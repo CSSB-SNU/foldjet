@@ -168,3 +168,24 @@ def test_run_trunk_releases_the_previous_fold_first():
     with pytest.raises(Stop):
         AlphaFold3.run_trunk(fake, {"x": torch.zeros(1)})
     assert order == ["release", "trunk"]
+
+
+def test_sample_diffusion_releases_the_fold_state_before_the_heads():
+    order = []
+    trunk = SimpleNamespace(
+        batch=None,
+        embeddings=None,
+        diffusion=SimpleNamespace(batch=None, embeddings=None, restore=lambda samples: samples),
+    )
+
+    def predict_heads(batch, embeddings, samples):
+        order.append("heads")
+        return {}
+
+    fake = SimpleNamespace(
+        foldforge_release_fold_state=lambda: order.append("release"),
+        _sample_diffusion=lambda batch, embeddings: order.append("sample") or {},
+        _predict_heads=predict_heads,
+    )
+    AlphaFold3.sample_diffusion(fake, trunk)
+    assert order == ["sample", "release", "heads"]

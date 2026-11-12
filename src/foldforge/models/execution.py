@@ -23,9 +23,11 @@ if TYPE_CHECKING:
     from foldforge.models.config import ExecutionConfig
 
 
-#: `Execution.release_fold_state` frees the previous fold's diffusion state before the next trunk only when that state holds at least this many bytes
-#: (the same 4 GiB as the banded pair conditioning): below it the release costs more (gc, synchronize, per-fold graphs rebuilt) than it saves.
-RELEASE_MIN_BYTES = 4 << 30
+#: `Execution.release_fold_state` frees a fold's diffusion state (before that fold's heads and before the next fold's trunk) only when the kept pair
+#: holds at least this many bytes: below it the release costs more (gc, synchronize, per-fold graphs rebuilt) than it saves. The engine tables
+#: derived from the kept pair (the token-DiT pair biases, about 3x its bytes) are not counted, so the bound is 2 GiB, not the 4 GiB of the banded
+#: conditioning: OpenDDE n = 16 keeps 3.75 GiB (11.3 GiB of engine bias behind it) and has to release.
+RELEASE_MIN_BYTES = 2 << 30
 
 
 class ExecutionPolicy(Protocol):
