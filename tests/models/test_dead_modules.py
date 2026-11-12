@@ -78,3 +78,40 @@ def test_the_flag_is_a_plain_attribute_so_compile_guards_on_it():
     mark_dead(module)
     assert "dead" in vars(module)
     assert module.dead is True
+
+
+# --- the engine contract `mark_dead` relies on (the engine declined to ship its own loader: FoldForge owns this) ---------------------
+
+
+def test_the_engine_residual_classes_still_declare_the_dead_flag_false_by_default():
+    from miniworld_engine.modules.attention import AttentionPairBias
+    from miniworld_engine.modules.msa import MSAPairWeightedAveraging, OuterProductMean
+    from miniworld_engine.modules.transition import Transition
+    from miniworld_engine.modules.triangle import TriangleAttention, TriangleMultiplication
+
+    for cls in (
+        Transition,
+        AttentionPairBias,
+        TriangleAttention,
+        TriangleMultiplication,
+        OuterProductMean,
+        MSAPairWeightedAveraging,
+    ):
+        assert hasattr(cls, "dead"), f"{cls.__name__} lost the `dead` flag: dead-module skipping would silently stop (speed only)"
+        assert cls.dead is False, f"{cls.__name__}.dead must default to False"
+
+
+def test_a_flagged_engine_transition_returns_its_residual_input_without_grad():
+    from miniworld_engine.modules.transition import Transition
+
+    module = Transition(d_hidden=16, n=2, backend="pytorch").eval()
+    with torch.no_grad():
+        for p in module.parameters():
+            p.fill_(5e-37)
+    assert mark_dead(module) == {"Transition": 1}
+    x = torch.randn(3, 16, dtype=torch.bfloat16)
+    with torch.no_grad():
+        assert torch.equal(module(x), x), "a dead Transition must return x unchanged (x + 0)"
+    module.dead = False
+    with torch.no_grad():
+        assert torch.allclose(module(x).float(), x.float(), atol=1e-2)

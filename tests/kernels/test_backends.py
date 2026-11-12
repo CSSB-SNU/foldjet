@@ -65,7 +65,8 @@ def test_choose_backend(monkeypatch):
     # H100: cuda where the class has it, pytorch for a class that has none
     monkeypatch.setattr(backends, "capability", lambda _d: (9, 0))
     assert backends.choose_backend("miniworld", Transition) == ("cuda", None)
-    assert backends.choose_backend("miniworld", AdaptiveLayerNorm) == ("pytorch", None)
+    # engine 2.5.4: AdaptiveLayerNorm has a portable triton backend (no cuda), so "miniworld" on H100 picks triton (2.5.3: pytorch)
+    assert backends.choose_backend("miniworld", AdaptiveLayerNorm) == ("triton", None)
     assert backends.choose_backend("cueq", TriangleMultiplication) == ("cueq", None)
     assert backends.choose_backend("cuequivariance", TriangleAttention) == ("cueq", None)
     assert backends.choose_backend("anthropic", OuterProductMean) == ("anthropic", None)  # engine 2.5.1 (2.5.0: no such backend)
