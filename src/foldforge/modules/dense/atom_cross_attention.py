@@ -155,14 +155,16 @@ def hoist_conditioning(
     """
     encoder_stack = encoder.atom_transformer_encoder
     decoder_stack = decoder.atom_transformer_decoder
-    if (
-        torch.is_grad_enabled()
-        or not isinstance(encoder_stack, DiffusionCrossAttTransformer)
-        or not isinstance(decoder_stack, DiffusionCrossAttTransformer)
-        or state.queries_single_cond is None
-    ):
+    if torch.is_grad_enabled() or state.queries_single_cond is None:
         return state
     norm = decoder.post_atom_cond_layer_norm
+    if not isinstance(encoder_stack, DiffusionCrossAttTransformer) or not isinstance(decoder_stack, DiffusionCrossAttTransformer):
+        # An engine stack projects its own conditioning; only the post norm is made here, once per fold, because inside the compiled
+        # step inductor autotunes the block size of its (persistent-reduction) kernel by timing, and the pick changes the sum
+        # order: two processes gave different structures. Eagerly it is one fixed kernel.
+        if norm is None:
+            return state
+        return dataclasses.replace(state, hoisted=(None, (norm(state.queries_single_cond), norm(state.keys_single_cond), None)))
     decoder_queries = state.queries_single_cond if norm is None else norm(state.queries_single_cond)
     decoder_keys = state.keys_single_cond if norm is None else norm(state.keys_single_cond)
     return dataclasses.replace(
@@ -803,7 +805,7 @@ class AtomCrossAttEncoder(nn.Module):
             queries_act *= queries_mask[..., None]
             queries_act += query_base
 
-        hoisted = {} if state.hoisted is None else {"hoisted": state.hoisted[0]}
+        hoisted = {} if state.hoisted is None or state.hoisted[0] is None else {"hoisted": state.hoisted[0]}
         queries_act = self.atom_transformer_encoder(
             queries_act=queries_act,
             queries_mask=queries_mask,
@@ -946,7 +948,7 @@ class AtomCrossAttDecoder(nn.Module):
             hoisted = {}
         else:
             decoder_queries_cond, decoder_keys_cond, decoder_projections = enc.hoisted_decoder
-            hoisted = {"hoisted": decoder_projections}
+            hoisted = {} if decoder_projections is None else {"hoisted": decoder_projections}
 
         # Run the atom cross attention transformer.
         queries_act = self.atom_transformer_decoder(

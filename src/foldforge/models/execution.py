@@ -23,6 +23,13 @@ if TYPE_CHECKING:
     from foldforge.models.config import ExecutionConfig
 
 
+#: `Execution.release_fold_state` frees a fold's diffusion state (before that fold's heads and before the next fold's trunk) only when the kept pair
+#: holds at least this many bytes: below it the release costs more (gc, synchronize, per-fold graphs rebuilt) than it saves. The engine tables
+#: derived from the kept pair (the token-DiT pair biases, about 3x its bytes) are not counted, so the bound is 2 GiB, not the 4 GiB of the banded
+#: conditioning: OpenDDE n = 16 keeps 3.75 GiB (11.3 GiB of engine bias behind it) and has to release.
+RELEASE_MIN_BYTES = 2 << 30
+
+
 class ExecutionPolicy(Protocol):
     """Configuration supplied by the terminal application."""
 
@@ -511,8 +518,16 @@ class Execution:
         engine's dead captured inputs. The trunk / confidence / distogram graphs are signature-cached across folds and stay.
         """
         head = getattr(self.model, "diffusion_head", None)
+        held = getattr(head, "fold_state_bytes", None)
+        if held is not None and held() < RELEASE_MIN_BYTES:
+            # The previous fold's state is small next to the device: dropping it early only costs (a collection, a synchronize and the per-fold
+            # graphs rebuilt: 8-50% of a small warm forward); the new fold's first denoiser call drops it anyway.
+            return
         if head is not None:
             head.release_fold_state()
+        # The per-shape sampler graphs keep a static copy of a fold's conditioning (pair, atom state: the size of the state being released here):
+        # for a fold this large the capture they save is a few percent of the forward, the copy is what the next trunk needs the memory for.
+        self.release_sampler_graphs()
         for wrapped in self.wrappers:
             wrapped.release_fold()
         # The previous fold's sampler closures (`denoise`, `conditioning`) and its tensors form reference cycles: only a collection frees them, and

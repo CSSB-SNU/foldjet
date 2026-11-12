@@ -204,6 +204,22 @@ class DiffusionHead(nn.Module):
         """A conditioning transition (no conditioning input, factor 2): the engine `Transition`."""
         return engine_graph.make_conditioning_transition(width)
 
+    def fold_state_bytes(self) -> int:
+        """Bytes of the fold-scoped state this head keeps between sampler calls (the fold conditioning and the token transformer's kept pair)."""
+        seen: set[int] = set()
+        total = 0
+        leaves = list(torch.utils._pytree.tree_leaves(self._fold))
+        kept = getattr(self.transformer, "fold_state_tensors", None)
+        if kept is not None:
+            leaves.extend(kept())
+        for leaf in leaves:
+            if isinstance(leaf, torch.Tensor):
+                storage = leaf.untyped_storage()
+                if storage.data_ptr() not in seen:
+                    seen.add(storage.data_ptr())
+                    total += storage.nbytes()
+        return total
+
     def release_fold_state(self) -> None:
         """Drop the fold-scoped state this head keeps between sampler calls: the fold conditioning and the token transformer's kept pair."""
         self._fold = None

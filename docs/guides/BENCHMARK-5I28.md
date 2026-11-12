@@ -47,6 +47,16 @@ featurization, loading and output writing. Report the median of the warm forward
   forward, and 94-97 ms at n = 8, about 2.4% of 3.9 s). `sampler_graph_captures` / `sampler_graph_cache_hits` in each cell say which case a record is.
   The kits' own spans are not changed by this. Records written before the change keep their numbers.
 
+## Determinism
+
+The same input, the same seeds and the same code give bit-identical output across processes, also with a fresh inductor / Triton cache
+(checked 2026-11-13: all nine benchmark models at n = 1 in two processes each, RoseTTAFold3 also at n = 4 and 8; coordinates and every
+confidence array with `np.array_equal`). Two sources of run-to-run differences were removed: Chai-1's post-atom-conditioning LayerNorm, which
+inductor autotuned by timing inside the compiled step (a different reduction order per process; now made once per fold outside the step),
+and RoseTTAFold3's chirality-gradient `index_add_` (float atomics on overlapping centres; now a sorted segment sum). A new engine kernel that
+uses atomics or a timing-chosen configuration breaks this guarantee: check it with two fresh processes. Chai-1 and RoseTTAFold3 outputs
+changed once with the fix (a new deterministic variant); references made before 2026-11-13 differ from them by the old spread.
+
 ## Reporting
 
 - Show the ratio as **kit / FoldForge** (> 1 means FoldForge is faster), never FoldForge / kit.

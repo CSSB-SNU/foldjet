@@ -1298,6 +1298,9 @@ class AlphaFold3(nn.Module):
             trunk.diffusion.batch, trunk.diffusion.embeddings
         )
         samples = trunk.diffusion.restore(samples)
+        release_fold_state = getattr(self, "foldforge_release_fold_state", None)  # set by `models.execution.Execution`
+        if release_fold_state is not None:
+            release_fold_state()  # a big fold's diffusion state (the kept pair and the engine tables keyed on it) goes before the heads run
         return self._predict_heads(trunk.batch, trunk.embeddings, samples)
 
     def forward(
