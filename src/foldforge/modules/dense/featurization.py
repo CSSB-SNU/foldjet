@@ -176,8 +176,21 @@ def create_relative_encoding(
     max_relative_chain: int,
     *,
     chain_bucket_on_same_chain: bool = False,
+    dtype: torch.dtype | None = None,
 ) -> torch.Tensor:
-    """Add relative position encodings."""
+    """Add relative position encodings.
+
+    ``dtype`` is the dtype of the result (int64 when None). The 0/1 values are the
+    same either way; a caller that casts the result anyway asks for the dtype here and
+    never builds the int64 one-hot (8 bytes per entry, ``[N, N, 139]``).
+    """
+
+    def one_hot(index: torch.Tensor, classes: int) -> torch.Tensor:
+        if dtype is None:
+            return torch.nn.functional.one_hot(index.to(dtype=torch.int64), classes)
+        classes_axis = torch.arange(classes, device=index.device, dtype=torch.int64)
+        return (index.to(dtype=torch.int64)[..., None] == classes_axis).to(dtype)
+
     rel_feats = []
     token_index = seq_features.token_index
     residue_index = seq_features.residue_index
@@ -211,9 +224,7 @@ def create_relative_encoding(
         clipped_offset,
         (2 * max_relative_idx + 1) * torch.ones_like(clipped_offset),
     )
-    rel_pos = torch.nn.functional.one_hot(
-        final_offset.to(dtype=torch.int64), 2 * max_relative_idx + 2
-    )
+    rel_pos = one_hot(final_offset, 2 * max_relative_idx + 2)
     rel_feats.append(rel_pos)
 
     # Embed relative token index as a one-hot embedding of distance along residue
@@ -229,9 +240,7 @@ def create_relative_encoding(
         clipped_token_offset,
         (2 * max_relative_idx + 1) * torch.ones_like(clipped_token_offset),
     )
-    rel_token = torch.nn.functional.one_hot(
-        final_token_offset.to(dtype=torch.int64), 2 * max_relative_idx + 2
-    )
+    rel_token = one_hot(final_token_offset, 2 * max_relative_idx + 2)
     rel_feats.append(rel_token)
 
     # Embed same entity ID
@@ -258,9 +267,7 @@ def create_relative_encoding(
         final_rel_chain = torch.where(same_chain, pad_class, clipped_rel_chain)
     else:
         final_rel_chain = torch.where(entity_id_same, clipped_rel_chain, pad_class)
-    rel_chain = torch.nn.functional.one_hot(
-        final_rel_chain.to(dtype=torch.int64), 2 * max_relative_chain + 2
-    )
+    rel_chain = one_hot(final_rel_chain, 2 * max_relative_chain + 2)
 
     rel_feats.append(rel_chain)
 
