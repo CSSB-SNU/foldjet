@@ -39,6 +39,10 @@ featurization, loading and output writing. Report the median of the warm forward
 - Kits: their `PHASE ... fwd_s` (or the kit's equivalent span, per the kit forward-definition audit). Not the kits' wider
   "Model forward time" lines.
 - FoldForge runs on prebuilt kernels and warm caches: no JIT compile inside a timed run.
+- **The FoldForge number includes one sampler CUDA-graph capture per forward** (2 eager warm-up steps + capture, `models/sampler_graph.py`: the graph is
+  built again for every fold). Measured on Protenix v1 (H100, 2026-11-12, engine 2.5.4): 73-79 ms at n = 1 (about 15% of the 0.485 s warm forward) and
+  94-97 ms at n = 8 (about 2.4% of 3.9 s); a second call of the model pays it again. The kits' own spans are not changed by this. Records written before a
+  fix keep their numbers; engine request R26 in [ENGINE-REQUESTS.md](../ENGINE-REQUESTS.md) is what would let the graph be captured once per shape.
 
 ## Reporting
 

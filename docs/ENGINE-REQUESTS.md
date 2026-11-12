@@ -6,7 +6,7 @@ Requests only: what FoldForge would like the engine to provide. What the engine 
 Priority: **P1** blocks a clean integration or costs most of a fold's speed on the main path (H100, bf16); **P2** removes a FoldForge workaround
 or a per-family slow path; **P3** convenience, documentation, or a wish for exactness in a corner.
 
-Numbering is stable (R1 ... R25); a request that is done is struck out here, not renumbered. Earlier lists were merged: the former items 1 / 5
+Numbering is stable (R1 ... R26); a request that is done is struck out here, not renumbered. Earlier lists were merged: the former items 1 / 5
 are R1, 4 / 8 are R2, 3 / F4 are R6, 6 is R5, 9 / D2 are R4, 7 / 11 are R10, D1 is R7, F1 is R8, F2 is R9, F3 is R11.
 
 | # | Priority | Request | Retires |
@@ -36,6 +36,7 @@ are R1, 4 / 8 are R2, 3 / F4 are R6, 6 is R5, 9 / D2 are R4, 7 / 11 are R10, D1 
 | R23 | P3 | Engine-internal ATen glue at n = 1 (`inverse_length`, the fp32 -> bf16 `copy_` of `trimul_h100`) | – |
 | R24 | P2 | An Euler update op without Kabsch alignment (the `AlignEuler` module always aligns) | U-backend (glue modules) |
 | R25 | P3 | RoseTTAFold3 chirality-gradient op (`modules/dense/chirality.py`, FoldForge-own) | U-class (chirality features) |
+| R26 | P2 | A contract to refresh the hoisted per-fold tables (token-DiT pair bias, atom-block conditioning) IN PLACE into the same buffers, so a sampler CUDA graph can be reused across folds | – |
 
 ## P1
 
@@ -146,3 +147,5 @@ family of its own: a wish, not a blocker.
 released `k_adaptive_layernorm` equals the query one before discarding it. RoseTTAFold3's `FlatQKNormAugmentedAttention` has no query bias; FoldForge
 drops the released zero bias after checking it. If the releases are documented to do this, say so in the class docstrings so the checks are
 confirmations, not inferences.
+
+**R26. In-place refresh of the hoisted per-fold tables (sampler graph reuse).** FoldForge captures the sampler step as a CUDA graph (`models/sampler_graph.py`, 2 eager warm-up steps + `torch.cuda.graph`) once per fold, i.e. in every forward: Protenix v1 on an H100 measures `sampler_graph_captures` = 4 for 4 forwards, 73-79 ms of capture + warm-up inside the warm forward at n = 1 (about 15% of 0.485 s) and 94-97 ms at n = 8 (about 2.4% of 3.9 s); the coordinates of every forward are identical. The graph bakes in the addresses of the per-fold tensors (`batch`, `embeddings`, `single_base`, `pair_cond`, `key_mask`, `atom_state`), and the engine's own tables hoisted during the warm-up (the token DiT pair bias, the atom blocks' conditioning) are cached by tensor OBJECT identity; `miniworld_engine.capture` exposes `static_inputs`, `static_weights` and `clear_weight_caches` only, nothing that writes a new fold's tables into the existing buffers. A graph reused across folds without that would read the first fold's conditioning and pair bias (a wrong result), which is why FoldForge re-captures. Please provide a contract (for example `refresh_static_inputs(module, ...)`, or hoisted tables that live in caller-owned buffers) so the graph can be captured once per shape. FoldForge would then keep the per-fold conditioning in static buffers and cache the graph per shape. Measured by a probe of the FoldForge sampler (not an engine profile); the bound on the gain is the capture + warm-up cost above, the per-fold table computation stays.
