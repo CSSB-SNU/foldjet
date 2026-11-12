@@ -45,15 +45,16 @@ def install_engine(
     """Apply ``plan`` (default: ``miniworld`` everywhere) to ``model``'s engine modules.
 
     ``modules=False`` (a CPU load, ``engine.skip`` containing ``engine_modules``) puts every module on ``pytorch``. The model's load report
-    gets the plan and the per-module choices (``engine_backends``). The dense sampler glue has no engine wiring yet, so the model's
-    ``foldforge_sampler_ops`` is False."""
+    gets the plan and the per-module choices (``engine_backends``). The dense sampler glue (``AugmentNoise`` / ``AlignEuler``,
+    ``models/sampler_graph.py``) is wired: ``foldforge_sampler_ops`` is True, and each call falls back to the torch ops by itself where the
+    module's ``unsupported`` is not None. Training switches it off per module (``train/prepare.py``)."""
     import torch as _torch
 
     plan = BackendPlan.make() if plan is None else plan
     if not modules or "engine_modules" in set(skip):
         plan = BackendPlan.make("pytorch", None, plan.unsupported)
     choices = apply_plan(model, plan, _torch.device(device))
-    model.foldforge_sampler_ops = False
+    model.foldforge_sampler_ops = True
     report: dict[str, Any] = getattr(model, "foldforge_load_report", {})
     report["engine_backends"] = {"plan": plan.report(), "modules": choices}
     model.foldforge_load_report = report
