@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 import torch
 
 from foldforge.modules.dense.dead import clear_dead
+from foldforge.train import freeze
 
 if TYPE_CHECKING:
     from torch import nn
@@ -19,11 +20,13 @@ if TYPE_CHECKING:
     from foldforge.train.config import TrainConfig
 
 
-def enable_training(model: nn.Module, cfg: TrainConfig) -> dict[str, int]:
-    """``train()``, gradients on for EVERY parameter (single-stage full finetuning), dead skip off, distogram / confidence logits kept for the loss."""
+def enable_training(model: nn.Module, cfg: TrainConfig) -> dict[str, object]:
+    """``train()``, gradients on for every parameter except the frozen ones (``train/freeze.py``: parameters with no path to the loss, slots the original
+    model lacks, parameters the original keeps fixed), dead skip off, distogram / confidence logits kept for the loss."""
     cleared = clear_dead(model)
     model.train()
     model.requires_grad_(True)
+    frozen = freeze.apply(model)
     model.foldforge_sampler_scope = None  # the mini-rollout samples eagerly (no sampler CUDA graph)
     model.confidence_head.save_logits = cfg.confidence  # the head returns its logits only when asked
     model.distogram_head.save_distogram = (
@@ -31,6 +34,7 @@ def enable_training(model: nn.Module, cfg: TrainConfig) -> dict[str, int]:
     )
     return {
         "dead_cleared": cleared,
+        "frozen": frozen,
         "sampler_ops_off_modules": disable_inference_only_ops(model),
     }
 

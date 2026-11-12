@@ -212,12 +212,20 @@ class Evoformer(nn.Module):
             self.extra_msa_target_feat = nn.Linear(
                 self.c_target_feat, self.msa_channel, bias=False
             )
-            self.msa_stack = nn.ModuleList(
-                [
-                    self._msa_block(spec)
-                    for _ in range(self.msa_stack_num_layer)
-                ]
-            )
+            if spec.msa_shared_block:
+                # One module under every index: ``state_dict`` still lists ``msa_stack.<i>.*`` for each i (same tensors), ``parameters()`` /
+                # ``named_parameters()`` list it once (as ``msa_stack.0.*``), so Adam, the EMA and the gradients see one parameter set.
+                shared = self._msa_block(spec)
+                self.msa_stack = nn.ModuleList(
+                    [shared] * self.msa_stack_num_layer
+                )
+            else:
+                self.msa_stack = nn.ModuleList(
+                    [
+                        self._msa_block(spec)
+                        for _ in range(self.msa_stack_num_layer)
+                    ]
+                )
 
         self.single_activations = nn.Linear(
             self.c_target_feat, self.seq_channel, bias=False

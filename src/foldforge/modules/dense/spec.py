@@ -309,6 +309,10 @@ class DenseSpec:
     #: ablation published). Boltz-2 keeps it; OpenDDE copies it ("Boltz-style
     #: MSA block" in its pairformer.py). Off: Boltz-2 -46, OpenDDE -18 pLDDT.
     msa_update_before_opm: bool = False
+    #: The ``msa_layers`` MSA blocks are ONE module run that many times (RoseTTAFold3: the original shares one MSA module). The converter
+    #: writes the same weights under every ``msa_stack.<i>`` key, so the checkpoint format is unchanged; the model holds one parameter set,
+    #: so training updates it once per use instead of drifting four independent copies apart (and never touching the last).
+    msa_shared_block: bool = False
     #: The distogram projection carries a trained bias.
     distogram_bias: bool = False
     #: Conditioned transitions multiply the SwiGLU output by a linear up-gate.
@@ -621,6 +625,7 @@ ROSETTAFOLD3 = replace(
     msa_value_dim=32,
     affine_norms=BOLTZ2.affine_norms,
     msa_query_paired=0.0,
+    msa_shared_block=True,
     template="rf3",
     template_heads=4,
     use_input_templates=False,

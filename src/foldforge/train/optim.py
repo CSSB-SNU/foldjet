@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from foldforge.train.config import TrainConfig
 
 #: Parameter-name prefixes of the heads (LR scale 1.0): the diffusion, confidence and distogram heads. Everything else is the trunk
-#: (`trunk_lr_scale`). Single-stage finetuning: every parameter is in the optimizer.
+#: (`trunk_lr_scale`). Single-stage finetuning: every parameter is in the optimizer except the frozen ones (`train/freeze.py`).
 HEAD_PREFIXES = ("diffusion_head.", "confidence_head.", "distogram_head.")
 
 
@@ -27,9 +27,11 @@ def split_parameters(
     list[tuple[str, nn.Parameter]],
     list[tuple[str, nn.Parameter]],
 ]:
-    """``(trunk, heads)`` named parameters."""
+    """``(trunk, heads)`` named parameters that train (a frozen one, ``requires_grad`` False, is in neither: ``train/freeze.py``)."""
     trunk, heads = [], []
     for name, param in model.named_parameters():
+        if not param.requires_grad:
+            continue
         if name.startswith(HEAD_PREFIXES):
             heads.append((name, param))
         else:

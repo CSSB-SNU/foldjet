@@ -26,6 +26,7 @@ from foldforge.train import (
     TrainConfig,
     checkpoint,
     data,
+    freeze,
     optim,
     prepare,
     step,
@@ -95,24 +96,38 @@ def split_sizes(model, example, cfg) -> dict:
     }
 
 
+#: columns of a :func:`grad_coverage` row
+COVERAGE_COLUMNS = ("total", "none", "zero_live", "nonfinite", "underflow", "data_dependent", "frozen")
+
+
 def grad_coverage(model: torch.nn.Module) -> dict:
-    """Which parameters got a gradient from one step: groups by the first three name components; the confidence head is in the list (single-stage training; only ``--no-confidence`` leaves it without a loss)."""
-    groups: dict[str, list[int]] = defaultdict(
-        lambda: [0, 0, 0, 0, 0]
-    )  # total, none, zero (live weight), nonfinite, zero (dead weight < 1e-30)
+    """Which parameters got a gradient from one step: groups by the first three name components; the confidence head is in the list (single-stage
+    training; only ``--no-confidence`` leaves it without a loss). A parameter is classified by ``train/freeze.py``: frozen (no path to the loss /
+    not in the original / fixed in the original: not counted as a defect), ``data_dependent`` (needs charged atoms / bonds in the example: smoke 7fvu),
+    ``underflow`` (a decayed module: the gradient is exactly zero because the weights are ~1e-37..1e-12 relative to the model's typical weight) and
+    the real defects ``none`` (no gradient), ``zero_live`` (zero gradient on a live weight) and ``nonfinite``."""
+    scale = freeze.weight_scale(model)
+    groups: dict[str, list[int]] = defaultdict(lambda: [0] * len(COVERAGE_COLUMNS))
+    column = {name: i for i, name in enumerate(COVERAGE_COLUMNS)}
     for name, param in model.named_parameters():
-        key = ".".join(name.split(".")[:3])
-        row = groups[key]
-        row[0] += 1
-        if param.grad is None:
-            row[1] += 1
-        else:
-            if not bool(param.grad.any()):
-                # an exactly-zero gradient on a weight that is itself ~1e-37 (a decayed module): the bf16 gradient underflows
-                row[4 if float(param.detach().abs().max()) < 1e-30 else 2] += 1
-            if not bool(torch.isfinite(param.grad).all()):
-                row[3] += 1
+        row = groups[".".join(name.split(".")[:3])]
+        row[column["total"]] += 1
+        if not param.requires_grad:
+            row[column["frozen"]] += 1
+            continue
+        kind = freeze.classify_gradient(name, param, scale)
+        if kind != "ok":
+            row[column[{"zero": "zero_live"}.get(kind, kind)]] += 1
     return dict(groups)
+
+
+def data_dependent_flow(model: torch.nn.Module) -> dict[str, bool]:
+    """Per data-dependent parameter (charge, bond embeddings): did a nonzero gradient reach it on this example?"""
+    flow = {}
+    for name, param in model.named_parameters():
+        if freeze.DATA_DEPENDENT.fullmatch(name):
+            flow[name] = param.grad is not None and bool(param.grad.any())
+    return flow
 
 
 def kernel_table(model, example, cfg, top: int = 30) -> list[tuple[str, float, int]]:
@@ -213,9 +228,7 @@ def main() -> None:
     # dead modules must run in training (their parameters train): do not flag them at load
     pred = ff.load_model(
         args.model,
-        # `atom_blocks` on pytorch for training: engine 2.5.1's sm90 atom-DiT backward (`kernels/integrations/local_dit_h100.py::_bwd`, kernel
-        # `finalize`) raises CUDA_ERROR_ILLEGAL_ADDRESS on this model's blocks (engine 2.5.0 refused training on that backend and ran pytorch).
-        config={"engine": {"skip_dead_modules": False, "ops": {"atom_blocks": "pytorch"}}},
+        config={"engine": {"skip_dead_modules": False}},  # atom_blocks: engine default (2.5.3 fixed the sm90 atom-DiT backward, R20)
         checkpoint=args.ckpt,
     )
     model = pred._network
@@ -266,6 +279,11 @@ def main() -> None:
         ),
         flush=True,
     )
+    by_rule: dict[str, list[str]] = defaultdict(list)
+    for frozen_name, rule in freeze.frozen_parameters(model).items():
+        by_rule[rule.key].append(frozen_name)
+    for rule_key, names in sorted(by_rule.items()):
+        print("FROZEN", rule_key, len(names), "e.g.", names[0], flush=True)
 
     if args.profile_phases:
         print("SIZES", json.dumps(split_sizes(model, first, cfg)), flush=True)
@@ -275,39 +293,50 @@ def main() -> None:
     parts = step.micro_step(model, first, cfg, passes=cfg.recycles_max)
     print("FIRST_STEP", json.dumps(parts), flush=True)
     cover = grad_coverage(model)
+    column = {name: i for i, name in enumerate(COVERAGE_COLUMNS)}
+    defects = ("none", "zero_live", "nonfinite")
+    in_loss = lambda k: cfg.confidence or not k.startswith("confidence_head")  # noqa: E731
     bad = {
-        k: v
-        for k, v in cover.items()
-        if (v[1] or v[2] or v[3]) and (cfg.confidence or not k.startswith("confidence_head"))
+        k: v for k, v in cover.items() if any(v[column[c]] for c in defects) and in_loss(k)
     }
     print(
-        "GRAD_COVERAGE groups=%d  groups_with_missing_or_zero_or_nonfinite=%d"
+        "GRAD_COVERAGE groups=%d  groups_with_defects=%d  (defect = no gradient / zero gradient on a live weight / nonfinite; frozen, data-dependent and underflow are classified, not defects)"
         % (len(cover), len(bad)),
         flush=True,
     )
-    sums = [0, 0, 0, 0, 0]
+    sums = [0] * len(COVERAGE_COLUMNS)
     for key, row in sorted(cover.items()):
-        total, none, zero, nonfinite, zero_dead = row
-        if cfg.confidence or not key.startswith("confidence_head"):
+        if in_loss(key):
             sums = [a + b for a, b in zip(sums, row)]
+        defect = any(row[column[c]] for c in defects)
         flag = (
             ""
-            if not (none or zero or nonfinite)
+            if not defect
             else (
                 "  <-- expected (no loss: --no-confidence)"
-                if (not cfg.confidence and key.startswith("confidence_head"))
+                if not in_loss(key)
                 else "  <-- CHECK"
             )
         )
         print(
-            f"GRAD {key:60s} total={total:4d} none={none:4d} zero_live={zero:4d} zero_deadweight={zero_dead:4d} nonfinite={nonfinite:4d}{flag}",
+            f"GRAD {key:60s} "
+            + " ".join(f"{c}={v:4d}" for c, v in zip(COVERAGE_COLUMNS, row))
+            + flag,
             flush=True,
         )
     print(
-        "GRAD_SUM params=%d none=%d zero_live=%d nonfinite=%d zero_deadweight=%d"
-        % (sums[0], sums[1], sums[2], sums[3], sums[4]),
+        "GRAD_SUM " + " ".join(f"{c}={v}" for c, v in zip(COVERAGE_COLUMNS, sums)),
         flush=True,
     )
+    for name, flowing in sorted(data_dependent_flow(model).items()):
+        print(f"DATA_DEPENDENT {name} gradient_flows={flowing}", flush=True)
+    tmask = first.features.get("template_atom_mask")
+    if tmask is not None:
+        print(
+            "TEMPLATES real_templates=%d real_atoms=%d"
+            % (int(tmask.reshape(tmask.shape[0], -1).any(-1).sum()), int(tmask.sum())),
+            flush=True,
+        )
     if args.smoke and not args.no_profile:
         for name, ms, count in kernel_table(model, first, cfg):
             print(f"KERNEL {ms:10.2f} ms  x{count:<6d} {name[:150]}", flush=True)
