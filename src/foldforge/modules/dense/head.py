@@ -508,6 +508,48 @@ class ConfidenceHead(nn.Module):
 
         return out
 
+    def _fold_inputs(
+        self, embeddings: dict[str, torch.Tensor], seq_mask: torch.Tensor, dtype: torch.dtype
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """The sample-independent inputs of one fold in the head's dtype: ``(pair_mask, pair, single, target_feat)``, global norms and single
+        clamp applied."""
+        seq_mask_cast = seq_mask.to(dtype=dtype)
+        pair_mask = seq_mask_cast[:, None] * seq_mask_cast[None, :]
+        pair_mask = pair_mask.to(dtype=dtype)
+
+        pair_act = embeddings["pair"].clone().to(dtype=dtype)
+        single_act = embeddings["single"].clone().to(dtype=dtype)
+        target_feat = embeddings["target_feat"].clone().to(dtype=dtype)
+
+        if self.spec.confidence_global_norm:
+            real = seq_mask.bool()
+            pair_act = masked_global_norm(pair_act, real[:, None] & real[None])
+            single_act = masked_global_norm(single_act, real)
+            # The vendor's input features are 449 wide; the two classes FoldForge's
+            # alphabet lacks are zero but still enter its mean and variance.
+            target_feat = masked_global_norm(target_feat, real, width=449)
+        if self.spec.confidence_single_clamp:
+            # Clamped and normalised before ANY use: the confidence pairformer
+            # and every head see the normalised single. AF3 uses it raw, and an
+            # unnormalised trunk single enters this head at std 211.
+            single_act = self.input_single_norm(single_act.clamp(-512.0, 512.0))
+        return pair_mask, pair_act, single_act, target_feat
+
+    def fold_state(
+        self,
+        embeddings: dict[str, torch.Tensor],
+        seq_mask: torch.Tensor,
+        batch: feat_batch.Batch,
+    ) -> dict[str, torch.Tensor | tuple[torch.Tensor, torch.Tensor]]:
+        """The sample-independent state of one fold of a ``reembed_pair`` head (``pair_mask`` and the re-embedded ``terms``), built by the
+        statements the first sample's call runs. Passed to every sample's call as ``fold`` it takes them out of a captured graph, which
+        would otherwise replay them once per sample."""
+        pair_mask, pair_act, single_act, target_feat = self._fold_inputs(
+            embeddings, seq_mask, self.left_half_distance_logits.weight.dtype
+        )
+        terms = self.reembedding.fold_terms(pair_act, single_act, target_feat, batch)
+        return {"terms": terms, "pair_mask": pair_mask}
+
     def forward(
         self,
         dense_atom_positions: torch.Tensor,
@@ -516,8 +558,12 @@ class ConfidenceHead(nn.Module):
         token_atoms_to_pseudo_beta: atom_layout.GatherInfo,
         asym_id: torch.Tensor,
         batch: feat_batch.Batch | None = None,
+        fold: dict[str, torch.Tensor | tuple[torch.Tensor, torch.Tensor]] | None = None,
     ) -> dict[str, torch.Tensor]:
         """Args:
+
+        fold (dict | None): the state :meth:`fold_state` built for this fold (``reembed_pair`` heads); read instead of rebuilding the
+            sample-independent re-embedding.
 
         target_feat (torch.Tensor): single embedding from InputFeatureEmbedder
             [..., N_tokens, c_s_inputs]
@@ -541,38 +587,23 @@ class ConfidenceHead(nn.Module):
         if not self.reembed_pair:
             dtype = self.left_target_feat_project.weight.dtype
 
-        # The per-fold terms are shared between calls only while they run eagerly: a call that is being captured into a CUDA graph
-        # reads and writes none (its graph would replay the tensors of the fold it was captured on).
-        fold = (
+        # The head's own per-fold cache is used only while calls run eagerly: a call that is being captured into a CUDA graph reads and writes
+        # none of it (its graph would replay the tensors of the fold it was captured on). A caller that built the fold state itself
+        # (``fold``, see :meth:`fold_state`) passes it in as an input, which a graph reads like any other input.
+        cache = (
             self._fold_cache
-            if self.reembed_pair and not torch.cuda.is_current_stream_capturing()
+            if self.reembed_pair and fold is None and not (torch.cuda.is_available() and torch.cuda.is_current_stream_capturing())
             else None
         )
-        if fold is not None and "terms" in fold:
-            # The second and later samples of a fold: the sample-independent re-embedding is already built.
+        if fold is not None:
             pair_mask = fold["pair_mask"]
             terms = fold["terms"]
+        elif cache is not None and "terms" in cache:
+            # The second and later samples of a fold: the sample-independent re-embedding is already built.
+            pair_mask = cache["pair_mask"]
+            terms = cache["terms"]
         else:
-            seq_mask_cast = seq_mask.to(dtype=dtype)
-            pair_mask = seq_mask_cast[:, None] * seq_mask_cast[None, :]
-            pair_mask = pair_mask.to(dtype=dtype)
-
-            pair_act = embeddings["pair"].clone().to(dtype=dtype)
-            single_act = embeddings["single"].clone().to(dtype=dtype)
-            target_feat = embeddings["target_feat"].clone().to(dtype=dtype)
-
-            if self.spec.confidence_global_norm:
-                real = seq_mask.bool()
-                pair_act = masked_global_norm(pair_act, real[:, None] & real[None])
-                single_act = masked_global_norm(single_act, real)
-                # The vendor's input features are 449 wide; the two classes FoldForge's
-                # alphabet lacks are zero but still enter its mean and variance.
-                target_feat = masked_global_norm(target_feat, real, width=449)
-            if self.spec.confidence_single_clamp:
-                # Clamped and normalised before ANY use: the confidence pairformer
-                # and every head see the normalised single. AF3 uses it raw, and an
-                # unnormalised trunk single enters this head at std 211.
-                single_act = self.input_single_norm(single_act.clamp(-512.0, 512.0))
+            pair_mask, pair_act, single_act, target_feat = self._fold_inputs(embeddings, seq_mask, dtype)
             terms = None
 
         if self.reembed_pair:
@@ -586,9 +617,9 @@ class ConfidenceHead(nn.Module):
                 terms = self.reembedding.fold_terms(
                     pair_act, single_act, target_feat, batch
                 )
-                if fold is not None:
+                if cache is not None:
                     # Kept for the fold's other samples (the pair is only read; the single is copied per sample).
-                    fold["terms"], fold["pair_mask"] = terms, pair_mask
+                    cache["terms"], cache["pair_mask"] = terms, pair_mask
             else:
                 terms = (terms[0], terms[1].clone())
             pair_act = self.reembedding.sample_term(
