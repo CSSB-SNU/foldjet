@@ -83,6 +83,11 @@ class TokenDiTStack(nn.Module):
             return None
         return source[0], engine
 
+    def release_fold(self) -> None:
+        """Drop the kept pair (and its engine-dtype cast): the previous fold's conditioning, ~1 GiB per 1000 tokens squared, and the key the
+        engine keeps its hoisted pair bias under."""
+        self._pair_source = self._pair_engine = None
+
     def _engine_pair(self, pair_cond: Tensor) -> Tensor:
         """``pair_cond[None]`` in the engine's activation dtype, the SAME tensor object for every call that gets the same ``pair_cond``
         (one fold: every block of every step): the engine hoists the pair bias (pair LayerNorm + bias GEMM) once per pair object, so a fresh

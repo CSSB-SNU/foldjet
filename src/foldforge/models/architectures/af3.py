@@ -1279,6 +1279,9 @@ class AlphaFold3(nn.Module):
 
     def run_trunk(self, batch: dict[str, torch.Tensor]) -> TrunkOutput:
         """Prepare residue/structural representations once for repeated sampling."""
+        release_fold_state = getattr(self, "foldforge_release_fold_state", None)  # set by `models.execution.Execution`
+        if release_fold_state is not None:
+            release_fold_state()  # the previous fold's diffusion state goes before this fold's trunk runs
         # Featurisation may hand float64 arrays (reference conformer positions of some families); autocast leaves float64 alone, so a
         # float64 input would meet a bf16 weight. Single precision is what every family's graph computes in.
         batch = {key: value.float() if value.dtype == torch.float64 else value for key, value in batch.items()}
