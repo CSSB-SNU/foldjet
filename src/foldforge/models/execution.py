@@ -436,6 +436,8 @@ def _autocast_entries(model: torch.nn.Module) -> None:
 class Execution:
     """Install actual call wrappers; reports never infer execution from flags."""
 
+    _collect_pending = False  # a release ran inside `sample_diffusion`: one more collection is due at the next release call
+
     def __init__(
         self, model: torch.nn.Module, family: str, config: ExecutionConfig
     ) -> None:
@@ -518,6 +520,13 @@ class Execution:
         The head's fold conditioning and kept pair, the per-fold denoiser graphs (each keeps a private pool holding that fold's conditioning), and the
         engine's dead captured inputs. The trunk / confidence / distogram graphs are signature-cached across folds and stay.
         """
+        if self._collect_pending:
+            # The previous release ran inside `sample_diffusion`, whose frame still held the sampler closures: their reference cycles (and the
+            # tensors behind them, an 8 GiB conditioning block at esmfold2 n = 16) are collectable only now. Without this the next fold's sampler
+            # ran next to them (peak 64.2 GiB instead of 56.2 GiB).
+            self._collect_pending = False
+            gc.collect()
+            self._release_engine_dead_inputs()
         head = getattr(self.model, "diffusion_head", None)
         held = getattr(head, "fold_state_bytes", None)
         if held is not None and held() < RELEASE_MIN_BYTES:
@@ -534,6 +543,11 @@ class Execution:
         # The previous fold's sampler closures (`denoise`, `conditioning`) and its tensors form reference cycles: only a collection frees them, and
         # the engine's per-input entries (below) die with their tensors.
         gc.collect()
+        self._release_engine_dead_inputs()
+        self._collect_pending = True  # the closures of the fold being sampled right now are still referenced by the caller's frame
+
+    @staticmethod
+    def _release_engine_dead_inputs() -> None:
         try:
             capture = importlib.import_module("miniworld_engine.kernels._capture")
         except ImportError:  # no engine: nothing of it to release

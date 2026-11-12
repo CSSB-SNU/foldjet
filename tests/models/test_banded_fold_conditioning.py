@@ -189,3 +189,22 @@ def test_sample_diffusion_releases_the_fold_state_before_the_heads():
     )
     AlphaFold3.sample_diffusion(fake, trunk)
     assert order == ["sample", "release", "heads"]
+
+
+def test_a_release_inside_sampling_leaves_one_collection_for_the_next_call(monkeypatch):
+    """The sampler closures of the fold being sampled are still referenced when the release runs: the next call collects them first."""
+    collections = []
+    monkeypatch.setattr(execution.gc, "collect", lambda *a: collections.append("gc"))
+    monkeypatch.setattr(execution, "RELEASE_MIN_BYTES", 1 << 40)
+    monkeypatch.setattr(execution.importlib, "import_module", lambda name: SimpleNamespace())
+    head = SimpleNamespace(fold_state_bytes=lambda: 0)
+    run = Execution.__new__(Execution)
+    run.model, run.wrappers = SimpleNamespace(diffusion_head=head), []
+    run.release_fold_state()  # small state, nothing pending: no collection
+    assert collections == []
+    run._collect_pending = True  # a release that ran inside sample_diffusion
+    run.release_fold_state()
+    assert collections == ["gc"]  # the pending collection runs even though the gate then skips the release
+    assert run._collect_pending is False
+    run.release_fold_state()
+    assert collections == ["gc"]  # once
