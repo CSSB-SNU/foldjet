@@ -101,6 +101,9 @@ class AtomCrossAttEncoderOutput:
     engine_key_mask: torch.Tensor | None = None
     engine_uid: torch.Tensor | None = None
     engine_even: tuple[torch.Tensor | None, ...] | None = None
+    #: The decoder's own conditioning of the fold (``hoist_conditioning``): its atom conditioning after the post norm, and every projection of
+    #: it the decoder's blocks read. ``None`` when the decoder projects them at each step.
+    hoisted_decoder: tuple | None = None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -135,6 +138,40 @@ class AtomFoldState:
     #:and padding
     #: inside its call would be a new tensor (a new pair bias) at every step.
     engine_even: tuple[torch.Tensor | None, ...] | None = None
+    #: ``(encoder projections, decoder conditioning)`` made once per fold by :func:`hoist_conditioning`, or ``None``.
+    hoisted: tuple | None = None
+
+
+def hoist_conditioning(
+    state: AtomFoldState, encoder: nn.Module, decoder: nn.Module
+) -> AtomFoldState:
+    """Make every projection of the atoms' single conditioning once per fold instead of once per sampler step.
+
+    The conditioning (reference conformer + trunk) is the same at every step, so what the atom blocks compute from it alone -- the AdaLN scales
+    and shifts of the query and key norms and of the transition, and the output gates -- is too. Only FoldForge's own atom stack
+    (:class:`DiffusionCrossAttTransformer`, ESMFold2's) reads the projections back; an engine ``AtomDiT`` stack, a gradient-recording call
+    (training) and a state without conditioning are returned as they are. The projections are made by the very modules and ops of the unhoisted
+    path, under the caller's autocast, so the step computes the same values.
+    """
+    encoder_stack = encoder.atom_transformer_encoder
+    decoder_stack = decoder.atom_transformer_decoder
+    if (
+        torch.is_grad_enabled()
+        or not isinstance(encoder_stack, DiffusionCrossAttTransformer)
+        or not isinstance(decoder_stack, DiffusionCrossAttTransformer)
+        or state.queries_single_cond is None
+    ):
+        return state
+    norm = decoder.post_atom_cond_layer_norm
+    decoder_queries = state.queries_single_cond if norm is None else norm(state.queries_single_cond)
+    decoder_keys = state.keys_single_cond if norm is None else norm(state.keys_single_cond)
+    return dataclasses.replace(
+        state,
+        hoisted=(
+            encoder_stack.project_cond(state.queries_single_cond, state.keys_single_cond),
+            (decoder_queries, decoder_keys, decoder_stack.project_cond(decoder_queries, decoder_keys)),
+        ),
+    )
 
 
 def build_atom_rope(
@@ -766,6 +803,7 @@ class AtomCrossAttEncoder(nn.Module):
             queries_act *= queries_mask[..., None]
             queries_act += query_base
 
+        hoisted = {} if state.hoisted is None else {"hoisted": state.hoisted[0]}
         queries_act = self.atom_transformer_encoder(
             queries_act=queries_act,
             queries_mask=queries_mask,
@@ -783,6 +821,7 @@ class AtomCrossAttEncoder(nn.Module):
                 state.engine_uid,
                 state.engine_even,
             ),
+            **hoisted,
         )
 
         queries_act = _mask_atoms(queries_act, queries_mask)
@@ -832,6 +871,7 @@ class AtomCrossAttEncoder(nn.Module):
             engine_key_mask=state.engine_key_mask,
             engine_uid=state.engine_uid,
             engine_even=state.engine_even,
+            hoisted_decoder=None if state.hoisted is None else state.hoisted[1],
         )
 
 
@@ -892,6 +932,22 @@ class AtomCrossAttDecoder(nn.Module):
         queries_act = queries_act + enc.skip_connection if torch.is_grad_enabled() else queries_act.add_(enc.skip_connection)
         queries_act = _mask_atoms(queries_act, enc.queries_mask)
 
+        if enc.hoisted_decoder is None:
+            decoder_queries_cond = (
+                enc.queries_single_cond
+                if self.post_atom_cond_layer_norm is None
+                else self.post_atom_cond_layer_norm(enc.queries_single_cond)
+            )
+            decoder_keys_cond = (
+                enc.keys_single_cond
+                if self.post_atom_cond_layer_norm is None
+                else self.post_atom_cond_layer_norm(enc.keys_single_cond)
+            )
+            hoisted = {}
+        else:
+            decoder_queries_cond, decoder_keys_cond, decoder_projections = enc.hoisted_decoder
+            hoisted = {"hoisted": decoder_projections}
+
         # Run the atom cross attention transformer.
         queries_act = self.atom_transformer_decoder(
             queries_act=queries_act,
@@ -905,21 +961,14 @@ class AtomCrossAttDecoder(nn.Module):
                 enc.engine_uid,
                 enc.engine_even,
             ),
-            queries_single_cond=(
-                enc.queries_single_cond
-                if self.post_atom_cond_layer_norm is None
-                else self.post_atom_cond_layer_norm(enc.queries_single_cond)
-            ),
-            keys_single_cond=(
-                enc.keys_single_cond
-                if self.post_atom_cond_layer_norm is None
-                else self.post_atom_cond_layer_norm(enc.keys_single_cond)
-            ),
+            queries_single_cond=decoder_queries_cond,
+            keys_single_cond=decoder_keys_cond,
             pair_cond=enc.pair_cond,
             # The decoder shares the ENCODER's rotation, not a rebuilt one: the
             # two are gathers of the same flat atom list.
             rope_q=enc.rope_q,
             rope_k=enc.rope_k,
+            **hoisted,
         )
 
         queries_act = _mask_atoms(queries_act, enc.queries_mask)

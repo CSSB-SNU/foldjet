@@ -7,6 +7,7 @@ from foldforge.modules.dense import featurization
 from foldforge.modules.dense.atom_cross_attention import (
     AtomCrossAttDecoder,
     AtomCrossAttEncoder,
+    hoist_conditioning,
 )
 from foldforge.modules.dense.preconditioning import (
     reconstruct_coordinates,
@@ -272,11 +273,12 @@ class DiffusionHead(nn.Module):
         The atom encoder's fold-invariant part (atom conditioning, atom-pair
         activations, rotary tables).
         """
-        return self.atom_cross_att_encoder.prepare(
+        state = self.atom_cross_att_encoder.prepare(
             batch,
             trunk_single_cond=embeddings["single"],
             trunk_pair_cond=pair_cond,
         )
+        return hoist_conditioning(state, self.atom_cross_att_encoder, self.atom_cross_att_decoder)
 
     def _noise_term(self, noise_level: torch.Tensor) -> torch.Tensor:
         """Run  noise term.

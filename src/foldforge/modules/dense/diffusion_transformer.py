@@ -51,6 +51,7 @@ def adaptive_normalization(
     shift: Projection | None = None,
     identity_scale: bool = False,
     activate_cond: bool = False,
+    projected: tuple[Tensor, Tensor] | None = None,
 ) -> Tensor:
     """Conditioned normalization, with the original separate normalization steps.
 
@@ -61,10 +62,17 @@ def adaptive_normalization(
 
     ``activate_cond`` passes the conditioning through SiLU before the scale and shift read it, which one family's atom blocks do in place of
     normalising it.
+
+    ``projected`` is the pair ``(scale(context), shift(context))`` of a conditioning that does not change between calls (a fold's atom
+    conditioning, see ``AdaptiveLayerNorm.project_cond``): it replaces the two projections, which are the only part of this function that reads ``cond``.
     """
     value = normalize(x)
     if cond is None:
         return value
+    if projected is not None:
+        scale_out, shift_out = projected
+        gate = scale_out + 1.0 if identity_scale else torch.sigmoid(scale_out)
+        return gate * value + shift_out
     if scale is None or shift is None:
         msg = "Conditioned normalization requires a scale and a shift"
         raise ValueError(msg)
@@ -93,7 +101,9 @@ def conditioned_residual(
     return single + (delta if residual_path is None else residual_path(delta))
 
 
-def reference_adaln(module: nn.Module, x: torch.Tensor, cond: torch.Tensor | None) -> torch.Tensor:
+def reference_adaln(
+    module: nn.Module, x: torch.Tensor, cond: torch.Tensor | None, projected: tuple[Tensor, Tensor] | None = None
+) -> torch.Tensor:
     """Bind optional single-conditioning to the shared adaptive normalization."""
     conditioned = module.use_single_cond
     if (cond is not None) != conditioned:
@@ -108,17 +118,22 @@ def reference_adaln(module: nn.Module, x: torch.Tensor, cond: torch.Tensor | Non
         shift=module.single_cond_bias if conditioned else None,
         identity_scale=getattr(module, "identity_scale", False),
         activate_cond=getattr(module, "activate_cond", False),
+        projected=projected,
     )
 
 
-def reference_conditioned_transition(module: nn.Module, x: torch.Tensor, cond: torch.Tensor | None) -> torch.Tensor:
-    """Bind the transition layout; normalization, SwiGLU and gating are shared."""
+def reference_conditioned_transition(
+    module: nn.Module, x: torch.Tensor, cond: torch.Tensor | None, hoisted: tuple | None = None
+) -> torch.Tensor:
+    """Bind the transition layout; normalization, SwiGLU and gating are shared. ``hoisted`` is ``(adaln projection, output gate)`` of the
+    block's conditioning (``DiffusionTransition.project_cond``)."""
+    adaln, gate = (None, None) if hoisted is None else hoisted
     hidden = swiglu(
-        module.adaptive_layernorm(x, cond),
+        module.adaptive_layernorm(x, cond, adaln),
         lambda value: value.to(module.transition1.weight.dtype) @ module.transition1.weight.T,
         None,
     )
-    return module.adaptive_zero_init(hidden, cond)
+    return module.adaptive_zero_init(hidden, cond, hoisted_gate=gate)
 
 
 def apply_rope(x: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor) -> torch.Tensor:
@@ -200,11 +215,22 @@ class AdaptiveLayerNorm(nn.Module):
         else:
             self.layer_norm = nn.LayerNorm(self.c_x, eps=eps)
 
+    def project_cond(self, single_cond: torch.Tensor) -> tuple[Tensor, Tensor]:
+        """The conditioning's scale and shift projections, which ``forward`` takes back as ``projected``: they read ``single_cond`` only, so a
+        conditioning that is the same at every sampler step needs them once per fold, not once per step."""
+        context = single_cond if getattr(self, "single_cond_layer_norm", None) is None else self.single_cond_layer_norm(single_cond)
+        if self.activate_cond:
+            context = F.silu(context)
+        return self.single_cond_scale(context), self.single_cond_bias(context)
+
     def forward(
-        self, x: torch.Tensor, single_cond: torch.Tensor | None = None
+        self,
+        x: torch.Tensor,
+        single_cond: torch.Tensor | None = None,
+        projected: tuple[Tensor, Tensor] | None = None,
     ) -> torch.Tensor:
         """Compute the module output."""
-        return reference_adaln(self, x, single_cond)
+        return reference_adaln(self, x, single_cond, projected)
 
 
 class AdaLNZero(nn.Module):
@@ -223,6 +249,7 @@ class AdaLNZero(nn.Module):
         super().__init__()
 
         self.raw_gate = raw_gate
+        self.project_output = project
         self.c_in = c_in
         self.c_out = c_out
         self.c_single_cond = c_single_cond
@@ -241,11 +268,17 @@ class AdaLNZero(nn.Module):
                 self.c_single_cond, self.c_out, bias=zero_bias
             )
 
+    def project_cond(self, single_cond: torch.Tensor) -> torch.Tensor:
+        """The output gate's projection of the conditioning (before the sigmoid of a non-raw gate): ``forward`` takes it back as ``hoisted_gate``."""
+        context = F.silu(single_cond) if self.raw_gate and self.project_output else single_cond
+        return self.adaptive_zero_cond(context)
+
     def forward(
         self,
         x: torch.Tensor,
         single_cond: torch.Tensor | None = None,
         gate_logits: torch.Tensor | None = None,
+        hoisted_gate: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Compute the module output."""
         if (single_cond is None) != (self.use_single_cond is False):
@@ -259,7 +292,7 @@ class AdaLNZero(nn.Module):
             if single_cond is None:
                 message = "A gate-only output needs its conditioning"
                 raise ValueError(message)
-            return torch.sigmoid(self.adaptive_zero_cond(single_cond)) * x
+            return torch.sigmoid(self.adaptive_zero_cond(single_cond) if hoisted_gate is None else hoisted_gate) * x
         output = (
             self.transition2(x)
             if gate_logits is None
@@ -276,8 +309,11 @@ class AdaLNZero(nn.Module):
             # squashes its gate through a sigmoid and offsets it by -2, and no
             # weight can undo either -- a sigmoid does not fold into a linear
             # map.
-            context = F.silu(single_cond) if self.raw_gate else single_cond
-            cond = self.adaptive_zero_cond(context)
+            if hoisted_gate is None:
+                context = F.silu(single_cond) if self.raw_gate else single_cond
+                cond = self.adaptive_zero_cond(context)
+            else:
+                cond = hoisted_gate
             output = (cond if self.raw_gate else torch.sigmoid(cond)) * output
         return output
 
@@ -325,11 +361,15 @@ class DiffusionTransition(nn.Module):
             raw_gate=rms_conditioning,
         )
 
+    def project_cond(self, single_cond: torch.Tensor) -> tuple:
+        """``(adaln projection, output gate)`` of a conditioning that is the same at every call; ``forward`` takes it back as ``hoisted``."""
+        return self.adaptive_layernorm.project_cond(single_cond), self.adaptive_zero_init.project_cond(single_cond)
+
     def forward(
-        self, x: torch.Tensor, single_cond: torch.Tensor | None = None
+        self, x: torch.Tensor, single_cond: torch.Tensor | None = None, hoisted: tuple | None = None
     ) -> torch.Tensor:
         """Compute the module output."""
-        return reference_conditioned_transition(self, x, single_cond)
+        return reference_conditioned_transition(self, x, single_cond, hoisted)
 
 
 class GatedDiffusionTransition(DiffusionTransition):
@@ -345,13 +385,14 @@ class GatedDiffusionTransition(DiffusionTransition):
         self.a_to_b = nn.Linear(c_x, self.num_intermediate_factor * c_x, bias=False)
 
     def forward(
-        self, x: torch.Tensor, single_cond: torch.Tensor | None = None
+        self, x: torch.Tensor, single_cond: torch.Tensor | None = None, hoisted: tuple | None = None
     ) -> torch.Tensor:
         """Compute the module output."""
-        normed = self.adaptive_layernorm(x, single_cond)
+        adaln, out_gate = (None, None) if hoisted is None else hoisted
+        normed = self.adaptive_layernorm(x, single_cond, adaln)
         gate, value = self.transition1(normed).chunk(2, dim=-1)
         hidden = torch.nn.functional.silu(gate) * value * self.a_to_b(normed)
-        return self.adaptive_zero_init(hidden, single_cond)
+        return self.adaptive_zero_init(hidden, single_cond, hoisted_gate=out_gate)
 
 
 def conditioned_transition(spec: DenseSpec) -> type[DiffusionTransition]:
@@ -424,6 +465,14 @@ class CrossAttention(nn.Module):
             raw_gate=rms_conditioning,
         )
 
+    def project_cond(self, single_cond_q: torch.Tensor, single_cond_k: torch.Tensor) -> tuple:
+        """``(query norm, key norm, output gate)`` projections of the two conditionings: what ``forward`` reads of them and nothing else."""
+        return (
+            self.q_adaptive_layernorm.project_cond(single_cond_q),
+            self.k_adaptive_layernorm.project_cond(single_cond_k),
+            self.adaptive_zero_init.project_cond(single_cond_q),
+        )
+
     def forward(
         self,
         x_q: torch.Tensor,
@@ -437,8 +486,11 @@ class CrossAttention(nn.Module):
         keys_from_queries: Callable[[torch.Tensor], torch.Tensor] | None = None,
         rope_q: tuple[torch.Tensor, torch.Tensor] | None = None,
         rope_k: tuple[torch.Tensor, torch.Tensor] | None = None,
+        hoisted: tuple | None = None,
     ) -> torch.Tensor:
         """Compute the module output.
+
+        ``hoisted`` is :meth:`project_cond` of the two conditionings, made once per fold.
 
         ``keys_from_queries`` CHAINS the two adaptive normalisations instead of
         running them in parallel: the keys are gathered from the already-normed
@@ -477,10 +529,11 @@ class CrossAttention(nn.Module):
             # an attenuated average whose damage is intra-residue geometry.
             bias = torch.where(pair_mask[..., None, :, :], bias, -1e9)
 
-        x_q = self.q_adaptive_layernorm(x_q, single_cond_q)
+        q_proj, k_proj, out_gate = (None, None, None) if hoisted is None else hoisted
+        x_q = self.q_adaptive_layernorm(x_q, single_cond_q, q_proj)
         if keys_from_queries is not None:
             x_k = keys_from_queries(x_q)
-        x_k = self.k_adaptive_layernorm(x_k, single_cond_k)
+        x_k = self.k_adaptive_layernorm(x_k, single_cond_k, k_proj)
 
         q = self.q_projection(x_q)
         k = self.k_projection(x_k)
@@ -512,7 +565,7 @@ class CrossAttention(nn.Module):
 
         gate_logits = self.gating_query(x_q) if self.use_gating_query else None
         return self.adaptive_zero_init(
-            weighted_avg, single_cond_q, gate_logits=gate_logits
+            weighted_avg, single_cond_q, gate_logits=gate_logits, hoisted_gate=out_gate
         )
 
 
@@ -611,6 +664,18 @@ class DiffusionCrossAttTransformer(nn.Module):
             ]
         )
 
+    def project_cond(self, queries_single_cond: torch.Tensor, keys_single_cond: torch.Tensor) -> list[tuple]:
+        """Every conditioning projection of the stack, per block, for a conditioning that is the same at every sampler step of a fold (the atoms'
+        single conditioning: the reference conformer and the trunk, never the noisy coordinates). ``forward`` takes the list back as ``hoisted``
+        and skips those GEMMs, which are a third of this stack's kernels at one sample."""
+        return [
+            (
+                attention.project_cond(queries_single_cond, keys_single_cond),
+                transition.project_cond(queries_single_cond),
+            )
+            for attention, transition in zip(self.cross_attention, self.transition_block, strict=True)
+        ]
+
     def forward(
         self,
         queries_act: torch.Tensor,  # (num_subsets, num_queries, ch)
@@ -624,8 +689,11 @@ class DiffusionCrossAttTransformer(nn.Module):
         rope_q: tuple[torch.Tensor, torch.Tensor] | None = None,
         rope_k: tuple[torch.Tensor, torch.Tensor] | None = None,
         engine_inputs: tuple[torch.Tensor | None, ...] | None = None,
+        hoisted: list[tuple] | None = None,
     ) -> torch.Tensor:
         """Compute the module output.
+
+        ``hoisted`` is :meth:`project_cond` of the two conditionings (``None``: project them here).
 
         ``engine_inputs`` is the engine's ``(pair, key_mask[, uid])`` layout made once per fold by the
         caller (``uid``: the atoms' conformer ids, for a family whose pair mask is same-conformer): the engine hoists its pair bias per tensor object, and a view made here would be a
@@ -645,6 +713,7 @@ class DiffusionCrossAttTransformer(nn.Module):
             )
 
         for block_idx in range(self.num_blocks):
+            attention_hoisted, transition_hoisted = (None, None) if hoisted is None else hoisted[block_idx]
             gather = functools.partial(
                 atom_layout.convert, queries_to_keys, layout_axes=(-3, -2)
             )
@@ -665,8 +734,9 @@ class DiffusionCrossAttTransformer(nn.Module):
                         keys_from_queries=chained,
                         rope_q=rope_q,
                         rope_k=rope_k,
+                        hoisted=attention_hoisted,
                     )
-                    + self.transition_block[block_idx](queries_act, queries_single_cond)
+                    + self.transition_block[block_idx](queries_act, queries_single_cond, transition_hoisted)
                 )
                 continue
 
@@ -686,9 +756,12 @@ class DiffusionCrossAttTransformer(nn.Module):
                         keys_from_queries=chained,
                         rope_q=rope_q,
                         rope_k=rope_k,
+                        hoisted=attention_hoisted,
                     )
                 ),
-                transition=self.transition_block[block_idx],
+                transition=lambda value, cond, block_idx=block_idx, transition_hoisted=transition_hoisted: self.transition_block[block_idx](
+                    value, cond, transition_hoisted
+                ),
             )
 
         return queries_act
