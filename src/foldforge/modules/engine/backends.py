@@ -43,7 +43,8 @@ OP_CLASSES: dict[str, tuple[str, ...]] = {
     "layernorm": ("LayerNorm",),
     "conditioning": ("ConditionedTransition", "AdaptiveLayerNorm", "IdentityAdaptiveLayerNorm", "AdaptiveRMSNorm"),
     "dit_blocks": ("TokenDiTProtenix", "TokenDiTMiniWorldBiasOnly"),
-    "atom_blocks": ("AtomDiTProtenix", "AtomDiTOpenFold3", "AtomDiTBoltz2", "AtomDiTRoseTTAFold3", "AtomDiTChai1", "AtomDiTMiniWorld"),
+    "atom_blocks": ("AtomDiTProtenix", "AtomDiTOpenFold3", "AtomDiTBoltz2", "AtomDiTRoseTTAFold3", "AtomDiTChai1", "AtomDiTMiniWorld",
+                    "AtomDiTESMFold2Pair"),
     "sampler_ops": ("AugmentNoise", "AlignEuler", "PoolAtoms"),
 }
 OPS = tuple(OP_CLASSES)
@@ -60,7 +61,7 @@ def op_classes(op: str) -> tuple[type, ...]:
     """The engine classes of ``op`` (imports the engine)."""
     import miniworld_engine.modules as modules
 
-    return tuple(getattr(modules, name) for name in OP_CLASSES[op])
+    return tuple(getattr(modules, name) for name in OP_CLASSES[op] if hasattr(modules, name))  # a class newer than the engine is skipped
 
 
 def op_of(module: object) -> str | None:

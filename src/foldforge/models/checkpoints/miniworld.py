@@ -92,8 +92,29 @@ def load_into(model: nn.Module, path: Path, *, family: str) -> dict[str, Any]:
     for name in LOOSE:  # registered first (their shapes are the file's), then loaded like every other entry
         fourier.register_buffer(name.rsplit(".", 1)[1], torch.zeros_like(state[name], dtype=torch.float32).reshape(-1))
         state[name] = state[name].to(torch.float32).reshape(-1)
+    _adopt_dense_atom_stacks(model, state)
     model.load_state_dict(state, strict=True)
     return {"format": FORMAT, "format_version": VERSION, "source": blob.get("source"), "mapped_records": len(state)}
+
+
+def _adopt_dense_atom_stacks(model: nn.Module, state: dict[str, torch.Tensor]) -> None:
+    """A file written while ESMFold2's atom stacks were FoldForge's own (engine 2.5.1: ``cross_attention.i.*`` / ``transition_block.i.*``)
+    loaded into a graph whose stacks are engine ``AtomDiT("esmfold2_pair")`` blocks (``blocks.i.*``): the same conversion as at
+    convert time, in place. A file already in the block layout is left as it is."""
+    from foldforge.models.checkpoints.legacy import released
+    from foldforge.modules.engine.transformers import AtomDiTStack
+
+    for name, module in model.named_modules():
+        if not (isinstance(module, AtomDiTStack) and module.rotary) or f"{name}.blocks.0.attention.to_query.weight" in state:
+            continue
+        dense = {k[len(name) + 1 :]: v for k, v in state.items() if k.startswith(f"{name}.")}
+        if not dense:
+            continue
+        for key in dense:
+            del state[f"{name}.{key}"]
+        for i, tensors in enumerate(released.esmfold2_atom_blocks_from_released(dense, n_head=module.blocks[0].attention.n_head)):
+            for key, value in tensors.items():
+                state[f"{name}.blocks.{i}.{key}"] = value
 
 
 # ---------------------------------------------------------------------------------------------------------------------- converting
@@ -111,6 +132,8 @@ def _converters(engine_model: nn.Module) -> list[tuple[str, Any, nn.Module]]:
             first = module.blocks[0]
             if isinstance(module, TokenDiTStack):
                 listed = convert(state, n_head=first.attention.n_head, prefix=prefix)
+            elif module.rotary:  # ESMFold2's atom block: no K / V AdaLN choice, no gate biases
+                listed = released.esmfold2_atom_blocks_from_released(state, n_head=first.attention.n_head, prefix=prefix)
             else:
                 listed = convert(state, n_head=first.attention.n_head, kv_norm=first.kv_norm, prefix=prefix)
             if len(listed) != len(module.blocks):

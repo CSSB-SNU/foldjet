@@ -16,7 +16,7 @@ choices FoldForge makes (the keys below, the precision, the options a family's e
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Literal
 
 import torch
@@ -72,18 +72,29 @@ MODEL_KEYS: dict[str, ModelKeys] = {
     "boltz2": ModelKeys("boltz2", "boltz2", "boltz2"),
     "rosettafold3": ModelKeys("rf3", "rosettafold3", "rosettafold3"),
     "chai1": ModelKeys("chai1", "chai1", "chai1", confidence="chai1_confidence"),
-    "esmfold2": ModelKeys(None, "esmfold2", None),
-    "esmfold2-fast": ModelKeys(None, "esmfold2", None),
+    "esmfold2": ModelKeys(None, "esmfold2", "esmfold2_pair"),
+    "esmfold2-fast": ModelKeys(None, "esmfold2", "esmfold2_pair"),
 }
 
 
+def engine_has_atom_dit(key: str) -> bool:
+    """Whether the installed engine has an ``AtomDiT(model=key)`` class (``esmfold2_pair`` is newer than engine 2.5.1)."""
+    from miniworld_engine.modules.atom_dit import ATOM_DIT_MODELS
+
+    return key in ATOM_DIT_MODELS
+
+
 def model_keys(family: str) -> ModelKeys:
-    """The selector keys of ``family``."""
+    """The selector keys of ``family``. An ``atom_dit`` key the installed engine does not have reads as ``None`` (the family keeps its
+    own atom stack: ESMFold2 on engine 2.5.1)."""
     try:
-        return MODEL_KEYS[family]
+        keys = MODEL_KEYS[family]
     except KeyError:
         known = ", ".join(sorted(MODEL_KEYS))
         raise ValueError(f"no engine selector keys for family {family!r}; known: {known}") from None
+    if keys.atom_dit is not None and not engine_has_atom_dit(keys.atom_dit):
+        return replace(keys, atom_dit=None)
+    return keys
 
 
 def set_norm_eps(module: nn.Module, eps: float) -> None:

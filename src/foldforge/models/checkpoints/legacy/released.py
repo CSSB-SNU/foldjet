@@ -347,6 +347,43 @@ def atom_dit_blocks_from_released(state: State, *, n_head: int, kv_norm: str, pr
     return blocks
 
 
+def esmfold2_atom_blocks_from_released(state: State, *, n_head: int = 4, prefix: str = "") -> list[dict[str, Tensor]]:
+    """One engine ``AtomDiT("esmfold2_pair")`` block state dict per block of ESMFold2's ``DiffusionCrossAttTransformer``.
+
+    ESMFold2's AdaLNs are RMS-conditioned (``single_cond_scale`` / ``single_cond_bias`` only, no layer-norm weight and no scale bias) and its
+    two output gates are raw ``W silu(c)`` (no bias), which :func:`atom_dit_blocks_from_released` does not take. The pair LayerNorm is ONE
+    shared weight (replicated per block), the pair projection ONE ``Linear(d_pair, n_blocks * n_head)`` (rows ``n_head b .. n_head b + n_head - 1``
+    to block ``b``), ``transition1`` ``[2 n c, c]`` is ``chunk(2)`` into ``expand_a`` / ``expand_b``."""
+    s = _sub(state, prefix)
+    n_blocks = count_blocks(s, "cross_attention")
+    blocks: list[dict[str, Tensor]] = []
+    for i in range(n_blocks):
+        key, tkey = f"cross_attention.{i}", f"transition_block.{i}"
+        out: dict[str, Tensor] = {}
+        for dst, src in (("attention.ada_ln_in", f"{key}.q_adaptive_layernorm"), ("attention.ada_ln_kv", f"{key}.k_adaptive_layernorm"),
+                         ("transition.ada_ln_in", f"{tkey}.adaptive_layernorm")):
+            _need(s, f"{src}.single_cond_scale.weight", f"{src}.single_cond_bias.weight")
+            out[f"{dst}.to_scale.weight"] = s[f"{src}.single_cond_scale.weight"]
+            out[f"{dst}.to_bias.weight"] = s[f"{src}.single_cond_bias.weight"]
+        for dst, src in (("to_query", "q_projection"), ("to_key", "k_projection"), ("to_value", "v_projection"), ("to_gate", "gating_query")):
+            _need(s, f"{key}.{src}.weight")
+            out[f"attention.{dst}.weight"] = s[f"{key}.{src}.weight"]
+        _need(s, f"{key}.q_projection.bias", f"{key}.adaptive_zero_init.transition2.weight", f"{key}.adaptive_zero_init.adaptive_zero_cond.weight")
+        out["attention.to_query.bias"] = s[f"{key}.q_projection.bias"]
+        out["attention.to_out.weight"] = s[f"{key}.adaptive_zero_init.transition2.weight"]
+        out["attention.to_scale.weight"] = s[f"{key}.adaptive_zero_init.adaptive_zero_cond.weight"]
+        _need(s, "pair_input_layer_norm.weight", "pair_logits_projection.weight")
+        out["attention.ln_pair.weight"] = s["pair_input_layer_norm.weight"]
+        out["attention.to_bias.weight"] = s["pair_logits_projection.weight"][i * n_head : (i + 1) * n_head]
+        _need(s, f"{tkey}.transition1.weight", f"{tkey}.adaptive_zero_init.transition2.weight", f"{tkey}.adaptive_zero_init.adaptive_zero_cond.weight")
+        a, b = s[f"{tkey}.transition1.weight"].chunk(2, dim=0)
+        out["transition.expand_a.weight"], out["transition.expand_b.weight"] = a, b
+        out["transition.squeeze.weight"] = s[f"{tkey}.adaptive_zero_init.transition2.weight"]
+        out["transition.to_scale.weight"] = s[f"{tkey}.adaptive_zero_init.adaptive_zero_cond.weight"]
+        blocks.append({k: v.contiguous() for k, v in out.items()})
+    return blocks
+
+
 # ---------------------------------------------------------------------------------------------------------------- loading
 def fit_to_module(module: nn.Module, converted: Mapping[str, Tensor]) -> tuple[dict[str, Tensor], list[str]]:
     """``(kept, dropped)``: ``converted`` restricted to the keys ``module`` has; ``dropped`` names the rest, so a caller can demand that

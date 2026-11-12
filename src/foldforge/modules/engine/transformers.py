@@ -79,6 +79,8 @@ class AtomDiTStack(nn.Module):
     def __init__(self, blocks: list[nn.Module]) -> None:
         super().__init__()
         self.blocks = nn.ModuleList(blocks)
+        #: ESMFold2's block (``AtomDiT("esmfold2_pair")``): the atom pair AND rotary q / k (per-atom tables), the ``+/- 64`` rank window inside
+        self.rotary = type(blocks[0]).__name__ == "AtomDiTESMFold2Pair"
 
     def forward(
         self,
@@ -95,13 +97,13 @@ class AtomDiTStack(nn.Module):
         engine_inputs: tuple[Tensor | None, ...] | None = None,
     ) -> Tensor:
         """Every block in order."""
-        if rope_q is not None or rope_k is not None:
+        if (rope_q is not None or rope_k is not None) and not self.rotary:
             raise ValueError("a rotary atom transformer is not an engine AtomDiT block with a pair")
         windows, queries, channels = queries_act.shape[-3:]
         atoms = windows * queries
         lead = queries_act.shape[:-3]
         pair, key_mask, uid = ((*engine_inputs, None, None, None) if engine_inputs else (None, None, None))[:3]
-        if pair_mask is not None and uid is None:
+        if pair_mask is not None and uid is None and not self.rotary:  # the rotary block builds its own rank window
             raise ValueError("a pair mask (same-conformer attention) needs the conformer ids in engine_inputs")
         if uid is not None and uid.ndim == 1:  # the encoder keeps the flat ids [N]; the engine takes [B, N]
             uid = uid[None]
@@ -112,6 +114,14 @@ class AtomDiTStack(nn.Module):
         x = engine_activation(queries_act.reshape(-1, 1, atoms, channels))  # the engine's master blocks take bf16 activations, not fp32
         cond = engine_activation(queries_single_cond.reshape(1, 1, atoms, channels)).expand(x.shape[0], 1, atoms, channels)
         pair = engine_activation(pair)
+        if self.rotary:
+            if rope_q is None:
+                raise ValueError("the ESMFold2 atom block rotates q and k: the caller passes the rope tables")
+            # the per-atom tables of the queries layout [windows, 32, r] (a key takes its own atom's row: the block gathers them itself)
+            rope = tuple(table.reshape(1, atoms, table.shape[-1]).to(torch.float32) for table in rope_q)
+            for block in self.blocks:
+                x = block(x, cond, pair, key_mask, rope=rope)
+            return x.reshape(*lead, windows, queries, channels)
         for block in self.blocks:
             x = block(x, cond, pair, key_mask, uid) if uid is not None else block(x, cond, pair, key_mask)
         return x.reshape(*lead, windows, queries, channels)
@@ -170,6 +180,8 @@ def atom_dit_stack(
     extra: dict[str, Any] = {"key_window": key_window} if key_window is not None else {}
     if adaln_eps is not None:
         extra["adaln_eps"] = adaln_eps
+    if key == "esmfold2_pair":  # one window (192 keys, the +/- 64 rank band) and its own AdaLN epsilon: nothing to choose
+        extra = {}
     blocks = [AtomDiT(key, d_single, d_cond, d_pair, n_head, n, **extra) for _ in range(n_blocks)]
     return finish(AtomDiTStack(blocks), precision)  # type: ignore[return-value]
 
