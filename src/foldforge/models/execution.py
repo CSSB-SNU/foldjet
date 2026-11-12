@@ -387,6 +387,7 @@ class SamplerScope:
                 self,
                 max_entries=config.max_graphs,
                 budget_fraction=getattr(config, "sampler_graph_cache_fraction", 0.3),
+                max_fold_bytes=getattr(config, "sampler_graph_cache_max_fold_bytes", 2 << 30),
             )
 
     def reset_counters(self) -> None:

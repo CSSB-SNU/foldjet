@@ -422,3 +422,10 @@ def test_static_clone_keeps_expanded_dims_expanded_and_load_writes_the_unique_pa
     new = torch.full((1, 6), 7.0).expand(4, 6)
     entry.load([new, torch.ones(2)], None)  # a plain copy_ into an expanded tensor would raise
     assert static.data_ptr() == pointer and static.stride(0) == 0 and torch.equal(static, new)
+
+
+def test_a_fold_larger_than_the_cutoff_is_not_cached(cached_call, monkeypatch) -> None:
+    monkeypatch.setattr(engine_capture, "tensor_bytes", lambda held, seen=None: 3 << 30)
+    assert cached_call.run([torch.ones(2, 2)]) is None  # the caller runs the per-fold capture: no static copy next to the fold
+    assert cached_call.counters.uncached == 1 and not cached_call.captures
+    assert cached_call.cache.max_fold_bytes == 2 << 30

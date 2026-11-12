@@ -136,6 +136,8 @@ class ExecutionConfig(BaseModel):
     # Largest share of the device's memory the cached sampler graphs (private pools + static folds) may hold together; a graph larger than
     # that is used for its fold and dropped.
     sampler_graph_cache_fraction: float = Field(default=0.3, gt=0.0, le=1.0)
+    # A fold whose tensors (batch, conditioning, atom state) are larger than this is not cached: the graph's static copy would sit next to the fold.
+    sampler_graph_cache_max_fold_bytes: int = Field(default=2 << 30, ge=0)
     # scope=trunk only: which trunk-side callables get a graph of their own.
     trunk_sites: tuple[
         Literal["evoformer", "confidence_head", "distogram_head"], ...

@@ -457,10 +457,20 @@ class SamplerGraphCache:
     ``counters`` is the object whose attributes count (``cache_hits``, ``cache_misses``, ``cache_evictions``, ...; missing ones are skipped).
     """
 
-    def __init__(self, counters: object | None = None, *, max_entries: int = 4, budget_fraction: float = 0.3) -> None:
+    def __init__(
+        self,
+        counters: object | None = None,
+        *,
+        max_entries: int = 4,
+        budget_fraction: float = 0.3,
+        max_fold_bytes: int = 2 << 30,
+    ) -> None:
         self.counters = counters
         self.max_entries = max_entries
         self.budget_fraction = budget_fraction
+        #: a fold whose tensors are larger than this is not cached: its static copy would sit next to the fold (the memory a big fold needs), and the
+        #: capture it saves is a few percent of such a forward
+        self.max_fold_bytes = max_fold_bytes
         self.entries: OrderedDict[Any, _Entry] = OrderedDict()
         self.weights: tuple[int, int] | None = None
         #: bytes the previous capture reserved (0 before the first)
@@ -672,6 +682,9 @@ def _sample_cached(
     try:
         structure, leaves = _flatten(tree)
     except (TypeError, ValueError):
+        cache.bump("uncached")
+        return None
+    if engine_capture.tensor_bytes(leaves) > cache.max_fold_bytes:
         cache.bump("uncached")
         return None
     row0 = None if table is None else table[0]
