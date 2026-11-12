@@ -87,6 +87,19 @@ def engine_activation(tensor: torch.Tensor | None) -> torch.Tensor | None:
     return tensor.to(torch.get_autocast_dtype(tensor.device.type))
 
 
+def diffusion_autocast(model: nn.Module) -> contextlib.AbstractContextManager[None]:
+    """The autocast the diffusion head (denoiser, conditioning) runs under.
+
+    ``bf16`` and ``fp32``: the model's own (:func:`activation_autocast`). ``af3_default`` (``model.reference_precision``): AF3 runs the diffusion
+    module in fp32 while the trunk is bf16, so on a ``master`` model the head runs with autocast DISABLED -- fp32 activations on the fp32
+    masters, TF32 matmuls where torch's matmul precision allows. Disabling is explicit because the entry points open the bf16 autocast
+    around the whole forward and :func:`engine_activation` would turn fp32 head activations back into bf16 inside it."""
+    if getattr(model, "foldforge_precision", None) == "master" and getattr(model, "reference_precision", False):
+        device = next(model.parameters()).device.type
+        return torch.autocast(device, enabled=False)
+    return activation_autocast(model)
+
+
 def set_tf32_policy(model: nn.Module, *, tf32: bool, diffusion_tf32: bool = False) -> None:
     """Record whether TF32 tensor cores may serve this model's modules (``foldforge_tf32`` on every module).
 

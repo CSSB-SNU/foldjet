@@ -248,10 +248,8 @@ def load_checkpoint(  # noqa: C901, PLR0912, PLR0915 - one explicit checkpoint l
         skip=engine_skip,
         plan=plan,
     )
-    # The engine's FP32 kernels run on TF32 tensor cores: the diffusion head of
-    # af3_default takes them as its
-    # atom blocks always have; everything else waits for ``execution.tf32``
-    # (models.execution.Execution).
+    # af3_default: the diffusion head runs with the autocast disabled (fp32 activations; `diffusion_autocast`); the TF32 flag below only matters
+    # when execution.tf32 allows TF32 tensor cores (models.execution.Execution).
     set_tf32_policy(model, tf32=False, diffusion_tf32=precision_policy == "af3_default")
     # Residual modules whose every parameter is ~1e-37 return their input at inference (the kits skip them too); `engine.skip_dead_modules: false` runs them all.
     from foldforge.modules.dense.dead import clear_dead, mark_dead

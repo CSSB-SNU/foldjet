@@ -29,7 +29,7 @@ from foldforge.modules.dense.spec import ALPHAFOLD3, DenseSpec
 from foldforge.modules.dense.structural_tokens import StructuralTokenExpander
 from foldforge.modules.dense.template import TemplateEmbedding
 from foldforge.modules.engine import graph as engine_graph
-from foldforge.modules.engine.configure import activation_autocast
+from foldforge.modules.engine.configure import diffusion_autocast
 from foldforge.utils.rigid_align import kabsch_rotation
 
 # Copyright 2024 DeepMind Technologies Limited
@@ -953,7 +953,7 @@ class AlphaFold3(nn.Module):
         ) -> torch.Tensor:
             """Compute denoise."""
             # the sampler loop runs outside the activation autocast (below); the network inside it does
-            with activation_autocast(self):
+            with diffusion_autocast(self):
                 return self.diffusion_head(
                     positions_noisy=coords,
                     noise_level=sigma,
@@ -980,7 +980,7 @@ class AlphaFold3(nn.Module):
             return weighted_rigid_align(noisy, denoised, mask)
 
         def conditioning(levels: torch.Tensor) -> torch.Tensor:
-            with activation_autocast(self):
+            with diffusion_autocast(self):
                 return self.diffusion_head.conditioning_table(batch, embeddings, levels)
 
         # The sampler state is fp32 coordinates: the random rigid motion, the Kabsch alignment and the Euler step run OUTSIDE the activation autocast

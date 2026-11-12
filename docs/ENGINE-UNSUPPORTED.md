@@ -106,9 +106,16 @@ Two consequences measured on FoldBench (115 assemblies, 2026-11-10/11):
 - **The diffusion sampler loop runs OUTSIDE the activation autocast** (`models/architectures/af3.py::_sample_diffusion`; only the network calls `denoise` and
   the conditioning table open it). Inside it, the random rigid motion and the Kabsch alignment matmuls rounded the fp32 coordinates to bf16 at every one of
   the 200 steps: consecutive CA-CA distance std 0.10-0.21 A instead of 0.02-0.05 A and FoldBench lDDT 0.88 -> 0.17 with TM-score and DockQ unchanged.
-- **`af3_default` is `bf16` plus a TF32 flag that has no effect** in the port: the diffusion head runs under the same bf16 autocast as the trunk
-  (measured: bit-identical structures to `bf16`), where AF3's own policy runs the diffusion module in fp32. The flag `diffusion_tf32` only reaches the
-  engine fp32 backends, which the head does not use under `master`. Running the head in fp32 is the `fp32` precision (whole model).
+- **`af3_default` runs the diffusion head in fp32** (since 2026-11-12; before it was bit-identical to `bf16`). AF3 runs the diffusion module in fp32 while the trunk is bf16:
+  the trunk and the heads stay `master` (fp32 masters, bf16 activations), while the denoiser and the conditioning table (`models/architectures/af3.py::_sample_diffusion`)
+  run under `modules/engine/configure.py::diffusion_autocast`, which DISABLES the autocast (the entry points open the bf16 autocast around the whole forward and
+  `engine_activation` would turn fp32 head activations back into bf16 inside it). The head gets fp32 activations (`reference_precision` casts the pair / single
+  trunk outputs) on the fp32 masters. The engine `cuda` backends of the head refuse them (matmul precision `highest`: "float32 activations run on TF32 tensor cores only")
+  and the engine `pytorch` backend serves them in true fp32 (logged, `engine.unsupported: fallback`); `execution.tf32: true` makes them TF32 cores.
+  `bf16` is unchanged (125 of 125 CIFs md5-identical on the 5 FoldBench targets). Measured 2026-11-12 on H100 (protenix1, 5 targets x 5 seeds x 5 samples): not
+  closer to fp32 than `bf16` (all-atom RMSD to fp32 0.26 / 2.44 / 11.86 / 1.02 / 0.16 A against 0.29 / 2.54 / 11.81 / 1.01 / 0.21 A: noise; FoldBench scores equal),
+  and 1.5x slower (5I28 warm forward n=1 0.44 -> 0.68 s, n=4 1.29 -> 2.00 s; `fp32`: 1.05 s, 10.3 s). It is the AF3 policy as defined, not an accuracy gain.
+  Training (`train/step.py`) keeps the head under the bf16 autocast.
 
 ## The legacy converter graph (not a gap, a boundary)
 

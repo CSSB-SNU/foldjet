@@ -82,7 +82,7 @@ def make_spec(n: int, template_n: int) -> dict:
 def make_config(recycles: int, extra: dict, repeats: int) -> dict:
     config = {
         "backend": "miniworld",
-        "precision": "bf16",
+        "precision": os.environ.get("FOLDFORGE_5I28_PRECISION", "bf16"),  # bf16 (the benchmark), af3_default | fp32 for precision checks
         "mode": "exact",
         "trunk_seed": 0,
         "diffusion_seed": 0,

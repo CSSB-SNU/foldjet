@@ -57,7 +57,7 @@ module with zero observations is not evidence that it did not run. Replay counts
 
 `bf16` (default) and `af3_default` run the engine's `master` precision: fp32 parameters, bf16 activations under autocast (`master`); `fp32` runs
 plain fp32 (`fp32`); `model_default` is `af3_default`. There are no native-bf16 parameters. `af3_default` loads the released values exactly into
-fp32 (a bf16 value is exact in fp32) and lets the diffusion head use TF32 while the trunk stays exact. The resulting engine precision is
+fp32 (a bf16 value is exact in fp32) and runs the diffusion head (denoiser, conditioning) in fp32 with the autocast disabled while the trunk and heads stay `master` (AF3's own policy; about 1.5x slower than `bf16`, measured structures not closer to `fp32`; `bf16` is unchanged; training keeps the head under bf16). The resulting engine precision is
 `precision` in the load report.
 
 ## `backend`, `engine.ops`, `engine.unsupported`
