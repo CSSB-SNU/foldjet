@@ -177,12 +177,16 @@ def create_relative_encoding(
     *,
     chain_bucket_on_same_chain: bool = False,
     dtype: torch.dtype | None = None,
+    rows: slice | None = None,
 ) -> torch.Tensor:
     """Add relative position encodings.
 
     ``dtype`` is the dtype of the result (int64 when None). The 0/1 values are the
     same either way; a caller that casts the result anyway asks for the dtype here and
     never builds the int64 one-hot (8 bytes per entry, ``[N, N, 139]``).
+
+    ``rows`` (a slice of the left token axis) returns only those rows of the result: row i of the band is row ``rows.start + i`` of the
+    whole, bit for bit (every entry is a function of one token pair).
     """
 
     def one_hot(index: torch.Tensor, classes: int) -> torch.Tensor:
@@ -198,19 +202,22 @@ def create_relative_encoding(
     entity_id = seq_features.entity_id
     sym_id = seq_features.sym_id
 
-    left_asym_id = asym_id[:, None]
+    def left(x: torch.Tensor) -> torch.Tensor:
+        return (x if rows is None else x[rows])[:, None]
+
+    left_asym_id = left(asym_id)
     right_asym_id = asym_id[None, :]
 
-    left_residue_index = residue_index[:, None]
+    left_residue_index = left(residue_index)
     right_residue_index = residue_index[None, :]
 
-    left_token_index = token_index[:, None]
+    left_token_index = left(token_index)
     right_token_index = token_index[None, :]
 
-    left_entity_id = entity_id[:, None]
+    left_entity_id = left(entity_id)
     right_entity_id = entity_id[None, :]
 
-    left_sym_id = sym_id[:, None]
+    left_sym_id = left(sym_id)
     right_sym_id = sym_id[None, :]
 
     # Embed relative positions using a one-hot embedding of distance along chain

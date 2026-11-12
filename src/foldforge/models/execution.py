@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import contextlib
 import dataclasses
+import gc
+import importlib
 import time
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, cast
@@ -266,6 +268,15 @@ class ExecutedCallable:
             self.evictions += 1
             torch.cuda.empty_cache()
 
+    def release_fold(self) -> bool:
+        """Drop the graphs of the current fold epoch (a callable keyed per fold only; the signature-cached ones stay). True when any were held."""
+        if (self.epoch_key is None and self.epoch_fn is None) or not self.graphs:
+            return False
+        torch.cuda.synchronize()
+        self.graphs.clear()
+        self.epoch = None
+        return True
+
     def __call__(self, *args, **kwargs):
         if torch.is_grad_enabled():
             raise RuntimeError("Inference execution requires no_grad or inference_mode")
@@ -390,6 +401,7 @@ class Execution:
             diffusion_tf32=bool(getattr(model, "reference_precision", False)),
         )
         _autocast_entries(model)
+        model.foldforge_release_fold_state = self.release_fold_state  # called by `AlphaFold3.run_trunk` before a new fold's trunk
         self.autocast_scopes = getattr(model, "reference_autocast_scopes", [])
         head = getattr(model, "confidence_head", None)
         if head is not None and hasattr(head, "sample_chunk_override"):
@@ -444,6 +456,28 @@ class Execution:
             # The whole sampler step goes in one graph (see `models.sampler_graph`).
             self.sampler_scope = SamplerScope(self.wrappers[0])
         model.foldforge_sampler_scope = self.sampler_scope
+
+    def release_fold_state(self) -> None:
+        """Release the PREVIOUS fold's diffusion state before the next fold's trunk runs, so the trunk does not run next to it.
+
+        The head's fold conditioning and kept pair, the per-fold denoiser graphs (each keeps a private pool holding that fold's conditioning), and the
+        engine's dead captured inputs. The trunk / confidence / distogram graphs are signature-cached across folds and stay.
+        """
+        head = getattr(self.model, "diffusion_head", None)
+        if head is not None:
+            head.release_fold_state()
+        for wrapped in self.wrappers:
+            wrapped.release_fold()
+        # The previous fold's sampler closures (`denoise`, `conditioning`) and its tensors form reference cycles: only a collection frees them, and
+        # the engine's per-input entries (below) die with their tensors.
+        gc.collect()
+        try:
+            capture = importlib.import_module("miniworld_engine.kernels._capture")
+        except ImportError:  # no engine: nothing of it to release
+            capture = None
+        release_dead_inputs = getattr(capture, "release_dead_inputs", None)  # engines before 2.5.5 have none
+        if release_dead_inputs is not None:
+            release_dead_inputs()
 
     def begin_request(self) -> None:
         """Reset observations while preserving compiled callables and graph caches."""

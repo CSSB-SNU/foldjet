@@ -47,6 +47,13 @@ SIGMA_DATA = 16.0
 #:the transitions at once.
 MAX_TABLE_ROWS = 32768
 
+#: Banded pair conditioning (`DiffusionHead._fold_conditioning_banded`): a trunk pair whose fp32 copy would exceed
+#: ``PAIR_BAND_THRESHOLD_BYTES`` is conditioned ``PAIR_BAND_BYTES`` of fp32 rows at a time, so the whole-pair fp32 copy and the
+#: ``[S, S, 2 * pair_channel]`` concatenation are never materialized (22.5 GiB each at OpenDDE n=16). Every op of the chain is per token
+#: pair, so the bands equal the unbanded result bit for bit; below the threshold the unbanded code runs unchanged.
+PAIR_BAND_THRESHOLD_BYTES = 4 << 30
+PAIR_BAND_BYTES = 1 << 30
+
 
 def fourier_features(value: torch.Tensor, weight: torch.Tensor, bias: torch.Tensor) -> torch.Tensor:
     """``cos(2 pi (value * weight + bias))`` for scalar noise levels, with the checkpoint's fixed projection."""
@@ -195,6 +202,13 @@ class DiffusionHead(nn.Module):
         """A conditioning transition (no conditioning input, factor 2): the engine `Transition`."""
         return engine_graph.make_conditioning_transition(width)
 
+    def release_fold_state(self) -> None:
+        """Drop the fold-scoped state this head keeps between sampler calls: the fold conditioning and the token transformer's kept pair."""
+        self._fold = None
+        release = getattr(self.transformer, "release_fold", None)
+        if release is not None:
+            release()
+
     def _fold_conditioning(
         self,
         batch,
@@ -209,6 +223,8 @@ class DiffusionHead(nn.Module):
         Both read only the trunk output and the batch, never the noise level or the
         coordinates, so they are the same at every sampler step of a fold.
         """
+        if self._pair_band_rows(embeddings["pair"]) is not None:
+            return self._fold_conditioning_banded(batch, embeddings, use_conditioning)
         # Official AF3 hands FP32 trunk embeddings to its FP32 denoiser.
         # Keep this boundary explicit when the trunk itself uses BF16.
         if self.single_cond_initial_projection.weight.dtype == torch.float32:
@@ -242,6 +258,10 @@ class DiffusionHead(nn.Module):
 
         # The diffusion module takes the structure projection where the family
         # trained one; every other family hands it the same tensor as the trunk.
+        return self._single_conditioning(embeddings, single_embedding), pair_cond
+
+    def _single_conditioning(self, embeddings, single_embedding) -> torch.Tensor:
+        """The noise-independent single conditioning of one fold (``single_embedding`` = ``use_conditioning * single``)."""
         target_feat = embeddings.get("structure_target_feat", embeddings["target_feat"])
         if self.spec.single_cond_layout == "esm":
             target_feat = featurization.widen_to_esm_classes(target_feat)
@@ -264,8 +284,54 @@ class DiffusionHead(nn.Module):
                 ],
                 dim=-1,
             )
-        single_cond = self.single_cond_initial_projection(self.single_cond_initial_norm(features_1d))
+        return self.single_cond_initial_projection(self.single_cond_initial_norm(features_1d))
 
+    def _pair_band_rows(self, pair: torch.Tensor) -> int | None:
+        """Rows per band when the fold's pair conditioning runs banded, else None (the unbanded path)."""
+        f32 = self.single_cond_initial_projection.weight.dtype == torch.float32
+        row_bytes = pair[0].numel() * (4 if f32 else pair.element_size())
+        if row_bytes * pair.shape[0] <= PAIR_BAND_THRESHOLD_BYTES:
+            return None
+        return max(1, PAIR_BAND_BYTES // row_bytes)
+
+    def _fold_conditioning_banded(self, batch, embeddings, use_conditioning):
+        """`_fold_conditioning` with the pair part in row bands (same arithmetic per token pair, bit-identical; see ``PAIR_BAND_BYTES``)."""
+        f32 = self.single_cond_initial_projection.weight.dtype == torch.float32
+        pair = embeddings["pair"]
+        rows = self._pair_band_rows(pair)
+        # The fp32 trunk-embedding boundary, for the token-sized tensors only (the pair ones are cast band by band).
+        small = {name: embeddings[name] for name in ("single", "target_feat", "structure_target_feat") if name in embeddings}
+        if f32:
+            small = {name: value.float() for name, value in small.items()}
+        single_cond = self._single_conditioning(small, use_conditioning * small["single"])
+        dtype = torch.float32 if f32 else pair.dtype
+        pair_cond = None
+        for start in range(0, pair.shape[0], rows):
+            band = slice(start, start + rows)
+            pair_embedding = use_conditioning * pair[band].to(dtype)
+            if self.compress_trunk_pair:
+                pair_embedding = self.z_trunk_projection(self.z_trunk_norm(pair_embedding))
+            if self.pair_init_cond:
+                second = embeddings["pair_init"][band].to(dtype).to(dtype=pair_embedding.dtype)
+            else:
+                second = featurization.create_relative_encoding(
+                    batch.token_features,
+                    max_relative_idx=32,
+                    max_relative_chain=2,
+                    chain_bucket_on_same_chain=self.spec.chain_bucket_on_same_chain,
+                    dtype=pair_embedding.dtype,
+                    rows=band,
+                )
+                if self.relpe_projection is not None:
+                    second = self.relpe_projection(second)
+            piece = self.pair_cond_initial_projection(self.pair_cond_initial_norm(torch.concatenate([pair_embedding, second], dim=-1)))
+            piece = _plus_transition(self.pair_transition_0, piece)
+            piece = _plus_transition(self.pair_transition_1, piece)
+            if self.cond_final_norm:
+                piece = self.pair_cond_final_norm(piece)
+            if pair_cond is None:
+                pair_cond = piece.new_empty((pair.shape[0], *piece.shape[1:]))
+            pair_cond[band] = piece
         return single_cond, pair_cond
 
     def _fold_atom_state(self, batch, embeddings, pair_cond):
