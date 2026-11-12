@@ -573,8 +573,9 @@ class Execution:
 
     def release_sampler_graphs(self) -> None:
         """Drop the cached sampler graphs (and with them their static buffers and pools)."""
-        if self.sampler_scope is not None:
-            self.sampler_scope.release_graphs()
+        scope = getattr(self, "sampler_scope", None)
+        if scope is not None:
+            scope.release_graphs()
 
     def report(self, *, require_compile: bool = True) -> dict[str, Any]:
         """Report observed compiler graphs and successful manual replays."""
