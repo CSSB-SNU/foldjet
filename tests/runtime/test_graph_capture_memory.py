@@ -74,3 +74,22 @@ def test_make_room_does_nothing_before_the_first_capture_or_with_enough_memory(m
     graphed._make_room()  # noqa: SLF001
     assert list(graphed.graphs) == ["a"]
     assert graphed.evictions == 0
+
+
+def test_flatten_leaves_no_reference_cycle_holding_the_graph_inputs():
+    """`_flatten`'s recursive closure referenced its own cell: the input tensors lived until a full gc (3 GiB at boltz2 n = 16)."""
+    import gc
+    import weakref
+
+    gc.collect()
+    gc.disable()
+    try:
+        tensor = torch.empty(4, device="meta")  # not a CPU tensor: `_flatten` keeps it as a graph input (CPU integer metadata is inlined)
+        alive = weakref.ref(tensor)
+        signature, tensors = execution._flatten({"a": [tensor], "b": (None, 1)})
+        assert len(tensors) == 1 and tensors[0] is tensor
+        assert signature
+        del tensor, tensors
+        assert alive() is None  # freed by reference counting alone
+    finally:
+        gc.enable()

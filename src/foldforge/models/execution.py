@@ -114,7 +114,11 @@ def _flatten(value):
             return v
         raise TypeError(f"Unsupported graph input: {type(v).__name__}")
 
-    return visit(value), tensors
+    result = visit(value)
+    # The recursive closure references its own cell: a reference cycle that keeps `tensors` (every graph input, e.g. the cold forward's pair tensors:
+    # 3 GiB at boltz2 n = 16) alive until a full collection, whose timing then shifts the peak memory between engine versions.
+    del visit
+    return result, tensors
 
 
 def _static_inputs(on: bool):
