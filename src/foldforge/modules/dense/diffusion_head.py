@@ -227,7 +227,8 @@ class DiffusionHead(nn.Module):
                 max_relative_idx=32,
                 max_relative_chain=2,
                 chain_bucket_on_same_chain=self.spec.chain_bucket_on_same_chain,
-            ).to(dtype=pair_embedding.dtype)
+                dtype=pair_embedding.dtype,
+            )
             if self.relpe_projection is not None:
                 second = self.relpe_projection(second)
         features_2d = torch.concatenate([pair_embedding, second], dim=-1)

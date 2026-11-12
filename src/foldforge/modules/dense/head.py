@@ -10,6 +10,9 @@
 # https://github.com/google-deepmind/alphafold3/blob/main/WEIGHTS_TERMS_OF_USE.md
 
 
+import contextlib
+from collections.abc import Iterator
+
 import einops
 import torch
 import torch.nn as nn
@@ -191,16 +194,17 @@ class ConfidenceReembedding(nn.Module):
             self.distogram_boundaries = nn.Parameter(torch.zeros(bins - 1))
         self.distogram_feat_project = nn.Linear(bins, c_pair, bias=False)
 
-    def forward(
+    def fold_terms(
         self,
         pair: torch.Tensor,
         single: torch.Tensor,
         target_feat: torch.Tensor,
-        positions: torch.Tensor,
-        pair_mask: torch.Tensor,
         batch: feat_batch.Batch,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        """Return the re-embedded (pair, single)."""
+        """The re-embedded (pair, single) before the distogram term: everything that does not read the positions.
+
+        The same for every diffusion sample of a fold, so a caller with several samples builds it once.
+        """
         dtype = pair.dtype
         if self.esm_classes:
             target_feat = featurization.widen_to_esm_classes(target_feat)
@@ -215,7 +219,8 @@ class ConfidenceReembedding(nn.Module):
                 max_relative_idx=32,
                 max_relative_chain=2,
                 chain_bucket_on_same_chain=self.chain_bucket_on_same_chain,
-            ).to(dtype)
+                dtype=dtype,
+            )
         )
         pair = pair + self.token_bonds_project((bonds > 0)[..., None].to(dtype))
         pair = pair + self.token_bonds_type_embed(
@@ -228,6 +233,16 @@ class ConfidenceReembedding(nn.Module):
         pair = pair + self.s_to_z_prod_out(
             self.s_to_z_prod_in1(inputs)[:, None] * self.s_to_z_prod_in2(inputs)[None]
         )
+        return pair, single
+
+    def sample_term(
+        self,
+        pair: torch.Tensor,
+        positions: torch.Tensor,
+        pair_mask: torch.Tensor,
+    ) -> torch.Tensor:
+        """``pair`` plus the distogram embedding of one sample's pseudo-beta ``positions``."""
+        dtype = pair.dtype
         distance = (
             (positions[:, None] - positions[None]).square().sum(-1) + 1e-10
         ).sqrt()
@@ -239,8 +254,20 @@ class ConfidenceReembedding(nn.Module):
         distogram = torch.nn.functional.one_hot(
             (distance[..., None] > edges).sum(-1), self.learned_bins or 64
         ).to(dtype)
-        pair = pair + self.distogram_feat_project(distogram * pair_mask[..., None])
-        return pair, single
+        return pair + self.distogram_feat_project(distogram * pair_mask[..., None])
+
+    def forward(
+        self,
+        pair: torch.Tensor,
+        single: torch.Tensor,
+        target_feat: torch.Tensor,
+        positions: torch.Tensor,
+        pair_mask: torch.Tensor,
+        batch: feat_batch.Batch,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Return the re-embedded (pair, single)."""
+        pair, single = self.fold_terms(pair, single, target_feat, batch)
+        return self.sample_term(pair, positions, pair_mask), single
 
 
 class ConfidenceHead(nn.Module):
@@ -275,6 +302,7 @@ class ConfidenceHead(nn.Module):
         self.reembed_pair = spec.confidence_reembed_pair
         #: ``execution.confidence_sample_chunk`` of the config: samples per call, None = the rule below
         self.sample_chunk_override: int | None = None
+        self._fold_cache: dict | None = None
         #: Training only (``train.prepare``): also return the raw logits of the pLDDT / PDE / PAE (and resolved) heads, which the
         #: confidence loss is a cross entropy on. Inference leaves it False and returns the derived values only.
         self.save_logits = False
@@ -513,26 +541,39 @@ class ConfidenceHead(nn.Module):
         if not self.reembed_pair:
             dtype = self.left_target_feat_project.weight.dtype
 
-        seq_mask_cast = seq_mask.to(dtype=dtype)
-        pair_mask = seq_mask_cast[:, None] * seq_mask_cast[None, :]
-        pair_mask = pair_mask.to(dtype=dtype)
+        # The per-fold terms are shared between calls only while they run eagerly: a call that is being captured into a CUDA graph
+        # reads and writes none (its graph would replay the tensors of the fold it was captured on).
+        fold = (
+            self._fold_cache
+            if self.reembed_pair and not torch.cuda.is_current_stream_capturing()
+            else None
+        )
+        if fold is not None and "terms" in fold:
+            # The second and later samples of a fold: the sample-independent re-embedding is already built.
+            pair_mask = fold["pair_mask"]
+            terms = fold["terms"]
+        else:
+            seq_mask_cast = seq_mask.to(dtype=dtype)
+            pair_mask = seq_mask_cast[:, None] * seq_mask_cast[None, :]
+            pair_mask = pair_mask.to(dtype=dtype)
 
-        pair_act = embeddings["pair"].clone().to(dtype=dtype)
-        single_act = embeddings["single"].clone().to(dtype=dtype)
-        target_feat = embeddings["target_feat"].clone().to(dtype=dtype)
+            pair_act = embeddings["pair"].clone().to(dtype=dtype)
+            single_act = embeddings["single"].clone().to(dtype=dtype)
+            target_feat = embeddings["target_feat"].clone().to(dtype=dtype)
 
-        if self.spec.confidence_global_norm:
-            real = seq_mask.bool()
-            pair_act = masked_global_norm(pair_act, real[:, None] & real[None])
-            single_act = masked_global_norm(single_act, real)
-            # The vendor's input features are 449 wide; the two classes FoldForge's
-            # alphabet lacks are zero but still enter its mean and variance.
-            target_feat = masked_global_norm(target_feat, real, width=449)
-        if self.spec.confidence_single_clamp:
-            # Clamped and normalised before ANY use: the confidence pairformer
-            # and every head see the normalised single. AF3 uses it raw, and an
-            # unnormalised trunk single enters this head at std 211.
-            single_act = self.input_single_norm(single_act.clamp(-512.0, 512.0))
+            if self.spec.confidence_global_norm:
+                real = seq_mask.bool()
+                pair_act = masked_global_norm(pair_act, real[:, None] & real[None])
+                single_act = masked_global_norm(single_act, real)
+                # The vendor's input features are 449 wide; the two classes FoldForge's
+                # alphabet lacks are zero but still enter its mean and variance.
+                target_feat = masked_global_norm(target_feat, real, width=449)
+            if self.spec.confidence_single_clamp:
+                # Clamped and normalised before ANY use: the confidence pairformer
+                # and every head see the normalised single. AF3 uses it raw, and an
+                # unnormalised trunk single enters this head at std 211.
+                single_act = self.input_single_norm(single_act.clamp(-512.0, 512.0))
+            terms = None
 
         if self.reembed_pair:
             if batch is None:
@@ -541,14 +582,19 @@ class ConfidenceHead(nn.Module):
             positions = atom_layout.convert(
                 token_atoms_to_pseudo_beta, dense_atom_positions, layout_axes=(-3, -2)
             )
-            pair_act, single_act = self.reembedding(
-                pair_act,
-                single_act,
-                target_feat,
-                positions.to(dtype),
-                pair_mask,
-                batch,
+            if terms is None:
+                terms = self.reembedding.fold_terms(
+                    pair_act, single_act, target_feat, batch
+                )
+                if fold is not None:
+                    # Kept for the fold's other samples (the pair is only read; the single is copied per sample).
+                    fold["terms"], fold["pair_mask"] = terms, pair_mask
+            else:
+                terms = (terms[0], terms[1].clone())
+            pair_act = self.reembedding.sample_term(
+                terms[0], positions.to(dtype), pair_mask
             )
+            single_act = terms[1]
         else:
             pair_act += self._embed_features(
                 dense_atom_positions, token_atoms_to_pseudo_beta, pair_mask, target_feat
@@ -584,6 +630,16 @@ class ConfidenceHead(nn.Module):
     #: sizes on one sample per call.
     SAMPLE_CHUNK_PAIR_BYTES = 384 << 20
 
+    @contextlib.contextmanager
+    def fold_scope(self) -> Iterator[None]:
+        """One fold's samples: the re-embedding terms that do not read the positions are built by the first
+        sample's call and read by the others (``reembed_pair`` heads; a no-op for the rest)."""
+        self._fold_cache = {}
+        try:
+            yield
+        finally:
+            self._fold_cache = None
+
     def sample_chunk(self, num_samples: int, num_tokens: int) -> int:
         """Samples per call: all of them while their ``[S, L, L, c_pair]`` stream stays under
         ``SAMPLE_CHUNK_PAIR_BYTES``, else the largest count that does (at least one).
@@ -616,18 +672,20 @@ class ConfidenceHead(nn.Module):
         leading S axis (equal to stacking S ``forward`` calls).
         """
         if self.reembed_pair or self.row_pool_attn is not None:
-            outputs = [
-                type(self).forward(
-                    self,
-                    sample,
-                    embeddings,
-                    seq_mask,
-                    token_atoms_to_pseudo_beta,
-                    asym_id,
-                    batch,
-                )
-                for sample in dense_atom_positions
-            ]
+            # One fold: the re-embedding terms that do not read the positions are built by the first sample only.
+            with self.fold_scope():
+                outputs = [
+                    type(self).forward(
+                        self,
+                        sample,
+                        embeddings,
+                        seq_mask,
+                        token_atoms_to_pseudo_beta,
+                        asym_id,
+                        batch,
+                    )
+                    for sample in dense_atom_positions
+                ]
             return {key: torch.stack([o[key] for o in outputs]) for key in outputs[0]}
         count = dense_atom_positions.shape[0]
         dtype = self.left_target_feat_project.weight.dtype

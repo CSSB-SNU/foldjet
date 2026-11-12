@@ -409,7 +409,8 @@ class Evoformer(nn.Module):
                 max_relative_idx,
                 max_relative_chain,
                 chain_bucket_on_same_chain=self.spec.chain_bucket_on_same_chain,
-            ).to(dtype=pair_activations.dtype)
+                dtype=pair_activations.dtype,
+            )
 
         return pair_activations + self.position_activations(rel_feat)
 
@@ -1062,19 +1063,20 @@ class AlphaFold3(nn.Module):
         chunker = getattr(head, "sample_chunk", None)
         chunk = 1 if chunker is None else chunker(count, positions.shape[1])
         outputs = []
-        for start in range(0, count, chunk):
-            part = positions[start : start + chunk]
-            result = head(
-                dense_atom_positions=part[0] if part.shape[0] == 1 else part,
-                embeddings=embeddings,
-                seq_mask=batch_data.token_features.mask,
-                token_atoms_to_pseudo_beta=batch_data.pseudo_beta_info.token_atoms_to_pseudo_beta,
-                asym_id=batch_data.token_features.asym_id,
-                batch=batch_data,
-            )
-            if part.shape[0] == 1:
-                result = {key: value[None] for key, value in result.items()}
-            outputs.append(result)
+        with getattr(head, "fold_scope", contextlib.nullcontext)():
+            for start in range(0, count, chunk):
+                part = positions[start : start + chunk]
+                result = head(
+                    dense_atom_positions=part[0] if part.shape[0] == 1 else part,
+                    embeddings=embeddings,
+                    seq_mask=batch_data.token_features.mask,
+                    token_atoms_to_pseudo_beta=batch_data.pseudo_beta_info.token_atoms_to_pseudo_beta,
+                    asym_id=batch_data.token_features.asym_id,
+                    batch=batch_data,
+                )
+                if part.shape[0] == 1:
+                    result = {key: value[None] for key, value in result.items()}
+                outputs.append(result)
         return {
             key: outputs[0][key]
             if len(outputs) == 1
