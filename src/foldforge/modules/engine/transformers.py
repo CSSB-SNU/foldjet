@@ -38,6 +38,8 @@ class TokenDiTStack(nn.Module):
     def __init__(self, blocks: list[nn.Module]) -> None:
         super().__init__()
         self.blocks = nn.ModuleList(blocks)
+        self._pair_source: tuple[Tensor, int] | None = None
+        self._pair_engine: Tensor | None = None
 
     def forward(
         self,
@@ -59,12 +61,30 @@ class TokenDiTStack(nn.Module):
         if key_mask is None:
             key_mask = (mask > 0)[None]
         unbatched = act.ndim == _UNBATCHED_RANK
+        out_dtype = act.dtype
+        # the engine's master blocks take bf16 activations: cast once here (a block would re-round fp32 at its entry on every call)
+        act, single_cond = engine_activation(act), engine_activation(single_cond)
         cond = single_cond.expand(*act.shape[:-1], single_cond.shape[-1])
         x, cond = (act[None, None], cond[None, None]) if unbatched else (act[:, None], cond[:, None])
-        pair = pair_cond[None]
+        pair = self._engine_pair(pair_cond)
         for block in self.blocks:
             x = block(x, cond, pair, key_mask, **kw)
-        return x[0, 0] if unbatched else x[:, 0]
+        x = x[0, 0] if unbatched else x[:, 0]
+        return x if x.dtype == out_dtype else x.to(out_dtype)
+
+    def _engine_pair(self, pair_cond: Tensor) -> Tensor:
+        """``pair_cond[None]`` in the engine's activation dtype, the SAME tensor object for every call that gets the same ``pair_cond``
+        (one fold: every block of every step): the engine hoists the pair bias (pair LayerNorm + bias GEMM) once per pair object, so a fresh
+        cast per call would recompute it per block per step. One entry, kept with its source (identity + in-place version); not kept
+        when the pair requires grad (a cast carries an autograd graph that must not outlive its step)."""
+        source = self._pair_source
+        if source is not None and source[0] is pair_cond and source[1] == pair_cond._version:
+            return self._pair_engine
+        pair = engine_activation(pair_cond)[None]
+        if torch.is_grad_enabled() and pair_cond.requires_grad:
+            return pair
+        self._pair_source, self._pair_engine = (pair_cond, pair_cond._version), pair
+        return pair
 
 
 class AtomDiTStack(nn.Module):
