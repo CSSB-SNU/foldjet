@@ -409,3 +409,16 @@ def test_hold_helpers_do_nothing_on_an_engine_without_weight_caches(monkeypatch)
     _fake_engine_capture(monkeypatch)
     assert engine_capture.cache_marks() == {}
     assert engine_capture.hold_new({}) == []
+
+
+def test_static_clone_keeps_expanded_dims_expanded_and_load_writes_the_unique_part() -> None:
+    shared = torch.arange(6.0).reshape(1, 6).expand(4, 6)  # one mask served to 4 folds
+    assert shared.stride(0) == 0
+    static = sampler_graph._static_clone(shared)
+    assert static.stride(0) == 0 and torch.equal(static, shared)
+    assert sampler_graph._static_clone(torch.ones(3, 2)).stride() == (2, 1)
+    pointer = static.data_ptr()
+    entry = entry_of(leaves=[static, torch.zeros(2)])
+    new = torch.full((1, 6), 7.0).expand(4, 6)
+    entry.load([new, torch.ones(2)], None)  # a plain copy_ into an expanded tensor would raise
+    assert static.data_ptr() == pointer and static.stride(0) == 0 and torch.equal(static, new)

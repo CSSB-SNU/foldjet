@@ -340,6 +340,21 @@ class Fold:
     casts: Callable[[], list[tuple[torch.Tensor, torch.Tensor]]] = lambda: []
 
 
+def _unique_part(t: torch.Tensor) -> tuple[slice, ...] | None:
+    """The index of the part of an expanded tensor that owns its storage (size 1 along every stride-0 dim), or None for an ordinary tensor."""
+    if not any(stride == 0 and size > 1 for size, stride in zip(t.shape, t.stride(), strict=True)):
+        return None
+    return tuple(slice(0, 1) if stride == 0 and size > 1 else slice(None) for size, stride in zip(t.shape, t.stride(), strict=True))
+
+
+def _static_clone(t: torch.Tensor) -> torch.Tensor:
+    """A tensor of fixed identity holding t's values, with t's expanded (stride 0) dims kept expanded: the engine reads a shared mask / conditioning
+    by its stride 0 (one fold's mask served to the NT folds of a grouped call) and takes a slower general path for a dense copy."""
+    t = t.detach()
+    keep = _unique_part(t)
+    return t.clone() if keep is None else t[keep].clone().expand(t.shape)
+
+
 class _Entry:
     """One captured sampler step with the static buffers it reads (the per-shape cache's value)."""
 
@@ -375,7 +390,11 @@ class _Entry:
         if len(leaves) != len(self.leaves):
             raise _LayoutMismatch(f"{len(leaves)} tensors for {len(self.leaves)} static buffers")
         for dst, src in zip(self.leaves, leaves, strict=True):
-            dst.copy_(src)
+            keep = _unique_part(dst)
+            if keep is None:
+                dst.copy_(src)
+            else:  # an expanded (stride 0) leaf: its storage is the unique part, written through the size-1 view
+                dst[keep].copy_(src[keep])
         for source, copy in self.casts:
             copy.copy_(source.unsqueeze(0))
         for dst, src in self.mask_copies:
@@ -603,7 +622,7 @@ def _capture_entry(
     """Capture the step on a STATIC clone of the fold (the caller's tensors stay the caller's; later folds are written into the clone)."""
 
     marks = engine_capture.cache_marks()
-    static = _map(tree, lambda t: t.detach().clone())
+    static = _map(tree, _static_clone)
     _, leaves = _flatten(static)
     with fold.bind(static):
         denoise, augment, align, rigid_mask = fold.pieces(static)
@@ -624,9 +643,9 @@ def _capture_entry(
     # only copies of a leaf of this fold's tree (a stale entry of some other call is not ours to rewrite)
     casts = [cast for cast in fold.casts() if any(cast[0] is leaf for leaf in leaves)]
     entry = _Entry(captured, static, leaves, casts, mask_copies)
-    # the step (and with it the engine glue modules, which own device buffers the graph reads) and the closures over the static fold: the graph
-    # outlives this call, so what its kernels read must too
-    entry.keepalive = (step, denoise, augment, align, rigid_mask)
+    # the engine glue modules (they own device buffers the graph reads); NOT the closures over the fold (they hold the caller's embeddings: the
+    # previous fold's tensors must not stay alive in the cache)
+    entry.keepalive = glue
 
     entry.engine_held = engine_capture.hold_new(marks)
     entry.retained += engine_capture.tensor_bytes(entry.engine_held)
