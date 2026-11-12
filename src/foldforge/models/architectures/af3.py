@@ -1063,6 +1063,17 @@ class AlphaFold3(nn.Module):
         chunker = getattr(head, "sample_chunk", None)
         chunk = 1 if chunker is None else chunker(count, positions.shape[1])
         outputs = []
+        # A re-embedding head: the sample-independent part of its input is built ONCE here, outside any graph the head's call is wrapped in,
+        # and passed to every sample (a graph replays whatever it captured, i.e. that part once per sample).
+        extra = {}
+        if (
+            count > 1
+            and chunk == 1
+            and getattr(head, "reembed_pair", False)
+            and hasattr(head, "fold_state")
+            and not (torch.cuda.is_available() and torch.cuda.is_current_stream_capturing())
+        ):
+            extra["fold"] = head.fold_state(embeddings, batch_data.token_features.mask, batch_data)
         with getattr(head, "fold_scope", contextlib.nullcontext)():
             for start in range(0, count, chunk):
                 part = positions[start : start + chunk]
@@ -1073,6 +1084,7 @@ class AlphaFold3(nn.Module):
                     token_atoms_to_pseudo_beta=batch_data.pseudo_beta_info.token_atoms_to_pseudo_beta,
                     asym_id=batch_data.token_features.asym_id,
                     batch=batch_data,
+                    **extra,
                 )
                 if part.shape[0] == 1:
                     result = {key: value[None] for key, value in result.items()}
