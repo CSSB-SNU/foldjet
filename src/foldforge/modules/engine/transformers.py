@@ -72,6 +72,17 @@ class TokenDiTStack(nn.Module):
         x = x[0, 0] if unbatched else x[:, 0]
         return x if x.dtype == out_dtype else x.to(out_dtype)
 
+    def engine_pair_cast(self) -> tuple[Tensor, Tensor] | None:
+        """``(pair_cond, its engine-dtype copy)`` when the cached engine pair is a cast COPY of the pair (fp32 pair, bf16 blocks), else ``None``.
+
+        A sampler graph that serves a new fold from static buffers (``models.sampler_graph``) refills ``pair_cond`` in place; this copy was made
+        outside the graph (at the warm-up) and is read by the engine's hoisted pair bias, so it is rewritten from the new pair
+        (``copy.copy_(pair_cond[None])`` rounds exactly like the cast) before the engine's tables are refreshed."""
+        source, engine = self._pair_source, self._pair_engine
+        if source is None or engine is None or engine.data_ptr() == source[0].data_ptr():
+            return None
+        return source[0], engine
+
     def _engine_pair(self, pair_cond: Tensor) -> Tensor:
         """``pair_cond[None]`` in the engine's activation dtype, the SAME tensor object for every call that gets the same ``pair_cond``
         (one fold: every block of every step): the engine hoists the pair bias (pair LayerNorm + bias GEMM) once per pair object, so a fresh

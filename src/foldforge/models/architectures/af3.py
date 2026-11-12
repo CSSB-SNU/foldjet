@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, replace
 from typing import Any
 
@@ -955,38 +956,47 @@ class AlphaFold3(nn.Module):
             )
         sampler = EulerSampler(sampler_config)
 
-        def denoise(
-            coords: torch.Tensor,
-            sigma: torch.Tensor,
-            single_cond: torch.Tensor | None = None,
-        ) -> torch.Tensor:
-            """Compute denoise."""
-            # the sampler loop runs outside the activation autocast (below); the network inside it does
-            with diffusion_autocast(self):
-                return self.diffusion_head(
-                    positions_noisy=coords,
-                    noise_level=sigma,
-                    batch=batch,
-                    embeddings=embeddings,
-                    use_conditioning=True,
-                    single_cond=single_cond,
-                )
+        def pieces(batch: feat_batch.Batch, embeddings: dict[str, torch.Tensor]):
+            """``(denoise, augment, align, atom_mask)`` of a fold's ``batch`` / ``embeddings``: the fold itself, or the static clone of the first
+            fold of a shape that the per-shape sampler graph is captured on."""
+            atom_mask = batch.predicted_structure_info.atom_mask
 
-        def augment(coords: torch.Tensor) -> torch.Tensor:
-            """Compute augment."""
-            return masked_dense_rigid_motion(coords, mask)
+            def denoise(
+                coords: torch.Tensor,
+                sigma: torch.Tensor,
+                single_cond: torch.Tensor | None = None,
+            ) -> torch.Tensor:
+                """Compute denoise."""
+                # the sampler loop runs outside the activation autocast (below); the network inside it does
+                with diffusion_autocast(self):
+                    return self.diffusion_head(
+                        positions_noisy=coords,
+                        noise_level=sigma,
+                        batch=batch,
+                        embeddings=embeddings,
+                        use_conditioning=True,
+                        single_cond=single_cond,
+                    )
 
-        def realign(noisy: torch.Tensor, denoised: torch.Tensor) -> torch.Tensor:
-            """Rigid-align the noisy coordinates onto the denoised prediction.
+            def augment(coords: torch.Tensor) -> torch.Tensor:
+                """Compute augment."""
+                return masked_dense_rigid_motion(coords, atom_mask)
 
-            This family augments the state -- rotates and translates it -- every
-            step, and its denoiser is NOT equivariant: it reads a fixed
-            reference conformer through rotary position embeddings, so the
-            prediction comes back in its own frame. Differencing across the two
-            frames would make the Euler gradient a rotation as much as a
-            gradient.
-            """
-            return weighted_rigid_align(noisy, denoised, mask)
+            def realign(noisy: torch.Tensor, denoised: torch.Tensor) -> torch.Tensor:
+                """Rigid-align the noisy coordinates onto the denoised prediction.
+
+                This family augments the state -- rotates and translates it -- every
+                step, and its denoiser is NOT equivariant: it reads a fixed
+                reference conformer through rotary position embeddings, so the
+                prediction comes back in its own frame. Differencing across the two
+                frames would make the Euler gradient a rotation as much as a
+                gradient.
+                """
+                return weighted_rigid_align(noisy, denoised, atom_mask)
+
+            return denoise, augment, realign if self.spec.realign_sampler else None, atom_mask
+
+        denoise, augment, realign, _ = pieces(batch, embeddings)
 
         def conditioning(levels: torch.Tensor) -> torch.Tensor:
             with diffusion_autocast(self):
@@ -1001,6 +1011,7 @@ class AlphaFold3(nn.Module):
             else contextlib.nullcontext()
         )
         scope = getattr(self, "foldforge_sampler_scope", None)
+        fold = self._sampler_fold(batch, embeddings, pieces) if scope is not None else None
         try:
             with fp32_sampler:
                 if scope is not None:
@@ -1012,7 +1023,7 @@ class AlphaFold3(nn.Module):
                         device=mask.device,
                         generator=None,
                         augment=augment,
-                        align=realign if self.spec.realign_sampler else None,
+                        align=realign,
                         coordinate_dims=2,
                         scopes=scope,
                         # the engine's fused rigid-motion glue is miniworld's
@@ -1021,6 +1032,7 @@ class AlphaFold3(nn.Module):
                         if getattr(self, "foldforge_sampler_ops", True)
                         else None,
                         conditioning=conditioning,
+                        fold=fold,
                     )
                 else:
                     positions = sampler.sample(
@@ -1032,7 +1044,7 @@ class AlphaFold3(nn.Module):
                         chunk_size=None,
                         initialize_all=True,
                         augment=augment,
-                        align=realign if self.spec.realign_sampler else None,
+                        align=realign,
                     )
         finally:
             # The fold's conditioning is not needed once its steps are done.
@@ -1044,6 +1056,54 @@ class AlphaFold3(nn.Module):
             "atom_positions": positions,
             "mask": torch.tile(mask[None], (self.num_samples, 1, 1)),
         }
+
+    def _sampler_fold(
+        self,
+        batch: feat_batch.Batch,
+        embeddings: dict[str, torch.Tensor],
+        pieces: Callable[..., tuple],
+    ) -> sampler_graph.Fold:
+        """What the sampler graph needs to serve other folds of this shape (``sampler_graph.Fold``).
+
+        The per-fold state a captured step reads: ``batch`` (the atom / token features: masks, gathers, reference conformer), the head's
+        fold conditioning (``DiffusionHead.fold_tree``: single base, pair, key mask, atom state) -- or, in the grouped multi-fold sampler
+        (``models.grouped``), its ``fold_tree`` (the NT folds' state and the stacked tensors). ``embeddings`` are read only to make the
+        conditioning (outside the graph), so they are not part of it. The step also reads tensors made OUTSIDE the graph from those: the
+        glue's float atom mask (``sampler_graph``) and the token DiT stack's engine-dtype copy of the pair (``engine_pair_cast``)."""
+        head = self.diffusion_head
+        extra = getattr(self, "foldforge_fold_extra", None)
+
+        def tree() -> dict[str, Any]:
+            return {
+                "batch": batch,
+                "head": None if extra is not None else head.fold_tree(),
+                "extra": None if extra is None else extra.fold_tree(),
+            }
+
+        @contextlib.contextmanager
+        def bind(static: dict[str, Any]) -> Iterator[None]:
+            with contextlib.ExitStack() as stack:
+                if static["extra"] is not None:
+                    stack.enter_context(extra.bind_fold(static["extra"]))
+                else:
+                    saved = head._fold  # noqa: SLF001 - fold-scoped conditioning
+                    head.adopt_fold(static["batch"], embeddings, static["head"])
+                    stack.callback(setattr, head, "_fold", saved)
+                yield
+                if static["extra"] is None and (head._fold is None or head._fold[2] is not static["head"]["pair_cond"]):  # noqa: SLF001
+                    raise RuntimeError("the sampler capture remade the fold conditioning instead of reading the static one")
+
+        def casts() -> list[tuple[torch.Tensor, torch.Tensor]]:
+            found = (getattr(module, "engine_pair_cast", None) for module in head.modules())
+            return [cast for cast in (find() for find in found if find is not None) if cast is not None]
+
+        return sampler_graph.Fold(
+            model=self,
+            tree=tree,
+            pieces=lambda static: pieces(static["batch"], embeddings),
+            bind=bind,
+            casts=casts,
+        )
 
     def _confidence_over_samples(
         self,

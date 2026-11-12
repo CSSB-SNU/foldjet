@@ -13,6 +13,8 @@ then samples the folds one after another."""
 
 from __future__ import annotations
 
+import contextlib
+from collections.abc import Iterator
 from typing import Any
 
 import torch
@@ -290,6 +292,28 @@ class GroupedSampler:
             [self._table_of(c, levels) for c in self.state["cond"]], 1
         )  # [steps, NT, L, 384]
 
+    # ---- the per-fold state a sampler graph reads (``models.sampler_graph``: one graph per shape, reused over folds) ------------------------------------
+    def fold_tree(self) -> dict[str, Any]:
+        """Everything ``_forward`` reads from ``self.state`` (the NT folds' conditioning, the stacked pair / atom pair / key masks), without the folds' epochs
+        (a counter that differs per fold and is read by nothing in a step)."""
+        state = self.state
+        return {
+            **{k: v for k, v in state.items() if k != "cond"},
+            "cond": [{k: v for k, v in c.items() if k != "epoch"} for c in state["cond"]],
+        }
+
+    @contextlib.contextmanager
+    def bind_fold(self, tree: dict[str, Any]) -> Iterator[None]:
+        """Run with ``tree`` (a ``fold_tree``, e.g. static clones) as the state the denoiser reads."""
+        saved = dict(self.state)
+        self.state.clear()
+        self.state.update(tree)
+        try:
+            yield
+        finally:
+            self.state.clear()
+            self.state.update(saved)
+
     # ---- the call ----------------------------------------------------------------------------------------------------------------------------------
     def sample(self, trunks: list[Any], samples: int) -> torch.Tensor:
         """Positions ``[samples * NT, ...]`` (fold-major inside: row ``a * NT + b`` is sample ``a`` of fold ``b``)."""
@@ -301,12 +325,14 @@ class GroupedSampler:
         head.forward, head.conditioning_table = self._forward, self._table
         saved = net.num_samples
         net.num_samples = samples * self.nt
+        net.foldforge_fold_extra = self  # the sampler graph keeps this state in static buffers (fold_tree / bind_fold)
         try:
             out = net._sample_diffusion(
                 trunks[0].diffusion.batch, trunks[0].diffusion.embeddings
             )
         finally:
             net.num_samples = saved
+            net.foldforge_fold_extra = None
             del head.forward, head.conditioning_table
             head._fold = None
             self.state.clear()

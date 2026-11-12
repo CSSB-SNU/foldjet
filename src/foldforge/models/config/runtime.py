@@ -130,6 +130,12 @@ class ExecutionConfig(BaseModel):
     # scope=trunk only: the sampler step (re-pose, re-noise, denoise, align, update) as
     # one graph.
     sampler_graph: bool = True
+    # The sampler graph is captured once per shape and served to every later fold of that shape (engine request R26; needs an engine with
+    # ``StaticTables.refresh``, else every fold is captured on its own). Off: one capture per fold.
+    sampler_graph_cache: bool = True
+    # Largest share of the device's memory the cached sampler graphs (private pools + static folds) may hold together; a graph larger than
+    # that is used for its fold and dropped.
+    sampler_graph_cache_fraction: float = Field(default=0.3, gt=0.0, le=1.0)
     # scope=trunk only: which trunk-side callables get a graph of their own.
     trunk_sites: tuple[
         Literal["evoformer", "confidence_head", "distogram_head"], ...

@@ -108,6 +108,10 @@ def release_size_memory() -> tuple[int, int]:
     once each, ascending, so none is replayed again) and the allocator's cached blocks. The compiled code and the weights stay.
     Returns the reserved bytes before and after."""
     from foldforge.models.execution import ExecutedCallable
+    try:
+        from foldforge.models.sampler_graph import SamplerGraphCache
+    except ImportError:  # a FoldForge without the per-shape sampler graph cache
+        SamplerGraphCache = ()
 
     torch.cuda.synchronize()
     before = torch.cuda.memory_reserved()
@@ -115,6 +119,8 @@ def release_size_memory() -> tuple[int, int]:
         if type(item) is ExecutedCallable and item.graphs:  # type(), not isinstance: a dead weakref proxy raises on isinstance
             item.graphs.clear()
             item.last_capture_bytes = 0
+        elif SamplerGraphCache and type(item) is SamplerGraphCache and item.entries and not os.environ.get("FF_5I28_KEEP_SAMPLER_CACHE"):  # the sampler graphs cached per shape (R26), with their static folds
+            item.clear()
     gc.collect()
     torch.cuda.empty_cache()
     return before, torch.cuda.memory_reserved()
@@ -204,6 +210,7 @@ def main() -> int:
                 "cuda_graph": report.get("cuda_graph"),
                 "cuda_graph_captures": report.get("cuda_graph_captures"),
                 "cuda_graph_evictions": report.get("cuda_graph_evictions"),
+                **{k: v for k, v in report.items() if k.startswith("sampler_graph_")},
                 "peak_allocated_bytes": report.get("model_peak_allocated_bytes"),
                 "peak_reserved_bytes": report.get("model_peak_reserved_bytes"),
             }

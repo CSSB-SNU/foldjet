@@ -1,3 +1,5 @@
+from typing import Any
+
 import torch
 import torch.nn as nn
 
@@ -375,6 +377,57 @@ class DiffusionHead(nn.Module):
             single_cond=single_cond,
         )
 
+    @staticmethod
+    def _fold_key(batch, embeddings, use_conditioning):
+        """The identity (and in-place version) of everything a fold's conditioning was made from."""
+        try:
+            return (
+                id(batch),
+                bool(use_conditioning),
+                tuple(
+                    (name, id(value), value._version, tuple(value.shape))
+                    for name, value in sorted(embeddings.items())
+                ),
+            )
+        except RuntimeError:  # inference tensors carry no version counter
+            return (
+                id(batch),
+                bool(use_conditioning),
+                tuple(
+                    (name, id(value), value.data_ptr(), tuple(value.shape))
+                    for name, value in sorted(embeddings.items())
+                ),
+            )
+
+    def fold_tree(self) -> dict[str, Any]:
+        """The per-fold tensors the current fold's step reads (the entry ``_conditioned`` made last), without the identity key and the epoch.
+
+        What a sampler graph reused over folds keeps in static buffers (``models.sampler_graph``): ``adopt_fold`` installs a copy of it."""
+        entry = self._fold
+        if entry is None:
+            raise RuntimeError("no fold conditioning has been made")
+        return {
+            "single_base": entry[1],
+            "pair_cond": entry[2],
+            "lite": entry[3],
+            "key_mask": entry[5],
+            "atom_state": entry[6],
+        }
+
+    def adopt_fold(self, batch, embeddings, tree: dict[str, Any], use_conditioning: bool = True) -> None:
+        """Make ``tree`` (a ``fold_tree``, possibly cloned) the conditioning of the fold ``(batch, embeddings)``: the next ``_conditioned`` of
+        that pair serves it instead of making it."""
+        self._fold = (
+            self._fold_key(batch, embeddings, use_conditioning),
+            tree["single_base"],
+            tree["pair_cond"],
+            tree["lite"],
+            self._fold_epoch,
+            tree["key_mask"],
+            tree["atom_state"],
+            (batch, embeddings),
+        )
+
     def _conditioned(self, batch, embeddings, use_conditioning):
         """Run  conditioned.
 
@@ -386,24 +439,7 @@ class DiffusionHead(nn.Module):
         keeps its tensors alive, so an address cannot be reused while the entry
         stands.
         """
-        try:
-            key = (
-                id(batch),
-                bool(use_conditioning),
-                tuple(
-                    (name, id(value), value._version, tuple(value.shape))
-                    for name, value in sorted(embeddings.items())
-                ),
-            )
-        except RuntimeError:  # inference tensors carry no version counter
-            key = (
-                id(batch),
-                bool(use_conditioning),
-                tuple(
-                    (name, id(value), value.data_ptr(), tuple(value.shape))
-                    for name, value in sorted(embeddings.items())
-                ),
-            )
+        key = self._fold_key(batch, embeddings, use_conditioning)
         entry = self._fold
         if entry is None or entry[0] != key:
             single_base, pair_cond = self._fold_conditioning(

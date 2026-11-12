@@ -39,10 +39,13 @@ featurization, loading and output writing. Report the median of the warm forward
 - Kits: their `PHASE ... fwd_s` (or the kit's equivalent span, per the kit forward-definition audit). Not the kits' wider
   "Model forward time" lines.
 - FoldForge runs on prebuilt kernels and warm caches: no JIT compile inside a timed run.
-- **The FoldForge number includes one sampler CUDA-graph capture per forward** (2 eager warm-up steps + capture, `models/sampler_graph.py`: the graph is
-  built again for every fold). Measured on Protenix v1 (H100, 2026-11-12, engine 2.5.4): 73-79 ms at n = 1 (about 15% of the 0.485 s warm forward) and
-  94-97 ms at n = 8 (about 2.4% of 3.9 s); a second call of the model pays it again. The kits' own spans are not changed by this. Records written before a
-  fix keep their numbers; engine request R26 in [ENGINE-REQUESTS.md](../ENGINE-REQUESTS.md) is what would let the graph be captured once per shape.
+- **Sampler CUDA-graph capture (R26).** With `execution.sampler_graph_cache` on (the default) and an engine that has the refresh API (miniworld-engine
+  >= 2.5.6: `StaticTables.refresh`), `models/sampler_graph.py` captures the sampler graph once per shape and serves every later fold of that shape by writing
+  it into the graph's static buffers; the FIRST forward of a shape (`model_seconds_cold`) includes the capture (2 eager warm-up steps + capture), later
+  forwards do not, so `model_seconds_warm` / `model_seconds_warm_median` exclude it. On an older engine (2.5.4) or with the cache off, every forward
+  captures again and the number includes the capture (measured on Protenix v1, H100, engine 2.5.4: 73-79 ms at n = 1, about 15% of the 0.485 s warm
+  forward, and 94-97 ms at n = 8, about 2.4% of 3.9 s). `sampler_graph_captures` / `sampler_graph_cache_hits` in each cell say which case a record is.
+  The kits' own spans are not changed by this. Records written before the change keep their numbers.
 
 ## Reporting
 

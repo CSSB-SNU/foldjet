@@ -120,10 +120,31 @@ def _static_inputs(on: bool):
         return contextlib.nullcontext()
     from foldforge.modules.engine.capture import static_inputs, static_weights
 
-    stack = contextlib.ExitStack()
-    stack.enter_context(static_weights())
-    stack.enter_context(static_inputs())
-    return stack
+    return _StaticScopes(static_weights, static_inputs)
+
+
+class _StaticScopes(contextlib.AbstractContextManager):
+    """``static_weights()`` + ``static_inputs()``; entering yields the engine's ``StaticTables`` handle of the capture (``None`` on an engine
+    without the refresh API)."""
+
+    def __init__(self, static_weights, static_inputs) -> None:
+        self._contexts = (static_weights, static_inputs)
+        self._stack: contextlib.ExitStack | None = None
+
+    def __enter__(self):
+        stack = contextlib.ExitStack()
+        try:
+            stack.enter_context(self._contexts[0]())
+            handle = stack.enter_context(self._contexts[1]())
+        except BaseException:
+            stack.close()
+            raise
+        self._stack = stack
+        return handle
+
+    def __exit__(self, *exc):
+        stack, self._stack = self._stack, None
+        return stack.__exit__(*exc)
 
 
 class _Graph:
@@ -326,19 +347,45 @@ class ExecutedCallable:
 
 
 class SamplerScope:
-    """Capture scope of the sampler graph: the denoiser runs inside it, under the engine's static contracts."""
+    """Capture scope of the sampler graph: the denoiser runs inside it, under the engine's static contracts.
 
-    def __init__(self, denoiser: ExecutedCallable) -> None:
+    Also the owner of the per-shape cache of sampler graphs (``sampler_graph.SamplerGraphCache``; ``None`` when the config turns it off or the
+    engine has no refresh API: every fold is then captured on its own, as before R26) and of the counters of the sampler graph."""
+
+    #: Counters reset by ``Execution.begin_request`` and reported by ``Execution.report``.
+    COUNTERS = (
+        "captures", "replays", "refreshes", "cache_hits", "cache_misses", "cache_evictions", "stale_recaptures", "uncached",
+    )
+
+    def __init__(self, denoiser: ExecutedCallable, config: ExecutionPolicy | None = None) -> None:
+        from foldforge.models import sampler_graph
+        from foldforge.modules.engine import capture as engine_capture
+
         self.denoiser = denoiser
-        self.captures = 0
-        self.replays = 0
+        self.reset_counters()
+        self.cache = None
+        if config is not None and getattr(config, "sampler_graph_cache", True) and engine_capture.refresh_available():
+            self.cache = sampler_graph.SamplerGraphCache(
+                self,
+                max_entries=config.max_graphs,
+                budget_fraction=getattr(config, "sampler_graph_cache_fraction", 0.3),
+            )
+
+    def reset_counters(self) -> None:
+        for name in self.COUNTERS:
+            setattr(self, name, 0)
+
+    def release_graphs(self) -> None:
+        """Drop every cached sampler graph (the runner's per-size memory release)."""
+        if self.cache is not None:
+            self.cache.clear()
 
     @contextlib.contextmanager
     def __call__(self):
         self.denoiser.bypass += 1
         try:
-            with _static_inputs(True):  # noqa: FBT003 - engine context enable flag
-                yield
+            with _static_inputs(True) as tables:  # noqa: FBT003 - engine context enable flag
+                yield tables
         finally:
             self.denoiser.bypass -= 1
 
@@ -442,7 +489,7 @@ class Execution:
         self.sampler_scope = None
         if config.cuda_graph and config.scope == "trunk" and config.sampler_graph:
             # The whole sampler step goes in one graph (see `models.sampler_graph`).
-            self.sampler_scope = SamplerScope(self.wrappers[0])
+            self.sampler_scope = SamplerScope(self.wrappers[0], config)
         model.foldforge_sampler_scope = self.sampler_scope
 
     def begin_request(self) -> None:
@@ -458,7 +505,27 @@ class Execution:
             for name in ("calls", "replays", "captures", "evictions", "uncaptured"):
                 setattr(wrapped, name, 0)
         if self.sampler_scope is not None:
-            self.sampler_scope.captures = self.sampler_scope.replays = 0
+            self.sampler_scope.reset_counters()
+
+    def sampler_cache_report(self) -> dict[str, Any]:
+        """The per-shape sampler graph cache: whether it is on, this request's hits / misses / evictions / stale recaptures / uncached folds, and what it holds."""
+        scope = self.sampler_scope
+        cache = getattr(scope, "cache", None)
+        return {
+            "enabled": cache is not None,
+            "hits": getattr(scope, "cache_hits", 0),
+            "misses": getattr(scope, "cache_misses", 0),
+            "evictions": getattr(scope, "cache_evictions", 0),
+            "stale_recaptures": getattr(scope, "stale_recaptures", 0),
+            "uncached": getattr(scope, "uncached", 0),
+            "entries": 0 if cache is None else len(cache.entries),
+            "retained_bytes": 0 if cache is None else cache.retained_bytes,
+        }
+
+    def release_sampler_graphs(self) -> None:
+        """Drop the cached sampler graphs (and with them their static buffers and pools)."""
+        if self.sampler_scope is not None:
+            self.sampler_scope.release_graphs()
 
     def report(self, *, require_compile: bool = True) -> dict[str, Any]:
         """Report observed compiler graphs and successful manual replays."""
@@ -500,6 +567,9 @@ class Execution:
             "wrapped_calls": sum(x.calls for x in self.wrappers),
             "sampler_graph_captures": getattr(self.sampler_scope, "captures", 0),
             "sampler_graph_replays": getattr(self.sampler_scope, "replays", 0),
+            # one graph per shape (R26): refreshes = folds served by writing into a cached graph's buffers; the rest are the cache's own ledger
+            "sampler_graph_refreshes": getattr(self.sampler_scope, "refreshes", 0),
+            **{f"sampler_graph_cache_{name}": value for name, value in self.sampler_cache_report().items()},
             "uncaptured_calls": sum(x.uncaptured for x in self.wrappers),
         }
 
