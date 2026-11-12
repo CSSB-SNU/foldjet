@@ -103,7 +103,30 @@ def test_release_fold_drops_only_per_fold_graphs(monkeypatch):
     assert per_fold.release_fold() is False  # nothing left
 
 
+def test_release_fold_state_is_skipped_for_a_small_previous_fold(monkeypatch):
+    """A small kept state is not released early (gc + synchronize + rebuilt per-fold graphs cost 8-50% of a small warm forward)."""
+    monkeypatch.setattr(torch.cuda, "synchronize", lambda *a: None)
+    per_fold = _graphed("fold_epoch")
+    head = DiffusionHead.__new__(DiffusionHead)
+    nn.Module.__init__(head)
+    head._fold = (torch.zeros(4),)
+    head.transformer = TokenDiTStack([])
+    head.transformer._pair_source, head.transformer._pair_engine = (torch.zeros(8), 0), torch.zeros(8)
+    assert head.fold_state_bytes() == 16 + 32 + 32  # the fold conditioning, the kept pair and its engine-dtype cast
+    run = Execution.__new__(Execution)
+    run.model, run.wrappers = SimpleNamespace(diffusion_head=head), [per_fold]
+    run.release_fold_state()
+    assert head._fold is not None
+    assert per_fold.graphs  # untouched below the threshold
+    monkeypatch.setattr(execution, "RELEASE_MIN_BYTES", 80)  # at or above it the state goes
+    monkeypatch.setattr(execution.importlib, "import_module", lambda name: SimpleNamespace())
+    run.release_fold_state()
+    assert head._fold is None
+    assert not per_fold.graphs
+
+
 def test_release_fold_state_of_the_execution(monkeypatch):
+    monkeypatch.setattr(execution, "RELEASE_MIN_BYTES", 0)  # the release itself (the gate has its own test)
     monkeypatch.setattr(torch.cuda, "synchronize", lambda *a: None)
     per_fold, cached = _graphed("fold_epoch"), _graphed()
     head = DiffusionHead.__new__(DiffusionHead)  # the real method over a bare instance: only the attributes it touches

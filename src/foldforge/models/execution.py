@@ -23,6 +23,11 @@ if TYPE_CHECKING:
     from foldforge.models.config import ExecutionConfig
 
 
+#: `Execution.release_fold_state` frees the previous fold's diffusion state before the next trunk only when that state holds at least this many bytes
+#: (the same 4 GiB as the banded pair conditioning): below it the release costs more (gc, synchronize, per-fold graphs rebuilt) than it saves.
+RELEASE_MIN_BYTES = 4 << 30
+
+
 class ExecutionPolicy(Protocol):
     """Configuration supplied by the terminal application."""
 
@@ -464,6 +469,11 @@ class Execution:
         engine's dead captured inputs. The trunk / confidence / distogram graphs are signature-cached across folds and stay.
         """
         head = getattr(self.model, "diffusion_head", None)
+        held = getattr(head, "fold_state_bytes", None)
+        if held is not None and held() < RELEASE_MIN_BYTES:
+            # The previous fold's state is small next to the device: dropping it early only costs (a collection, a synchronize and the per-fold
+            # graphs rebuilt: 8-50% of a small warm forward); the new fold's first denoiser call drops it anyway.
+            return
         if head is not None:
             head.release_fold_state()
         for wrapped in self.wrappers:

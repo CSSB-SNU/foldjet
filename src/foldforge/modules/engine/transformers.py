@@ -72,6 +72,11 @@ class TokenDiTStack(nn.Module):
         x = x[0, 0] if unbatched else x[:, 0]
         return x if x.dtype == out_dtype else x.to(out_dtype)
 
+    def fold_state_tensors(self) -> list[Tensor]:
+        """The tensors `release_fold` drops: the kept pair and its engine-dtype cast."""
+        source, engine = self._pair_source, self._pair_engine
+        return [t for t in (source[0] if source is not None else None, engine) if t is not None]
+
     def release_fold(self) -> None:
         """Drop the kept pair (and its engine-dtype cast): the previous fold's conditioning, ~1 GiB per 1000 tokens squared, and the key the
         engine keeps its hoisted pair bias under."""
