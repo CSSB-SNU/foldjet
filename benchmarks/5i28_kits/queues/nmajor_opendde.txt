@@ -1,0 +1,6 @@
+sep_opendde_x1|bash $BENCH_DIR/protenix_family_run.sh opendde 1
+sep_opendde_x2|bash $BENCH_DIR/protenix_family_run.sh opendde 2
+sep_opendde_x4|bash $BENCH_DIR/protenix_family_run.sh opendde 4
+sep_opendde_x8|bash $BENCH_DIR/protenix_family_run.sh opendde 8
+sep_opendde_x12|bash $BENCH_DIR/protenix_family_run.sh opendde 12
+sep_opendde_x16|bash $BENCH_DIR/protenix_family_run.sh opendde 16

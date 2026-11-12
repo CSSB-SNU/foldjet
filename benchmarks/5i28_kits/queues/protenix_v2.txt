@@ -1,0 +1,6 @@
+kit_protenix_v2_x1|bash $BENCH_DIR/protenix_family_run.sh protenix_v2 1
+kit_protenix_v2_x2|bash $BENCH_DIR/protenix_family_run.sh protenix_v2 2
+kit_protenix_v2_x4|bash $BENCH_DIR/protenix_family_run.sh protenix_v2 4
+kit_protenix_v2_x8|bash $BENCH_DIR/protenix_family_run.sh protenix_v2 8
+kit_protenix_v2_x12|bash $BENCH_DIR/protenix_family_run.sh protenix_v2 12
+kit_protenix_v2_x16|bash $BENCH_DIR/protenix_family_run.sh protenix_v2 16

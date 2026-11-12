@@ -1,0 +1,6 @@
+kit_af3_torch_x1|bash $BENCH_DIR/af3_torch/run.sh 1
+kit_af3_torch_x2|bash $BENCH_DIR/af3_torch/run.sh 2
+kit_af3_torch_x4|bash $BENCH_DIR/af3_torch/run.sh 4
+kit_af3_torch_x8|bash $BENCH_DIR/af3_torch/run.sh 8
+kit_af3_torch_x12|bash $BENCH_DIR/af3_torch/run.sh 12
+kit_af3_torch_x16|bash $BENCH_DIR/af3_torch/run.sh 16

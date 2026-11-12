@@ -1,0 +1,6 @@
+kit_openfold3_x1|bash $BENCH_DIR/openfold3/run.sh 1
+kit_openfold3_x2|bash $BENCH_DIR/openfold3/run.sh 2
+kit_openfold3_x4|bash $BENCH_DIR/openfold3/run.sh 4
+kit_openfold3_x8|bash $BENCH_DIR/openfold3/run.sh 8
+kit_openfold3_x12|bash $BENCH_DIR/openfold3/run.sh 12
+kit_openfold3_x16|bash $BENCH_DIR/openfold3/run.sh 16

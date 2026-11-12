@@ -46,6 +46,7 @@ featurization, loading and output writing. Report the median of the warm forward
 - A number taken any other way (no MSA, no templates, fewer than 4 real templates, a wider timing span) is not a 5I28 number.
 - Records are dated files (`docs/records/`, created with the first FoldForge record) and are not edited afterwards. The first:
   [2026-11-11](../records/5i28_foldforge_20261111.md).
+  The kit side (every kit, n = 1..16, method, versions, caveats): [2026-11-11](../records/5i28_anthropic_kits_20261111.md); its harness is `benchmarks/5i28_kits/`.
 
 ## Preflight before any sweep
 

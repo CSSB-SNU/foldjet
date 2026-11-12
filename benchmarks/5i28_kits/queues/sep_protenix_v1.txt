@@ -1,0 +1,2 @@
+sep_protenix_v1_x16|bash $BENCH_DIR/protenix_family_run.sh protenix_v1 16
+sep_protenix_v1_x1|bash $BENCH_DIR/protenix_family_run.sh protenix_v1 1

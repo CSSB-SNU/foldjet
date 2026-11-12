@@ -1,0 +1,6 @@
+sep_protenix_v1_x1|bash $BENCH_DIR/protenix_family_run.sh protenix_v1 1
+sep_protenix_v1_x2|bash $BENCH_DIR/protenix_family_run.sh protenix_v1 2
+sep_protenix_v1_x4|bash $BENCH_DIR/protenix_family_run.sh protenix_v1 4
+sep_protenix_v1_x8|bash $BENCH_DIR/protenix_family_run.sh protenix_v1 8
+sep_protenix_v1_x12|bash $BENCH_DIR/protenix_family_run.sh protenix_v1 12
+sep_protenix_v1_x16|bash $BENCH_DIR/protenix_family_run.sh protenix_v1 16

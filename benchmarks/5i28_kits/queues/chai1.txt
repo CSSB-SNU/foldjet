@@ -1,0 +1,6 @@
+kit_chai1_x1|bash $BENCH_DIR/chai1/run.sh 1
+kit_chai1_x2|bash $BENCH_DIR/chai1/run.sh 2
+kit_chai1_x4|bash $BENCH_DIR/chai1/run.sh 4
+kit_chai1_x8|bash $BENCH_DIR/chai1/run.sh 8
+kit_chai1_x12|bash $BENCH_DIR/chai1/run.sh 12
+kit_chai1_x16|bash $BENCH_DIR/chai1/run.sh 16

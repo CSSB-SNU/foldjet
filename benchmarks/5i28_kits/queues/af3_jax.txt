@@ -1,0 +1,6 @@
+kit_af3_jax_x1|bash $BENCH_DIR/af3_jax/run.sh 1
+kit_af3_jax_x2|bash $BENCH_DIR/af3_jax/run.sh 2
+kit_af3_jax_x4|bash $BENCH_DIR/af3_jax/run.sh 4
+kit_af3_jax_x8|bash $BENCH_DIR/af3_jax/run.sh 8
+kit_af3_jax_x12|bash $BENCH_DIR/af3_jax/run.sh 12
+kit_af3_jax_x16|bash $BENCH_DIR/af3_jax/run.sh 16

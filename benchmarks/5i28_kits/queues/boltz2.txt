@@ -1,0 +1,6 @@
+kit_boltz2_x1|bash $BENCH_DIR/boltz2/run.sh 1
+kit_boltz2_x2|bash $BENCH_DIR/boltz2/run.sh 2
+kit_boltz2_x4|bash $BENCH_DIR/boltz2/run.sh 4
+kit_boltz2_x8|bash $BENCH_DIR/boltz2/run.sh 8
+kit_boltz2_x12|bash $BENCH_DIR/boltz2/run.sh 12
+kit_boltz2_x16|bash $BENCH_DIR/boltz2/run.sh 16
