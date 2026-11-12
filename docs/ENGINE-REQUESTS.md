@@ -1,4 +1,4 @@
-# Requests to the miniworld-engine team (2.5.0 / 2.5.1)
+# Requests to the miniworld-engine team (2.5.0 - 2.5.4)
 
 Requests only: what FoldForge would like the engine to provide. What the engine does not support and what FoldForge does meanwhile is in
 [ENGINE-UNSUPPORTED.md](ENGINE-UNSUPPORTED.md); each request names the rows there it would retire (`U-<section>`).
@@ -6,23 +6,23 @@ Requests only: what FoldForge would like the engine to provide. What the engine 
 Priority: **P1** blocks a clean integration or costs most of a fold's speed on the main path (H100, bf16); **P2** removes a FoldForge workaround
 or a per-family slow path; **P3** convenience, documentation, or a wish for exactness in a corner.
 
-Numbering is stable (R1 ... R20); a request that is done is struck out here, not renumbered. Earlier lists were merged: the former items 1 / 5
+Numbering is stable (R1 ... R25); a request that is done is struck out here, not renumbered. Earlier lists were merged: the former items 1 / 5
 are R1, 4 / 8 are R2, 3 / F4 are R6, 6 is R5, 9 / D2 are R4, 7 / 11 are R10, D1 is R7, F1 is R8, F2 is R9, F3 is R11.
 
 | # | Priority | Request | Retires |
 | --- | --- | --- | --- |
 | R1 | P1 | Public CUDA-graph capture and weight-cache API | U-removed (capture), U-layout (caches) |
 | R2 | P1 | Kernel-served `OuterProductMean` with `count_offset` (AF3's `n + 1e-3` divisor) | U-backend (OPM) |
-| R3 | P2 | `AttentionPairBias` `cuda` / `triton` with an additive `extra_pair_bias` | U-backend (single attention) |
+| ~~R3~~ | – | ~~`AttentionPairBias` `cuda` / `triton` with an additive `extra_pair_bias`~~ Fixed (served on `cuda` in 2.5.4, eval only) | U-backend (single attention, closed) |
 | R4 | P2 | `protenix_v2` key (or documented alias) on `TriangleAttention` / `TriangleMultiplication` | U-class (protenix2 keys) |
 | R5 | P2 | Separate model keys for the triangle attention and the triangle multiplication of a `PairformerBlock` | U-layout (RoseTTAFold3 fast) |
-| R6 | P2 | ESMFold2 atom block with the atom pair (and rotary keyed by `uid`), or a documented non-equivalence | U-class (ESMFold2 atom stack) |
-| R7 | P2 | Chai-1 `TokenDiTChai1` / `AtomDiTChai1` on `cuda` with FoldForge's mixed dtypes (bf16 `single`, fp32 `cond` / `pair`) | U-backend (Chai-1 DiT) |
+| ~~R6~~ | – | ~~ESMFold2 atom block with the atom pair (and rotary keyed by `uid`), or a documented non-equivalence~~ Done: `AtomDiT("esmfold2_pair")` (2.5.3), used by FoldForge `b36209c` / `fcddf56` | U-class (ESMFold2 atom stack, closed) |
+| ~~R7~~ | – | ~~Chai-1 `TokenDiTChai1` / `AtomDiTChai1` on `cuda` with FoldForge's mixed dtypes (bf16 `single`, fp32 `cond` / `pair`)~~ Fixed (served on `cuda` in 2.5.4) | U-backend (Chai-1 DiT, closed) |
 | R8 | P2 | fp32 `TriangleMultiplication` / `TriangleAttention` / `Transition` kernels (`precision: fp32` runs them on `pytorch`) | U-backend (fp32) |
 | R9 | P3 | Chai-1 `circular` atom key window, or a documented equivalence of `pad` + `uid` | U-backend (Chai-1 key window) |
 | R10 | P3 | Stack classes for the DiT blocks (`TokenDiTStack` / `AtomDiTStack`) and a `from_shared_pair(...)` helper for the released shared pair norm | U-layout (DiT stacks, shared pair norm) |
 | R11 | P3 | A Chai-1 MSA block (`outer_product_mean(groups=8)` into parallel MSA / pair stages) and a general MSA block with the AF3 / Boltz orders | U-class (MSA block) |
-| R12 | P3 | `parallel_residual`: a fused residual add of parallel branches | U-removed (parallel_residual) |
+| R12 | P3 | `parallel_residual`: narrowed, still open. The engine has `ParallelResidual` (`cuda`, `triton`; at most 4 branches); FoldForge's MSA-stack sum (2-3 branches) can use it, the pairformer's 5 cannot (R22) | U-removed (parallel_residual) |
 | R13 | P3 | An option on `AtomDiTOpenFold3` for AF3's mask form under 128 real atoms | U-equivalence (atom window < 128 atoms) |
 | R14 | P3 | Class-docstring invariants for the shared-KV atom AdaLN and RoseTTAFold3's zero query bias (or a `query_bias` constructor option) | U-layout (shared KV, zero query bias) |
 | ~~R15~~ | – | ~~Export the dead-module loader~~ Closed: the engine declined; solved in FoldForge (`modules/dense/dead.py`) | U-removed (dead-module loader) |
@@ -31,7 +31,11 @@ are R1, 4 / 8 are R2, 3 / F4 are R6, 6 is R5, 9 / D2 are R4, 7 / 11 are R10, D1 
 | R18 | P2 | A public multi-fold (trunk_seed x diffusion_seed) contract for the DiT blocks | U-class (grouped 5x5 sampler) |
 | R19 | P2 | Smaller temporaries for the 2.5.0 `PairformerBlock` batched over samples (the confidence head's CUDA-graph pool) | U-class (confidence-head graph memory) |
 | ~~R20~~ | – | ~~2.5.1 sm90 atom-DiT backward `CUDA_ERROR_ILLEGAL_ADDRESS`~~ Fixed in 2.5.3 (a Protenix v1 training smoke on `cuda` without the `pytorch` workaround runs) | U-backend (training: atom DiT cuda backward) |
-| R21 | P2 | `MSAPairWeightedAveraging` `cuda` for `d_pair` 256 (Chai-1) past N = 1024, and the memory it then needs | U-class (PWA wide pair, N > 1024) |
+| ~~R21~~ | – | ~~`MSAPairWeightedAveraging` `cuda` for `d_pair` 256 (Chai-1) past N = 1024, and the memory it then needs~~ Fixed (served at N = 1536 / 2048 in 2.5.4; the memory was not re-measured) | U-class (PWA wide pair, closed) |
+| R22 | P2 | The engine `PairformerBlock._pair_updates` sums its parallel branches in ATen (`sub` / `add`): a fused path for 5 branches (ParallelResidual caps at 4) | U-removed (parallel_residual) |
+| R23 | P3 | Engine-internal ATen glue at n = 1 (`inverse_length`, the fp32 -> bf16 `copy_` of `trimul_h100`) | – |
+| R24 | P2 | An Euler update op without Kabsch alignment (the `AlignEuler` module always aligns) | U-backend (glue modules) |
+| R25 | P3 | RoseTTAFold3 chirality-gradient op (`modules/dense/chirality.py`, FoldForge-own) | U-class (chirality features) |
 
 ## P1
 
@@ -50,9 +54,10 @@ FoldForge builds `count_offset=None` by default and runs the exact form on `pyto
 
 ## P2
 
-**R3. `AttentionPairBias` with `extra_pair_bias`.** OpenDDE's structural-token refiner adds an `[L, L]` bias to every head of the single
-attention. The `cuda` backend refuses it ("the kernels compute the bias from pair inside the pass"), so those calls (4 per fold) run
-`pytorch`. An additive logit input, or folding the bias into the hoisted pair bias as `TokenDiTProtenix` does, would serve them.
+**R3. FIXED in 2.5.4 (checked 2026-11-12). `AttentionPairBias` with `extra_pair_bias`.** OpenDDE's structural-token refiner adds an `[L, L]` bias to every head of the single
+attention. Engine 2.5.0 / 2.5.1 refused it on `cuda`, so those calls (4 per fold) ran `pytorch`. In 2.5.4 `AttentionPairBias._supports_cuda` accepts it (the planes are
+added to the hoisted bias; eval only, with a gradient the call is refused). Audit on H100 (OpenDDE, eager `engine_dispatch`, n = 1 / 8 / 12): all 216 `AttentionPairBias`
+calls (56 modules) on `cuda`, no refusal.
 
 **R4. `protenix_v2` key.** `TokenDiT` / `AtomDiT` have `protenix_v2`; `TriangleAttention` / `TriangleMultiplication` do not, so protenix2 builds
 them with `protenix` (same math: transposed ending bias). A documented alias lets the family key map to one name.
@@ -61,17 +66,18 @@ them with `protenix` (same math: transposed ending bias). A documented alias let
 fast mode wants RF3 attention with the plain multiplication, so FoldForge replaces the block's two multiplications after building it
 (`modules/engine/pairformer.py`). A second key (for example `trimul_model=`) removes the replaced sub-modules.
 
-**R6. ESMFold2 atom stack with the pair.** `AtomDiT("esmfold2")` is the pair-free sliding-window block (fused `Wqkv`, six-way modulation, 3D RoPE
-inside the block, no `to_bias`). FoldForge's ESMFold2 atom stack is the AF3 block over a `[windows, 32, 192, d_pair]` atom pair with the
-family's rotary and RMS / SiLU AdaLN, so it stays FoldForge-own. Either an option that takes the pair bias and the rotary keyed by `uid`, or a
-statement that the two are different functions, tells FoldForge whether the stack could ever move.
+**R6. DONE (engine 2.5.3, used by FoldForge 2026-11-12). ESMFold2 atom stack with the pair.** The engine now has `AtomDiT("esmfold2_pair")` (`AtomDiTESMFold2Pair`: the AF3 block over the
+`[windows, 32, 192, d_pair]` atom pair with the family's rotary and RMS / SiLU AdaLN; `backends = pytorch / triton / cuda`). FoldForge runs the ESMFold2 atom
+stacks on it since commit `b36209c` (`fcddf56` adds `key_dim_per_head`), keeping the own stack as the fallback on engines without the class. Audit on H100 (engine 2.5.4,
+n = 1 / 8 / 12 / 16): 9 blocks served on `cuda`, no refusal. Measured gain (5I28, ESMFold2, warm forward, H100, 2026-11-12): n = 1 0.405 -> 0.299 s, n = 8 4.096 -> 3.404 s
+(kit 0.311 / 3.919 s). Before: ESMFold2's sampler took 0.514 s against Protenix v1's 0.429 s at n = 1 although its token DiT has half the blocks (12 against 24);
+the engine's fused atom kernels (`pre90_split`, `post90_fwd`, `h_attn_fwd`) were absent from its profile (`docs/records/5i28_foldforge_20261111.md`).
 
-Measured 2026-11-12 (5I28 n=1, H100, torch profiler, one warm sampler call): ESMFold2's sampler takes 0.514 s against Protenix v1's 0.429 s although its token DiT has half the blocks (12 against 24). The engine's fused atom kernels (`pre90_split`, `post90_fwd`, `h_attn_fwd`) are absent from its profile, replaced by generic GEMMs, inductor-fused casts and fp32 FFMA GEMMs: the FoldForge-own atom stack. ESMFold2 is the one model slower than its kit on 5I28 (kit / FoldForge 0.57 at n = 1, 1.0 at n = 12; `docs/records/5i28_foldforge_20261111.md`).
-
-**R7. Chai-1 DiT on `cuda`.** FoldForge hands the token block bf16 `single` and fp32 `cond` / `pair` (the conditioning is built in fp32).
-`TokenDiTProtenix` serves that on `cuda`; the Chai-1 classes refuse ("all bfloat16 or all float32"), so Chai-1's 64 token-DiT and 27 atom-DiT
-calls per fold run `pytorch` (observed on H100). The atom block also refuses under the fp32 sampler glue ("bfloat16 activations under bfloat16
-autocast only"). Accepting fp32 `cond` / `pair` with a bf16 `single` (or casting inside the class) would put them on `cuda`.
+**R7. FIXED in 2.5.4 (checked 2026-11-12). Chai-1 DiT on `cuda`.** FoldForge hands the token block bf16 `single` and fp32 `cond` / `pair` (the conditioning is built in fp32).
+Engine 2.5.1 refused that in the Chai-1 classes ("all bfloat16 or all float32"; the atom block also under the fp32 sampler glue), so the 64 token-DiT and 27 atom-DiT
+calls per fold ran `pytorch`. In 2.5.4 both classes (`MasterEntryCast`) are served on `cuda`: audit on H100 (eager `engine_dispatch`, n = 8 / 12 / 16, fp32 conditioning
+inputs): `TokenDiTChai1` 16 modules / 48 calls, `AtomDiTChai1` 9 modules / 21 calls, no refusal. The engine accepts the fp32 inputs; a FoldForge-side dtype change for them
+is separate work and not a refusal.
 
 **R8. fp32 pair-stack kernels.** An fp32-activation (`precision: fp32`) fold of the Protenix lineage runs `TriangleMultiplication`,
 `TriangleAttention` and `Transition` on `pytorch` (the kernels are bf16-only). Documented behaviour; listed because every fp32 reference run is
@@ -85,9 +91,22 @@ mostly `pytorch`.
 
 **R19. Confidence-head graph memory.** With one CUDA-graph pool per captured graph, the 2.5.0 `PairformerBlock` batched over samples (`engine/graph.py::make_pairformer_block(..., batched="sample")`) needs 2.4x the pool of the 2.4.0 fused `AF3Pairformer` in the confidence head: summed over the captures of 70 ascending-size FoldBench assemblies, 26.9 GiB against 11.3 GiB (largest bucket 5.67 against 3.04 GiB). Together with the evoformer pools (about 37-41 GiB) the private pools reached 80 GiB at the ~400-token bucket and a capture failed (five assemblies; `release-graphs target` passed). FoldForge now evicts the callable's oldest graphs before a capture when memory is short (`models/execution.py`), but the size of the temporaries is the engine's: please check whether the batched block can use a fused path or state a workspace-size contract. The temporaries were estimated from pool sizes, not profiled.
 
+**New candidates from the 2.5.4 per-model audits (2026-11-12, H100).** R22 - R25 come from torch profiles of the audited models; graph replays carry no python stacks, so some
+attributions are inferred from eager runs or by kernel name (marked "inferred"). Treat the percentages as estimates.
+
+**R22. Fused parallel update in `PairformerBlock`.** `PairformerBlock._pair_updates` (`modules/pairformer.py` ~line 293) sums the parallel branches' deltas with ATen `sub` / `add`
+(`module(x) - x` per branch, then `+`). Chai-1 (bench, n = 8, 200 steps, wall 14.33 s): `aten::sub` 570 ms (3.98%) + `aten::add` 457 ms (3.19%) = 7.2% of the wall (trunk 896 ms,
+confidence head 93 ms, template 38 ms; attributed from eager, inferred for the graph). `ParallelResidual` caps at `MAX_BRANCHES = 4`, the Chai-1 pair update has 5 branches (two
+multiplications, two attentions, the transition). Please lift the cap to 5 (or fuse the sum inside the pairformer). Retires part of R12's scope.
+
+**R24. Euler update without Kabsch alignment.** `AlignEuler` always aligns (Kabsch); the families with `realign_sampler=False` (protenix1 / protenix2, opendde, af3, openfold3,
+boltz2, chai1, rosettafold3) therefore get no engine sampler glue for the Euler step and run FoldForge's torch update. From the profiles: 3-5% of the n = 1 time (inferred, by kernel name).
+An op that takes the denoised coordinates and sigma step without the alignment would serve them.
+
 **R20. Atom-DiT `cuda` backward (training), engine 2.5.1. FIXED in 2.5.3** (the training smoke runs without the `pytorch` workaround; the kernel comment names this request). Engine 2.5.0 refused a training call of `AtomDiTProtenix` on `cuda` ("the backward kernels know the chained K / V AdaLN and the clipped 'pad' window only") and the guard ran `pytorch`; 2.5.1 serves it, and on Protenix v1's blocks (128 tokens, 8ayg, batch of 8 noisy samples) the backward fails: `miniworld_engine/kernels/integrations/local_dit_h100.py:436 _bwd` -> `k90.finalize(...)` -> `cuLaunchKernelEx: CUDA_ERROR_ILLEGAL_ADDRESS` (grid (16, 27, 1), seen with `CUDA_LAUNCH_BLOCKING=1`; without it the same fault surfaces later as `CUBLAS_STATUS_EXECUTION_FAILED` in a bf16 GEMM). Please fix the kernel or refuse the call as 2.5.0 did. Also: the block's output is a view created inside a custom autograd Function, so an in-place write to it fails when a gradient is recorded (`Output 0 of View is a view and is being modified inplace`); FoldForge now writes out of place when grad is enabled (`modules/dense/atom_cross_attention.py::_mask_atoms`), but returning a fresh tensor would avoid the trap for other callers. FoldForge's training script runs `atom_blocks` on `pytorch` meanwhile (`scripts/train_protenix1.py`).
 
-**R21. `MSAPairWeightedAveraging` at `d_pair` 256 past 1024 tokens.** On the engine's `redesign` branch (a01c952e1) the Chai-1 5I28 run still logs
+**R21. FIXED in 2.5.4 (checked 2026-11-12): served at N = 1536 / 2048.** The H100 Chai-1 audit (eager `engine_dispatch`, n = 12 and 16) shows `MSAPairWeightedAveraging` (4 modules, 16 calls) on `cuda`
+with no refusal; the engine docstring now lists `pwa_wide` at N <= 2048 for inference. The memory this path needs (77 GiB at n = 16) was NOT re-measured. Original text: On the engine's `redesign` branch (a01c952e1) the Chai-1 5I28 run still logs
 "MSAPairWeightedAveraging backend cuda refuses a call: d_pair 256: the pair side is pwa_wide's sm_90a kernels (N <= 1024), got N=2048 on sm_90;
 running its pytorch backend": the 1536 / 2048 serving covers `d_pair` 128 only. Chai-1 n = 16 (2048 tokens) is the one cell that then needs 77 GiB
 of the 80 (it runs alone in a fresh process, 70.6 s against the kit's 89.7 s, and runs out of memory behind the smaller sizes of one process), so
@@ -107,11 +126,21 @@ every caller of a released AF3-family checkpoint use one engine implementation.
 **R11. MSA block.** The engine has no MSA block; FoldForge composes `modules/engine/graph.py::EvoformerBlock` from engine parts, including
 Chai-1's parallel schedule (each part owns its residual, so a stage's update is the sum of the parts' deltas `part(x) - x`).
 
-**R12. `parallel_residual`.** `EvoformerBlock._forward_parallel` (Chai-1's MSA block) sums parallel branches in torch (`x + sum_i (y_i - x)`) because the
-parts own their residuals; the 2.5.0 modules expose no fused equivalent. (The pairformer blocks use the engine's own `parallel=True`.)
+**R12. `parallel_residual` (narrowed, still open).** `EvoformerBlock._forward_parallel` (Chai-1's MSA block) sums parallel branches in torch (`x + sum_i (y_i - x)`) because the
+parts own their residuals. The 2.5.0 modules had no fused equivalent; engine 2.5.4 has `ParallelResidual` (`pytorch`, `cuda`, `triton`; `MAX_BRANCHES = 4`). FoldForge's
+MSA-stack sum has 2 branches (MSA attention + MSA transition) or 3 (two triangle multiplications + pair transition; then 2 triangle attentions), so it could use the module:
+FoldForge has not switched yet. The pairformer's pair update has 5 branches (two multiplications, two attentions, the transition) and cannot (R22). The pairformer blocks use the engine's own `parallel=True`.
 
 **R13. AF3 mask under 128 atoms.** `AtomDiT*` switch every masked key off; AF3's own form (`+1e9` only where both query and key are padding) lets a
 real query read the padded keys of its slid window below 128 real atoms. Identical from 128 atoms (tested at 130 and 200).
+
+**R23. ATen glue inside engine modules at n = 1.** Examples: `modules/functional.py` ~365 `inverse_length` (`copy_`, `sum`, `reciprocal` per triangle multiplication) and the fp32 -> bf16
+`copy_` in `kernels/integrations/trimul_h100.py` ~709 (`_update_inference_body`): about 3% of the RoseTTAFold3 n = 1 time (`~/foldforge-scratch/cuda254/rosettafold3/classified.txt`, eager
+attribution; Chai-1 n = 1: `trimul_h100.py:709` 3.47 ms = 0.52% of a 662 ms wall). Small per call, but at n = 1 they are not hidden by the kernels.
+
+**R25. RoseTTAFold3 chirality gradient.** `modules/dense/chirality.py` (`dihedral_error_gradient`, FoldForge-own, run per sampler step in the atom encoder) is 3.4% of the eager n = 8
+time and 14.6% of the eager n = 1 time (eager profile; the compiled / graph runs show it as small `bmm` / `gemv` kernels, `chirality.py:53`). A fused op for it would be an engine
+family of its own: a wish, not a blocker.
 
 **R14. Documented invariants.** `AtomDiTBoltz2` / `AtomDiTRoseTTAFold3` / `AtomDiTChai1` share one AdaLN for q and k / v; FoldForge checks the
 released `k_adaptive_layernorm` equals the query one before discarding it. RoseTTAFold3's `FlatQKNormAugmentedAttention` has no query bias; FoldForge
