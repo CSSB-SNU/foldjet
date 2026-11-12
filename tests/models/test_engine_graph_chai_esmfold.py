@@ -21,7 +21,6 @@ import torch
 from foldforge.models.architectures.af3 import AlphaFold3
 from foldforge.models.checkpoints import miniworld
 from foldforge.models.checkpoints.legacy import dense_model
-from foldforge.modules.dense.diffusion_transformer import DiffusionCrossAttTransformer
 from foldforge.modules.dense.spec import spec_for
 from foldforge.modules.engine import graph, modules
 from foldforge.modules.engine.modules import MODEL_KEYS
@@ -118,9 +117,9 @@ def test_the_graph_holds_engine_classes_with_engine_keys(pair_of_models):
         assert not any(k.endswith("attention.to_gate.weight") for k in keys if "diffusion_head.transformer" in k)  # no gating query
         assert not any("ada_ln_kv" in k for k in keys if "atom_transformer" in k)  # one shared atom AdaLN
     else:
-        # the engine's ESMFold2 atom block is pair-free SWA: this family's atom stack (atom pair + rope) is FoldForge's own
-        assert isinstance(decoder, DiffusionCrossAttTransformer)
-        assert not any(isinstance(m, AtomDiTStack) for m in engine.modules())
+        # engine 2.5.3+: the ESMFold2 atom block with the atom pair + rotary (AtomDiT("esmfold2_pair"), FoldForge R6) is the engine's
+        assert isinstance(decoder, AtomDiTStack) and decoder.rotary
+        assert type(decoder.blocks[0]).__name__ == "AtomDiTESMFold2Pair"
         assert not any("single_attention" in k for k in keys if "trunk_pairformer" in k)  # pair-only trunk
 
 

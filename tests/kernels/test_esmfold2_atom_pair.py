@@ -80,6 +80,8 @@ def test_the_family_selects_the_engine_block():
     assert model_keys("esmfold2-fast").atom_dit == "esmfold2_pair"
     stack = atom_dit_stack("esmfold2", n_blocks=BLOCKS, precision="fp32")
     assert isinstance(stack, AtomDiTStack) and stack.rotary
+    # the atom cross-attention builds its rotary tables for this width (the whole model failed on its absence, which no stack-only test saw)
+    assert isinstance(stack.key_dim_per_head, int) and stack.key_dim_per_head > 0
     assert type(stack.blocks[0]).__name__ == "AtomDiTESMFold2Pair"
 
 

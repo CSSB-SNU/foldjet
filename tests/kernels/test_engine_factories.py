@@ -117,9 +117,10 @@ def test_dit_stacks_are_engine_blocks(family, token, atom, window):
         assert atoms.blocks[0].attention.ada_ln_in.ln_in.eps == 1e-5
 
 
-def test_esmfold2_atom_stack_is_not_built():
-    with pytest.raises(ValueError, match="no engine atom DiT"):
-        atom_dit_stack("esmfold2", n_blocks=3)
+def test_esmfold2_atom_stack_is_the_engine_pair_block():
+    # engine 2.5.3+ ships AtomDiT("esmfold2_pair") (R6): the family's atom stack is the engine's, with the rotary tables
+    stack = atom_dit_stack("esmfold2", n_blocks=3)
+    assert stack.rotary and type(stack.blocks[0]).__name__ == "AtomDiTESMFold2Pair"
     assert type(token_dit_stack("esmfold2", n_blocks=1, d_single=768, d_cond=768, d_pair=256, n_head=16).blocks[0]) is TokenDiTProtenix
 
 

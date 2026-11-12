@@ -183,5 +183,7 @@ def atom_dit_stack(
     if key == "esmfold2_pair":  # one window (192 keys, the +/- 64 rank band) and its own AdaLN epsilon: nothing to choose
         extra = {}
     blocks = [AtomDiT(key, d_single, d_cond, d_pair, n_head, n, **extra) for _ in range(n_blocks)]
-    return finish(AtomDiTStack(blocks), precision)  # type: ignore[return-value]
+    stack = AtomDiTStack(blocks)
+    stack.key_dim_per_head = d_single // n_head  # the per-head width the caller builds the atom rotary tables for (the dense stack has the same attribute)
+    return finish(stack, precision)  # type: ignore[return-value]
 
