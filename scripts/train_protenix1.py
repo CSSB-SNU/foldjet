@@ -32,6 +32,7 @@ from foldforge.train import (
     data,
     dist,
     freeze,
+    fused_opt,
     optim,
     prepare,
     step,
@@ -201,6 +202,7 @@ def main() -> None:
     ap.add_argument("--effective-batch", type=int, default=None, help="micro batch 1 x grad_accum x world size; sets grad_accum = N / world size (error if not divisible)")
     ap.add_argument("--dist-backend", default="nccl", help="torch.distributed backend under torchrun (gloo: two processes on one GPU, for tests)")
     ap.add_argument("--seed", type=int, default=None, help="base seed (default: TrainConfig.seed)")
+    ap.add_argument("--fused-opt", nargs="?", const="fused", default=None, choices=("foreach", "fused", "triton"), help="clip + Adam + EMA as multi-tensor launches (train/fused_opt.py; capturable Adam, device lr); default: the per-tensor path of train/optim.py")
     ap.add_argument("--bench", action="store_true", help="speed measurement of --steps real optimizer steps (implies --no-save --no-profile; no phase-0 micro step / coverage / kernel table)")
     ap.add_argument("--bench-pool", default="default", help="'default' (targets near --bench-tokens) or comma separated FoldBench targets; STAND-IN examples")
     ap.add_argument("--bench-tokens", type=int, default=bench.RECIPE_TOKENS, help="token count of the default pool (MiniWorld recipe crop: 384)")
@@ -406,8 +408,9 @@ def main() -> None:
                 say(f"KERNEL {ms:10.2f} ms  x{count:<6d} {name[:150]}", flush=True)
 
     # -- training loop
-    optimizer = optim.build_optimizer(model, cfg)
-    ema = optim.EMA(model, cfg.ema_decay) if cfg.use_ema else None
+    fopt = fused_opt.build_fused(model, cfg, args.fused_opt) if args.fused_opt else None
+    optimizer = fopt.optimizer if fopt else optim.build_optimizer(model, cfg)
+    ema = fopt.ema if fopt else (optim.EMA(model, cfg.ema_decay) if cfg.use_ema else None)
     params = [p for g in optimizer.param_groups for p in g["params"]]
     history: list[float] = []
     bench_walls: list[float] = []
@@ -423,7 +426,7 @@ def main() -> None:
     reset_observations(model)  # the dispatch table counts the training steps only (not the load / pool build)
     t0 = time.time()
     for it in range(args.steps):
-        lr = optim.set_lr(optimizer, it, cfg)
+        lr = fopt.set_lr(it, cfg) if fopt else optim.set_lr(optimizer, it, cfg)
         optimizer.zero_grad(set_to_none=True)
         totals = defaultdict(float)
         timer = PhaseTimer(args.profile_phases)
@@ -459,10 +462,13 @@ def main() -> None:
         with timer.phase("allreduce"):
             dist.allreduce_gradients(params, world)
         with timer.phase("optimizer_ema"):
-            norm_t = optim.clip_grad_norm(params, cfg.grad_clip_max_norm)
-            optimizer.step()
-            if ema is not None:
-                ema.update(model)
+            if fopt is not None:
+                norm_t = fopt.step()
+            else:
+                norm_t = optim.clip_grad_norm(params, cfg.grad_clip_max_norm)
+                optimizer.step()
+                if ema is not None:
+                    ema.update(model)
         norm = float(norm_t)
         totals = defaultdict(float, dist.mean_over_ranks(totals, world, device))
         if args.bench:
