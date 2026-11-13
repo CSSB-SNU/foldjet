@@ -28,6 +28,7 @@ from foldforge.train import (
     TrainBatch,
     TrainConfig,
     bench,
+    bucket_batch,
     checkpoint,
     data,
     dist,
@@ -207,6 +208,10 @@ def main() -> None:
     ap.add_argument("--micro-log", action="store_true", help="--bench: print one MICRO line per micro step on every rank (global index, example, recycles, loss) to compare runs micro step by micro step")
     ap.add_argument("--bench-pool-count", type=int, default=8, help="targets of the default pool")
     ap.add_argument("--bench-pool-cache", default=None, help="build the pool once (rank 0) into this file and load it everywhere: identical stand-in labels for every backend")
+    ap.add_argument("--bench-bucket", action="store_true", help="pad every example to ONE shape (train/bucket_batch.py: --bench-tokens tokens, --bucket-atoms atoms, --bucket-msa-pool raw MSA rows, --bucket-templates), so a CUDA graph of the micro step has one signature; also applies to --batch-source streams; default off")
+    ap.add_argument("--bucket-atoms", type=int, default=4096, help="--bench-bucket: flat atoms (MiniWorld crop.max_atoms 4096)")
+    ap.add_argument("--bucket-msa-pool", type=int, default=16384, help="--bench-bucket: raw MSA pool rows before the per-recycle draw (16384 = the largest FoldForge MSA bucket: nothing is cut)")
+    ap.add_argument("--bucket-templates", type=int, default=4, help="--bench-bucket: templates")
     args = ap.parse_args()
 
     world = dist.world_info()
@@ -290,6 +295,11 @@ def main() -> None:
         flush=True,
     )
 
+    bucket_spec = (
+        bucket_batch.BucketSpec(tokens=args.bench_tokens, atoms=args.bucket_atoms, msa_pool_rows=args.bucket_msa_pool, templates=args.bucket_templates)
+        if args.bench_bucket
+        else None
+    )
     pool: list[TrainBatch] = []
     if args.bench:
         targets = bench.parse_pool(args.bench_pool, args.bench_tokens, args.bench_pool_count)
@@ -302,6 +312,7 @@ def main() -> None:
             base_seed=cfg.seed,
             barrier=lambda: dist.barrier(world),
             max_tokens=args.bench_tokens if args.bench_pool == "default" else None,
+            bucket=bucket_spec,
             log=say,
         )
         say("POOL targets=%s tokens=%s build_s=%.1f" % (",".join(targets), [bench.real_tokens(e) for e in pool], time.time() - t_pool), flush=True)
@@ -312,6 +323,8 @@ def main() -> None:
         first = next(source)
     elif args.batch_source:
         source = iter(data.load_source(args.batch_source)(cfg, device))
+        if bucket_spec is not None:
+            source = bucket_batch.bucket_source(source, bucket_spec)
         first = next(source)
     else:
         raise SystemExit("give --smoke, --bench or --batch-source module:callable")

@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any
 import torch
 
 import foldforge as ff
+from foldforge.train.bucket_batch import BucketSpec, bucket_example, count_signatures
 from foldforge.train.data import TrainBatch
 
 if TYPE_CHECKING:
@@ -143,10 +144,12 @@ def build_pool(
     barrier=None,
     log=print,
     max_tokens: int | None = None,
+    bucket: BucketSpec | None = None,
 ) -> list[TrainBatch]:
     """The examples of ``targets`` on the GPU. With ``cache`` the pool is built ONCE (rank 0) and loaded by every rank and every later run: the
     stand-in ground truth is then identical for the three backends. Without it each process builds its own (the ground truth is the
-    prediction of the backend being measured)."""
+    prediction of the backend being measured). With ``bucket`` every example is then padded to that ONE shape (``train/bucket_batch.py``, in memory after
+    the build / load: the cache file keeps the raw examples, so one cache serves the bucketed and the plain pool); without it the pool is unchanged."""
 
     def build() -> list[TrainBatch]:
         out = []
@@ -159,19 +162,27 @@ def build_pool(
             out.append(example)
         return out
 
+    def finish(pool: list[TrainBatch]) -> list[TrainBatch]:
+        if bucket is None:
+            log(f"POOL signatures={len(count_signatures(pool))}")
+            return pool
+        out = [bucket_example(e, bucket) for e in pool]
+        log(f"POOL bucketed to {bucket}: signatures {len(count_signatures(pool))} -> {len(count_signatures(out))}")
+        return out
+
     device = pred.device
     if cache is None:
-        return build()
+        return finish(build())
     if cache.exists():
         requested, loaded = _load_pool(cache, device)
         if requested == list(targets):
-            return loaded
+            return finish(loaded)
     if info.is_main:
         pool = build()
         _save_pool(pool, cache, list(targets))
     if barrier is not None:
         barrier()
-    return _load_pool(cache, device)[1]
+    return finish(_load_pool(cache, device)[1])
 
 
 def _save_pool(pool: Sequence[TrainBatch], path: Path, requested: list[str]) -> None:
