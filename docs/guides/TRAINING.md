@@ -81,3 +81,67 @@ python scripts/train_protenix1.py --batch-source my_pkg.adapter:batches --steps 
 ```
 
 체크포인트는 네이티브 `*.miniworld.pt`(+ 같은 이름의 `.train.pt`: optimizer, EMA, step)로 저장된다. `protenix1.bin.zst` 형식으로의 역변환은 없다.
+
+## Speed measurement of the three backends
+
+`scripts/train_protenix1.py --bench` times REAL optimizer steps (trunk + diffusion + confidence, backward, gradient all-reduce, clip, Adam, EMA); it is not a finetune
+(stand-in data, nothing is saved, divergence does not stop it). The same command line with `--backend pytorch | cueq | miniworld` gives the three options:
+
+| `--backend` | what runs |
+|---|---|
+| `pytorch` | every engine module on its engine `pytorch` reference backend |
+| `cueq` | the engine's connection to NVIDIA cuEquivariance for the classes that have it: `TriangleMultiplication`, `TriangleAttention`, `AttentionPairBias`, `TokenDiTProtenix` (forward and backward, served with the gradient enabled); `OuterProductMean`, `MSAPairWeightedAveraging`, `Transition`, `AtomDiTProtenix` and the sampler glue have no `cueq` backend and run `pytorch` (`engine.unsupported: fallback`, listed in `LOAD_REPORT`) |
+| `miniworld` (default) | our kernels per module class: `cuda` on an H100 where the class has it, else `triton`, else `pytorch` |
+
+The effective batch is `micro batch 1 x grad_accum x number of GPUs`: 256 = 32 x 8 GPUs. `--effective-batch 256` derives `grad_accum = 256 / world size` (an error if it
+does not divide). Data parallelism is NOT DDP (the step runs a forward, several partial backwards and accumulates): every rank runs its own micro steps, the gradients are
+summed over the ranks in a few flattened buckets (`train/dist.py`) with the micro-step scale `1 / (grad_accum x world size)` (the same loss scale as one process with that many
+micro steps), then clip / Adam / EMA run replicated. Parameters are broadcast from rank 0 once. In `--bench` every micro step is a pure function of
+`(--seed, global micro index)` (`train/bench.py::micro_plan`: pool example, 1-4 recycles, torch RNG seed for noise / rotations), rank `r` takes the micro steps `r, r + W, ...`:
+the three backends and any GPU count see the same data stream, and a 2-rank run equals the 1-process run with twice the accumulation.
+
+```bash
+# one GPU, 30 steps x 256 micro steps (long: see the per-micro-step time below), one pool file shared by all runs
+POOL=/path/to/pool.pt        # built by the first run (rank 0), loaded by every later run and rank: identical stand-in labels
+for B in pytorch cueq miniworld; do
+  python scripts/train_protenix1.py --bench --backend $B --effective-batch 256 --steps 30 --warmup-steps 10 --bench-pool-cache $POOL
+done
+# 8 GPUs: 8 x 32 = 256
+for B in pytorch cueq miniworld; do
+  torchrun --nproc-per-node 8 scripts/train_protenix1.py --bench --backend $B --effective-batch 256 --steps 30 --warmup-steps 10 --bench-pool-cache $POOL
+done
+# smoke of the plumbing: 3 steps of 2 micro steps
+python scripts/train_protenix1.py --bench --backend cueq --steps 3 --grad-accum 2 --warmup-steps 1 --bench-pool-cache $POOL
+```
+
+Output (rank 0 only):
+
+- `LOAD_REPORT`: the loader's plan and the engine modules that are not on the requested backend, with the reason.
+- `ENGINE_AFTER_MICRO1` / `ENGINE_AFTER_MICRO2` / `ENGINE_FINAL`: the engine dispatch per module class from `report_observations` while the gradient is enabled.
+  `selected` = the backend each module of the class is set to, `served` = host calls that ran on each backend (a refused call is served by `pytorch`), `refused` = calls the
+  selected backend refused, with the reason (for example a backward the cuEquivariance op does not take). Counts are Python calls in the eager training step; nothing here
+  is a kernel trace. The comparison is only honest when this table is read with the times: a class listed as `selected=cueq ... refused=...` ran `pytorch` for those calls.
+- `POOL targets=... tokens=[...]`: the examples (tokens after FoldForge's featurisation).
+- `BENCHSTEP it=.. wall_s=.. loss=.. lr=.. peak_gib=.. micro_steps=.. gnorm=..`: CUDA-synchronized wall time of the whole optimizer step (micro steps, all-reduce, clip, Adam, EMA).
+  `micro_steps` is per optimizer step over all ranks (the effective batch); `peak_gib` is rank 0's peak allocated memory of the step. With `--profile-phases` the per-phase
+  `PHASES` lines are printed too (they add synchronizations).
+- `BENCH {json}`: backend, world size, grad_accum, effective batch, steps, `first_step_s` (includes first-call overheads, reported separately), mean / median / min / max over steps 2..N,
+  `total_wall_s`, `micro_steps_per_s` (all ranks), `seconds_per_micro_step_per_gpu`, `tokens_per_s`, `nonfinite_steps` (counted, the run goes on), peak allocated / reserved GiB, the
+  engine table, git commit, engine version and `miniworld_engine.__file__`, GPU name, and `ranks_identical` (the parameter checksum equals on every rank).
+
+Data are STAND-INS: FoldForge's featurisation of FoldBench targets (`--bench-pool default` = 8 targets with 0.7 x N .. N tokens (size table of the featurisation, <= 4096 atoms), N = `--bench-tokens`; an example that featurises above N tokens is dropped, default 384 = MiniWorld's recipe crop
+`crop.max_tokens: 384`, bucket 384; or `--bench-pool a,b,c`), the ground truth is the model's own pre-training prediction. Step time depends on the shapes, not on the label values,
+but the featurisation is FoldForge's inference one (MSA bucket 1024 rows, 4 templates where the target has them, no recipe crop / sampling): the recipe uses `bucket_msa_size: 128`,
+so the MSA part of a measured step is heavier than in the real run. Without `--bench-pool-cache` every process builds its own pool and the labels come from the backend being measured.
+
+Memory (80 GB H100, 384 tokens, 48 augmentations): 48 augmentations in one diffusion forward / backward OOM in the first micro step (78 GiB), so `--bench` defaults to
+`--augment-chunk 8` (6 chunks of the same 48 samples) AND `--activation-checkpointing` (the pair-stack blocks are recomputed in the backward): `pytorch` and `cueq` do not fit an 80 GB card
+without it (OOM at 77 GiB), `miniworld` fits either way (peak 68 GiB without, 17 GiB with; 5 % slower with). All three backends run the same flags; `--no-activation-checkpointing` /
+`--augment-chunk N` change them. Build the pool in a separate first run (`--bench-pool-cache`, one short `--steps 1`): the training numerics of a process that has just run the pool-building
+inference differ by ~1 % from a fresh process (pre-existing state of the inference calls; the loaded pool does not have it).
+Peak numbers in `BENCHSTEP` are wrong with `--profile-phases` (the phase timer resets the peak counters).
+
+Planning (H100 80GB, default pool 268-384 tokens, 48 augmentations in chunks of 8, activation checkpointing, 1-4 recycles, steps 2..4 of a 4 x 4 micro-step run, 2026-11-13): seconds per micro step per GPU
+`pytorch` 6.2, `cueq` 4.0, `miniworld` 2.2. A bench of 30 steps x 256 micro steps is 960 micro steps per GPU on 8 GPUs (about 100 / 65 / 36 minutes) and 7680 on one GPU (13.2 / 8.6 / 4.8 hours);
+the optimizer, EMA and the gradient all-reduce add well under a second per step. `--bench` is not resumable: give the job a time limit above that.
+`--micro-log` prints one `MICRO rank=.. g=.. example=.. passes=.. loss=..` line per micro step (the global index `g` is the same in a 1-process and an N-rank run).
