@@ -299,6 +299,8 @@ def main() -> None:
         flush=True,
     )
 
+    if args.bench_bucket:
+        bench.FIXED_LENGTH = max(bench.FIXED_LENGTH, args.bucket_atoms)  # present-atom index of one length for every example (else 512-multiples per example split the step-graph key)
     bucket_spec = (
         bucket_batch.BucketSpec(tokens=args.bench_tokens, atoms=args.bucket_atoms, msa_pool_rows=args.bucket_msa_pool, templates=args.bucket_templates)
         if args.bench_bucket
@@ -306,7 +308,7 @@ def main() -> None:
     )
     pool: list[TrainBatch] = []
     if args.bench:
-        targets = bench.parse_pool(args.bench_pool, args.bench_tokens, args.bench_pool_count)
+        targets = bench.parse_pool(args.bench_pool, args.bench_tokens, args.bench_pool_count, max_atoms=args.bucket_atoms)
         t_pool = time.time()
         pool = bench.build_pool(
             pred,

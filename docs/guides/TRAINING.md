@@ -156,3 +156,9 @@ capture); the random numbers come from the CUDA generator of the replay (`torch.
 Memory: the graphs share one private pool that stays reserved, on top of the eager peak (the `STEP_GRAPH` line of a `--bench` run reports captures, replays, fallbacks, pool GiB).
 Measured on one H100 (stand-in pool, bucketed, activation checkpointing): `miniworld` 2.2 -> 0.95 s per micro step at 4 recycles (GPU idle 64 % -> 3 %), `cueq` and `pytorch` are GPU bound
 (1.1x / 1.05x). Do not use `--profile-phases` with it (the phases are inside the graph).
+
+### L768 stand-in bench
+
+`--bench-tokens 768 --bucket-atoms 8192 --num-augment 32 --augment-chunk 0 --bench-bucket` (MiniWorld `distogram_diffusion_medium_v130_bioai_L768.yaml`: `crop.max_tokens 768`, `max_atoms 8192`; Protenix v1 fine-tuning stages 2-3: crop 768, diffusion batch 32).
+`--bucket-atoms` also bounds the default pool (targets above it are skipped) and sets the length of the present-atom index of every example (`bench.FIXED_LENGTH`), so that all examples have ONE step-graph signature.
+`FF_BENCH_PASSES_SEQ=1,2,3,4` (bench only) replaces the random recycle count by that cycle over the global micro index (capture-order tests); `FF_STEP_GRAPH_DEBUG=1` logs what differs when a second graph signature appears.

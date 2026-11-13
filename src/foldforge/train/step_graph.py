@@ -34,6 +34,7 @@ from __future__ import annotations
 import contextlib
 import dataclasses
 import logging
+import os
 import time
 from typing import TYPE_CHECKING, Any
 
@@ -255,6 +256,16 @@ class StepGraph:
                     self.warned = True
                 self.fallbacks += 1
                 return None
+            if os.environ.get("FF_STEP_GRAPH_DEBUG"):  # diagnosis of a split signature: what differs from the first captured example
+                sig = example_signature(example)
+                first = getattr(self, "_debug_sig", None)
+                if first is None:
+                    self._debug_sig = sig
+                else:
+                    diff = [(a, b) for a, b in zip(first[0], sig[0], strict=False) if a != b] + [(a, b) for a, b in zip(first[1:], sig[1:], strict=False) if a != b]
+                    LOG.warning("step graph key %d (%s): signature differs from the first in %d fields: %s", len(self.entries), example.name, len(diff), str(diff)[:1500])
+                    if not diff:
+                        LOG.warning("step graph: signature equal, key differs in (passes, scale, cfg, model, precision): %s", (passes, scale))
             try:
                 entry = self._capture(model, example, cfg, passes, scale)
             except torch.OutOfMemoryError:
