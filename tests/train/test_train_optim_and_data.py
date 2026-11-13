@@ -183,3 +183,50 @@ def test_resume_without_training_state_starts_at_step_zero(tmp_path):
         model, tmp_path / "w.miniworld.pt", family="protenix1", source="test"
     )
     assert checkpoint.resume(nn.Linear(2, 2), path) == 0
+
+
+def test_train_batch_fixed_index_fields_are_optional_and_with_fixed_atom_index_fills_them():
+    batch = data.TrainBatch(features={"pred_dense_atom_mask": torch.tensor([[1, 0, 1], [0, 0, 1]])}, atom_positions=torch.zeros(2, 3, 3))
+    assert batch.present_index is None and batch.present_valid is None
+    filled = data.with_fixed_atom_index(batch, length=8)
+    assert filled.present_index.tolist() == [0, 2, 5, 0, 0, 0, 0, 0]
+    assert filled.present_valid.tolist() == [True, True, True] + [False] * 5
+    assert data.with_fixed_atom_index(filled) is filled
+    masked = data.TrainBatch(features={}, atom_positions=torch.zeros(2, 3, 3), atom_mask=torch.tensor([[0, 1, 0], [0, 0, 0]]).bool())
+    assert data.with_fixed_atom_index(masked, 4).present_index.tolist() == [1, 0, 0, 0]
+
+
+def test_features_to_device_keeps_the_gather_shape_metadata_on_the_host():
+    features = {"a:input_shape": torch.tensor([3, 4]), "a:gather_idxs": torch.arange(3)}
+    out = data.features_to_device(features, torch.device("cpu"))
+    from foldforge.utils.atom_layout import GatherInfo
+
+    info = GatherInfo.from_dict({"a:gather_idxs": out["a:gather_idxs"], "a:gather_mask": torch.ones(3, dtype=torch.bool), "a:input_shape": out["a:input_shape"]}, "a")
+    assert info.input_shape == (3, 4) and out["a:input_shape"].device.type == "cpu"
+
+
+def test_device_parts_floats_replay_the_old_per_chunk_float_accumulation_exactly():
+    from types import SimpleNamespace
+
+    from foldforge.train.step import DeviceParts
+
+    g = torch.Generator().manual_seed(5)
+    w = SimpleNamespace(diffusion_loss=4.0, bond_loss=1.0, distogram_loss=0.03)
+    shares = [8 / 48] * 5 + [8 / 48]
+    parts = DeviceParts(3, (w.diffusion_loss, w.bond_loss, w.distogram_loss))
+    ref = {"loss": 0.0, "diffusion": 0.0, "bond": 0.0, "distogram": 0.0}
+    for share in shares:
+        d, b = torch.rand((), generator=g) * 3, torch.rand((), generator=g)
+        c = (w.diffusion_loss * d + w.bond_loss * b) * share
+        parts.chunks.append((share, d, b, c))
+        ref["diffusion"] += float(d) * share
+        ref["bond"] += float(b) * share
+        ref["loss"] += float(c)
+    disto, conf_, pl, pd = (torch.rand((), generator=g) for _ in range(4))
+    parts.distogram = disto
+    ref["distogram"] = float(disto)
+    ref["loss"] += w.distogram_loss * ref["distogram"]
+    parts.confidence, parts.conf_parts = conf_, {"plddt": pl, "pde": pd}
+    ref["loss"] += float(conf_)
+    ref.update(confidence=float(conf_), plddt=float(pl), pde=float(pd), passes=3)
+    assert parts.floats() == ref

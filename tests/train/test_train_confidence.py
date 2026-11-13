@@ -258,3 +258,64 @@ def test_the_recipe_trains_the_confidence_head_in_the_same_stage():
     assert (cfg.loss.plddt_loss, cfg.loss.pde_loss, cfg.loss.pae_loss) == (1.0, 1.0, 1.0)
     assert cfg.rollout_steps == 20
     assert not hasattr(cfg, "freeze_trunk"), "single-stage full finetuning has no frozen part"
+
+
+# ---------------------------------------------------------------------------------------------------- fixed-length present-atom path
+def _random_inputs(seed: int, res: int = 7, atoms: int = 6):
+    g = torch.Generator().manual_seed(seed)
+    gt = torch.randn(res, atoms, 3, generator=g) * 5.0
+    pred = gt + torch.randn(gt.shape, generator=g)
+    mask = torch.rand(res, atoms, generator=g) > 0.3
+    mask[:, 0] = True  # the slot of the pseudo-beta gather below
+    is_nuc = torch.rand(res, generator=g) > 0.7
+    is_lig = (torch.rand(res, generator=g) > 0.7) & ~is_nuc
+    return pred, gt, mask, is_nuc, is_lig
+
+
+def _targets_fixed(pred, gt, mask, is_nuc, is_lig, length):
+    from foldforge.train.data import fixed_atom_index
+
+    res, atoms, _ = pred.shape
+    index, valid = fixed_atom_index(mask, length)
+    idx = torch.arange(res) * atoms
+    gather = GatherInfo(gather_idxs=idx, gather_mask=torch.ones(res, dtype=torch.bool), input_shape=(res, atoms))
+    args = (pred, gt, mask, gather, torch.ones(res), torch.full((res,), ALA), is_nuc, is_lig, FakeHead())
+    return conf.confidence_targets(*args), conf.confidence_targets(*args, present_index=index, present_valid=valid)
+
+
+@pytest.mark.parametrize("seed", range(6))
+@pytest.mark.parametrize("length", [64, 400])
+def test_fixed_length_present_index_gives_the_nonzero_path_targets_bit_for_bit(seed, length):
+    pred, gt, mask, is_nuc, is_lig = _random_inputs(seed)
+    old, new = _targets_fixed(pred, gt, mask, is_nuc, is_lig, length)
+    for name in ("plddt", "pde", "pae"):
+        assert torch.equal(old[name][0], new[name][0]), name
+        assert torch.equal(old[name][1], new[name][1]), name
+
+
+def test_fixed_atom_index_is_ascending_padded_and_grows_past_its_length():
+    from foldforge.train.data import fixed_atom_index
+
+    mask = torch.zeros(4, 5, dtype=torch.bool)
+    mask[0, 1] = mask[2, 3] = mask[3, 4] = True
+    index, valid = fixed_atom_index(mask, 8)
+    assert index.tolist() == [1, 13, 19, 0, 0, 0, 0, 0] and valid.tolist() == [True] * 3 + [False] * 5
+    big = torch.ones(30, 40, dtype=torch.bool)  # 1200 atoms > 8
+    index, valid = fixed_atom_index(big, 8)
+    assert index.shape == (1536,) and int(valid.sum()) == 1200 and index[:1200].tolist() == list(range(1200))
+
+
+def test_per_atom_lddt_scalars_equal_the_old_tensor_constants():
+    pred, gt, _, is_nuc, is_lig = _random_inputs(3)
+    x, y = pred.reshape(-1, 3), gt.reshape(-1, 3)
+    nuc, lig = is_nuc.repeat_interleave(6), is_lig.repeat_interleave(6)
+    lddt, valid = conf.per_atom_lddt(x, y, nuc, lig)
+    # reference: the pre-change formulation with device constants and the broadcast comparison
+    pd, gd = torch.cdist(x, x), torch.cdist(y, y)
+    radius = torch.where(nuc, gd.new_tensor(30.0), gd.new_tensor(15.0))
+    pair = (gd > 0.0) & (gd < radius[None, :])
+    pair &= ~(lig[:, None] & lig[None, :])
+    bins = torch.tensor((0.5, 1.0, 2.0, 4.0))
+    kept = ((pd - gd).abs()[..., None] <= bins) & pair[..., None]
+    frac = kept.sum(dim=-2).float() / (pair.sum(dim=-1, keepdim=True).float() + 1e-8)
+    assert torch.equal(lddt, frac.mean(dim=-1)) and torch.equal(valid, pair.sum(dim=-1) > 0)
