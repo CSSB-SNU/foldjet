@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any
 import torch
 
 import foldforge as ff
-from foldforge.train.data import TrainBatch
+from foldforge.train.data import TrainBatch, features_to_device, fixed_atom_index
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -131,7 +131,15 @@ def standin_example(pred, target: str, seed: int | None = None) -> TrainBatch:
         samples = net.sample_diffusion(captured["trunk"])["diffusion_samples"]["atom_positions"]
     state.close()
     features = {k: v.clone() for k, v in captured["batch"].items()}  # leave inference mode: autograd needs ordinary tensors
-    return TrainBatch(features=features, atom_positions=samples[0].clone().float(), name=target)
+    features = features_to_device(features, samples.device)  # the GatherInfo input_shape metadata stays on the host (no sync per micro step)
+    index, valid = fixed_atom_index(features["pred_dense_atom_mask"].cpu())
+    return TrainBatch(
+        features=features,
+        atom_positions=samples[0].clone().float(),
+        name=target,
+        present_index=index.to(samples.device),
+        present_valid=valid.to(samples.device),
+    )
 
 
 def build_pool(
@@ -198,16 +206,26 @@ def _load_pool(path: Path, device: torch.device) -> tuple[list[str], list[TrainB
     def to(t):
         return None if t is None else t.to(device)
 
-    return saved["requested"], [
-        TrainBatch(
-            features={k: v.to(device) for k, v in b["features"].items()},
-            atom_positions=b["atom_positions"].to(device),
-            atom_mask=to(b["atom_mask"]),
-            bond_pairs=to(b["bond_pairs"]),
-            name=b["name"],
+    def fixed(b):  # sample-fixed present-atom index of the mask the step uses, computed here on the host data
+        mask = b["atom_mask"] if b["atom_mask"] is not None else b["features"]["pred_dense_atom_mask"]
+        index, valid = fixed_atom_index(mask)
+        return index.to(device), valid.to(device)
+
+    pool = []
+    for b in blob:
+        present_index, present_valid = fixed(b)
+        pool.append(
+            TrainBatch(
+                features=features_to_device(b["features"], device),
+                atom_positions=b["atom_positions"].to(device),
+                atom_mask=to(b["atom_mask"]),
+                bond_pairs=to(b["bond_pairs"]),
+                name=b["name"],
+                present_index=present_index,
+                present_valid=present_valid,
+            )
         )
-        for b in blob
-    ]
+    return saved["requested"], pool
 
 
 def pool_source(pool: Sequence[TrainBatch]) -> Iterator[TrainBatch]:  # pragma: no cover - trivial

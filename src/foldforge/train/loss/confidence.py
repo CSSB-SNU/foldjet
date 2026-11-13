@@ -48,13 +48,22 @@ def _frame_slot_table() -> tuple[list[tuple[int, int, int]], list[bool]]:
     return slots, valid
 
 
+@lru_cache(maxsize=8)
+def _frame_tables_on(device: torch.device) -> tuple[torch.Tensor, torch.Tensor]:
+    """The frame table on ``device``, built once (a ``torch.tensor(list, device=cuda)`` per call is a host->device copy that synchronises)."""
+    slots, valid = _frame_slot_table()
+    return (
+        torch.tensor(slots, dtype=torch.long, device=device),
+        torch.tensor(valid, dtype=torch.bool, device=device),
+    )
+
+
 def frame_slots(
     aatype: torch.Tensor,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """``(slots [res, 3], has_frame [res])`` of the tokens; an ``aatype`` outside the polymer alphabet (ligand) has no frame."""
     slots, valid = _frame_slot_table()
-    table = torch.tensor(slots, dtype=torch.long, device=aatype.device)
-    ok = torch.tensor(valid, dtype=torch.bool, device=aatype.device)
+    table, ok = _frame_tables_on(aatype.device)
     index = aatype.long().clamp(0, len(slots) - 1)
     in_range = (aatype >= 0) & (aatype < len(slots))
     return table[index], ok[index] & in_range
@@ -68,19 +77,25 @@ def per_atom_lddt(
     max_distance: float = 15.0,
     nuc_max_distance: float = 30.0,
     distance_bins: tuple[float, ...] = (0.5, 1.0, 2.0, 4.0),
+    atom_valid: torch.Tensor | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    """Per-atom lDDT ``[N]`` and the validity ``[N]`` (at least one neighbour) of ``N`` real atoms (``pred`` / ``gt`` ``[N, 3]``)."""
+    """Per-atom lDDT ``[N]`` and the validity ``[N]`` (at least one neighbour) of ``N`` real atoms (``pred`` / ``gt`` ``[N, 3]``).
+
+    ``atom_valid`` ``[N]`` (bool, optional): the fixed-length path -- ``N`` is a padded length and the ``False`` entries are padding, which is
+    nobody's neighbour (the pair mask drops it), so the real atoms' values equal the unpadded call's; a padded entry's own output is
+    meaningless (its validity is ``False``)."""
     pred_dist = torch.cdist(pred, pred)
     gt_dist = torch.cdist(gt, gt)
-    radius = torch.where(
-        is_nuc, gt_dist.new_tensor(nuc_max_distance), gt_dist.new_tensor(max_distance)
-    )
+    # python-float scalars (a ``new_tensor`` is a host->device copy, a sync); ``where`` of two scalars is float32 like ``gt_dist``
+    radius = torch.where(is_nuc, nuc_max_distance, max_distance).to(gt_dist.dtype)
     pair = (gt_dist > 0.0) & (gt_dist < radius[None, :])
     pair &= ~(is_ligand[:, None] & is_ligand[None, :])
+    if atom_valid is not None:
+        pair &= atom_valid[:, None] & atom_valid[None, :]
     delta = (pred_dist - gt_dist).abs()
-    bins = torch.tensor(distance_bins, dtype=torch.float32, device=pred.device)
-    kept = (delta[..., None] <= bins) & pair[..., None]
-    frac = kept.sum(dim=-2).float() / (pair.sum(dim=-1, keepdim=True).float() + 1e-8)
+    # one comparison per bin (python-float bins: no device constant), the same ``[N, 4]`` integer counts as the broadcast ``delta[..., None] <= bins``
+    kept = torch.stack([((delta <= b) & pair).sum(dim=-1) for b in distance_bins], dim=-1)
+    frac = kept.float() / (pair.sum(dim=-1, keepdim=True).float() + 1e-8)
     return frac.mean(dim=-1), pair.sum(dim=-1) > 0
 
 
@@ -121,27 +136,50 @@ def confidence_targets(
     is_nuc: torch.Tensor,
     is_ligand: torch.Tensor,
     head: ConfidenceHead,
+    present_index: torch.Tensor | None = None,
+    present_valid: torch.Tensor | None = None,
 ) -> dict[str, tuple[torch.Tensor, torch.Tensor]]:
     """``{"plddt" | "pde" | "pae": (target bins, mask)}``. ``x_pred`` / ``x_gt`` ``[res, atoms, 3]``, ``atom_mask`` ``[res, atoms]``
-    (ground-truth atoms present), token tensors ``[res]``."""
+    (ground-truth atoms present), token tensors ``[res]``.
+
+    ``present_index`` / ``present_valid`` (both or neither; ``TrainBatch.present_index`` / ``present_valid``): the flat indices of the true
+    entries of ``atom_mask`` padded to a fixed length, and their validity. Then the pLDDT part has a static shape (no ``nonzero``, no host sync);
+    the targets equal the ``nonzero`` path's (padding is nobody's neighbour, the scatter back to the dense layout skips it)."""
     res, atoms, _ = x_pred.shape
     x_pred, x_gt = x_pred.float(), x_gt.float()
     present = atom_mask.bool()
 
     # pLDDT over the real atoms only (a dense crop has many empty slots).
-    flat = present.reshape(-1)
-    index = flat.nonzero(as_tuple=True)[0]
-    token_of_atom = index // atoms
-    lddt, valid = per_atom_lddt(
-        x_pred.reshape(-1, 3)[index],
-        x_gt.reshape(-1, 3)[index],
-        is_nuc.bool()[token_of_atom],
-        is_ligand.bool()[token_of_atom],
-    )
-    lddt_dense = torch.zeros(res * atoms, device=x_pred.device)
-    valid_dense = torch.zeros(res * atoms, dtype=torch.bool, device=x_pred.device)
-    lddt_dense[index] = lddt
-    valid_dense[index] = valid
+    if present_index is None:
+        flat = present.reshape(-1)
+        index = flat.nonzero(as_tuple=True)[0]
+        token_of_atom = index // atoms
+        lddt, valid = per_atom_lddt(
+            x_pred.reshape(-1, 3)[index],
+            x_gt.reshape(-1, 3)[index],
+            is_nuc.bool()[token_of_atom],
+            is_ligand.bool()[token_of_atom],
+        )
+        lddt_dense = torch.zeros(res * atoms, device=x_pred.device)
+        valid_dense = torch.zeros(res * atoms, dtype=torch.bool, device=x_pred.device)
+        lddt_dense[index] = lddt
+        valid_dense[index] = valid
+    else:  # fixed length: padding reads atom 0 (masked out of every pair) and writes the spare slot ``res * atoms``
+        index = present_index
+        token_of_atom = index // atoms
+        lddt, valid = per_atom_lddt(
+            x_pred.reshape(-1, 3)[index],
+            x_gt.reshape(-1, 3)[index],
+            is_nuc.bool()[token_of_atom],
+            is_ligand.bool()[token_of_atom],
+            atom_valid=present_valid,
+        )
+        target = torch.where(present_valid, index, res * atoms)
+        lddt_dense = torch.zeros(res * atoms + 1, device=x_pred.device)
+        valid_dense = torch.zeros(res * atoms + 1, dtype=torch.bool, device=x_pred.device)
+        lddt_dense[target] = lddt
+        valid_dense[target] = valid
+        lddt_dense, valid_dense = lddt_dense[:-1], valid_dense[:-1]
     num_bins = head.num_plddt_bins
     plddt_bins = (lddt_dense.clamp(0.0, 1.0 - 1e-6) * num_bins).long().reshape(res, atoms)
 

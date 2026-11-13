@@ -34,6 +34,55 @@ if TYPE_CHECKING:
     from foldforge.train.data import TrainBatch
 
 
+class DeviceParts:
+    """Loss parts of one micro step as DEVICE scalars (no host read inside the step: every ``float(tensor)`` is a host sync that drains the
+    CUDA queue and blocks graph capture). :meth:`floats` reads them ONCE and replays the host accumulation of the old per-chunk ``float()``
+    code in the same order (double arithmetic on the exact fp32 values), so the numbers are bit-identical to it."""
+
+    def __init__(self, passes: int, share_weights: tuple[float, float, float]):
+        self.passes = passes
+        self.w_diffusion, self.w_bond, self.w_distogram = share_weights
+        self.chunks: list[tuple[float, torch.Tensor, torch.Tensor, torch.Tensor]] = []  # (share, l_diffusion, l_bond, chunk_loss)
+        self.distogram: torch.Tensor | None = None
+        self.confidence: torch.Tensor | None = None
+        self.conf_parts: dict[str, torch.Tensor] = {}
+        self.plain: dict[str, torch.Tensor] = {}  # ``only`` modes: "loss" (trunk dummy loss) etc., read as is
+
+    def tensors(self) -> list[torch.Tensor]:
+        flat: list[torch.Tensor] = []
+        for _, d, b, c in self.chunks:
+            flat += [d, b, c]
+        for t in (self.distogram, self.confidence):
+            if t is not None:
+                flat.append(t)
+        flat += list(self.conf_parts.values())
+        flat += list(self.plain.values())
+        return flat
+
+    def floats(self) -> dict[str, float]:
+        flat = self.tensors()
+        values = torch.stack([t.detach().reshape(()).float() for t in flat]).tolist() if flat else []  # the ONE host read
+        it = iter(values)
+        out: dict[str, float] = {"loss": 0.0, "diffusion": 0.0, "bond": 0.0, "distogram": 0.0}
+        for share, _, _, _ in self.chunks:
+            d, b, c = next(it), next(it), next(it)
+            out["diffusion"] += d * share
+            out["bond"] += b * share
+            out["loss"] += c
+        if self.distogram is not None:
+            out["distogram"] = next(it)
+            out["loss"] += self.w_distogram * out["distogram"]
+        if self.confidence is not None:
+            conf = next(it)
+            out["loss"] += conf
+            out["confidence"] = conf
+            out.update({k: next(it) for k in self.conf_parts})
+        for k in self.plain:
+            out[k] = next(it)
+        out["passes"] = self.passes
+        return out
+
+
 def run_trunk_train(
     model, batch_data, passes: int, timer: PhaseTimer | None = None
 ) -> dict[str, torch.Tensor]:
@@ -105,6 +154,7 @@ def confidence_step(
     x0: torch.Tensor,
     atom_mask: torch.Tensor,
     cfg: TrainConfig,
+    example: TrainBatch | None = None,
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
     """Confidence head (trunk inputs detached) on the rollout structure ``x_mini`` -> pLDDT / PDE / PAE cross entropies against the targets of
     ``x_mini`` and the ground truth ``x0`` ``[res, atoms, 3]``."""
@@ -129,6 +179,8 @@ def confidence_step(
         tf.is_dna.bool() | tf.is_rna.bool(),
         tf.is_ligand,
         model.confidence_head,
+        present_index=None if example is None else example.present_index,
+        present_valid=None if example is None else example.present_valid,
     )
     w = cfg.loss
     return confidence_loss(
@@ -149,6 +201,19 @@ def micro_step(
     scale: float = 1.0,
     timer: PhaseTimer | None = None,
 ) -> dict[str, float]:
+    """:func:`micro_step_device` + the ONE host read of the loss parts at its end (the callers want floats)."""
+    return micro_step_device(model, example, cfg, passes, scale=scale, timer=timer).floats()
+
+
+def micro_step_device(
+    model,
+    example: TrainBatch,
+    cfg: TrainConfig,
+    passes: int,
+    *,
+    scale: float = 1.0,
+    timer: PhaseTimer | None = None,
+) -> DeviceParts:
     """Forward + loss + backward of one example; gradients accumulate into ``param.grad`` (scaled by ``scale``). Returns the loss parts.
 
     The heads read LEAF copies of the trunk outputs, so the backward runs in independent pieces whose gradients add up: the diffusion head
@@ -169,7 +234,7 @@ def micro_step(
     if mode == "side" and side_stream is None:
         mode = "after"
     box: dict[str, torch.Tensor] = {}
-    out: dict[str, float] = {"loss": 0.0, "diffusion": 0.0, "bond": 0.0, "distogram": 0.0}
+    out = DeviceParts(passes, (cfg.loss.diffusion_loss, cfg.loss.bond_loss, cfg.loss.distogram_loss))
 
     with activation_autocast(model):
         features = {
@@ -192,14 +257,12 @@ def micro_step(
             dummy = sum(v.float().pow(2).mean() for v in embeddings.values() if torch.is_tensor(v) and v.requires_grad)
             with timer.phase("trunk_bwd"):
                 (dummy * 1e-6 * scale).backward()
-            out["loss"] = float(dummy.detach())
-            out["passes"] = passes
+            out.plain["loss"] = dummy.detach()
             return out
         if only in ("rollout", "confidence"):
             with timer.phase("mini_rollout"):
                 box["x_mini"] = mini_rollout(model, features, batch_data, detached, cfg.rollout_steps)
             if only == "rollout":
-                out["passes"] = passes
                 return out
             x0 = example.atom_positions.float()
             amask = (
@@ -208,12 +271,11 @@ def micro_step(
                 else batch_data.predicted_structure_info.atom_mask
             ).bool()
             with timer.phase("confidence_fwd"):
-                l_conf, parts = confidence_step(model, features, batch_data, detached, box["x_mini"], x0, amask, cfg)
+                l_conf, parts = confidence_step(model, features, batch_data, detached, box["x_mini"], x0, amask, cfg, example)
             with timer.phase("confidence_bwd"):
                 (l_conf * scale).backward()
-            out["loss"] = out["confidence"] = float(l_conf.detach())
-            out.update({k: float(v.detach()) for k, v in parts.items()})
-            out["passes"] = passes
+            out.confidence = l_conf.detach()
+            out.conf_parts = {k: v.detach() for k, v in parts.items()}
             return out
         diffusion = model._prepare_diffusion_inputs(features, batch_data, head_inputs)
         if mode == "before":
@@ -281,9 +343,7 @@ def micro_step(
                 ) * share
             with timer.phase("diffusion_train_bwd"):
                 (chunk_loss * scale).backward()
-            out["diffusion"] += float(l_diffusion.detach()) * share
-            out["bond"] += float(l_bond.detach()) * share
-            out["loss"] += float(chunk_loss.detach())
+            out.chunks.append((share, l_diffusion.detach(), l_bond.detach(), chunk_loss.detach()))
             del x_pred, x_noisy, x0_aug, noise, table, chunk_loss, l_diffusion, l_bond
         with timer.phase("distogram_fwd_bwd"):
             logits = model.distogram_head(model._head_batch(batch_data), head_inputs)[
@@ -298,8 +358,7 @@ def micro_step(
                 tf.mask,
             )
             (w.distogram_loss * l_disto * scale).backward()
-        out["distogram"] = float(l_disto.detach())
-        out["loss"] += w.distogram_loss * out["distogram"]
+        out.distogram = l_disto.detach()
 
     # ONE backward through the trunk with the gradient the heads left on the leaves
     with timer.phase("trunk_bwd"):
@@ -339,11 +398,10 @@ def micro_step(
                     x0,
                     atom_mask,
                     cfg,
+                    example,
                 )
         with timer.phase("confidence_bwd"):
             (l_conf * scale).backward()
-        out["loss"] += float(l_conf.detach())
-        out["confidence"] = float(l_conf.detach())
-        out.update({k: float(v.detach()) for k, v in parts.items()})
-    out["passes"] = passes
+        out.confidence = l_conf.detach()
+        out.conf_parts = {k: v.detach() for k, v in parts.items()}
     return out
