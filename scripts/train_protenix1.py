@@ -242,7 +242,9 @@ def main() -> None:
     if args.bench and not args.no_activation_checkpointing:
         args.activation_checkpointing = True
     if args.bench and args.augment_chunk is None:
-        args.augment_chunk = 8  # 48 augmentations at once OOM an 80 GB H100 at 384 tokens (peak 78+ GiB); 8 per chunk peak ~67 GiB, same loss
+        # No chunking: the recipe runs all augmentations in one forward / backward. (An earlier --bench default of 8 was never asked for; it made
+        # eager ~60% slower at 384 tokens.) With activation checkpointing (the --bench default) 48 augmentations at 384 peak 36 GiB on miniworld.
+        args.augment_chunk = 0
     if args.seed is not None:
         cfg = replace(cfg, seed=args.seed)
     changes = {"grad_accum_steps": 1 if args.smoke else cfg.grad_accum_steps}
