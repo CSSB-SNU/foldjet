@@ -145,3 +145,20 @@ Planning (H100 80GB, default pool 268-384 tokens, 48 augmentations in chunks of 
 `pytorch` 6.2, `cueq` 4.0, `miniworld` 2.2. A bench of 30 steps x 256 micro steps is 960 micro steps per GPU on 8 GPUs (about 100 / 65 / 36 minutes) and 7680 on one GPU (13.2 / 8.6 / 4.8 hours);
 the optimizer, EMA and the gradient all-reduce add well under a second per step. `--bench` is not resumable: give the job a time limit above that.
 `--micro-log` prints one `MICRO rank=.. g=.. example=.. passes=.. loss=..` line per micro step (the global index `g` is the same in a 1-process and an N-rank run).
+
+### Whole micro step as a CUDA graph (`--step-graph`)
+
+`--step-graph` (default off; `train/step_graph.py`) captures the WHOLE micro step (trunk recycles, diffusion forward / backward, distogram, trunk backward, the 20-step mini-rollout,
+confidence forward / backward) as one CUDA graph per recycle count and replays it; the eager step stays the default and the fallback. Use it with `--bench-bucket` (one input shape; without
+it every distinct shape signature is another graph, at most 8, the rest runs eager) and `--rollout-order graph` or `after` (the rollout is recorded inline in the step graph).
+Gradients accumulate in place into persistent `.grad` tensors (the loop zeroes them with `zero_()`, not `set_to_none`); weights are read at every replay (pack / table builds are part of the
+capture); the random numbers come from the CUDA generator of the replay (`torch.manual_seed` before a replay seeds it; measured: bitwise the eager numbers for the same seed).
+Memory: the graphs share one private pool that stays reserved, on top of the eager peak (the `STEP_GRAPH` line of a `--bench` run reports captures, replays, fallbacks, pool GiB).
+Measured on one H100 (stand-in pool, bucketed, activation checkpointing): `miniworld` 2.2 -> 0.95 s per micro step at 4 recycles (GPU idle 64 % -> 3 %), `cueq` and `pytorch` are GPU bound
+(1.1x / 1.05x). Do not use `--profile-phases` with it (the phases are inside the graph).
+
+### L768 stand-in bench
+
+`--bench-tokens 768 --bucket-atoms 8192 --num-augment 32 --augment-chunk 0 --bench-bucket` (MiniWorld `distogram_diffusion_medium_v130_bioai_L768.yaml`: `crop.max_tokens 768`, `max_atoms 8192`; Protenix v1 fine-tuning stages 2-3: crop 768, diffusion batch 32).
+`--bucket-atoms` also bounds the default pool (targets above it are skipped) and sets the length of the present-atom index of every example (`bench.FIXED_LENGTH`), so that all examples have ONE step-graph signature.
+`FF_BENCH_PASSES_SEQ=1,2,3,4` (bench only) replaces the random recycle count by that cycle over the global micro index (capture-order tests); `FF_STEP_GRAPH_DEBUG=1` logs what differs when a second graph signature appears.

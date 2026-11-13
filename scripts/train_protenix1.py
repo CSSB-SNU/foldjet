@@ -210,6 +210,7 @@ def main() -> None:
     ap.add_argument("--micro-log", action="store_true", help="--bench: print one MICRO line per micro step on every rank (global index, example, recycles, loss) to compare runs micro step by micro step")
     ap.add_argument("--bench-pool-count", type=int, default=8, help="targets of the default pool")
     ap.add_argument("--bench-pool-cache", default=None, help="build the pool once (rank 0) into this file and load it everywhere: identical stand-in labels for every backend")
+    ap.add_argument("--step-graph", action="store_true", help="the WHOLE micro step (trunk recycles + diffusion + confidence + backward, gradient accumulation into persistent .grad) as ONE CUDA graph per (recycles, shape signature), replayed (train/step_graph.py); the mini-rollout is recorded inline; needs --bench-bucket (one shape) to stay at <= 4 graphs; default off")
     ap.add_argument("--bench-bucket", action="store_true", help="pad every example to ONE shape (train/bucket_batch.py: --bench-tokens tokens, --bucket-atoms atoms, --bucket-msa-pool raw MSA rows, --bucket-templates), so a CUDA graph of the micro step has one signature; also applies to --batch-source streams; default off")
     ap.add_argument("--bucket-atoms", type=int, default=4096, help="--bench-bucket: flat atoms (MiniWorld crop.max_atoms 4096)")
     ap.add_argument("--bucket-msa-pool", type=int, default=16384, help="--bench-bucket: raw MSA pool rows before the per-recycle draw (16384 = the largest FoldForge MSA bucket: nothing is cut)")
@@ -254,6 +255,7 @@ def main() -> None:
         ("trunk_lr_scale", args.trunk_lr_scale),
         ("rollout_steps", args.rollout_steps),
         ("rollout", args.rollout_order),
+        ("step_graph", True if args.step_graph else None),
         ("augment_chunk", args.augment_chunk),
         ("only", args.only),
         ("recycles_min", args.recycles),
@@ -297,6 +299,8 @@ def main() -> None:
         flush=True,
     )
 
+    if args.bench_bucket:
+        bench.FIXED_LENGTH = max(bench.FIXED_LENGTH, args.bucket_atoms)  # present-atom index of one length for every example (else 512-multiples per example split the step-graph key)
     bucket_spec = (
         bucket_batch.BucketSpec(tokens=args.bench_tokens, atoms=args.bucket_atoms, msa_pool_rows=args.bucket_msa_pool, templates=args.bucket_templates)
         if args.bench_bucket
@@ -304,7 +308,7 @@ def main() -> None:
     )
     pool: list[TrainBatch] = []
     if args.bench:
-        targets = bench.parse_pool(args.bench_pool, args.bench_tokens, args.bench_pool_count)
+        targets = bench.parse_pool(args.bench_pool, args.bench_tokens, args.bench_pool_count, max_atoms=args.bucket_atoms)
         t_pool = time.time()
         pool = bench.build_pool(
             pred,
@@ -440,7 +444,7 @@ def main() -> None:
     t0 = time.time()
     for it in range(args.steps):
         lr = fopt.set_lr(it, cfg) if fopt else optim.set_lr(optimizer, it, cfg)
-        optimizer.zero_grad(set_to_none=True)
+        optimizer.zero_grad(set_to_none=not cfg.step_graph)  # a step graph accumulates into the SAME .grad tensors: zeroed in place
         totals = defaultdict(float)
         timer = PhaseTimer(args.profile_phases)
         if args.profile_phases or args.bench:
@@ -578,6 +582,8 @@ def main() -> None:
         table = bench.engine_table(report_observations(model))
         for line in bench.format_table(table, "ENGINE_FINAL"):
             say(line, flush=True)
+        if "_foldforge_step_graph" in model.__dict__:
+            say("STEP_GRAPH", json.dumps(model.__dict__["_foldforge_step_graph"].report()), flush=True)
         if "_foldforge_rollout_graph" in model.__dict__:  # --rollout-order graph: captures, replays, cache entries, bytes held
             say("ROLLOUT_GRAPH", json.dumps(model.__dict__["_foldforge_rollout_graph"].report()), flush=True)
         stats = bench.summarize_steps(bench_walls)

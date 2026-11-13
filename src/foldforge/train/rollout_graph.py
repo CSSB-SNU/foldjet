@@ -117,13 +117,17 @@ def rollout_body(model, batch, embeddings: dict[str, torch.Tensor], steps: int) 
         head.train()
 
 
-def graph_tree(batch_data, detached: dict[str, torch.Tensor]) -> dict[str, Any]:
-    """What the rollout reads: the batch (without the MSA and the templates: the diffusion head never reads them, and they are the big tensors)
-    and the detached trunk outputs."""
+def rollout_batch(batch_data):
+    """The batch the rollout reads (without the MSA and the templates: the diffusion head never reads them, and they are the big tensors)."""
     # `seq_length` (the real token count, a CPU int tensor) is read by no module, yet `_flatten` puts its VALUE in the key: it would make every
     # crop length its own graph
     tokens = dataclasses.replace(batch_data.token_features, seq_length=None)
-    return {"batch": dataclasses.replace(batch_data, msa=None, templates=None, token_features=tokens), "emb": dict(detached)}
+    return dataclasses.replace(batch_data, msa=None, templates=None, token_features=tokens)
+
+
+def graph_tree(batch_data, detached: dict[str, torch.Tensor]) -> dict[str, Any]:
+    """What the rollout reads: the batch (:func:`rollout_batch`) and the detached trunk outputs."""
+    return {"batch": rollout_batch(batch_data), "emb": dict(detached)}
 
 
 def graph_key(model, structure: Any, steps: int) -> tuple:

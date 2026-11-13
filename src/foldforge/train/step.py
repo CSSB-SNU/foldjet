@@ -129,6 +129,12 @@ def mini_rollout(
     model, features, batch_data, detached: dict[str, torch.Tensor], steps: int, graph: bool = False
 ) -> torch.Tensor:
     """No-grad structure of the (current) diffusion head from the detached trunk outputs: ``[res, atoms, 3]``. ``graph``: one CUDA graph per shape."""
+    from foldforge.train import step_graph
+
+    if step_graph.inline_rollout(model):  # inside a step graph's warm-up / capture: the rollout as plain ops (no host read, no graph of its own)
+        from foldforge.train import rollout_graph
+
+        return rollout_graph.rollout_body(model, rollout_graph.rollout_batch(batch_data), detached, steps)
     if graph:
         from foldforge.train import rollout_graph
 
@@ -225,6 +231,13 @@ def micro_step_device(
     trunk with the accumulated gradient of the leaves, then the confidence path. ``cfg.rollout`` places the mini-rollout: ``before`` (right after
     the trunk forward: its transient memory stacks on the saved trunk activations), ``side`` (on a second CUDA stream, overlapped with the
     diffusion-train forward / backward) or ``after`` (after the trunk backward, when the activations are freed)."""
+    if cfg.step_graph:  # the whole micro step as a CUDA graph (train/step_graph.py); None = not served (CPU, --only, a failed capture): run it eagerly
+        from foldforge.train import step_graph
+
+        if step_graph.mode(model) is None:
+            served = step_graph.micro_step_device(model, example, cfg, passes, scale=scale)
+            if served is not None:
+                return served
     timer = timer or PhaseTimer(False)
     device = example.atom_positions.device
     sigma_data = cfg.noise.sigma_data

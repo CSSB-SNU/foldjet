@@ -55,6 +55,9 @@ class TrainConfig:
     #: (a second CUDA stream overlapped with the diffusion-train forward / backward), or "graph" (the whole rollout as one CUDA graph per shape, replayed at the
     #: "after" placement: `train/rollout_graph.py`; no engine static_weights / static_inputs, so it follows the weights the optimizer changes).
     rollout: str = "after"
+    #: The whole micro step as ONE CUDA graph per (recycles, shape signature) (`train/step_graph.py`, `--step-graph`); the rollout is recorded inline in it.
+    #: Needs one example shape (`--bench-bucket`) to stay at <= recycles_max graphs. Gradients accumulate into persistent `.grad` (zeroed in place).
+    step_graph: bool = False
     #: Diffusion augmentations per forward / backward chunk (0 = all `num_augment` at once); smaller chunks hold fewer diffusion activations.
     augment_chunk: int = 0
     #: Measurement only: run one part of the step alone ("trunk", "diffusion", "rollout", "confidence"); "" = the whole step.

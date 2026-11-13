@@ -9,6 +9,7 @@ values, it depends on the shapes (tokens, atoms, MSA rows, templates), which the
 from __future__ import annotations
 
 import json
+import os
 import random
 import statistics
 import subprocess
@@ -34,6 +35,8 @@ SPECS = Path("/home/psk6950/foldforge-scratch/foldbench/specs_all")
 SIZE_TSV = Path("/home/psk6950/foldforge-scratch/foldbench/size_sorted.tsv")
 #: MiniWorld's recipe crop (configs/miniworld/data/H100_default.yaml: crop.max_tokens 384, max_atoms 4096; phase2a_*_b200_joint: crop L384).
 RECIPE_TOKENS = 384
+#: length of the present-atom index of every pool example (--bench-bucket sets it to --bucket-atoms: one signature above 4096 atoms; else a per-example multiple of 512)
+FIXED_LENGTH = 4096
 
 
 # ---------------------------------------------------------------------------------------------------------------- the deterministic plan
@@ -55,6 +58,10 @@ def micro_plan(base_seed: int, global_index: int, pool_size: int, cfg: TrainConf
     rng = random.Random(base_seed * 1_000_003 + global_index)
     example = rng.randrange(pool_size)
     passes = rng.randint(cfg.recycles_min, cfg.recycles_max)
+    forced = os.environ.get("FF_BENCH_PASSES_SEQ")  # e.g. "1,2,3,4": measurement only, recycle counts cycle by global micro index (capture-order test)
+    if forced:
+        seq = [int(x) for x in forced.split(",")]
+        passes = seq[global_index % len(seq)]
     return MicroPlan(example=example, passes=passes, torch_seed=rng.getrandbits(62))
 
 
@@ -95,10 +102,10 @@ def pick_pool(
     return [rows[round(i * step)][1] for i in range(count)]
 
 
-def parse_pool(spec: str, tokens: int = RECIPE_TOKENS, count: int = 8) -> list[str]:
+def parse_pool(spec: str, tokens: int = RECIPE_TOKENS, count: int = 8, max_atoms: int = 4096) -> list[str]:
     """``--bench-pool``: ``default`` (the targets near ``tokens``) or a comma separated list of FoldBench targets."""
     if spec in ("", "default"):
-        return pick_pool(tokens, count)
+        return pick_pool(tokens, count, max_atoms=max_atoms)
     return [t.strip() for t in spec.split(",") if t.strip()]
 
 
@@ -133,7 +140,7 @@ def standin_example(pred, target: str, seed: int | None = None) -> TrainBatch:
     state.close()
     features = {k: v.clone() for k, v in captured["batch"].items()}  # leave inference mode: autograd needs ordinary tensors
     features = features_to_device(features, samples.device)  # the GatherInfo input_shape metadata stays on the host (no sync per micro step)
-    index, valid = fixed_atom_index(features["pred_dense_atom_mask"].cpu())
+    index, valid = fixed_atom_index(features["pred_dense_atom_mask"].cpu(), FIXED_LENGTH)
     return TrainBatch(
         features=features,
         atom_positions=samples[0].clone().float(),
@@ -219,7 +226,7 @@ def _load_pool(path: Path, device: torch.device) -> tuple[list[str], list[TrainB
 
     def fixed(b):  # sample-fixed present-atom index of the mask the step uses, computed here on the host data
         mask = b["atom_mask"] if b["atom_mask"] is not None else b["features"]["pred_dense_atom_mask"]
-        index, valid = fixed_atom_index(mask)
+        index, valid = fixed_atom_index(mask, FIXED_LENGTH)
         return index.to(device), valid.to(device)
 
     pool = []
