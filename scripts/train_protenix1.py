@@ -171,9 +171,9 @@ def main() -> None:
     )
     ap.add_argument(
         "--rollout-order",
-        choices=("after", "before", "side"),
+        choices=("after", "before", "side", "graph"),
         default=None,
-        help="where the mini-rollout runs: after the trunk backward (default, least memory), before the diffusion forward, or on a second CUDA stream (side)",
+        help="where the mini-rollout runs: after the trunk backward (default, least memory), before the diffusion forward, or on a second CUDA stream (side), or graph: the 20-step rollout as ONE CUDA graph per shape, replayed after the trunk backward (train/rollout_graph.py; the noise is drawn inside the graph from the default CUDA generator; measured on the 5I28-size pool the losses and parameters are bitwise those of --rollout-order after)",
     )
     ap.add_argument("--augment-chunk", type=int, default=None, help="diffusion augmentations per forward/backward chunk (0 = all)")
     ap.add_argument("--recycles", type=int, default=None, help="fix the trunk passes (min = max)")
@@ -572,6 +572,8 @@ def main() -> None:
         table = bench.engine_table(report_observations(model))
         for line in bench.format_table(table, "ENGINE_FINAL"):
             say(line, flush=True)
+        if "_foldforge_rollout_graph" in model.__dict__:  # --rollout-order graph: captures, replays, cache entries, bytes held
+            say("ROLLOUT_GRAPH", json.dumps(model.__dict__["_foldforge_rollout_graph"].report()), flush=True)
         stats = bench.summarize_steps(bench_walls)
         total_micro = args.steps * accum * world.world_size
         tokens = torch.tensor([float(bench_tokens)], dtype=torch.float64, device=device)

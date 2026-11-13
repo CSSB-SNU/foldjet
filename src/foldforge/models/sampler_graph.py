@@ -756,6 +756,11 @@ def sample(
     a shape, served to every later fold by writing the fold into the graph's static buffers. Without them the graph is built for this fold and
     dropped (``denoise`` / ``augment`` / ``align`` / ``rigid_mask`` then read the fold's own tensors).
     """
+    if getattr(scopes, "inline", False):  # the training rollout graph (train/rollout_graph.py): the loop runs in the caller's capture
+        return sample_inline(
+            sampler, denoise, shape, sigmas, device=device, generator=generator, augment=augment, align=align,
+            coordinate_dims=coordinate_dims, dtype=dtype, conditioning=conditioning,
+        )
     coords = sigmas[0] * torch.randn(
         shape, device=device, dtype=dtype, generator=generator
     )
@@ -796,3 +801,29 @@ def sample(
             )
         captured(pairs[index], row)
     return captured.coords.clone()
+
+
+def sample_inline(
+    sampler: EulerSampler,
+    denoise: Callable,
+    shape: tuple[int, ...],
+    sigmas: torch.Tensor,
+    *,
+    device: torch.device,
+    generator: torch.Generator | None,
+    augment: Callable | None,
+    align: Callable | None,
+    coordinate_dims: int,
+    dtype: torch.dtype = torch.float32,
+    conditioning: Callable[[torch.Tensor], torch.Tensor] | None = None,
+) -> torch.Tensor:
+    """The whole trajectory as one straight-line sequence of ops: no host read (the churn branch is a ``where`` on the device scalars of
+    :func:`build_step`), no capture of its own and no cache. A caller that captures (the training mini-rollout, ``train/rollout_graph.py``) or
+    runs it eagerly gets the same arithmetic. ``conditioning`` is evaluated here, so a capture around this call records it too: every replay
+    makes the conditioning table from the weights of that moment."""
+    coords = sigmas[0] * torch.randn(shape, device=device, dtype=dtype, generator=generator)
+    table = None if conditioning is None else conditioning(_hatted(sampler.config, sigmas))
+    step = build_step(sampler, denoise, generator=generator, augment=augment, align=align, coordinate_dims=coordinate_dims, rigid_mask=None)
+    for index in range(len(sigmas) - 1):
+        coords = step(coords, sigmas[index], sigmas[index + 1], None if table is None else table[index])
+    return coords
