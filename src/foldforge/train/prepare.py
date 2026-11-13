@@ -64,18 +64,72 @@ def disable_inference_only_ops(model: nn.Module) -> int:
 #: memory: the engine ``PairformerBlock`` of the trunk / templates / confidence head and FoldForge's ``EvoformerBlock``).
 CHECKPOINTED_BLOCKS = ("PairformerBlock", "EvoformerBlock")
 
+#: Block groups a policy can name (by the module path of the block's list: ``trunk_pairformer.N``, ``msa_stack.N``, ``tmpl_pairformer`` /
+#: ``template_embedding_iteration``, ``confidence_pairformer``).
+CKPT_GROUPS = ("trunk", "msa", "template", "confidence")
 
-def enable_activation_checkpointing(model: nn.Module) -> int:
-    """Wrap the forward of every pair-stack block in ``torch.utils.checkpoint`` (non-reentrant, RNG preserved) so its activations are recomputed in
-    the backward instead of stored. Returns the number of blocks wrapped. Training only: ``torch.is_grad_enabled()`` is the guard."""
+
+def _block_group(name: str) -> str:
+    if "confidence" in name:
+        return "confidence"
+    if "tmpl" in name or "template" in name:
+        return "template"
+    if "msa" in name:
+        return "msa"
+    return "trunk"
+
+
+def ckpt_select(groups: dict[str, list[str]], policy: str) -> set[str]:
+    """The block names ``policy`` wraps, from ``groups`` (group -> block names in module order).
+
+    ``all`` (every block, the default), ``none``, ``pairformer`` (trunk blocks only), ``evoformer`` (MSA blocks only), ``except:<group>``
+    (all but one group: trunk / msa / template / confidence), and ``every:N`` / ``first:K`` / ``last:K``: those trunk pairformer blocks
+    (index % N == 0 / the first K / the last K) PLUS every block of the other groups."""
+    names = {n for blocks in groups.values() for n in blocks}
+    trunk = groups.get("trunk", [])
+    others = names - set(trunk)
+    kind, _, arg = policy.partition(":")
+    if kind == "all" and not arg:
+        return names
+    if kind == "none" and not arg:
+        return set()
+    if kind == "pairformer" and not arg:
+        return set(trunk)
+    if kind == "evoformer" and not arg:
+        return set(groups.get("msa", []))
+    if kind == "except" and arg in CKPT_GROUPS:
+        return names - set(groups.get(arg, []))
+    if kind in ("every", "first", "last") and arg.isdigit() and int(arg) > 0:
+        k = int(arg)
+        if kind == "every":
+            chosen = trunk[::k]
+        elif kind == "first":
+            chosen = trunk[:k]
+        else:
+            chosen = trunk[len(trunk) - k :] if k < len(trunk) else trunk
+        return others | set(chosen)
+    raise ValueError(f"unknown checkpoint policy {policy!r} (all | none | pairformer | evoformer | except:<{'|'.join(CKPT_GROUPS)}> | every:N | first:K | last:K)")
+
+
+def enable_activation_checkpointing(model: nn.Module, policy: str = "all") -> int:
+    """Wrap the forward of the pair-stack blocks ``policy`` selects (default ``all``: every block) in ``torch.utils.checkpoint`` (non-reentrant,
+    RNG preserved) so its activations are recomputed in the backward instead of stored. Returns the number of blocks wrapped. Training only:
+    ``torch.is_grad_enabled()`` is the guard."""
     from torch.utils.checkpoint import checkpoint
 
-    count = 0
-    for module in model.modules():
-        if type(module).__name__ not in CHECKPOINTED_BLOCKS or getattr(
-            module, "_ff_checkpointed", False
-        ):
+    blocks: dict[str, nn.Module] = {}
+    groups: dict[str, list[str]] = {}
+    for name, module in model.named_modules():
+        if type(module).__name__ not in CHECKPOINTED_BLOCKS or getattr(module, "_ff_checkpointed", False):
             continue
+        blocks[name] = module
+        groups.setdefault(_block_group(name), []).append(name)
+    chosen = ckpt_select(groups, policy)
+    count = 0
+    for name in blocks:
+        if name not in chosen:
+            continue
+        module = blocks[name]
         forward = module.forward
 
         def wrapped(*args, _forward=forward, **kwargs):

@@ -185,6 +185,11 @@ def main() -> None:
         help="recompute the pair-stack blocks in the backward instead of storing their activations",
     )
     ap.add_argument(
+        "--ckpt-policy",
+        default="all",
+        help="which blocks --activation-checkpointing wraps: all (default) | none | pairformer (trunk only) | evoformer | except:<trunk|msa|template|confidence> | every:N / first:K / last:K (those trunk pairformer blocks plus every non-trunk block); 'none' also switches checkpointing off",
+    )
+    ap.add_argument(
         "--ckpt",
         default=None,
         help="start from this .miniworld.pt (default: the registered model's checkpoint)",
@@ -350,7 +355,7 @@ def main() -> None:
     prep_info = prepare.enable_training(model, cfg)
     dist.broadcast_parameters(list(model.parameters()) + [b for b in model.buffers() if b.is_floating_point()], world)
     if args.activation_checkpointing:
-        say("ACT_CKPT blocks=%d" % prepare.enable_activation_checkpointing(model), flush=True)
+        say("ACT_CKPT policy=%s blocks=%d" % (args.ckpt_policy, prepare.enable_activation_checkpointing(model, args.ckpt_policy)), flush=True)
     trunk, heads = optim.split_parameters(model)
     say(
         "PREPARE",
