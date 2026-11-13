@@ -27,7 +27,7 @@ def enable_training(model: nn.Module, cfg: TrainConfig) -> dict[str, object]:
     model.train()
     model.requires_grad_(True)
     frozen = freeze.apply(model)
-    model.foldforge_sampler_scope = None  # the mini-rollout samples eagerly (no sampler CUDA graph)
+    model.foldforge_sampler_scope = None  # no per-shape inference sampler graph in training (static_weights / refresh would go stale); rollout="graph" sets its own inline scope (train/rollout_graph.py)
     model.confidence_head.save_logits = cfg.confidence  # the head returns its logits only when asked
     model.distogram_head.save_distogram = (
         True  # the head returns its logits only when asked

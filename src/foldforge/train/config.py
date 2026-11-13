@@ -52,7 +52,8 @@ class TrainConfig:
     #: Steps of the no-grad mini-rollout whose structure the confidence head reads (Protenix `N_step_mini_rollout`, MiniWorld `protenix_finetune`: 20).
     rollout_steps: int = 20
     #: Where the mini-rollout runs inside a step: "after" the trunk backward (activations freed: least memory), "before" the diffusion forward, or "side"
-    #: (a second CUDA stream overlapped with the diffusion-train forward / backward).
+    #: (a second CUDA stream overlapped with the diffusion-train forward / backward), or "graph" (the whole rollout as one CUDA graph per shape, replayed at the
+    #: "after" placement: `train/rollout_graph.py`; no engine static_weights / static_inputs, so it follows the weights the optimizer changes).
     rollout: str = "after"
     #: Diffusion augmentations per forward / backward chunk (0 = all `num_augment` at once); smaller chunks hold fewer diffusion activations.
     augment_chunk: int = 0

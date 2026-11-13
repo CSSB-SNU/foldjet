@@ -77,9 +77,13 @@ def run_trunk_train(
 
 
 def mini_rollout(
-    model, features, batch_data, detached: dict[str, torch.Tensor], steps: int
+    model, features, batch_data, detached: dict[str, torch.Tensor], steps: int, graph: bool = False
 ) -> torch.Tensor:
-    """No-grad structure of the (current) diffusion head from the detached trunk outputs: ``[res, atoms, 3]``."""
+    """No-grad structure of the (current) diffusion head from the detached trunk outputs: ``[res, atoms, 3]``. ``graph``: one CUDA graph per shape."""
+    if graph:
+        from foldforge.train import rollout_graph
+
+        return rollout_graph.mini_rollout(model, features, batch_data, detached, steps, mini_rollout)
     head = model.diffusion_head
     saved = (model.num_samples, model.diffusion_steps)
     head.eval()
@@ -163,6 +167,7 @@ def micro_step(
     chunk = cfg.augment_chunk if 0 < cfg.augment_chunk < n else n
     only = cfg.only  # "" = the whole step; "trunk" | "diffusion" | "rollout" | "confidence" = one part alone (memory / time measurements)
     mode = cfg.rollout if cfg.confidence and not only else "none"
+    mode = "after" if mode == "graph" else mode  # "graph": the rollout graph (train/rollout_graph.py) runs at the "after" placement
     side_stream = (
         torch.cuda.Stream(device) if mode == "side" and device.type == "cuda" else None
     )
@@ -197,7 +202,7 @@ def micro_step(
             return out
         if only in ("rollout", "confidence"):
             with timer.phase("mini_rollout"):
-                box["x_mini"] = mini_rollout(model, features, batch_data, detached, cfg.rollout_steps)
+                box["x_mini"] = mini_rollout(model, features, batch_data, detached, cfg.rollout_steps, graph=cfg.rollout == "graph")
             if only == "rollout":
                 out["passes"] = passes
                 return out
@@ -327,7 +332,7 @@ def micro_step(
             elif mode == "after":
                 with timer.phase("mini_rollout"):
                     box["x_mini"] = mini_rollout(
-                        model, features, batch_data, detached, cfg.rollout_steps
+                        model, features, batch_data, detached, cfg.rollout_steps, graph=cfg.rollout == "graph"
                     )
             with timer.phase("confidence_fwd"):
                 l_conf, parts = confidence_step(
