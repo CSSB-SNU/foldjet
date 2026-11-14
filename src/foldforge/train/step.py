@@ -191,6 +191,9 @@ def confidence_step(
         model.confidence_head,
         present_index=None if example is None else example.present_index,
         present_valid=None if example is None else example.present_valid,
+        real_mask=batch_data.predicted_structure_info.atom_mask.bool() if cfg.loss.resolved_loss != 0.0 else None,
+        with_pae=cfg.loss.pae_loss != 0.0,
+        protenix_targets=cfg.targets_protenix,
     )
     w = cfg.loss
     return confidence_loss(
@@ -199,6 +202,7 @@ def confidence_step(
         plddt_loss=w.plddt_loss,
         pde_loss=w.pde_loss,
         pae_loss=w.pae_loss,
+        resolved_loss=w.resolved_loss,
     )
 
 

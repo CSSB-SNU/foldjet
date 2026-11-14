@@ -37,6 +37,7 @@ from foldforge.train import (
     freeze,
     fused_opt,
     optim,
+    recipes,
     prepare,
     step,
 )
@@ -161,6 +162,9 @@ def main() -> None:
     ap.add_argument("--min-lr", type=float, default=None)
     ap.add_argument("--warmup-steps", type=int, default=None)
     ap.add_argument("--trunk-lr-scale", type=float, default=None)
+    ap.add_argument("--recipe", choices=recipes.RECIPES, default="miniworld", help="miniworld (default, TrainConfig as it is) or protenix: Protenix v1 fine-tuning recipe (train/recipes.py: grad clip 10, Adam wd 1e-8, lr 1e-3 warmup 2000 af3 decay, loss weights, EMA 0.999); explicit flags below still override it")
+    ap.add_argument("--grad-clip", type=float, default=None, help="global grad-norm clip (default: the recipe, miniworld 1.0 / protenix 10)")
+    ap.add_argument("--weight-decay", type=float, default=None, help="Adam weight decay (default: the recipe, miniworld 0 / protenix 1e-8)")
     ap.add_argument(
         "--no-confidence",
         action="store_true",
@@ -243,7 +247,7 @@ def main() -> None:
         if world.is_main:
             print(*a, **k)
 
-    cfg = TrainConfig()
+    cfg = recipes.apply(args.recipe, TrainConfig())  # before the flags: an explicit flag overrides the recipe value
     if args.effective_batch is not None:
         if args.grad_accum is not None:
             raise SystemExit("--effective-batch and --grad-accum are exclusive")
@@ -267,6 +271,8 @@ def main() -> None:
         ("min_lr", args.min_lr),
         ("warmup_steps", args.warmup_steps),
         ("trunk_lr_scale", args.trunk_lr_scale),
+        ("grad_clip_max_norm", args.grad_clip),
+        ("weight_decay", args.weight_decay),
         ("rollout_steps", args.rollout_steps),
         ("rollout", args.rollout_order),
         ("step_graph", True if args.step_graph else None),
@@ -366,6 +372,9 @@ def main() -> None:
         ),
         flush=True,
     )
+    real_atoms = int(first.features["pred_dense_atom_mask"].sum())
+    resolved_atoms = int((first.atom_mask if first.atom_mask is not None else first.features["pred_dense_atom_mask"]).sum())
+    say("ATOMS first example: real=%d resolved=%d (the experimentally-resolved loss classifies the real ones)" % (real_atoms, resolved_atoms), flush=True)
     prep_info = prepare.enable_training(model, cfg)
     if args.msa_rows is not None:
         model.evoformer.num_msa = args.msa_rows  # MSA rows per recycle (the recipe: bucket_msa_size 128; FoldForge default 1024)
@@ -387,7 +396,7 @@ def main() -> None:
         flush=True,
     )
     by_rule: dict[str, list[str]] = defaultdict(list)
-    for frozen_name, rule in freeze.frozen_parameters(model).items():
+    for frozen_name, rule in freeze.frozen_parameters(model, cfg.loss).items():
         by_rule[rule.key].append(frozen_name)
     for rule_key, names in sorted(by_rule.items()):
         say("FROZEN", rule_key, len(names), "e.g.", names[0], flush=True)
@@ -572,7 +581,7 @@ def main() -> None:
                 )
         history.append(totals["loss"])
         say(
-            "STEP %4d lr=%.2e loss=%.4f diffusion=%.4f bond=%.4f distogram=%.4f plddt=%.4f pde=%.4f pae=%.4f gnorm=%.3f t=%.1fs"
+            "STEP %4d lr=%.2e loss=%.4f diffusion=%.4f bond=%.4f distogram=%.4f plddt=%.4f pde=%.4f pae=%.4f resolved=%.4f gnorm=%.3f t=%.1fs"
             % (
                 it,
                 lr,
@@ -583,6 +592,7 @@ def main() -> None:
                 totals["plddt"],
                 totals["pde"],
                 totals["pae"],
+                totals["resolved"],
                 norm,
                 time.time() - t0,
             ),
