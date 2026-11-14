@@ -193,6 +193,9 @@ def main() -> None:
     )
     ap.add_argument("--run-dir", default="runs/train_protenix1")
     ap.add_argument("--save-every", type=int, default=0)
+    ap.add_argument("--keep-last", type=int, default=3, help="--save-every: keep the newest N step checkpoints (and every --keep-every-th step); 0 keeps all")
+    ap.add_argument("--keep-every", type=int, default=500, help="--save-every: steps that are multiples of this are never pruned")
+    ap.add_argument("--resume", default=None, help="continue from this step<N>.miniworld.pt (+ its .train.pt: optimizer, EMA, step); --steps is then the TOTAL step count")
     ap.add_argument("--no-profile", action="store_true")
     ap.add_argument("--no-save", action="store_true", help="skip the final checkpoint (measurement runs)")
     ap.add_argument(
@@ -441,6 +444,10 @@ def main() -> None:
     optimizer = fopt.optimizer if fopt else optim.build_optimizer(model, cfg)
     ema = fopt.ema if fopt else (optim.EMA(model, cfg.ema_decay) if cfg.use_ema else None)
     params = [p for g in optimizer.param_groups for p in g["params"]]
+    start_step = 0
+    if args.resume:
+        start_step = checkpoint.resume(model, Path(args.resume), optimizer=optimizer, ema=ema)
+        say("RESUME", args.resume, "step", start_step, flush=True)
     history: list[float] = []
     bench_walls: list[float] = []
     bench_nonfinite = 0
@@ -468,7 +475,7 @@ def main() -> None:
     guard = contextlib.ExitStack()
     if cfg.compile and args.bench and not cfg.step_graph:  # nothing compiles after the warm-up (a step graph checks its own captures)
         guard.enter_context(train_compile.strict())
-    for it in range(args.steps):
+    for it in range(start_step, args.steps):
         lr = fopt.set_lr(it, cfg) if fopt else optim.set_lr(optimizer, it, cfg)
         optimizer.zero_grad(set_to_none=not cfg.step_graph)  # a step graph accumulates into the SAME .grad tensors: zeroed in place
         totals = defaultdict(float)
@@ -589,6 +596,15 @@ def main() -> None:
                 optimizer=optimizer,
                 step=it + 1,
             )
+            if args.keep_last > 0:  # prune: the newest --keep-last step checkpoints and every --keep-every-th step stay
+                done = sorted(
+                    (int(p.name[4:].split(".")[0]), p) for p in run_dir.glob("step*.miniworld.pt") if p.name[4:].split(".")[0].isdigit()
+                )
+                for n, p in done[: -args.keep_last]:
+                    if args.keep_every and n % args.keep_every == 0:
+                        continue
+                    p.unlink(missing_ok=True)
+                    p.with_name(p.name.removesuffix(".miniworld.pt") + ".train.pt").unlink(missing_ok=True)
 
     if history:
         n = max(1, min(10, len(history) // 2))
@@ -664,7 +680,7 @@ def main() -> None:
         source="train",
         ema=ema,
         optimizer=optimizer,
-        step=len(history),
+        step=start_step + len(history),
     )
     blob = torch.load(path, map_location="cpu", weights_only=True)
     state = model.state_dict()
