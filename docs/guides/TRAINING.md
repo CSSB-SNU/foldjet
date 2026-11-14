@@ -157,6 +157,28 @@ Memory: the graphs share one private pool that stays reserved, on top of the eag
 Measured on one H100 (stand-in pool, bucketed, activation checkpointing): `miniworld` 2.2 -> 0.95 s per micro step at 4 recycles (GPU idle 64 % -> 3 %), `cueq` and `pytorch` are GPU bound
 (1.1x / 1.05x). Do not use `--profile-phases` with it (the phases are inside the graph).
 
+### torch.compile (`--compile`)
+
+`--compile [blocks|diffusion|all]` (default off, bare flag = `all`; `train/compile.py`) wraps the `forward` of the repeated blocks in ONE `torch.compile(dynamic=False)` function
+per process: the pair-stack blocks (`PairformerBlock` of trunk / templates / confidence head, `EvoformerBlock`: `blocks`) and the diffusion transformers (`TokenDiTProtenix`,
+`AtomDiTProtenix`: `diffusion`). It is meant for the `pytorch` backend (the engine modules are plain ops that Inductor fuses; the kernel backends are opaque autograd nodes).
+The granularity is the block, not the recycle or the step: the micro step has host control flow (random recycle count, chunk loop, loss-part host read) that a whole-step trace would
+specialise on; the blocks run on identical shapes 100+ times per step, so one graph per (class, grad mode, shape) serves all instances (nn.Module passed as an argument: 91 modules, 13 graphs).
+Rules: `dynamic=False` with bucketed shapes (`--bench-bucket` / the recipe crop), `recompile_limit` 32 (past it dynamo runs a block eagerly), `triton.cudagraphs` off (the step graph is our
+capture), `fallback_random` (dropout scales come from eager's RNG ops: same seed, same random numbers; CUDA-graph safe). The checkpoint wrapper (`--activation-checkpointing`) recomputes the
+compiled forward (compile is applied first). Warm-up: `--bench` / training run one scale-0 micro step at the deepest recycle count before the loop (compiles the no-grad, grad / recompute, 48-sample diffusion and
+1-sample rollout variants); `--bench` then runs the timed steps under `error_on_recompile`. With `--step-graph` the first capture warms up at the deepest recycle count, does a throwaway
+capture (code that branches on "is the stream capturing"), and every kept capture runs under `error_on_recompile` (a failing capture falls back to eager and is reported in `STEP_GRAPH`).
+`COMPILE_WARMUP seconds=..` and a final `COMPILE {...}` line (dynamo `unique_graphs`, `graph_breaks`, `recompiles`) are printed. Persist the compile caches between jobs with `TORCHINDUCTOR_CACHE_DIR` / `TRITON_CACHE_DIR`
+(cold warm-up about 170 s on an H100, 20-30 s with a warm cache). Compiled regions do not update the host dispatch counters (`ENGINE_*` tables show `served=-`).
+
+Measured (2026-11-15, one H100 80 GB, `pytorch` backend, stand-in pool 268-384 tokens bucketed to 384 / 4096 atoms, 48 augmentations, activation checkpointing, random 1-4 recycles, median over timed steps 2..N of 8-micro steps, seconds per micro step):
+eager chunk 0 OOM (peak above 75 GiB, OOM at step 1); eager chunk 24 5.45 (peak 46.7 GiB); eager chunk 8 5.84 (32 GiB); eager + `--step-graph` chunk 8 5.11 (chunk 24 and 0 OOM: graph pool on top of the eager peak);
+`--compile` chunk 0 2.50 (2.57 over 3 x 32 micro steps; peak 49.7 GiB); `--compile --step-graph` chunk 0 2.12 (2.23 over 3 x 32 micro steps; 4 captures, 0 fallbacks, graph pool 45 GiB on top of a 47 GiB warm-up peak).
+Region choice at chunk 0: `blocks` alone OOMs (the 48-sample diffusion activations: peak above 75 GiB) and `diffusion` alone is no faster than eager (about 5.2); `all` is the one that fits and is 2x faster.
+Numerics: eager is bitwise reproducible run to run; a compiled step is not (compile vs compile: step-0 gradient relative L2 1.4e-2, cosine 0.9999; eager vs compile 2.9e-2 / 0.9996), per micro step the loss
+agrees to 0.2 % at 1 recycle and 1-4 % at 4 recycles. Dynamo: 13 graphs for 91 wrapped modules, 0 graph breaks, 0 recompiles after the warm-up.
+`--bench-dump DIR` writes the step-0 gradients and the final parameters for run-to-run comparison; `--msa-rows N` sets the MSA rows drawn per recycle (recipe 128, default 1024).
 ### L768 stand-in bench
 
 `--bench-tokens 768 --bucket-atoms 8192 --num-augment 32 --augment-chunk 0 --bench-bucket` (MiniWorld `distogram_diffusion_medium_v130_bioai_L768.yaml`: `crop.max_tokens 768`, `max_atoms 8192`; Protenix v1 fine-tuning stages 2-3: crop 768, diffusion batch 32).

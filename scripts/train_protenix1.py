@@ -15,6 +15,7 @@ The recipe (loss weights, Adam, clip, EMA, recycles, augmentations) is :class:`f
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import time
 from collections import defaultdict
@@ -30,6 +31,7 @@ from foldforge.train import (
     bench,
     bucket_batch,
     checkpoint,
+    compile as train_compile,
     data,
     dist,
     freeze,
@@ -191,6 +193,9 @@ def main() -> None:
     )
     ap.add_argument("--run-dir", default="runs/train_protenix1")
     ap.add_argument("--save-every", type=int, default=0)
+    ap.add_argument("--keep-last", type=int, default=3, help="--save-every: keep the newest N step checkpoints (and every --keep-every-th step); 0 keeps all")
+    ap.add_argument("--keep-every", type=int, default=500, help="--save-every: steps that are multiples of this are never pruned")
+    ap.add_argument("--resume", default=None, help="continue from this step<N>.miniworld.pt (+ its .train.pt: optimizer, EMA, step); --steps is then the TOTAL step count")
     ap.add_argument("--no-profile", action="store_true")
     ap.add_argument("--no-save", action="store_true", help="skip the final checkpoint (measurement runs)")
     ap.add_argument(
@@ -208,9 +213,12 @@ def main() -> None:
     ap.add_argument("--bench-pool", default="default", help="'default' (targets near --bench-tokens) or comma separated FoldBench targets; STAND-IN examples")
     ap.add_argument("--bench-tokens", type=int, default=bench.RECIPE_TOKENS, help="token count of the default pool (MiniWorld recipe crop: 384)")
     ap.add_argument("--micro-log", action="store_true", help="--bench: print one MICRO line per micro step on every rank (global index, example, recycles, loss) to compare runs micro step by micro step")
+    ap.add_argument("--bench-dump", default=None, help="--bench: directory to write the step-0 gradients (grads_step0.pt) and the final parameters (params.pt) of rank 0, for run-to-run / eager-vs-compile comparison")
     ap.add_argument("--bench-pool-count", type=int, default=8, help="targets of the default pool")
     ap.add_argument("--bench-pool-cache", default=None, help="build the pool once (rank 0) into this file and load it everywhere: identical stand-in labels for every backend")
     ap.add_argument("--step-graph", action="store_true", help="the WHOLE micro step (trunk recycles + diffusion + confidence + backward, gradient accumulation into persistent .grad) as ONE CUDA graph per (recycles, shape signature), replayed (train/step_graph.py); the mini-rollout is recorded inline; needs --bench-bucket (one shape) to stay at <= 4 graphs; default off")
+    ap.add_argument("--compile", nargs="?", const="all", default=None, choices=tuple(train_compile.REGIONS), help="torch.compile(dynamic=False) of the pair-stack / diffusion blocks (train/compile.py); composes with --step-graph and --activation-checkpointing; default off (eager)")
+    ap.add_argument("--msa-rows", type=int, default=None, help="MSA rows drawn per recycle (default: the model's 1024; MiniWorld recipe bucket_msa_size: 128)")
     ap.add_argument("--bench-bucket", action="store_true", help="pad every example to ONE shape (train/bucket_batch.py: --bench-tokens tokens, --bucket-atoms atoms, --bucket-msa-pool raw MSA rows, --bucket-templates), so a CUDA graph of the micro step has one signature; also applies to --batch-source streams; default off")
     ap.add_argument("--bucket-atoms", type=int, default=4096, help="--bench-bucket: flat atoms (MiniWorld crop.max_atoms 4096)")
     ap.add_argument("--bucket-msa-pool", type=int, default=16384, help="--bench-bucket: raw MSA pool rows before the per-recycle draw (16384 = the largest FoldForge MSA bucket: nothing is cut)")
@@ -258,6 +266,7 @@ def main() -> None:
         ("rollout_steps", args.rollout_steps),
         ("rollout", args.rollout_order),
         ("step_graph", True if args.step_graph else None),
+        ("compile", args.compile),
         ("augment_chunk", args.augment_chunk),
         ("only", args.only),
         ("recycles_min", args.recycles),
@@ -348,7 +357,11 @@ def main() -> None:
         flush=True,
     )
     prep_info = prepare.enable_training(model, cfg)
+    if args.msa_rows is not None:
+        model.evoformer.num_msa = args.msa_rows  # MSA rows per recycle (the recipe: bucket_msa_size 128; FoldForge default 1024)
     dist.broadcast_parameters(list(model.parameters()) + [b for b in model.buffers() if b.is_floating_point()], world)
+    if cfg.compile:
+        say("COMPILE blocks=%d region=%s" % (train_compile.enable_compile(model, cfg.compile), cfg.compile), flush=True)  # before the checkpoint wrapper: it recomputes the compiled forward
     if args.activation_checkpointing:
         say("ACT_CKPT blocks=%d" % prepare.enable_activation_checkpointing(model), flush=True)
     trunk, heads = optim.split_parameters(model)
@@ -431,6 +444,10 @@ def main() -> None:
     optimizer = fopt.optimizer if fopt else optim.build_optimizer(model, cfg)
     ema = fopt.ema if fopt else (optim.EMA(model, cfg.ema_decay) if cfg.use_ema else None)
     params = [p for g in optimizer.param_groups for p in g["params"]]
+    start_step = 0
+    if args.resume:
+        start_step = checkpoint.resume(model, Path(args.resume), optimizer=optimizer, ema=ema)
+        say("RESUME", args.resume, "step", start_step, flush=True)
     history: list[float] = []
     bench_walls: list[float] = []
     bench_nonfinite = 0
@@ -443,8 +460,22 @@ def main() -> None:
     from foldforge.modules.engine.serving import report_observations, reset_observations
 
     reset_observations(model)  # the dispatch table counts the training steps only (not the load / pool build)
+    if args.bench_dump and world.is_main:
+        Path(args.bench_dump).mkdir(parents=True, exist_ok=True)
+        torch.save({n: p.detach().cpu() for n, p in model.named_parameters()}, Path(args.bench_dump) / "params_init.pt")
+    compile_warmup_s = 0.0
+    if cfg.compile and not cfg.step_graph:  # compile every variant (no-grad recycles, grad + checkpoint recompute, 48-sample diffusion, rollout) before the timed steps; a step graph warms up in its capture
+        t_warm = time.time()
+        step.micro_step(model, first, cfg, passes=cfg.recycles_max, scale=0.0)
+        torch.cuda.synchronize()
+        optimizer.zero_grad(set_to_none=True)
+        compile_warmup_s = time.time() - t_warm
+        say("COMPILE_WARMUP seconds=%.1f" % compile_warmup_s, flush=True)
     t0 = time.time()
-    for it in range(args.steps):
+    guard = contextlib.ExitStack()
+    if cfg.compile and args.bench and not cfg.step_graph:  # nothing compiles after the warm-up (a step graph checks its own captures)
+        guard.enter_context(train_compile.strict())
+    for it in range(start_step, args.steps):
         lr = fopt.set_lr(it, cfg) if fopt else optim.set_lr(optimizer, it, cfg)
         optimizer.zero_grad(set_to_none=not cfg.step_graph)  # a step graph accumulates into the SAME .grad tensors: zeroed in place
         totals = defaultdict(float)
@@ -480,6 +511,9 @@ def main() -> None:
                     say(line, flush=True)
         with timer.phase("allreduce"):
             dist.allreduce_gradients(params, world)
+            if args.bench_dump and it == 0 and world.is_main:
+                Path(args.bench_dump).mkdir(parents=True, exist_ok=True)
+                torch.save({n: p.grad.detach().cpu() for n, p in model.named_parameters() if p.grad is not None}, Path(args.bench_dump) / "grads_step0.pt")
         with timer.phase("optimizer_ema"):
             if fopt is not None:
                 norm_t = fopt.step()
@@ -562,6 +596,15 @@ def main() -> None:
                 optimizer=optimizer,
                 step=it + 1,
             )
+            if args.keep_last > 0:  # prune: the newest --keep-last step checkpoints and every --keep-every-th step stay
+                done = sorted(
+                    (int(p.name[4:].split(".")[0]), p) for p in run_dir.glob("step*.miniworld.pt") if p.name[4:].split(".")[0].isdigit()
+                )
+                for n, p in done[: -args.keep_last]:
+                    if args.keep_every and n % args.keep_every == 0:
+                        continue
+                    p.unlink(missing_ok=True)
+                    p.with_name(p.name.removesuffix(".miniworld.pt") + ".train.pt").unlink(missing_ok=True)
 
     if history:
         n = max(1, min(10, len(history) // 2))
@@ -571,6 +614,8 @@ def main() -> None:
             flush=True,
         )
 
+    if args.bench_dump and world.is_main:  # numerics comparison: the parameters after the last step (the gradients of step 0 are saved in the loop)
+        torch.save({n: p.detach().cpu() for n, p in model.named_parameters()}, Path(args.bench_dump) / "params.pt")
     checksum = dist.param_checksum(params)
     agree = dist.ranks_agree(checksum, world, device)
     say("PARAM_CHECKSUM sum_abs=%.10f ranks_identical=%s" % (checksum, agree), flush=True)
@@ -584,6 +629,8 @@ def main() -> None:
         table = bench.engine_table(report_observations(model))
         for line in bench.format_table(table, "ENGINE_FINAL"):
             say(line, flush=True)
+        if cfg.compile:
+            say("COMPILE", json.dumps({"region": cfg.compile, "warmup_s": round(compile_warmup_s, 1), **train_compile.report()}), flush=True)
         if "_foldforge_step_graph" in model.__dict__:
             say("STEP_GRAPH", json.dumps(model.__dict__["_foldforge_step_graph"].report()), flush=True)
         if "_foldforge_rollout_graph" in model.__dict__:  # --rollout-order graph: captures, replays, cache entries, bytes held
@@ -633,7 +680,7 @@ def main() -> None:
         source="train",
         ema=ema,
         optimizer=optimizer,
-        step=len(history),
+        step=start_step + len(history),
     )
     blob = torch.load(path, map_location="cpu", weights_only=True)
     state = model.state_dict()

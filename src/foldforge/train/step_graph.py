@@ -41,6 +41,7 @@ from typing import TYPE_CHECKING, Any
 import torch
 
 from foldforge.modules.engine import capture as engine_capture
+from foldforge.train import compile as train_compile
 from foldforge.train import rollout_graph
 
 if TYPE_CHECKING:
@@ -302,8 +303,10 @@ class StepGraph:
             side = torch.cuda.Stream()
             side.wait_stream(torch.cuda.current_stream())
             with _mode(model, "capture"), torch.cuda.stream(side):  # noqa: SLF001
+                # compile: the deepest recycle count, so every variant (no-grad recycles, grad, diffusion, rollout) is compiled before ANY capture
+                warm_passes = max(passes, cfg.recycles_max) if cfg.compile else passes
                 for _ in range(self.warmup):
-                    micro_step_device(model, static, cfg, passes, scale=scale).floats()
+                    micro_step_device(model, static, cfg, warm_passes, scale=scale).floats()
             torch.cuda.current_stream().wait_stream(side)
             torch.cuda.synchronize()
             # every gradient buffer exists now (the warm-up made the missing ones): the capture ACCUMULATES into them
@@ -316,6 +319,12 @@ class StepGraph:
                     p.grad.copy_(g)
             del saved
             torch.cuda.set_rng_state(rng_state, device)
+        if cfg.compile and not self.entries:  # a throwaway capture first (as the engine measurer): code that branches on "is the stream capturing" compiles its capture variant here; the kept capture then compiles nothing
+            with _mode(model, "capture"), torch.cuda.graph(torch.cuda.CUDAGraph(), capture_error_mode="thread_local"):  # noqa: SLF001
+                micro_step_device(model, static, cfg, passes, scale=scale)
+            torch.cuda.synchronize()
+            model.diffusion_head.release_fold_state()
+            torch.cuda.empty_cache()
         rollout_graph.bump_versions(model)  # the engine packs of the warm-up must not be served: the capture records the pack kernels itself
         if self.pool is None:
             self.pool = torch.cuda.graph_pool_handle()
@@ -325,7 +334,7 @@ class StepGraph:
         reserved = torch.cuda.memory_reserved()
         previous_debug = torch.cuda.get_sync_debug_mode()
         try:
-            with _mode(model, "capture"), torch.cuda.graph(graph, pool=self.pool, capture_error_mode="thread_local"):  # noqa: SLF001
+            with _mode(model, "capture"), torch.cuda.graph(graph, pool=self.pool, capture_error_mode="thread_local"), (train_compile.strict() if cfg.compile else contextlib.nullcontext()):  # noqa: SLF001
                 if self.sync_debug:  # set inside the context: capture_begin itself synchronizes
                     torch.cuda.set_sync_debug_mode(self.sync_debug)
                 parts = micro_step_device(model, static, cfg, passes, scale=scale)
