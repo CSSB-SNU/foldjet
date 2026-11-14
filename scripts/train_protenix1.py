@@ -196,6 +196,10 @@ def main() -> None:
     ap.add_argument("--keep-last", type=int, default=3, help="--save-every: keep the newest N step checkpoints (and every --keep-every-th step); 0 keeps all")
     ap.add_argument("--keep-every", type=int, default=500, help="--save-every: steps that are multiples of this are never pruned")
     ap.add_argument("--resume", default=None, help="continue from this step<N>.miniworld.pt (+ its .train.pt: optimizer, EMA, step); --steps is then the TOTAL step count")
+    ap.add_argument("--epoch-samples", type=int, default=25600, help="samples per epoch (MiniWorld train.train_item, the composed v200 recipe: 25600): steps per epoch = this / effective batch")
+    ap.add_argument("--epochs", type=int, default=None, help="TOTAL epochs (replaces --steps: steps = epochs x steps per epoch); with --resume this is also the total")
+    ap.add_argument("--save-every-epochs", type=int, default=0, help="save epoch<E>.miniworld.pt (+ .train.pt) at the end of every K-th epoch; never pruned (MiniWorld save_freq 5)")
+    ap.add_argument("--latest-every", type=int, default=0, help="crash recovery only: overwrite ONE latest.miniworld.pt (+ .train.pt, latest.step) every N steps; resume picks the newer of it and the epoch checkpoints")
     ap.add_argument("--no-profile", action="store_true")
     ap.add_argument("--no-save", action="store_true", help="skip the final checkpoint (measurement runs)")
     ap.add_argument(
@@ -277,6 +281,12 @@ def main() -> None:
     if args.no_confidence:
         changes["confidence"] = False
     cfg = replace(cfg, **changes)
+    effective = cfg.grad_accum_steps * world.world_size
+    if args.epoch_samples % effective:
+        raise SystemExit(f"--epoch-samples {args.epoch_samples} is not a multiple of the effective batch {effective}")
+    steps_per_epoch = args.epoch_samples // effective
+    if args.epochs is not None:  # --epochs replaces --steps (the default of 50 is only a placeholder)
+        args.steps = args.epochs * steps_per_epoch
     run_dir = Path(args.run_dir)
     if world.is_main:
         run_dir.mkdir(parents=True, exist_ok=True)
@@ -605,6 +615,17 @@ def main() -> None:
                         continue
                     p.unlink(missing_ok=True)
                     p.with_name(p.name.removesuffix(".miniworld.pt") + ".train.pt").unlink(missing_ok=True)
+        if not args.bench and world.is_main and args.save_every_epochs and (it + 1) % steps_per_epoch == 0 and ((it + 1) // steps_per_epoch) % args.save_every_epochs == 0:
+            epoch = (it + 1) // steps_per_epoch
+            checkpoint.save(model, run_dir / f"epoch{epoch:04d}.miniworld.pt", family=args.model, source="train", ema=ema, optimizer=optimizer, step=it + 1)
+            say("SAVED epoch", epoch, "step", it + 1, flush=True)
+        if not args.bench and world.is_main and args.latest_every and (it + 1) % args.latest_every == 0:
+            # crash recovery: one file, written next to the target name and renamed, so a kill mid-write leaves the previous one intact
+            tmp = run_dir / "latest_tmp.miniworld.pt"
+            checkpoint.save(model, tmp, family=args.model, source="train", ema=ema, optimizer=optimizer, step=it + 1)
+            for suffix in (".miniworld.pt", ".train.pt"):
+                (run_dir / f"latest_tmp{suffix}").replace(run_dir / f"latest{suffix}")
+            (run_dir / "latest.step").write_text(str(it + 1))
 
     if history:
         n = max(1, min(10, len(history) // 2))
