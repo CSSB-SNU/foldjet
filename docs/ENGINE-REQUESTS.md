@@ -12,7 +12,7 @@ are R1, 4 / 8 are R2, 3 / F4 are R6, 6 is R5, 9 / D2 are R4, 7 / 11 are R10, D1 
 | # | Priority | Request | Retires |
 | --- | --- | --- | --- |
 | ~~R1~~ | – | ~~Public CUDA-graph capture and weight-cache API~~ Done: `miniworld_engine.capture` (2.5.6), used by FoldForge `modules/engine/capture.py` | U-removed (capture), U-layout (caches) |
-| R2 | P1 | Kernel-served `OuterProductMean` with `count_offset` (AF3's `n + 1e-3` divisor) | U-backend (OPM) |
+| ~~R2~~ | – | ~~Kernel-served `OuterProductMean` with `count_offset` (AF3's `n + 1e-3` divisor)~~ Done (engine kernels serve it; FoldForge defaults to it since 2026-11-14) | U-backend (OPM, closed) |
 | ~~R3~~ | – | ~~`AttentionPairBias` `cuda` / `triton` with an additive `extra_pair_bias`~~ Fixed (served on `cuda` in 2.5.4, eval only) | U-backend (single attention, closed) |
 | R4 | P2 | `protenix_v2` key (or documented alias) on `TriangleAttention` / `TriangleMultiplication` | U-class (protenix2 keys) |
 | R5 | P2 | Separate model keys for the triangle attention and the triangle multiplication of a `PairformerBlock` | U-layout (RoseTTAFold3 fast) |
@@ -47,7 +47,7 @@ clear_weight_caches` empties `kernels._capture._FORMS`, `kernels._tf32._CACHE` a
 before weights are replaced. All of that is private API, confined to `modules/engine/capture.py`. Please export `static_weights`, `static_inputs` and `clear_weight_caches` from the
 package root with the same semantics (a model that builds a second set of weights, or a test that builds many models, needs the clear).
 
-**R2. OPM `count_offset` on kernels.** AF3's divisor is `n + 1e-3`; the `cuda` / `triton` backends serve only `clamp(n, 1)` and refuse a call that
+**R2. DONE: OPM `count_offset` on kernels.** AF3's divisor is `n + 1e-3`; the `cuda` / `triton` backends serve only `clamp(n, 1)` and refuse a call that
 sets `count_offset`, so AF3-family rows choose between the kernels (clamp divisor, a relative difference of 1e-3 / n) and exactness (`pytorch`).
 FoldForge builds `count_offset=None` by default and runs the exact form on `pytorch` only where the mode asks for it
 (`modules.OPM_COUNT_OFFSET`). A kernel with the offset removes the choice.

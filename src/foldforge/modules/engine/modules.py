@@ -36,10 +36,10 @@ if TYPE_CHECKING:
 Precision = Literal["master", "fp32"]
 PRECISIONS = ("master", "fp32")
 
-#: AF3's outer-product-mean divisor is ``n + 1e-3``; the engine kernels serve ``clamp(n, 1)`` only (``count_offset=None``, the default here).
-#: They differ by 1e-3 / n relative: below 1e-4 from ~10 valid rows, and at pairs with no valid row (padding). Set to ``1e-3`` for the
-#: exact AF3 divisor (the engine then runs that module on its pytorch backend; ``docs/ENGINE-UNSUPPORTED.md``). Read when a block is built.
-OPM_COUNT_OFFSET: float | None = None
+#: AF3's outer-product-mean divisor is ``n + 1e-3`` (``clamp(n, 1)`` in the Boltz lineage, ``ModelSpec.opm_clamped_norm``). The engine's `cuda` (sm_90a, sm_80) and
+#: `triton` kernels serve ``count_offset`` since 2026-11-11 (FoldForge R2), so the exact AF3 divisor is the default here; ``None`` selects the clamped count (what
+#: the kernels computed before: a relative difference of 1e-3 / n, and at pairs with no valid row). Read when a block is built.
+OPM_COUNT_OFFSET: float | None = 1e-3
 
 
 @dataclass(frozen=True)
