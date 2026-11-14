@@ -1029,7 +1029,7 @@ class AlphaFold3(nn.Module):
                         # the engine's fused rigid-motion glue is miniworld's
                         # (`backends.SERVES["sampler_ops"]`)
                         rigid_mask=mask
-                        if getattr(self, "foldforge_sampler_ops", True)
+                        if getattr(self, "foldforge_sampler_glue", True)
                         else None,
                         conditioning=conditioning,
                         fold=fold,

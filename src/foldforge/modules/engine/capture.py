@@ -1,22 +1,17 @@
-"""The ONLY place FoldForge touches miniworld-engine's private modules (``kernels._capture``, ``kernels._tf32``, the ``_PACKS*`` stores of
-``kernels.integrations.*``). Everything else imports from here, so that when the engine exports a public API
-(``static_weights`` / ``static_inputs`` / ``clear_weight_caches``, requested in docs/ENGINE-REQUESTS.md) this file is the one to change.
-"""
+"""The ONE place FoldForge calls the engine's capture API (``miniworld_engine.capture``: ``static_weights`` / ``static_inputs`` /
+``clear_weight_caches`` / ``refresh_static_inputs``, public since engine 2.5.6; R1). Everything else imports from here."""
 
 from __future__ import annotations
 
 import contextlib
-import sys
 from typing import Any
-
-_PACK_STORES = ("_PACKS", "_PACKS32")
 
 
 def static_weights() -> contextlib.AbstractContextManager[None]:
     """The weights stay fixed between graph replays (inference): the engine may serve its eager weight re-layouts to a capture."""
-    from miniworld_engine.kernels import _capture
+    from miniworld_engine import capture
 
-    return _capture.static_weights()
+    return capture.static_weights()
 
 
 def static_inputs() -> contextlib.AbstractContextManager[Any]:
@@ -24,9 +19,9 @@ def static_inputs() -> contextlib.AbstractContextManager[Any]:
 
     The context yields the engine's ``StaticTables`` handle (the hoisted tables the captures inside the block read) on an engine that has the
     refresh API (:func:`refresh_available`), else whatever the engine's context yields (``None``)."""
-    from miniworld_engine.kernels import _capture
+    from miniworld_engine import capture
 
-    return _capture.static_inputs()
+    return capture.static_inputs()
 
 
 def refresh_available() -> bool:
@@ -67,18 +62,9 @@ def clear_weight_caches() -> None:
     from foldforge.models import sampler_graph
 
     sampler_graph.release_all_caches()
-    from miniworld_engine.kernels import _capture
+    from miniworld_engine import capture
 
-    _capture._FORMS.clear()
-    tf32 = sys.modules.get("miniworld_engine.kernels._tf32")
-    if tf32 is not None:
-        tf32._CACHE.clear()
-    for name, module in list(sys.modules.items()):
-        if name.startswith("miniworld_engine.kernels.integrations."):
-            for attr in _PACK_STORES:
-                store = getattr(module, attr, None)
-                if isinstance(store, dict):
-                    store.clear()
+    capture.clear_weight_caches()  # every registered store (packs, hoisted tables, forms, TF32 operands) since engine 2.5.6
 
 
 def hold_caches() -> list:

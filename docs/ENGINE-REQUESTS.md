@@ -1,4 +1,4 @@
-# Requests to the miniworld-engine team (2.5.0 - 2.5.4)
+# Requests to the miniworld-engine team (2.5.0 - 2.5.6)
 
 Requests only: what FoldForge would like the engine to provide. What the engine does not support and what FoldForge does meanwhile is in
 [ENGINE-UNSUPPORTED.md](ENGINE-UNSUPPORTED.md); each request names the rows there it would retire (`U-<section>`).
@@ -11,7 +11,7 @@ are R1, 4 / 8 are R2, 3 / F4 are R6, 6 is R5, 9 / D2 are R4, 7 / 11 are R10, D1 
 
 | # | Priority | Request | Retires |
 | --- | --- | --- | --- |
-| R1 | P1 | Public CUDA-graph capture and weight-cache API | U-removed (capture), U-layout (caches) |
+| ~~R1~~ | – | ~~Public CUDA-graph capture and weight-cache API~~ Done: `miniworld_engine.capture` (2.5.6), used by FoldForge `modules/engine/capture.py` | U-removed (capture), U-layout (caches) |
 | R2 | P1 | Kernel-served `OuterProductMean` with `count_offset` (AF3's `n + 1e-3` divisor) | U-backend (OPM) |
 | ~~R3~~ | – | ~~`AttentionPairBias` `cuda` / `triton` with an additive `extra_pair_bias`~~ Fixed (served on `cuda` in 2.5.4, eval only) | U-backend (single attention, closed) |
 | R4 | P2 | `protenix_v2` key (or documented alias) on `TriangleAttention` / `TriangleMultiplication` | U-class (protenix2 keys) |
@@ -27,7 +27,7 @@ are R1, 4 / 8 are R2, 3 / F4 are R6, 6 is R5, 9 / D2 are R4, 7 / 11 are R10, D1 
 | R14 | P3 | Class-docstring invariants for the shared-KV atom AdaLN and RoseTTAFold3's zero query bias (or a `query_bias` constructor option) | U-layout (shared KV, zero query bias) |
 | ~~R15~~ | – | ~~Export the dead-module loader~~ Closed: the engine declined; solved in FoldForge (`modules/dense/dead.py`) | U-removed (dead-module loader) |
 | ~~R16~~ | – | ~~`AtomDiT` blocks send a gradient to the atom-pair input~~ Withdrawn 2026-11-12: not an engine bug (FoldForge training policy, see the paragraph) | U-backend (training: atom-pair conditioning) |
-| ~~R17~~ | P2 (training) | An autograd-capable `PoolAtoms` (or a backward for the `sampler_ops` module) | U-backend (training: pooling) | (2.5.3 ships a `PoolAtoms` backward over `x`; FoldForge has not switched yet)
+| ~~R17~~ | – | ~~An autograd-capable `PoolAtoms` (or a backward for the `sampler_ops` module)~~ Done: engine `PoolAtoms` backward (2.5.3); FoldForge training uses it since 2026-11-14 (`foldforge_sampler_glue` off, pooling on; 64 of 68 calls per bench served by the engine) | U-backend (training: pooling, closed) |
 | R18 | P2 | A public multi-fold (trunk_seed x diffusion_seed) contract for the DiT blocks | U-class (grouped 5x5 sampler) |
 | R19 | P2 | Smaller temporaries for the 2.5.0 `PairformerBlock` batched over samples (the confidence head's CUDA-graph pool) | U-class (confidence-head graph memory) |
 | ~~R20~~ | – | ~~2.5.1 sm90 atom-DiT backward `CUDA_ERROR_ILLEGAL_ADDRESS`~~ Fixed in 2.5.3 (a Protenix v1 training smoke on `cuda` without the `pytorch` workaround runs) | U-backend (training: atom DiT cuda backward) |
@@ -36,8 +36,8 @@ are R1, 4 / 8 are R2, 3 / F4 are R6, 6 is R5, 9 / D2 are R4, 7 / 11 are R10, D1 
 | R23 | P3 | Engine-internal ATen glue at n = 1 (`inverse_length`, the fp32 -> bf16 `copy_` of `trimul_h100`) | – |
 | R24 | P2 | An Euler update op without Kabsch alignment (the `AlignEuler` module always aligns) | U-backend (glue modules) |
 | R25 | P3 | RoseTTAFold3 chirality-gradient op (`modules/dense/chirality.py`, FoldForge-own) | U-class (chirality features) |
-| R26 | P2 | A contract to refresh the hoisted per-fold tables (token-DiT pair bias, atom-block conditioning) IN PLACE into the same buffers, so a sampler CUDA graph can be reused across folds | – |
-| R27 | P2 | The H100 token-DiT cuda path at small L: the stack-level conditioning hoist of 2.4.4 is gone (ESMFold2 and Boltz-2 at d_cond 768: 11 kernels per block instead of about 7; RoseTTAFold3 and Chai-1 smaller) | – |
+| ~~R26~~ | – | ~~A contract to refresh the hoisted per-fold tables (token-DiT pair bias, atom-block conditioning) IN PLACE into the same buffers, so a sampler CUDA graph can be reused across folds~~ Done: `refresh_static_inputs` / `StaticTables` (2.5.5), used by `models/sampler_graph.py` | – |
+| ~~R27~~ | – | ~~The H100 token-DiT cuda path at small L: the stack-level conditioning hoist of 2.4.4 is gone (ESMFold2 and Boltz-2 at d_cond 768: 11 kernels per block instead of about 7; RoseTTAFold3 and Chai-1 smaller)~~ Fixed in 2.5.6 (checked 2026-11-14): ESMFold2 5I28 warm n = 1 / 2 / 4 = 0.245 / 0.433 / 1.021 s on 2.5.6 (2.5.4: 0.299 / 0.476 / 1.098, 2.4.4: 0.254 / 0.445 / 1.055; the 2.5.4 and 2.4.4 numbers are the 2026-11-12 record, not a same-day run) | – |
 
 ## P1
 

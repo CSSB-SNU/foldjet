@@ -149,15 +149,3 @@ def test_autocast_cache_guard_is_a_noop_without_cuda_autocast() -> None:
         assert not torch.is_autocast_enabled("cuda")
 
 
-def test_engine_capture_guard_switches_the_cond_pipeline_off_and_restores_it(monkeypatch: pytest.MonkeyPatch) -> None:
-    import importlib
-    import types
-
-    fake = types.SimpleNamespace(_COND_PIPE_ROWS=1024)
-    monkeypatch.setattr(importlib, "import_module", lambda name: fake)
-    with rollout_graph._engine_capture_guard():
-        assert fake._COND_PIPE_ROWS == 0
-    assert fake._COND_PIPE_ROWS == 1024
-    monkeypatch.setattr(importlib, "import_module", lambda name: types.SimpleNamespace())  # an engine without the knob: nothing to switch
-    with rollout_graph._engine_capture_guard():
-        pass

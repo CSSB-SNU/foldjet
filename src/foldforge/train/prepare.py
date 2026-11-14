@@ -51,11 +51,12 @@ def seed_everything(seed: int) -> random.Random:
 
 
 def disable_inference_only_ops(model: nn.Module) -> int:
-    """The dense atom encoder pools through the engine's ``sampler_ops`` kernel (``PoolAtoms``), which has no backward: set the module-level
-    ``foldforge_sampler_ops = False`` (the switch ``atom_cross_attention`` reads) so training uses the torch pooling. Returns the module count."""
+    """The sampler's fused rigid-motion glue (``AugmentNoise`` / ``AlignEuler``) is inference-only (no autograd): set the module-level
+    ``foldforge_sampler_glue = False`` (the switch ``af3`` reads). The atom encoder's ``PoolAtoms`` stays on: it is differentiable in ``x`` since
+    engine 2.5.3 (R17), so training no longer needs the torch gather. Returns the module count."""
     count = 0
     for module in model.modules():
-        module.foldforge_sampler_ops = False
+        module.foldforge_sampler_glue = False
         count += 1
     return count
 

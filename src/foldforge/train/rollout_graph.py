@@ -30,7 +30,6 @@ from __future__ import annotations
 
 import contextlib
 import dataclasses
-import importlib
 import logging
 import time
 from typing import Any
@@ -60,27 +59,6 @@ def _no_autocast_cache():
         return
     with torch.autocast("cuda", dtype=torch.get_autocast_dtype("cuda"), cache_enabled=False):
         yield
-
-
-@contextlib.contextmanager
-def _engine_capture_guard():
-    """Engines with the grouped conditioning-GEMM pipeline (`conditioned_transition.cuda._cond_gemm`, `_COND_PIPE_ROWS`; unreleased source 507d91366)
-    compute a WRONG token-DiT stack in a capture made outside `static_inputs()` (side-stream chunk GEMMs read after the allocator reused them:
-    24 blocks replay max|d| 1.1e3 vs eager, 2 blocks 4e1; measured `scratch/ft_wpb/gate3_507.log`). The pipeline is a capture-time decision, so it is
-    switched off while the graph is recorded (bitwise equal to eager with it off). Engine 2.5.4 has no such knob and is correct without it."""
-    try:
-        module = importlib.import_module("miniworld_engine.kernels.conditioned_transition.cuda")
-    except ImportError:
-        module = None
-    saved = getattr(module, "_COND_PIPE_ROWS", None)
-    if saved is None:
-        yield
-        return
-    module._COND_PIPE_ROWS = 0
-    try:
-        yield
-    finally:
-        module._COND_PIPE_ROWS = saved
 
 
 class InlineScope:
@@ -272,7 +250,7 @@ class RolloutGraph:
         rng_state = torch.cuda.get_rng_state(device)
         side = torch.cuda.Stream()
         side.wait_stream(torch.cuda.current_stream())
-        with _no_autocast_cache(), _engine_capture_guard(), torch.cuda.stream(side):
+        with _no_autocast_cache(), torch.cuda.stream(side):
             for _ in range(self.warmup):
                 rollout_body(model, batch, embeddings, steps)
         torch.cuda.current_stream().wait_stream(side)
@@ -282,7 +260,7 @@ class RolloutGraph:
         torch.autograd.graph.increment_version(list(head.parameters()))
         graph = torch.cuda.CUDAGraph()
         reserved = torch.cuda.memory_reserved()
-        with _no_autocast_cache(), _engine_capture_guard(), torch.cuda.graph(graph, capture_error_mode="thread_local"):
+        with _no_autocast_cache(), torch.cuda.graph(graph, capture_error_mode="thread_local"):
             out = rollout_body(model, batch, embeddings, steps)
         torch.cuda.synchronize()
         pool_bytes = max(0, torch.cuda.memory_reserved() - reserved)

@@ -134,10 +134,10 @@ Data are STAND-INS: FoldForge's featurisation of FoldBench targets (`--bench-poo
 but the featurisation is FoldForge's inference one (MSA bucket 1024 rows, 4 templates where the target has them, no recipe crop / sampling): the recipe uses `bucket_msa_size: 128`,
 so the MSA part of a measured step is heavier than in the real run. Without `--bench-pool-cache` every process builds its own pool and the labels come from the backend being measured.
 
-Memory (80 GB H100, 384 tokens, 48 augmentations): 48 augmentations in one diffusion forward / backward OOM in the first micro step (78 GiB), so `--bench` defaults to
-`--augment-chunk 8` (6 chunks of the same 48 samples) AND `--activation-checkpointing` (the pair-stack blocks are recomputed in the backward): `pytorch` and `cueq` do not fit an 80 GB card
-without it (OOM at 77 GiB), `miniworld` fits either way (peak 68 GiB without, 17 GiB with; 5 % slower with). All three backends run the same flags; `--no-activation-checkpointing` /
-`--augment-chunk N` change them. Build the pool in a separate first run (`--bench-pool-cache`, one short `--steps 1`): the training numerics of a process that has just run the pool-building
+Memory (80 GB H100, 384 tokens, 48 augmentations): the 48 augmentations run in ONE diffusion forward / backward (`--augment-chunk 0`, the recipe; `--bench` has no chunk default:
+a chunk of 8 slowed eager by about 60 %). `--bench` uses `--activation-checkpointing` (the pair-stack blocks are recomputed in the backward): `miniworld` fits an 80 GB card either way
+(peak 68 GiB without, 17 GiB with; 5 % slower with). `pytorch` and `cueq` at chunk 0 were NOT re-measured after the chunk default was removed (their earlier numbers were taken at chunk 8
+and are invalid). `--no-activation-checkpointing` / `--augment-chunk N` change the flags. Build the pool in a separate first run (`--bench-pool-cache`, one short `--steps 1`): the training numerics of a process that has just run the pool-building
 inference differ by ~1 % from a fresh process (pre-existing state of the inference calls; the loaded pool does not have it).
 Peak numbers in `BENCHSTEP` are wrong with `--profile-phases` (the phase timer resets the peak counters).
 

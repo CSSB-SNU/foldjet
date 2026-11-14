@@ -1,4 +1,4 @@
-# What miniworld-engine 2.5.4 does not support
+# What miniworld-engine 2.5.6 does not support
 
 For every gap: **what**, **where FoldForge needs it**, **what FoldForge does meanwhile**. Requests to the engine team that follow from a row are
 in [ENGINE-REQUESTS.md](ENGINE-REQUESTS.md) (`R<n>`). The sections are the categories:

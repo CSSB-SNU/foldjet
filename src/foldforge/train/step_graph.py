@@ -301,7 +301,7 @@ class StepGraph:
             saved = [None if p.grad is None else p.grad.detach().clone() for p in params]
             side = torch.cuda.Stream()
             side.wait_stream(torch.cuda.current_stream())
-            with _mode(model, "capture"), rollout_graph._engine_capture_guard(), torch.cuda.stream(side):  # noqa: SLF001
+            with _mode(model, "capture"), torch.cuda.stream(side):  # noqa: SLF001
                 for _ in range(self.warmup):
                     micro_step_device(model, static, cfg, passes, scale=scale).floats()
             torch.cuda.current_stream().wait_stream(side)
@@ -325,7 +325,7 @@ class StepGraph:
         reserved = torch.cuda.memory_reserved()
         previous_debug = torch.cuda.get_sync_debug_mode()
         try:
-            with _mode(model, "capture"), rollout_graph._engine_capture_guard(), torch.cuda.graph(graph, pool=self.pool, capture_error_mode="thread_local"):  # noqa: SLF001
+            with _mode(model, "capture"), torch.cuda.graph(graph, pool=self.pool, capture_error_mode="thread_local"):  # noqa: SLF001
                 if self.sync_debug:  # set inside the context: capture_begin itself synchronizes
                     torch.cuda.set_sync_debug_mode(self.sync_debug)
                 parts = micro_step_device(model, static, cfg, passes, scale=scale)
