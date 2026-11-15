@@ -17,7 +17,8 @@ parameters); the losses are fp32.
 from __future__ import annotations
 
 import logging
-from contextlib import nullcontext
+import os
+from contextlib import contextmanager, nullcontext
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
@@ -32,6 +33,44 @@ from foldforge.train.profile import PhaseTimer
 if TYPE_CHECKING:
     from foldforge.train.config import TrainConfig
     from foldforge.train.data import TrainBatch
+
+
+@contextmanager
+def foreach_accumulation(params: list[torch.nn.Parameter]):
+    """Run a backward with the parameters' ``.grad`` detached, then add the new gradients into the old ones with ONE ``torch._foreach_add_``.
+
+    Autograd's ``AccumulateGrad`` adds a new gradient into an existing ``.grad`` with one ``add_`` launch per parameter (``grad += new``: 4.4k
+    launches, ~8.5 ms of a Protenix v1 micro step in a step graph). Here every ``.grad`` is set to ``None`` for the backward, so autograd stores
+    the new gradient itself (no kernel; exactly what it does for a parameter without a gradient), and the old buffers get ``old + new`` from the
+    multi-tensor add: the same fp32 addition per element with the same operands (``a + 1 * b``), so the result is bitwise the same. A parameter
+    without an old gradient keeps the new one, as before. The ``.grad`` tensor objects are the old ones afterwards (a step graph accumulates
+    into them). ``FOLDFORGE_FOREACH_GRAD_ACCUM=0``: plain autograd accumulation."""
+    if os.environ.get("FOLDFORGE_FOREACH_GRAD_ACCUM", "1") == "0":
+        yield
+        return
+    held = [p.grad for p in params]
+    for p in params:
+        p.grad = None
+    done = False
+    try:
+        yield
+        done = True
+    finally:
+        dst, src = [], []
+        for p, old in zip(params, held, strict=True):
+            if old is None:  # the first gradient of this parameter: autograd stored it as it does without this context
+                continue
+            new = p.grad
+            p.grad = old
+            if done and new is not None:
+                dst.append(old)
+                src.append(new)
+        if dst:
+            torch._foreach_add_(dst, src)
+
+
+def trainable(model) -> list[torch.nn.Parameter]:
+    return [p for p in model.parameters() if p.requires_grad]
 
 
 class DeviceParts:
@@ -257,6 +296,7 @@ def micro_step_device(
         mode = "after"
     box: dict[str, torch.Tensor] = {}
     out = DeviceParts(passes, (cfg.loss.diffusion_loss, cfg.loss.bond_loss, cfg.loss.distogram_loss))
+    params = trainable(model)  # the backwards accumulate into their .grad with one multi-tensor add each (foreach_accumulation)
 
     with activation_autocast(model):
         features = {
@@ -278,7 +318,8 @@ def micro_step_device(
         if only == "trunk":  # trunk forward + backward alone: a dummy loss on its outputs stands for the heads' gradient
             dummy = sum(v.float().pow(2).mean() for v in embeddings.values() if torch.is_tensor(v) and v.requires_grad)
             with timer.phase("trunk_bwd"):
-                (dummy * 1e-6 * scale).backward()
+                with foreach_accumulation(params):
+                    (dummy * 1e-6 * scale).backward()
             out.plain["loss"] = dummy.detach()
             return out
         if only in ("rollout", "confidence"):
@@ -295,7 +336,8 @@ def micro_step_device(
             with timer.phase("confidence_fwd"):
                 l_conf, parts = confidence_step(model, features, batch_data, detached, box["x_mini"], x0, amask, cfg, example)
             with timer.phase("confidence_bwd"):
-                (l_conf * scale).backward()
+                with foreach_accumulation(params):
+                    (l_conf * scale).backward()
             out.confidence = l_conf.detach()
             out.conf_parts = {k: v.detach() for k, v in parts.items()}
             return out
@@ -364,7 +406,8 @@ def micro_step_device(
                     w.diffusion_loss * l_diffusion + w.bond_loss * l_bond
                 ) * share
             with timer.phase("diffusion_train_bwd"):
-                (chunk_loss * scale).backward()
+                with foreach_accumulation(params):
+                    (chunk_loss * scale).backward()
             out.chunks.append((share, l_diffusion.detach(), l_bond.detach(), chunk_loss.detach()))
             del x_pred, x_noisy, x0_aug, noise, table, chunk_loss, l_diffusion, l_bond
         with timer.phase("distogram_fwd_bwd"):
@@ -379,7 +422,8 @@ def micro_step_device(
                 batch_data.pseudo_beta_info.token_atoms_to_pseudo_beta,
                 tf.mask,
             )
-            (w.distogram_loss * l_disto * scale).backward()
+            with foreach_accumulation(params):
+                (w.distogram_loss * l_disto * scale).backward()
         out.distogram = l_disto.detach()
 
     # ONE backward through the trunk with the gradient the heads left on the leaves
@@ -395,9 +439,10 @@ def micro_step_device(
             )
         used = [k for k in leaves if leaves[k].grad is not None]
         if used:
-            torch.autograd.backward(
-                [embeddings[k] for k in used], [leaves[k].grad for k in used]
-            )
+            with foreach_accumulation(params):
+                torch.autograd.backward(
+                    [embeddings[k] for k in used], [leaves[k].grad for k in used]
+                )
     del leaves, head_inputs, diffusion, embeddings
 
     if cfg.confidence and not only:
@@ -423,7 +468,8 @@ def micro_step_device(
                     example,
                 )
         with timer.phase("confidence_bwd"):
-            (l_conf * scale).backward()
+            with foreach_accumulation(params):
+                (l_conf * scale).backward()
         out.confidence = l_conf.detach()
         out.conf_parts = {k: v.detach() for k, v in parts.items()}
     return out
