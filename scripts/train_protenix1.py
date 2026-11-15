@@ -203,7 +203,7 @@ def main() -> None:
     ap.add_argument("--epoch-samples", type=int, default=25600, help="samples per epoch (MiniWorld train.train_item, the composed v200 recipe: 25600): steps per epoch = this / effective batch")
     ap.add_argument("--epochs", type=int, default=None, help="TOTAL epochs (replaces --steps: steps = epochs x steps per epoch); with --resume this is also the total")
     ap.add_argument("--save-every-epochs", type=int, default=0, help="save epoch<E>.miniworld.pt (+ .train.pt) at the end of every K-th epoch; never pruned (MiniWorld save_freq 5)")
-    ap.add_argument("--latest-every", type=int, default=0, help="crash recovery only: overwrite ONE latest.miniworld.pt (+ .train.pt, latest.step) every N steps; resume picks the newer of it and the epoch checkpoints")
+    ap.add_argument("--save-last", action="store_true", help="at the end of EVERY epoch overwrite last.miniworld.pt (+ .train.pt, last.step), like MiniWorld's last.pt; resume picks the newer of it and the epoch<E> checkpoints")
     ap.add_argument("--no-profile", action="store_true")
     ap.add_argument("--no-save", action="store_true", help="skip the final checkpoint (measurement runs)")
     ap.add_argument(
@@ -629,13 +629,14 @@ def main() -> None:
             epoch = (it + 1) // steps_per_epoch
             checkpoint.save(model, run_dir / f"epoch{epoch:04d}.miniworld.pt", family=args.model, source="train", ema=ema, optimizer=optimizer, step=it + 1)
             say("SAVED epoch", epoch, "step", it + 1, flush=True)
-        if not args.bench and world.is_main and args.latest_every and (it + 1) % args.latest_every == 0:
-            # crash recovery: one file, written next to the target name and renamed, so a kill mid-write leaves the previous one intact
-            tmp = run_dir / "latest_tmp.miniworld.pt"
+        if not args.bench and world.is_main and args.save_last and (it + 1) % steps_per_epoch == 0:
+            # MiniWorld's last.pt: overwritten at the end of every epoch (written under a temporary name and renamed, so a kill mid-write leaves the previous one intact)
+            tmp = run_dir / "last_tmp.miniworld.pt"
             checkpoint.save(model, tmp, family=args.model, source="train", ema=ema, optimizer=optimizer, step=it + 1)
             for suffix in (".miniworld.pt", ".train.pt"):
-                (run_dir / f"latest_tmp{suffix}").replace(run_dir / f"latest{suffix}")
-            (run_dir / "latest.step").write_text(str(it + 1))
+                (run_dir / f"last_tmp{suffix}").replace(run_dir / f"last{suffix}")
+            (run_dir / "last.step").write_text(str(it + 1))
+            say("SAVED last epoch", (it + 1) // steps_per_epoch, "step", it + 1, flush=True)
 
     if history:
         n = max(1, min(10, len(history) // 2))
