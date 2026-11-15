@@ -182,7 +182,7 @@ def test_the_recipe_values_equal_the_defaults_and_stage_one_overrides_of_configs
     assert (alpha_bond, smooth) == (0.0, 1.0)
     w = cfg.loss
     assert w.diffusion_loss == alpha_diff and w.distogram_loss == alpha_disto
-    assert w.plddt_loss == w.pde_loss == w.resolved_loss == alpha_conf * alpha_except and w.pae_loss == alpha_conf * alpha_pae
+    assert w.plddt_loss == w.pde_loss == w.resolved_loss == alpha_conf * alpha_except and w.pae_loss == alpha_conf * 1.0  # PAE on: alpha_pae 1.0 (configs_base.py:402 "1 in finetuning stage 3"; the default there is 0.0)
     assert w.bond_loss == alpha_diff * 1.0 and w.smooth_lddt_loss == 0.0  # stage 1: alpha_bond 1.0, smooth_lddt 0
     clip, beta1, beta2, wd, adamw = ref["optim"]
     assert (cfg.grad_clip_max_norm, cfg.betas, cfg.weight_decay) == (clip, (beta1, beta2), wd) and adamw == 0.0

@@ -48,7 +48,7 @@ PROTENIX_REFERENCES: dict[str, tuple[str, str]] = {
     "smooth_lddt_loss": ("0.0", "configs/configs_base.py:407 `smooth_lddt` 1.0 'or 0 in finetuning stages'; docs table: stage 1 0; loss.py:1471 weight alpha_diffusion * smooth_lddt"),
     "distogram_loss": ("0.03", "configs/configs_base.py:405 `alpha_distogram`"),
     "plddt_loss / pde_loss / resolved_loss": ("1e-4", "configs/configs_base.py:401,403 `alpha_confidence` 1e-4 x `alpha_except_pae` 1.0; loss.py:1464-1466"),
-    "pae_loss": ("0.0", "configs/configs_base.py:402 `alpha_pae` 0.0 ('1 in finetuning stage 3'); docs table: 0 in stages 1-2; loss.py:1467 = alpha_confidence * alpha_pae"),
+    "pae_loss": ("1e-4", "configs/configs_base.py:402 `alpha_pae` 0.0 default, '1 in finetuning stage 3': we switch it on (alpha_pae 1.0); loss.py:1467 = alpha_confidence * alpha_pae = 1e-4 x 1.0"),
     "targets_protenix": ("pLDDT neighbours / thresholds and PDE, PAE bin edges as Protenix (PDE edges shifted one step: loss.py:693-725, PAE :916-938)", "protenix/model/loss.py:1212-1280 `calculate_atom_bespoke_lddt` (neighbours m = plddt_m_rep_atom_mask & polymer, `<` thresholds at 1253-1258; `PLDDTLoss` 1283-1440, an atom with weight 0 keeps bin 0 at 1324-1349)"),
 }
 
@@ -67,7 +67,7 @@ def protenix(cfg: TrainConfig) -> TrainConfig:
         plddt_loss=1e-4,
         pde_loss=1e-4,
         resolved_loss=1e-4,
-        pae_loss=0.0,
+        pae_loss=1e-4,  # alpha_confidence 1e-4 x alpha_pae 1.0 (configs_base.py:402 "1 in finetuning stage 3"); the user switched the PAE loss ON
     )
     return replace(
         cfg,

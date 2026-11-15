@@ -51,11 +51,11 @@ def test_the_protenix_recipe_sets_every_documented_value():
     assert (cfg.max_lr, cfg.warmup_steps, cfg.decay_steps, cfg.decay_factor, cfg.min_lr) == (1e-3, 2000, 50_000, 0.95, 0.0)
     assert cfg.decay_from_warmup is False and cfg.ema_decay == 0.999 and cfg.use_ema
     assert (cfg.recycles_min, cfg.recycles_max, cfg.rollout_steps, cfg.num_augment) == (1, 4, 20, 48)
-    # loss (configs_base.py:401-407, docs table "fine-tuning stage 1"): bond = alpha_diffusion x alpha_bond, confidence = 1e-4 x 1.0, PAE 0
+    # loss (configs_base.py:401-407, docs table "fine-tuning stage 1"): bond = alpha_diffusion x alpha_bond, confidence = 1e-4 x 1.0, PAE = 1e-4 x alpha_pae 1.0 (stage 3 value, switched on)
     w = cfg.loss
     assert (w.diffusion_loss, w.alpha_dna, w.alpha_rna, w.alpha_ligand) == (4.0, 5.0, 5.0, 10.0)
     assert w.bond_loss == 4.0 * 1.0 and w.smooth_lddt_loss == 0.0 and w.distogram_loss == 0.03
-    assert (w.plddt_loss, w.pde_loss, w.resolved_loss, w.pae_loss) == (1e-4, 1e-4, 1e-4, 0.0)
+    assert (w.plddt_loss, w.pde_loss, w.resolved_loss, w.pae_loss) == (1e-4, 1e-4, 1e-4, 1e-4)
     assert cfg.targets_protenix
     # the fields the recipe does not name stay MiniWorld's
     assert (cfg.noise, cfg.grad_accum_steps, cfg.rollout, cfg.confidence) == (TrainConfig().noise, 32, "after", True)
