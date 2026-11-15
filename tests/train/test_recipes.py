@@ -171,15 +171,18 @@ def test_the_frozen_set_follows_the_loss_weights_resolved_and_pae():
     assert set(miniworld.values()) == {"experimentally_resolved"} and len(miniworld) == 2
     assert freeze.frozen_parameters(model) == freeze.frozen_parameters(model, LossWeights()), "no weights = the MiniWorld defaults"
     protenix = {n: r.key for n, r in freeze.frozen_parameters(model, recipes.apply("protenix", TrainConfig()).loss).items()}
-    assert set(protenix) == {
+    assert protenix == {}, "the protenix recipe trains the PAE head (pae_loss 1e-4) and the resolved head: nothing frozen"
+    # a recipe with the PAE weight 0 freezes the PAE head
+    no_pae = replace(recipes.apply("protenix", TrainConfig()).loss, pae_loss=0.0)
+    assert {r.key for r in freeze.frozen_parameters(model, no_pae).values()} == {"pae_zero_weight"}
+    assert set(freeze.frozen_parameters(model, no_pae)) == {
         "confidence_head.pae_logits_ln.weight",
         "confidence_head.pae_logits.weight",
         "confidence_head.pae_inter_logits.weight",
     }
-    assert set(protenix.values()) == {"pae_zero_weight"}
     # a recipe that trains both heads freezes neither
     both = replace(LossWeights(), resolved_loss=1.0, pae_loss=1.0)
     assert freeze.frozen_parameters(model, both) == {}
     freeze.apply(model, recipes.apply("protenix", TrainConfig()).loss)
     trainable = {n for n, p in model.named_parameters() if p.requires_grad}
-    assert "confidence_head.experimentally_resolved_logits.weight" in trainable and "confidence_head.pae_logits.weight" not in trainable
+    assert "confidence_head.experimentally_resolved_logits.weight" in trainable and "confidence_head.pae_logits.weight" in trainable
