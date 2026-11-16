@@ -12,22 +12,24 @@ def weighted_align(
     if x.shape != y.shape:
         msg = "x and y must have the same shape."
         raise ValueError(msg)
-    if weight.shape != x.shape[:-1]:
+    # as released, weight=None raises AttributeError at `.shape` here, so the None
+    # branch below is unreachable
+    if weight.shape != x.shape[:-1]:  # pyright: ignore[reportOptionalMemberAccess]
         msg = (
             "weight must have the same shape as x and y except for the last dimension."
         )
         raise ValueError(msg)
-    if x.ndim < 2:
+    if x.ndim < 2:  # noqa: PLR2004 - (..., L, 3)
         msg = "x and y must have at least 2 dimensions."
         raise ValueError(msg)
-    if x.shape[-1] != 3:
+    if x.shape[-1] != 3:  # noqa: PLR2004 - xyz
         msg = "Last dimension of x and y must be of size 3."
         raise ValueError(msg)
 
     L = x.shape[-2]  # Length of the sequence
     original_shape = x.shape
     x, y = x.reshape(-1, L, 3), y.reshape(-1, L, 3)  # (AB, L, 3)
-    weight = weight.reshape(-1, L)  # (AB, L)
+    weight = weight.reshape(-1, L)  # pyright: ignore[reportOptionalMemberAccess]  # (AB, L)
 
     if weight is None:
         weight = torch.ones_like(x[..., 0])
@@ -80,6 +82,7 @@ def weighted_align(
 
 def kabsch_rmsd(coords: np.ndarray, mask: np.ndarray) -> np.ndarray:
     """Calculate NxN RMSD matrix for N coordinate sets (NumPy version).
+
     coords: (N, L, 3)
     mask:  (N, L) or (N, L, 1) boolean
     """
@@ -87,7 +90,7 @@ def kabsch_rmsd(coords: np.ndarray, mask: np.ndarray) -> np.ndarray:
     _n, _l, _ = coords.shape
 
     # ensure mask shape
-    if mask.ndim == 3:
+    if mask.ndim == 3:  # noqa: PLR2004 - (N, L, 1)
         mask = mask.squeeze(-1)
     mask = mask.astype(bool)  # (N, L)
 
@@ -147,7 +150,9 @@ def kabsch_rmsd(coords: np.ndarray, mask: np.ndarray) -> np.ndarray:
 def kabsch_rmsd_ref(
     coords: np.ndarray, mask: np.ndarray, ref_idx: int = 0, eps: float = 1e-7
 ) -> np.ndarray:
-    """Fully-vectorized NxN RMSD by aligning all structures to a single reference (coords[ref_idx]).
+    """Fully-vectorized NxN RMSD by aligning all structures to one reference.
+
+    The reference is coords[ref_idx].
     - Input: NumPy arrays
       coords: (N, L, 3) float
       mask:   (N, L) or (N, L, 1) bool/0-1
@@ -155,7 +160,7 @@ def kabsch_rmsd_ref(
     - No Python loops; uses PyTorch batched ops internally for stability.
     """
     # --- to torch (float64 for stable SVD) ---
-    if mask.ndim == 3:
+    if mask.ndim == 3:  # noqa: PLR2004 - (N, L, 1)
         mask = np.squeeze(mask, axis=-1)
     tC = torch.from_numpy(coords).to(torch.float64)
     tM = torch.from_numpy(mask.astype(bool))
@@ -165,7 +170,7 @@ def kabsch_rmsd_ref(
 
     # --- reference-centered coords (zero-out invalid) ---
     ref_m = tM[ref_idx]  # (L,)
-    # ref_cnt = torch.clamp(ref_m.sum(), min=1)
+    # no clamped reference count is needed: the mean over ref_m atoms is the centroid
     ref_centroid = tC[ref_idx, ref_m].mean(dim=0, keepdim=True)  # (1,3)
     ref_centered = tC[ref_idx] - ref_centroid  # (L,3)
     ref_centered = torch.where(
@@ -199,7 +204,7 @@ def kabsch_rmsd_ref(
         R = Vh_fix.transpose(-2, -1) @ U.transpose(-2, -1)
 
     # --- handle degenerate intersections (<3 common atoms): fall back to I ---
-    valid = inter.sum(dim=1) >= 3  # (N,)
+    valid = inter.sum(dim=1) >= 3  # noqa: PLR2004 - (N,); three atoms fix a rotation
     I3 = torch.eye(3, dtype=R.dtype, device=device).expand(N, 3, 3)
     R = torch.where(valid[:, None, None], R, I3)
 

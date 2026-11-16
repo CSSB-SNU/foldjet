@@ -52,7 +52,7 @@ def _component_plane_pairs(ccd: Any, name: str) -> list[tuple[tuple[str, ...], f
         mol = rdkit_utils.mol_from_ccd_cif(cif, remove_hydrogens=False)
         Chem.SanitizeMol(mol)
         if mol.GetNumConformers() == 0:
-            AllChem.EmbedMolecule(mol, randomSeed=0)
+            AllChem.EmbedMolecule(mol, randomSeed=0)  # pyright: ignore[reportAttributeAccessIssue]  # rdkit re-exports it at runtime
         Chem.AssignAtomChiralTagsFromStructure(mol)
         centres = Chem.FindMolChiralCenters(mol, includeUnassigned=True)
     except Exception:  # noqa: BLE001 - a component RDKit cannot read has no chiral rows
@@ -99,7 +99,7 @@ def chiral_features(example: dict[str, Any], ccd: Any) -> dict[str, np.ndarray]:
     for t, a in zip(*np.nonzero(names != ""), strict=True):
         key = (str(layout.chain_id[t, a]), int(layout.res_id[t, a]))
         residues.setdefault(key, {})[str(names[t, a])] = int(t) * slots + int(a)
-        resname[key] = str(layout.res_name[t, a])
+        resname[key] = str(layout.res_name[t, a])  # pyright: ignore[reportOptionalSubscript]  # set on a featurised layout
     cache: dict[str, list] = {}
     centres, targets = [], []
     for key, atoms in residues.items():

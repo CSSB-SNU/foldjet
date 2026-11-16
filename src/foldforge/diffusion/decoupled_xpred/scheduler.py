@@ -2,16 +2,20 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import torch
-from jaxtyping import Float
 
 from foldforge.diffusion.base.scheduler import DiffusionScheduler
 
+if TYPE_CHECKING:
+    from jaxtyping import Float
+
 
 class DecoupledXPredScheduler(DiffusionScheduler):
-    """Decoupled x-prediction scheduler (VE noise, independent of edm/) implementing DiffusionScheduler.
+    """Decoupled x-prediction scheduler (VE noise, independent of edm/).
 
-    Revised based on the AF3 paper:
+    Implements DiffusionScheduler. Revised based on the AF3 paper:
       - sigma_data set to 16.
       - Noise distribution: ln((1/sigma_data)*sigma_y) ~ N(P_mean, P_std).
       - Rotation and translation noise use their own schedules derived from sigma_y.
@@ -133,7 +137,7 @@ class DecoupledXPredScheduler(DiffusionScheduler):
           - sigma_rotation / sigma_translation stay near zero
           - sigma_y decreases to sigma_y_min for high-resolution refinement
         """
-        eps_mask = sigma <= 1e-8
+        eps_mask = sigma <= 1e-8  # noqa: PLR2004 - zero-noise threshold
         sigma_y_max, sigma_y_min, sigma_y_phase_1_end, sigma_y_phase_2_end = (
             self._sigma_y_phase_boundaries()
         )
@@ -202,13 +206,13 @@ class DecoupledXPredScheduler(DiffusionScheduler):
     def sample_noise(
         self,
         batch_size: int,
-        uniform: bool = False,
+        uniform: bool = False,  # noqa: FBT001, FBT002 - public signature
     ) -> tuple[
         Float[torch.Tensor, ...],
         Float[torch.Tensor, ...],
         Float[torch.Tensor, ...],
     ]:
-        """Sample decoupled noise magnitudes for coordinates, rotation, and translation."""
+        """Sample decoupled noise magnitudes for coordinates, rotation, translation."""
         if batch_size <= 0:
             msg = f"Batch size should be greater than 0, got {batch_size}"
             raise ValueError(msg)

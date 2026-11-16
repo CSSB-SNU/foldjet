@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import torch
-from jaxtyping import Float
 
 from foldforge.diffusion.base.scheduler import DiffusionScheduler
 from foldforge.diffusion.edm.schedules import PowerLawSchedule
+
+if TYPE_CHECKING:
+    from jaxtyping import Float
 
 
 class EDMScheduler(DiffusionScheduler):
@@ -36,7 +40,7 @@ class EDMScheduler(DiffusionScheduler):
     def sample_noise(
         self,
         batch_size: int,
-        uniform: bool = False,
+        uniform: bool = False,  # noqa: FBT001, FBT002 - public signature
     ) -> Float[torch.Tensor, ...]:
         """Sample noise from a exp Normal distribution."""
         if batch_size <= 0:

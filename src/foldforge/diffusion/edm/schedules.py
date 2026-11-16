@@ -21,6 +21,8 @@ class PowerLawSchedule:
     """Construct a schedule while preserving its endpoint and grid conventions."""
 
     class Config(BaseModel):
+        """Configuration for the PowerLawSchedule class."""
+
         model_config = ConfigDict(extra="forbid", frozen=True)
         sigma_data: float = Field(default=16.0, gt=0)
         sigma_max: float = Field(default=160.0, gt=0)
@@ -35,14 +37,19 @@ class PowerLawSchedule:
         self.config = config or self.Config()
 
     def levels(self, times: torch.Tensor) -> torch.Tensor:
+        """Noise levels at the normalised ``times`` (0 = sigma_max, 1 = sigma_min)."""
         config = self.config
         upper = config.sigma_max ** (1 / config.rho)
         lower = config.sigma_min ** (1 / config.rho)
         return config.sigma_data * (upper + times * (lower - upper)) ** config.rho
 
     def __call__(
-        self, num_steps: int, device=None, dtype=torch.float32
+        self,
+        num_steps: int,
+        device: torch.device | str | None = None,
+        dtype: torch.dtype = torch.float32,
     ) -> torch.Tensor:
+        """Noise levels of a ``num_steps``-step sampling schedule."""
         if num_steps < 1:
             msg = "num_steps must be positive"
             raise ValueError(msg)
@@ -69,6 +76,8 @@ class LogNormalNoise:
     """Noise draws without changing the caller's generator or global settings."""
 
     class Config(BaseModel):
+        """Configuration for the LogNormalNoise class."""
+
         model_config = ConfigDict(extra="forbid", frozen=True)
         mean: float = -1.2
         std: float = Field(default=1.5, ge=0)
@@ -77,7 +86,14 @@ class LogNormalNoise:
     def __init__(self, config: Config | None = None) -> None:
         self.config = config or self.Config()
 
-    def __call__(self, shape, device=None, *, generator=None):
+    def __call__(
+        self,
+        shape: int | tuple[int, ...],
+        device: torch.device | str | None = None,
+        *,
+        generator: torch.Generator | None = None,
+    ) -> torch.Tensor:
+        """Draw log-normal noise levels of ``shape``."""
         noise = torch.randn(shape, device=device, generator=generator)
         return (
             noise * self.config.std + self.config.mean
@@ -87,7 +103,13 @@ class LogNormalNoise:
 class InferenceNoiseScheduler(PowerLawSchedule):
     """Compatibility constructor; computation belongs to PowerLawSchedule."""
 
-    def __init__(self, s_max=160.0, s_min=4e-4, rho=7, sigma_data=16.0):
+    def __init__(
+        self,
+        s_max: float = 160.0,
+        s_min: float = 4e-4,
+        rho: float = 7,
+        sigma_data: float = 16.0,
+    ) -> None:
         super().__init__(
             self.Config(
                 sigma_max=s_max,
@@ -99,15 +121,30 @@ class InferenceNoiseScheduler(PowerLawSchedule):
             )
         )
 
-    def __call__(self, N_step=200, device="cpu", dtype=torch.float32):
+    def __call__(
+        self,
+        N_step: int = 200,
+        device: torch.device | str | None = "cpu",
+        dtype: torch.dtype = torch.float32,
+    ) -> torch.Tensor:
+        """Noise levels of an ``N_step``-step sampling schedule (on CPU by default)."""
         return super().__call__(N_step, device, dtype)
 
 
 class TrainingNoiseSampler(LogNormalNoise):
     """Compatibility constructor for existing training configurations."""
 
-    def __init__(self, p_mean=-1.2, p_std=1.5, sigma_data=16.0):
+    def __init__(
+        self, p_mean: float = -1.2, p_std: float = 1.5, sigma_data: float = 16.0
+    ) -> None:
         super().__init__(self.Config(mean=p_mean, std=p_std, sigma_data=sigma_data))
 
-    def __call__(self, size, device="cpu", *, generator=None):
+    def __call__(
+        self,
+        size: int | tuple[int, ...],
+        device: torch.device | str | None = "cpu",
+        *,
+        generator: torch.Generator | None = None,
+    ) -> torch.Tensor:
+        """Draw log-normal noise levels of ``size`` (on CPU by default)."""
         return super().__call__(size, device, generator=generator)

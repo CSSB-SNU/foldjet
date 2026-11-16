@@ -7,12 +7,16 @@ any model package.
 
 from __future__ import annotations
 
-import numpy as np
+from typing import TYPE_CHECKING
+
 import torch
-from jaxtyping import Bool, Float
 from scipy.spatial.transform import Rotation
 
 from foldforge.diffusion.tensor_layout import expand_at_dim, rot_vec_mul
+
+if TYPE_CHECKING:
+    import numpy as np
+    from jaxtyping import Bool, Float
 
 
 def random_rigid_motion(
@@ -91,23 +95,28 @@ def centre_random_augmentation(
     x_input_coords: torch.Tensor,
     N_sample: int = 1,
     s_trans: float = 1.0,
-    centre_only: bool = False,
+    centre_only: bool = False,  # noqa: FBT001, FBT002 - public signature
     mask: torch.Tensor | None = None,
     eps: float = 1e-12,
     torch_generator: torch.Generator | None = None,
     numpy_rng: np.random.Generator | None = None,
 ) -> torch.Tensor:
-    """Implements Algorithm 19 in AF3
+    """Implement Algorithm 19 in AF3.
 
     Args:
         x_input_coords (torch.Tensor): input coords
             [..., N_atom, 3]
         N_sample (int, optional): the total number of augmentation. Defaults to 1.
         s_trans (float, optional): scale factor of trans. Defaults to 1.0.
-        centre_only (bool, optional): if set true, will only perform centering without applying random translation and rotation.
+        centre_only (bool, optional): if set true, will only perform centering
+            without applying random translation and rotation.
         mask (torch.Tensor, optional): masking for the coords
             [..., N_atom]
         eps (float, optional): small number used for masked mean
+        torch_generator (torch.Generator, optional): source of the random
+            translations.
+        numpy_rng (np.random.Generator, optional): source of the random rotations.
+
     Returns:
         torch.Tensor:  the Augmentation version of input coords
             [..., N_sample, N_atom, 3]
@@ -133,7 +142,7 @@ def centre_random_augmentation(
     if centre_only:
         return x_input_coords
 
-    # N_augment = batch_size * N_sample
+    # N_augment is batch_size times N_sample
     N_augment = torch.numel(x_input_coords[..., 0, 0])
 
     # Generate N_augment (rot, trans) pairs
@@ -164,26 +173,34 @@ def uniform_random_rotation(
     N_sample: int = 1,
     numpy_rng: np.random.Generator | None = None,
 ) -> torch.Tensor:
-    """Generate random rotation matrices with scipy.spatial.transform.Rotation
+    """Generate random rotation matrices with scipy.spatial.transform.Rotation.
 
     Args:
         N_sample (int, optional): the total number of augmentation. Defaults to 1.
+        numpy_rng (np.random.Generator, optional): source of randomness (NumPy's
+            global RNG when None).
 
     Returns:
         torch.Tensor: N_sample rot matrics
             [N_sample, 3, 3]
 
     """
-    rotation = Rotation.random(num=N_sample, random_state=numpy_rng)
-    rot_matrix = torch.from_numpy(rotation.as_matrix()).float()  # [N_sample, 3, 3]
-    return rot_matrix
+    # the installed SciPy still takes `random_state`; its typed signature does not
+    rotation = Rotation.random(num=N_sample, random_state=numpy_rng)  # pyright: ignore[reportCallIssue]
+    # N_sample rotation matrices of 3 x 3
+    return torch.from_numpy(rotation.as_matrix()).float()
 
 
 # Copyright 2024 xfold authors
 # Copyright 2024 DeepMind Technologies Limited
 # This dense-layout augmentation is derived from AlphaFold 3, CC BY-NC-SA 4.0.
 # https://creativecommons.org/licenses/by-nc-sa/4.0/
-def gram_schmidt_rotation(device, dtype, batch_shape=()):
+def gram_schmidt_rotation(
+    device: torch.device | str | None,
+    dtype: torch.dtype | None,
+    batch_shape: tuple[int, ...] | torch.Size = (),
+) -> torch.Tensor:
+    """Draw random rotation matrices of shape ``(*batch_shape, 3, 3)``."""
     # Create a random rotation (Gram-Schmidt orthogonalization of two
     # random normal vectors)
     v0, v1 = torch.randn(size=(*batch_shape, 2, 3), dtype=dtype, device=device).unbind(

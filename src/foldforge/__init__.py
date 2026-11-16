@@ -3,9 +3,9 @@
 FoldForge is a *terminal* repo in a two-layer stack: miniworld-engine holds the
 fused kernels and the modules that wrap them (since 2.4.2 no architecture, diffusion
 or checkpoint adapters: those are ``foldforge.diffusion`` / ``blocks`` / ``layers`` /
-``checkpoints``); the full models are assembled here. Nothing in this package should define an op or a general-purpose block —
-if you are writing one, it belongs in the engine.
-The point of the repo is that AF3, Boltz-2, Chai-1, Protenix, ESMFold2 and
+``checkpoints``); the full models are assembled here. Nothing in this package should
+define an op or a general-purpose block — if you are writing one, it belongs in the
+engine. The point of the repo is that AF3, Boltz-2, Chai-1, Protenix, ESMFold2 and
 OpenDDE run off *one* set of blocks and one set of kernels, so a change to a
 triangle multiplication is a change to all of them at once.
 """

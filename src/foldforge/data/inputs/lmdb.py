@@ -67,22 +67,28 @@ def text(value: object) -> str:
     return value.decode("utf-8") if isinstance(value, bytes) else str(value)
 
 
-# Token order of the nucleic alphabets differs between MSA LMDBs of the same family: MiniWorld's ResidueMapping writes RNA as A U G C and
-# DNA as A T G C (21.. / 26..), the FoldBench LMDBs as A G C U and A G C T (AlphaFold 3's order). The first order of each kind is the
-# default; ``Alignment.load`` takes the one under which the stored query letters equal the first aligned row, so a record is always decoded
-# with the order it was written in.
+# Token order of the nucleic alphabets differs between MSA LMDBs of the same family:
+# MiniWorld's ResidueMapping writes RNA as A U G C and DNA as A T G C (21.. / 26..), the
+# FoldBench LMDBs as A G C U and A G C T (AlphaFold 3's order). The first order of each
+# kind is the default; ``Alignment.load`` takes the one under which the stored query
+# letters equal the first aligned row, so a record is always decoded with the order it
+# was written in.
 _ORDERS = {
     "protein": ("ARNDCQEGHILKMFPSTWYVX",),
     "rna": ("AUGCN", "AGCUN"),
     "dna": ("ATGCN", "AGCTN"),
 }
 _FIRST_TOKEN = {"protein": 0, "rna": 21, "dna": 26}
-#: letters that stand for "unknown / modified residue" on either side of a query-versus-FASTA comparison
+#: letters that stand for "unknown / modified residue" on either side of a
+#: query-versus-FASTA comparison
 _WILDCARD = {"protein": frozenset("X"), "rna": frozenset("XN"), "dna": frozenset("XN")}
 
 
 def _agree(a: str, b: str, wildcard: frozenset[str]) -> bool:
-    """Equal length, and equal letter by letter wherever neither side is an unknown / modified residue."""
+    """Equal length, and equal letter by letter except at unknown / modified residues.
+
+    A position where either side is a wildcard (unknown / modified residue) is skipped.
+    """
     return len(a) == len(b) and all(
         x == y or x in wildcard or y in wildcard for x, y in zip(a, b, strict=True)
     )
@@ -108,11 +114,12 @@ class Alignment:
     profile: np.ndarray
     deletion_mean: np.ndarray
     kind: str
-    #: token -> letter of the order this record was written in (None: the default ``ALPHABETS[kind]``)
+    #: token -> letter of the order this record was written in (None: the default
+    #: ``ALPHABETS[kind]``)
     alphabet: dict[int, str] | None = None
 
     @classmethod
-    def load(cls, path: Path, key: str, kind: str, sequence: str) -> Alignment:  # noqa: C901 - validate one complete MSA record
+    def load(cls, path: Path, key: str, kind: str, sequence: str) -> Alignment:  # noqa: C901, PLR0912, PLR0915 - validate one complete MSA record
         """Load ."""
         if kind not in ALPHABETS:
             msg = f"MSA-LMDB is not defined for {kind}"
@@ -136,7 +143,8 @@ class Alignment:
         unknown = "X" if kind == "protein" else "N"
         alphabet = ALPHABETS[kind]
         if query.dtype.kind in {"U", "S"}:
-            # an unknown / modified nucleotide is spelled N or X in a query; it is the alphabet's N either way
+            # an unknown / modified nucleotide is spelled N or X in a query; it is the
+            # alphabet's N either way
             letters = [unknown if text(x) in wildcard else text(x) for x in query]
             if not np.issubdtype(tokens.dtype, np.integer):
                 msg = f"{key}: MSA tokens must be integers"
@@ -151,7 +159,10 @@ class Alignment:
                     query = np.asarray([mapping[x] for x in letters], dtype=np.int32)
                     break
             else:
-                msg = f"{key}: the query letters match the first aligned row under no known {kind} token order {_ORDERS[kind]}"
+                msg = (
+                    f"{key}: the query letters match the first aligned row under no "
+                    f"known {kind} token order {_ORDERS[kind]}"
+                )
                 raise ValueError(msg)
         if not np.issubdtype(tokens.dtype, np.integer) or not np.issubdtype(
             query.dtype, np.integer
@@ -165,8 +176,10 @@ class Alignment:
             msg = f"{key}: token outside MiniWorld {kind} alphabet"
             raise ValueError(msg)
         decoded = "".join(alphabet[int(x)] for x in query)
-        # a cross-linked chromophore (GFP's CR2 / CH6 ...) is ONE residue in the FASTA and three in an MSA written for the expanded chain: the
-        # extra columns after the residue are folded away (query, every aligned row, deletions, profile); `keep` selects the columns that stay.
+        # a cross-linked chromophore (GFP's CR2 / CH6 ...) is ONE residue in the FASTA
+        # and three in an MSA written for the expanded chain: the extra columns after
+        # the residue are folded away (query, every aligned row, deletions, profile);
+        # `keep` selects the columns that stay.
         keep = None
         if len(decoded) > len(sequence):
             extra = len(decoded) - len(sequence)
@@ -185,8 +198,9 @@ class Alignment:
                     )
                     decoded = "".join(alphabet[int(x)] for x in query)
                     break
-        # the FASTA spells an unknown / modified residue X (its parent is not in the parser's table); the MSA query carries the entity's
-        # canonical letter there. Everywhere else the two must agree.
+        # the FASTA spells an unknown / modified residue X (its parent is not in the
+        # parser's table); the MSA query carries the entity's canonical letter there.
+        # Everywhere else the two must agree.
         same = _agree(decoded, sequence, wildcard)
         if not same or not np.array_equal(query, tokens[0]):
             msg = f"{key}: LMDB query does not match FASTA sequence"
@@ -219,11 +233,15 @@ class Alignment:
         )
 
     def merge_query(self, sequence: str) -> str:
-        """``sequence`` with its unknown / modified positions (``X``; ``N`` for nucleic acids) replaced by the MSA query's canonical letter.
+        """``sequence`` with its unknown / modified positions set from the MSA query.
 
-        An MSA is written for the entity's canonical sequence, so where the FASTA names a modified residue the query carries its parent; the
-        AF3 parser requires the MSA's first row to equal the chain's sequence exactly. The chain's modified residues are one-letter in the
-        released adapters (``modifications`` is empty), so taking the parent letter changes nothing else.
+        The unknown / modified positions (``X``; ``N`` for nucleic acids) take the MSA
+        query's canonical letter. An MSA is written for the entity's canonical
+        sequence, so where the FASTA names a modified residue the query carries its
+        parent; the AF3 parser requires the MSA's first row to equal the chain's
+        sequence exactly. The chain's modified residues are one-letter in the released
+        adapters (``modifications`` is empty), so taking the parent letter changes
+        nothing else.
         """
         wildcard = _WILDCARD[self.kind]
         alphabet = self.alphabet or ALPHABETS[self.kind]
@@ -396,17 +414,21 @@ class Template:
         }
 
 
-#: ambiguous / rare one-letter codes a template sequence may carry (Glx, Asx, Xle, selenocysteine, pyrrolysine): an unknown residue
+#: ambiguous / rare one-letter codes a template sequence may carry (Glx, Asx, Xle,
+#: selenocysteine, pyrrolysine): an unknown residue
 _AMBIGUOUS = str.maketrans("BZJUO", "XXXXX")
 MIN_TEMPLATE_IDENTITY = 0.25
 
 
 def _template_start(template: str, query: str, offset: int) -> int | None:
-    """Where the query starts inside the template's aligned frame, or None when the template cannot be placed on it.
+    """Where the query starts inside the template's aligned frame.
 
-    The template records are aligned to the entity's full sequence; a FoldBench input may carry a trimmed one. Same length: start 0. An
-    explicit ``offset`` (the residues trimmed from the front) is taken as given. A longer template with no offset: the start whose letters
-    agree best with the query over the aligned residues (a homolog, so a clear winner and not a perfect match is what to look for).
+    None when the template cannot be placed on it. The template records are aligned to
+    the entity's full sequence; a FoldBench input may carry a trimmed one. Same length:
+    start 0. An explicit ``offset`` (the residues trimmed from the front) is taken as
+    given. A longer template with no offset: the start whose letters agree best with
+    the query over the aligned residues (a homolog, so a clear winner and not a perfect
+    match is what to look for).
     """
     length, full = len(query), len(template)
     if offset:
@@ -420,7 +442,7 @@ def _template_start(template: str, query: str, offset: int) -> int | None:
         pairs = [
             (a, b)
             for a, b in zip(template[start : start + length], query, strict=True)
-            if a != "-" and a != "X" and b != "X"
+            if a not in {"-", "X"} and b != "X"
         ]
         if len(pairs) >= MIN_ALIGNED_BACKBONES:
             identity = sum(a == b for a, b in pairs) / len(pairs)
@@ -429,7 +451,7 @@ def _template_start(template: str, query: str, offset: int) -> int | None:
     return best_start if best >= MIN_TEMPLATE_IDENTITY else None
 
 
-def load_templates(
+def load_templates(  # noqa: C901 - validate and place every template of one record
     path: Path,
     key: str,
     query: str | int,
@@ -438,10 +460,14 @@ def load_templates(
     *,
     dedup: bool = True,
 ) -> tuple[Template, ...]:
-    """Load the templates of ``key`` placed on ``query``. ``query`` is the chain length (int): every template must be aligned to exactly that
-    many residues, else the record is refused. ``query`` as the chain's one-letter sequence (str) also takes a template aligned in a longer
-    frame: placed by ``offset`` (residues trimmed from the front of the chain, FoldBench's ``template_offset``) or, with none, by the start that
-    agrees best with the sequence; a template that cannot be placed is skipped.
+    """Load the templates of ``key`` placed on ``query``.
+
+    ``query`` is the chain length (int): every template must be aligned to exactly that
+    many residues, else the record is refused. ``query`` as the chain's one-letter
+    sequence (str) also takes a template aligned in a longer frame: placed by
+    ``offset`` (residues trimmed from the front of the chain, FoldBench's
+    ``template_offset``) or, with none, by the start that agrees best with the
+    sequence; a template that cannot be placed is skipped.
     """
     if count == 0:
         return ()
@@ -491,7 +517,8 @@ def load_templates(
         # One template per hit sequence, as AF3's and Protenix's template search
         # keep it: the LMDB stores every chain of an entry (5SYD_A, 5SYD_B, ...),
         # so the first ``count`` records would repeat the same structure.
-        # ``dedup=False`` (spec ``template_dedup: false``) keeps the repeats: FoldBench's lists.
+        # ``dedup=False`` (spec ``template_dedup: false``) keeps the repeats:
+        # FoldBench's lists.
         if dedup:
             if sequence.replace("-", "") in seen:
                 continue

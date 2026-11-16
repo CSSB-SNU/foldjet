@@ -15,7 +15,8 @@ from torch import nn
 
 
 def rot_vec_mul(r: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
-    """Apply rot matrix to vector
+    """Apply rot matrix to vector.
+
     Applies a rotation to a vector. Written out by hand to avoid transfer
     to avoid AMP downcasting.
 
@@ -46,7 +47,7 @@ def rot_vec_mul(r: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
 
 
 def flatten_final_dims(t: torch.Tensor, num_dims: int) -> torch.Tensor:
-    """Flatten final dims of tensor
+    """Flatten final dims of tensor.
 
     Args:
         t (torch.Tensor): the input tensor
@@ -63,7 +64,8 @@ def flatten_final_dims(t: torch.Tensor, num_dims: int) -> torch.Tensor:
 def one_hot(
     x: torch.Tensor, lower_bins: torch.Tensor, upper_bins: torch.Tensor
 ) -> torch.Tensor:
-    """Get one hot embedding of x from lower_bins and upper_bins
+    """Get one hot embedding of x from lower_bins and upper_bins.
+
     Args:
         x (torch.Tensor): the input x
             [...]
@@ -77,14 +79,13 @@ def one_hot(
             [..., bins]
 
     """
-    dgram = (x[..., None] > lower_bins) * (x[..., None] < upper_bins).float()
-    return dgram
+    return (x[..., None] > lower_bins) * (x[..., None] < upper_bins).float()
 
 
 def broadcast_token_to_atom(
     x_token: torch.Tensor, atom_to_token_idx: torch.Tensor
 ) -> torch.Tensor:
-    """Broadcast token-level embeddings to atom-level embeddings
+    """Broadcast token-level embeddings to atom-level embeddings.
 
     Args:
         x_token (torch.Tensor): token embedding
@@ -100,7 +101,7 @@ def broadcast_token_to_atom(
     if len(atom_to_token_idx.shape) == 1:
         # shape = [N_atom], easy index
         return x_token[..., atom_to_token_idx, :]
-    assert atom_to_token_idx.shape[:-1] == x_token.shape[:-2]
+    assert atom_to_token_idx.shape[:-1] == x_token.shape[:-2]  # noqa: S101 - released shape contract
 
     return batched_gather(
         data=x_token,
@@ -111,7 +112,7 @@ def broadcast_token_to_atom(
 
 
 def expand_at_dim(x: torch.Tensor, dim: int, n: int) -> torch.Tensor:
-    """Expand a tensor at specific dim by n times
+    """Expand a tensor at specific dim by n times.
 
     Args:
         x (torch.Tensor): input
@@ -164,7 +165,7 @@ def rearrange_qk_to_dense_trunk(
     dim_k: int | list[int],
     n_queries: int = 32,
     n_keys: int = 128,
-    compute_mask: bool = True,
+    compute_mask: bool = True,  # noqa: FBT001, FBT002 - public signature
 ) -> tuple[
     torch.Tensor | list[torch.Tensor],
     torch.Tensor | list[torch.Tensor],
@@ -175,12 +176,17 @@ def rearrange_qk_to_dense_trunk(
     Args:
         q (torch.Tensor): query tensor. Could be a tensor or a list of tensors.
             [..., n_q, ...] (n_q is at dimension dim_q)
-        k (torch.Tensor | List[torch.Tensor]): key tensor. Could be a tensor or a list of tensors.
+        k (torch.Tensor | List[torch.Tensor]): key tensor. Could be a tensor or a
+            list of tensors.
             [..., n_k, ...] (n_k is at dimension dim_k)
-        dim_q (int): along which dimension to build the trunks. Could be an int or a list of int.
-        dim_k (int): along which dimension to build the trunks. Could be an int or a list of int.
+        dim_q (int): along which dimension to build the trunks. Could be an int or a
+            list of int.
+        dim_k (int): along which dimension to build the trunks. Could be an int or a
+            list of int.
         n_queries (int, optional): local window size of query tensor.
         n_keys (int, optional): local window size of key/value tensor.
+        compute_mask (bool, optional): whether to build ``mask_trunked`` (None
+            otherwise).
 
     Returns:
         tuple[Union[torch.Tensor, list[torch.Tensor]]]:
@@ -194,14 +200,16 @@ def rearrange_qk_to_dense_trunk(
                 q_pad: query padded dimension
 
     """
-    assert n_keys >= n_queries
-    assert n_queries & 0x01 == 0
-    assert n_keys & 0x01 == 0
+    assert n_keys >= n_queries  # noqa: S101 - released argument contract
+    assert n_queries & 0x01 == 0  # noqa: S101 - released argument contract
+    assert n_keys & 0x01 == 0  # noqa: S101 - released argument contract
 
-    def basic_checks(x, dim_x):
+    def basic_checks(
+        x: Any, dim_x: Any
+    ) -> tuple[list[torch.Tensor], list[int], bool, int, int]:
         if isinstance(x, list):
             x_is_list = True
-            assert isinstance(dim_x, list)
+            assert isinstance(dim_x, list)  # noqa: S101 - released argument contract
         else:
             x_is_list = False
             x = [x]
@@ -210,14 +218,15 @@ def rearrange_qk_to_dense_trunk(
         for i in range(len(dim_x)):
             if dim_x[i] < 0:
                 dim_x[i] = len(x[i].shape) + dim_x[i]
-            assert x[i].size(dim_x[i]) == n_x
+            assert x[i].size(dim_x[i]) == n_x  # noqa: S101 - released shape contract
         return x, dim_x, x_is_list, n_x, len(x)
 
     q, dim_q, q_is_list, n, num_q = basic_checks(q, dim_q)
     k, dim_k, k_is_list, n_k, num_k = basic_checks(k, dim_k)
 
-    assert n == n_k
-    n_trunks = int(math.ceil(n / n_queries))
+    assert n == n_k  # noqa: S101 - released shape contract
+    # int() kept: under torch.compile it specialises a symbolic size as released
+    n_trunks = int(math.ceil(n / n_queries))  # noqa: RUF046 - see above
     q_pad_length = n_trunks * n_queries - n
 
     q_new = [
@@ -293,18 +302,17 @@ def optimized_concat_split(attn_bias: torch.Tensor, n_queries: int) -> torch.Ten
     """
     D = attn_bias.size(-2)
     E = attn_bias.size(-1)
-    assert D % n_queries == 0
+    assert D % n_queries == 0  # noqa: S101 - released shape contract
     num_splits = D // n_queries
     reshaped = attn_bias.reshape(*attn_bias.shape[:-2], num_splits, n_queries, E)
     permuted = reshaped.permute(*range(reshaped.dim() - 3), -2, -3, -1)
-    output = permuted.reshape(*attn_bias.shape[:-2], n_queries, num_splits * E)
-    return output
+    return permuted.reshape(*attn_bias.shape[:-2], n_queries, num_splits * E)
 
 
 def gather_pair_embedding_in_dense_trunk(
     x: torch.Tensor, idx_q: torch.Tensor, idx_k: torch.Tensor
 ) -> torch.Tensor:
-    """Selectively gather elements from a tensor using two sets of indices.
+    """Gather elements of a tensor selectively, using two sets of indices.
 
     Args:
         x: [..., N_token, N_token, d]
@@ -318,7 +326,7 @@ def gather_pair_embedding_in_dense_trunk(
     """
     idx_q = idx_q.long()
     idx_k = idx_k.long()
-    assert len(idx_q.shape) == len(idx_k.shape) == 2
+    assert len(idx_q.shape) == len(idx_k.shape) == 2  # noqa: S101, PLR2004 - released shape contract
 
     # Get the shape parameters
     _, N_q = idx_q.shape
@@ -329,23 +337,23 @@ def gather_pair_embedding_in_dense_trunk(
     idx_k_expanded = idx_k.unsqueeze(1).expand(-1, N_q, -1)
 
     # Use advanced indexing to gather the desired elements
-    y = x[..., idx_q_expanded, idx_k_expanded, :]
-
-    return y
+    return x[..., idx_q_expanded, idx_k_expanded, :]
 
 
 def batched_gather(
     data: torch.Tensor, inds: torch.Tensor, dim: int = 0, no_batch_dims: int = 0
 ) -> torch.Tensor:
-    """Gather data according to indices specify by inds
+    """Gather data according to indices specify by inds.
 
     Args:
         data (torch.Tensor): the input data
             [..., K, ...]
         inds (torch.Tensor): the indices for gathering data
             [..., N]
-        dim (int, optional): along which dimension to gather data by inds (the dim of "K" "N"). Defaults to 0.
-        no_batch_dims (int, optional): length of dimensions before the "dim" dimension. Defaults to 0.
+        dim (int, optional): along which dimension to gather data by inds (the dim
+            of "K" "N"). Defaults to 0.
+        no_batch_dims (int, optional): length of dimensions before the "dim"
+            dimension. Defaults to 0.
 
     Returns:
         torch.Tensor: gathered data
@@ -362,7 +370,9 @@ def batched_gather(
         r = r.view(*(*((1,) * i), -1, *((1,) * (len(inds.shape) - i - 1))))
         ranges.append(r)
 
-    remaining_dims = [slice(None) for _ in range(len(data.shape) - no_batch_dims)]
+    remaining_dims: list[slice | torch.Tensor] = [
+        slice(None) for _ in range(len(data.shape) - no_batch_dims)
+    ]
     remaining_dims[dim - no_batch_dims if dim >= 0 else dim] = inds
     ranges.extend(remaining_dims)
     return data[tuple(ranges)]
@@ -371,15 +381,19 @@ def batched_gather(
 def pad_at_dim(
     x: torch.Tensor,
     dim: int,
-    pad_length: tuple[int] | list[int],
+    pad_length: tuple[int, ...] | list[int],
     value: float = 0,
 ) -> torch.Tensor:
-    """Pad to input x at dimension dim with length pad_length[0] to the left and and pad_length[1] to the right.
+    """Pad input x at dimension dim.
+
+    The padding is pad_length[0] to the left and pad_length[1] to the right.
 
     Args:
         x (torch.Tensor): input
         dim (int): padding dimension
-        pad_length (Union[Tuple[int], List[int]]): length to pad to the beginning and end.
+        pad_length (Union[Tuple[int], List[int]]): length to pad to the beginning
+            and end.
+        value (float, optional): padding value. Defaults to 0.
 
     Returns:
         torch.Tensor: padded tensor
@@ -400,9 +414,9 @@ def pad_at_dim(
 
 
 def reshape_at_dim(
-    x: torch.Tensor, dim: int, target_shape: tuple[int] | list[int]
+    x: torch.Tensor, dim: int, target_shape: tuple[int, ...] | list[int]
 ) -> torch.Tensor:
-    """Reshape dimension dim of x to target_shape
+    """Reshape dimension dim of x to target_shape.
 
     Args:
         x (torch.Tensor): input
@@ -425,7 +439,7 @@ def reshape_at_dim(
 
 
 def permute_final_dims(tensor: torch.Tensor, inds: list[int]) -> torch.Tensor:
-    """Permute final dims of tensor
+    """Permute final dims of tensor.
 
     Args:
         tensor (torch.Tensor): the input tensor
@@ -457,7 +471,8 @@ def aggregate_atom_to_token(
     Pass n_token explicitly inside compiled or captured model boundaries.
     """
     if reduce not in {"mean", "sum", "add"}:
-        raise ValueError(f"Unsupported atom reduction: {reduce}")
+        msg = f"Unsupported atom reduction: {reduce}"
+        raise ValueError(msg)
     index = torch.broadcast_to(atom_to_token_idx, x_atom.shape[:-1])
     if n_token is None:
         n_token = int(index.max()) + 1 if index.numel() else 0

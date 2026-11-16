@@ -7,11 +7,12 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import torch
-from jaxtyping import Float
 from pydantic import BaseModel
 from scipy.spatial.transform import Rotation
 
 if TYPE_CHECKING:
+    from jaxtyping import Float
+
     from foldforge.diffusion.base.scheduler import (
         DiffusionScheduler,
     )
@@ -65,10 +66,10 @@ class Diffuser(ABC):
         x: Float[torch.Tensor, "... L 3"],
     ) -> Float[torch.Tensor, "... L 3"]:
         """Apply random rotation and translation to the input tensor."""
-        if x.ndim < 2:
+        if x.ndim < 2:  # noqa: PLR2004 - (..., L, 3)
             msg = "Input tensor must have at least 2 dimensions."
             raise ValueError(msg)
-        if x.shape[-1] != 3:
+        if x.shape[-1] != 3:  # noqa: PLR2004 - xyz
             msg = "Last dimension of input tensor must be of size 3."
             raise ValueError(msg)
         x_shape = x.shape

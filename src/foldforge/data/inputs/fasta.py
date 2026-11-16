@@ -52,10 +52,12 @@ _RNA_1TO_CCD: dict[str, str] = {"A": "A", "U": "U", "G": "G", "C": "C"}
 # DNA 1-letter -> 2-letter CCD code.
 _DNA_1TO_CCD: dict[str, str] = {"A": "DA", "T": "DT", "G": "DG", "C": "DC"}
 
-# Modified / non-standard protein residues that may appear inline in a polypeptide(L) body as ``(CCD)`` (e.g. ``LPKGL(SEP)ASLPDL``).
-# The value is the parent standard amino acid's 1-letter code, used only for the MSA / restype embedding (the model has no distinct
-# restype for these -- the modification's atoms enter via the CCD reference geometry). Unlisted CCDs fall back to 'X' (unknown).
-# Same table as MiniWorld's data/inference/fasta.py: FoldBench's inputs are written in that grammar.
+# Modified / non-standard protein residues that may appear inline in a polypeptide(L)
+# body as ``(CCD)`` (e.g. ``LPKGL(SEP)ASLPDL``). The value is the parent standard amino
+# acid's 1-letter code, used only for the MSA / restype embedding (the model has no
+# distinct restype for these -- the modification's atoms enter via the CCD reference
+# geometry). Unlisted CCDs fall back to 'X' (unknown). Same table as MiniWorld's
+# data/inference/fasta.py: FoldBench's inputs are written in that grammar.
 _MODRES_PROTEIN_PARENT: dict[str, str] = {
     "SEP": "S",  # phosphoserine
     "TPO": "T",  # phosphothreonine
@@ -232,9 +234,11 @@ def parse_fasta_file(path: Path, chain_index: int) -> ChainSpec:  # noqa: C901 -
 def _parse_protein_body(body: str, path: Path) -> tuple[list[str], list[str]]:
     """Parse a polypeptide(L) body into per-residue CCD + 1-letter codes.
 
-    Standard residues are single letters (``A``..``Y``). A modified / non-standard residue is written inline as its CCD code in
-    parentheses, e.g. ``LPKGL(SEP)ASLPDL``. The parenthesized CCD becomes that residue's ``chemcomp_id`` (so its real atoms come from the
-    CCD reference), while the 1-letter code used for the MSA / restype embedding is the parent amino acid
+    Standard residues are single letters (``A``..``Y``). A modified / non-standard
+    residue is written inline as its CCD code in parentheses, e.g.
+    ``LPKGL(SEP)ASLPDL``. The parenthesized CCD becomes that residue's ``chemcomp_id``
+    (so its real atoms come from the CCD reference), while the 1-letter code used for
+    the MSA / restype embedding is the parent amino acid
     (:data:`_MODRES_PROTEIN_PARENT`, fallback ``X``).
     """
     ccds: list[str] = []
@@ -274,14 +278,18 @@ def _parse_nucleic_body(
 ) -> tuple[list[str], list[str]]:
     """Parse a nucleic body into per-residue CCD + 1-letter codes.
 
-    Canonical bases are single letters; anything else is written inline as its CCD code in parentheses, exactly as in a protein body --
-    ``AT(DI)GC`` for a strand with an inosine. The parenthesized CCD becomes that residue's ``chemcomp_id`` (so its real atoms come from
-    the CCD reference), while the 1-letter code used for the MSA / restype embedding falls back to ``'X'``. A parenthesized *canonical*
-    code keeps its letter: FoldBench writes every DNA base that way (``(DC)(DG)(DT)``), and mapping those to ``'X'`` would leave the
-    whole strand "unknown DNA" in restype and the MSA query.
+    Canonical bases are single letters; anything else is written inline as its CCD code
+    in parentheses, exactly as in a protein body -- ``AT(DI)GC`` for a strand with an
+    inosine. The parenthesized CCD becomes that residue's ``chemcomp_id`` (so its real
+    atoms come from the CCD reference), while the 1-letter code used for the MSA /
+    restype embedding falls back to ``'X'``. A parenthesized *canonical* code keeps its
+    letter: FoldBench writes every DNA base that way (``(DC)(DG)(DT)``), and mapping
+    those to ``'X'`` would leave the whole strand "unknown DNA" in restype and the MSA
+    query.
 
-    A bare letter outside the canonical four (``N``, ``X``, and the ``I`` / ``U`` an entity's canonical spelling can carry) is an
-    unidentified nucleotide rather than an error, so it takes ``unknown_ccd``.
+    A bare letter outside the canonical four (``N``, ``X``, and the ``I`` / ``U`` an
+    entity's canonical spelling can carry) is an unidentified nucleotide rather than an
+    error, so it takes ``unknown_ccd``.
     """
     ccd_to_one = {ccd: letter for letter, ccd in one_to_ccd.items()}
     ccds: list[str] = []

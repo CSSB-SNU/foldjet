@@ -7,7 +7,7 @@ not appear in the public step/sample interface.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import torch
 from pydantic import BaseModel
@@ -18,11 +18,13 @@ from foldforge.diffusion.base.solver import (
     _chain_count,
     _expand_to_batch,
 )
-from foldforge.diffusion.decoupled_xpred.scheduler import (
-    DecoupledXPredScheduler,
-)
 from foldforge.diffusion.geometry.alignment import weighted_align
 from foldforge.diffusion.geometry.se3 import apply_chain_rt, sample_rigid
+
+if TYPE_CHECKING:
+    from foldforge.diffusion.decoupled_xpred.scheduler import (
+        DecoupledXPredScheduler,
+    )
 
 
 class XPredDecoupledSolver(DiffusionSolver):
@@ -207,7 +209,7 @@ class XPredDecoupledSolver(DiffusionSolver):
         return y_next, x_pred, x_with_noise
 
     @torch.no_grad()
-    def sample(
+    def sample(  # noqa: C901, PLR0912 - one sampling loop, kept as released
         self,
         model_fn: ModelFn,
         shape: torch.Size,
@@ -278,7 +280,7 @@ class XPredDecoupledSolver(DiffusionSolver):
 
         if init_x0 is not None:
             init_x0 = init_x0.to(device=device, dtype=torch.float32)
-            if init_x0.ndim == 2:
+            if init_x0.ndim == 2:  # noqa: PLR2004 - (L, 3)
                 init_x0 = init_x0.unsqueeze(0)
             if init_x0.shape[-2:] != shape[-2:]:
                 msg = (

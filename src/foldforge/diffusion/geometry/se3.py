@@ -33,7 +33,7 @@ def rodrigues(omega: Tensor) -> Tensor:
     c = torch.cos(theta)[..., None]
     R = I + s * K + (1 - c) * (K @ K)
     # For very small angles, use 1st order approx
-    small = (theta.squeeze(-1) < 1e-4)[..., None, None]
+    small = (theta.squeeze(-1) < 1e-4)[..., None, None]  # noqa: PLR2004 - small angle
     R_small = I + hat_so3(omega)
     return torch.where(small, R_small, R)
 
@@ -59,7 +59,7 @@ def exp_se3(omega: Tensor, v: Tensor) -> tuple[Tensor, Tensor]:
 
 def apply_rt(R: Tensor, T: Tensor, pts: Tensor) -> Tensor:
     """Apply (R,T) to points. R:(B,3,3) or (3,3), T:(B,3) or (3,), pts:(...,3)."""
-    if R.dim() == 2:
+    if R.dim() == 2:  # noqa: PLR2004 - a single (3, 3) rotation
         return pts @ R.mT + T
     # batch over first dim of pts assumed to match R,T or be broadcastable
     return (pts @ R.transpose(-1, -2)) + T.unsqueeze(-2)
@@ -70,9 +70,12 @@ def apply_chain_rt(
     R: Tensor,
     T: Tensor,
     atom_to_combine: Tensor | Mapping[object, tuple[int, int]],
-    inverse: bool = False,
+    inverse: bool = False,  # noqa: FBT001, FBT002 - public signature
 ) -> Tensor:
-    """Apply chain-specific RT. x:(B,N,3), R,T:(B,C,3,3)/(B,C,3), atom_to_combine: (B, N_atom)."""
+    """Apply chain-specific RT.
+
+    x:(B,N,3), R,T:(B,C,3,3)/(B,C,3), atom_to_combine: (B, N_atom).
+    """
     if isinstance(atom_to_combine, Mapping):
         output = []
         for cc, chain_ID in enumerate(atom_to_combine.keys()):
@@ -85,8 +88,7 @@ def apply_chain_rt(
             else:
                 x_rt = apply_rt(R[:, cc], T[:, cc], x_rt)
             output.append(x_rt)
-        output = torch.cat(output, dim=1)
-        return output
+        return torch.cat(output, dim=1)
 
     # atom_to_combine: (B, N_atom) — group index per atom, values in [0, C)
     atom_to_combine = atom_to_combine.to(device=x.device, dtype=torch.long)
@@ -125,7 +127,7 @@ def log_so3(R: Tensor) -> Tensor:
     cos_theta = ((tr - 1) / 2).clamp(-1.0, 1.0)
     theta = torch.acos(cos_theta)
     # For small angles, use approximation
-    small = theta < 1e-4
+    small = theta < 1e-4  # noqa: PLR2004 - small angle
     if small.any():
         # skew = (R - R^T)/2, vee(skew) is approx omega
         skew = 0.5 * (R - R.transpose(-1, -2))
@@ -152,7 +154,10 @@ def compose(R1: Tensor, T1: Tensor, R2: Tensor, T2: Tensor) -> tuple[Tensor, Ten
 
 
 def exp_so3(omega: torch.Tensor) -> torch.Tensor:
-    """Stable Rodrigues formula for exp map from so(3) to SO(3). omega: (B,C,3) axis-angle."""
+    """Stable Rodrigues formula for exp map from so(3) to SO(3).
+
+    omega: (B,C,3) axis-angle.
+    """
     B, C = omega.shape[:2]
     omega = omega.view(-1, 3)
     theta = omega.norm(dim=-1, keepdim=True)  # (C,1)
@@ -177,8 +182,7 @@ def exp_so3(omega: torch.Tensor) -> torch.Tensor:
     a = s.view(B * C, 1, 1)
     b = (1 - c).view(B * C, 1, 1)
     R = I + a * K + b * (K @ K)
-    R = R.view(B, C, 3, 3)
-    return R
+    return R.view(B, C, 3, 3)
 
 
 class _IGSO3Sampler:
@@ -227,11 +231,11 @@ class _IGSO3Sampler:
         eps = torch.exp(log_eps)
 
         ls = torch.arange(self.L_max + 1, dtype=torch.float64, device=device)
-        # coefficients: (n_eps, L+1)
+        # coefficients: n_eps rows, L+1 columns
         coeffs = (2 * ls + 1).unsqueeze(0) * torch.exp(
             -ls * (ls + 1) * eps.unsqueeze(1) / 2,
         )
-        # characters: (n_omega, L+1)
+        # characters: n_omega rows, L+1 columns
         half_omega = omega.unsqueeze(1) / 2
         sin_half = torch.sin(half_omega).clamp_min(1e-12)
         characters = torch.sin((2 * ls + 1) * half_omega) / sin_half
@@ -296,15 +300,16 @@ class _IGSO3Sampler:
 
             eps = (sigma_l**2).clamp(self.eps_min, self.eps_max)
             log_eps = torch.log(eps).float()
-            idx = torch.searchsorted(self._log_eps_grid, log_eps).clamp(
+            # the three tables below are set by _ensure_table
+            idx = torch.searchsorted(self._log_eps_grid, log_eps).clamp(  # pyright: ignore[reportCallIssue, reportArgumentType]
                 0,
                 self.n_eps - 1,
             )
-            cdf_rows = self._cdf_table[idx]  # (n_l, n_omega)
+            cdf_rows = self._cdf_table[idx]  # pyright: ignore[reportOptionalSubscript]  # (n_l, n_omega)
 
             u = torch.rand(n_l, C, device=device)
             omega_idx = torch.searchsorted(cdf_rows, u).clamp(0, self.n_omega - 1)
-            angles = self._omega_grid[omega_idx]  # (n_l, C)
+            angles = self._omega_grid[omega_idx]  # pyright: ignore[reportOptionalSubscript]  # (n_l, C)
 
             axes = torch.randn(n_l, C, 3, device=device, dtype=dtype)
             axes = axes / axes.norm(dim=-1, keepdim=True).clamp_min(1e-8)
@@ -349,7 +354,10 @@ def sample_rigid(
     device: torch.device | None = None,
     dtype: torch.dtype = torch.float32,
 ) -> tuple[Tensor, Tensor]:
-    """Sample (R,T) from SE(3) heat kernel with rotation variance sigma_R^2 and translation variance sigma_T^2."""
+    """Sample (R,T) from the SE(3) heat kernel.
+
+    The rotation variance is sigma_R^2 and the translation variance sigma_T^2.
+    """
     R = sample_rotation_heat(sigma_R, C, steps=steps_R, device=device, dtype=dtype)
     T = sample_translation(sigma_T, C)
     return R, T
@@ -364,7 +372,12 @@ def se3_heat_step_sigma(
     sigma_T_s: Tensor,  # target sigmas (B,) or scalar
     eps: float = 1e-12,
 ) -> tuple[Tensor, Tensor]:
-    """Given (R_t,T_t) at time t with noise levels sigma_R_t, sigma_T_t, compute (R_s,T_s) at time s with noise levels sigma_R_s, sigma_T_s by applying the SE(3) heat semigroup step. Handles both increasing and decreasing noise cases."""
+    """Step (R_t,T_t) to (R_s,T_s) with the SE(3) heat semigroup.
+
+    Given (R_t,T_t) at time t with noise levels sigma_R_t, sigma_T_t, compute
+    (R_s,T_s) at time s with noise levels sigma_R_s, sigma_T_s by applying the SE(3)
+    heat semigroup step. Handles both increasing and decreasing noise cases.
+    """
     B = R_t.shape[0]
     device, dtype = R_t.device, R_t.dtype
 
@@ -448,7 +461,7 @@ def SE3_oper(
     noise_level: float = 5.0,
     rng: np.random.Generator | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Generate random SE(3) rotation matrices (length,3,3) and Gaussian noise (length,3)."""
+    """Generate random SE(3) rotations (length,3,3) and Gaussian noise (length,3)."""
     if rng is None:
         rng = np.random.default_rng()
 

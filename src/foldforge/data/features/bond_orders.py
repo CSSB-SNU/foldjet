@@ -88,8 +88,8 @@ def capture(ccd: Any) -> Iterator[list[np.ndarray]]:
         captured.append(orders)
         return info
 
-    features.LigandLigandBondInfo.compute_features = classmethod(compute_features)
+    features.LigandLigandBondInfo.compute_features = classmethod(compute_features)  # pyright: ignore[reportAttributeAccessIssue]  # deliberate monkeypatch
     try:
         yield captured
     finally:
-        features.LigandLigandBondInfo.compute_features = classmethod(original)
+        features.LigandLigandBondInfo.compute_features = classmethod(original)  # pyright: ignore[reportAttributeAccessIssue]  # restore the original

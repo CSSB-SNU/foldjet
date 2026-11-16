@@ -6,7 +6,6 @@ from abc import ABC
 from typing import TYPE_CHECKING
 
 import torch
-from jaxtyping import Bool, Float
 from pydantic import BaseModel
 
 from foldforge.diffusion.base.diffuser import Diffuser
@@ -14,6 +13,8 @@ from foldforge.diffusion.edm.scheduler import EDMScheduler
 from foldforge.diffusion.geometry.alignment import weighted_align
 
 if TYPE_CHECKING:
+    from jaxtyping import Bool, Float
+
     from foldforge.diffusion.base.scheduler import (
         DiffusionScheduler,
     )
@@ -65,11 +66,11 @@ class EuclideanDiffuser(Diffuser, ABC):
         device, dtype = x0.device, self.dtype
         if x0.dtype != dtype:
             x0 = x0.to(device=device, dtype=dtype)
-        if len(x0.shape) == 3:  # x0 : (B, L, 3)
+        if len(x0.shape) == 3:  # noqa: PLR2004 - x0 : (B, L, 3)
             x0 = x0.expand(num_augment, *x0.shape[1:])
             if mask is not None:
                 mask = mask.expand(num_augment, *mask.shape[1:])
-        elif len(x0.shape) == 4:  # x0 : (B, N_str, L, 3)
+        elif len(x0.shape) == 4:  # noqa: PLR2004 - x0 : (B, N_str, L, 3)
             num_expand = num_augment // x0.shape[1]
             num_augment = num_expand * x0.shape[1]
             x0 = x0.reshape(-1, *x0.shape[2:])
@@ -108,12 +109,13 @@ class EuclideanDiffuser(Diffuser, ABC):
         x_update: Float[torch.Tensor, "... L 3"],
         sigma: Float[torch.Tensor, ...],
     ) -> Float[torch.Tensor, "... L 3"]:
-        """EDM preconditioned prediction ``c_skip * (x_input / input_scale) + c_out * x_update``.
+        """EDM preconditioned prediction.
 
-        This is the same x_pred ``cal_loss`` builds internally; it is exposed so a client can
-        add distance-based auxiliary losses (smooth lDDT, AF3 Eq.5 bond loss) on exactly the
-        prediction the MSE term is computed from. Both are rigid-invariant, so they need no
-        alignment.
+        ``c_skip * (x_input / input_scale) + c_out * x_update``. This is the same
+        x_pred ``cal_loss`` builds internally; it is exposed so a client can add
+        distance-based auxiliary losses (smooth lDDT, AF3 Eq.5 bond loss) on exactly
+        the prediction the MSE term is computed from. Both are rigid-invariant, so they
+        need no alignment.
         """
         dtype = x_update.dtype
         input_scaling = self.scheduler.input_scale(sigma).to(
@@ -137,10 +139,10 @@ class EuclideanDiffuser(Diffuser, ABC):
         """Compute EDM loss between model prediction and true signal.
 
         ``atom_weight`` is the AF3 Eq.4 per-atom up-weighting
-        ``w_l = 1 + is_dna*a_dna + is_rna*a_rna + is_ligand*a_ligand``. It multiplies the
-        sigma-dependent loss weight, so ligand / nucleic-acid atoms are not drowned out by
-        the far more numerous protein atoms. Shape ``[B, L]`` broadcasts over the augment
-        dimension of ``x0``/``x_pred``. None = uniform (pre-1.0.0 behaviour).
+        ``w_l = 1 + is_dna*a_dna + is_rna*a_rna + is_ligand*a_ligand``. It multiplies
+        the sigma-dependent loss weight, so ligand / nucleic-acid atoms are not drowned
+        out by the far more numerous protein atoms. Shape ``[B, L]`` broadcasts over the
+        augment dimension of ``x0``/``x_pred``. None = uniform (pre-1.0.0 behaviour).
         """
         if x_update.dtype != self.dtype:
             msg = "x_update must be of type float32, but got dtype: " + str(
@@ -173,7 +175,7 @@ class EuclideanDiffuser(Diffuser, ABC):
         # align x0 to x_pred
         mask = mask.expand(x_pred.shape[:-1])
         # Empty examples must not send a zero-total-weight covariance to Kabsch.
-        align_weight = torch.where(mask.any(dim=-1, keepdim=True), mask, True)
+        align_weight = torch.where(mask.any(dim=-1, keepdim=True), mask, True)  # noqa: FBT003 - torch.where scalar operand
         x0_safe = torch.where(mask.unsqueeze(-1), x0, 0.0)
         pred_safe = torch.where(mask.unsqueeze(-1), x_pred, 0.0)
         x0_aligned = weighted_align(x0_safe, pred_safe, weight=align_weight.to(dtype))

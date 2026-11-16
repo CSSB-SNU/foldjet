@@ -1,6 +1,8 @@
-"""Diffusion processes (EDM, decoupled x-prediction), augmentation, schedules, samplers/solvers and the geometry they need.
+"""Diffusion processes, augmentation, schedules, samplers/solvers and their geometry.
 
-Self-contained on purpose: nothing here imports another foldforge module, so the folder can be moved out into its own package.
+The processes are EDM and decoupled x-prediction. Self-contained on purpose: nothing
+here imports another foldforge module, so the folder can be moved out into its own
+package.
 
 base/             — abstract Diffuser / DiffusionScheduler / DiffusionSolver
 edm/              — default Euclidean EDM (eps-prediction) with Karras/AF3

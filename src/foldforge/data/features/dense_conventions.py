@@ -123,7 +123,8 @@ def drop_atoms(example: dict[str, Any], names: tuple[str, ...]) -> int:
         example[f"{beta}:gather_mask"]
     ) & ~np.isin(np.asarray(example[f"{beta}:gather_idxs"]), flat)
 
-    layout = features._unwrap(example["token_atoms_layout"])  # noqa: SLF001
+    # an AF3 AtomLayout (untyped `_unwrap` infers ndarray)
+    layout: Any = features._unwrap(example["token_atoms_layout"])  # noqa: SLF001
     atom_names = np.array(layout.atom_name, copy=True)
     gone = set()
     for token, atom in drop:
@@ -155,7 +156,7 @@ def drop_atoms(example: dict[str, Any], names: tuple[str, ...]) -> int:
         ).as_data_dict()
     )
 
-    output = features._unwrap(example["flat_output_layout"])  # noqa: SLF001
+    output: Any = features._unwrap(example["flat_output_layout"])  # noqa: SLF001
     keep = np.array(
         [
             (str(chain), int(residue), str(atom)) not in gone
@@ -166,7 +167,7 @@ def drop_atoms(example: dict[str, Any], names: tuple[str, ...]) -> int:
     )
     if not keep.all():
         example["flat_output_layout"] = np.array(output[keep], object)
-        structure = features._unwrap(example["empty_output_struc"])  # noqa: SLF001
+        structure: Any = features._unwrap(example["empty_output_struc"])  # noqa: SLF001
         example["empty_output_struc"] = np.array(structure.filter(mask=keep), object)
     return len(drop)
 

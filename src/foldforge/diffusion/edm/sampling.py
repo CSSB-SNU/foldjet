@@ -13,10 +13,10 @@ from typing import TYPE_CHECKING, Any
 import torch
 from pydantic import BaseModel, ConfigDict, Field
 
-from foldforge.diffusion.base.solver import ModelFn
-
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    from foldforge.diffusion.base.solver import ModelFn
 
 
 def expand_to_coords(value: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
@@ -42,6 +42,7 @@ class PreconditionedDenoiser:
         self.condition_noise, self.batch_noise = (condition_noise, batch_noise)
 
     def __call__(self, noisy: torch.Tensor, sigma: torch.Tensor) -> torch.Tensor:
+        """Clean coordinates ``c_skip * noisy + c_out * network(c_in * noisy)``."""
         if self.batch_noise:
             sigma = sigma.reshape(1).expand(noisy.shape[0])
         scheduler = self.scheduler
@@ -171,10 +172,10 @@ class EulerSampler:
         sigmas: torch.Tensor,
         *,
         return_trajectory: bool = False,
-        **step_options,
-    ):
+        **step_options: Any,
+    ) -> Any:
         """Integrate an existing iterate; this is the sole reverse-time loop."""
-        if sigmas.ndim != 1 or len(sigmas) < 2:
+        if sigmas.ndim != 1 or len(sigmas) < 2:  # noqa: PLR2004 - two levels per step
             msg = "A noise schedule must contain at least two scalar levels"
             raise ValueError(msg)
         trajectory, denoised_trajectory = ([], [])
@@ -203,17 +204,17 @@ class EulerSampler:
         shape: tuple[int, ...],
         sigmas: torch.Tensor,
         *,
-        device=None,
-        dtype=torch.float32,
-        generator=None,
+        device: torch.device | str | None = None,
+        dtype: torch.dtype = torch.float32,
+        generator: torch.Generator | None = None,
         chunk_size: int | None = None,
         coordinate_dims: int = 1,
         initialize_all: bool = False,
         return_trajectory: bool = False,
-        **step_options,
-    ):
+        **step_options: Any,
+    ) -> Any:
         """Draw initial noise and integrate sample chunks with a stable RNG order."""
-        if len(shape) < coordinate_dims + 2 or shape[-1] != 3:
+        if len(shape) < coordinate_dims + 2 or shape[-1] != 3:  # noqa: PLR2004 - xyz
             msg = "Coordinates require a sample axis followed by atom axes and xyz"
             raise ValueError(msg)
         sample_axis = -(coordinate_dims + 2)
@@ -226,7 +227,7 @@ class EulerSampler:
             msg = "Chunked trajectories must be requested per chunk"
             raise ValueError(msg)
 
-        def initial(local_shape):
+        def initial(local_shape: tuple[int, ...]) -> torch.Tensor:
             return sigmas[0] * torch.randn(
                 local_shape, device=device, dtype=dtype, generator=generator
             )

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
-import torch
-from jaxtyping import Float
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    import torch
+    from jaxtyping import Float
 
 
 class DiffusionScheduler(ABC):
@@ -19,7 +22,7 @@ class DiffusionScheduler(ABC):
     def sample_noise(
         self,
         batch_size: int,
-        uniform: bool = False,
+        uniform: bool = False,  # noqa: FBT001, FBT002 - public signature
     ) -> (
         Float[torch.Tensor, ...]
         | tuple[

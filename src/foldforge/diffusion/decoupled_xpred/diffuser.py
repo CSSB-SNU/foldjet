@@ -2,16 +2,21 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import torch
-from jaxtyping import Bool, Float, Int
 from pydantic import BaseModel
 
 from foldforge.diffusion.base.diffuser import Diffuser
-from foldforge.diffusion.decoupled_xpred.scheduler import (
-    DecoupledXPredScheduler,
-)
 from foldforge.diffusion.geometry.alignment import weighted_align
 from foldforge.diffusion.geometry.se3 import apply_chain_rt, sample_rigid
+
+if TYPE_CHECKING:
+    from jaxtyping import Bool, Float, Int
+
+    from foldforge.diffusion.decoupled_xpred.scheduler import (
+        DecoupledXPredScheduler,
+    )
 
 
 class XPredDecoupledDiffuser(Diffuser):
@@ -45,7 +50,10 @@ class XPredDecoupledDiffuser(Diffuser):
         return self.scheduler.config.sigma_data
 
     def loss_weight(self, sigma: Float[torch.Tensor, ...]) -> Float[torch.Tensor, ...]:
-        """v-loss weight in sigma space: clamp((sigma + sigma_data)^2 / sigma^2, max)."""
+        """v-loss weight in sigma space.
+
+        clamp((sigma + sigma_data)^2 / sigma^2, max).
+        """
         w = (sigma + self.sigma_data) ** 2 / sigma**2
         return w.clamp(max=self.config.max_loss_weight)
 
@@ -56,10 +64,10 @@ class XPredDecoupledDiffuser(Diffuser):
         chain_atoms: list[torch.Tensor],
         dist_cutoff: float,
     ) -> torch.Tensor:
-        """Symmetric bool adjacency (n_chains, n_chains) for chains within dist_cutoff."""
+        """Symmetric bool adjacency (n_chains, n_chains): chains within dist_cutoff."""
         n = len(chain_atoms)
         nonempty = [(i, ca) for i, ca in enumerate(chain_atoms) if len(ca) > 0]
-        if len(nonempty) < 2:
+        if len(nonempty) < 2:  # noqa: PLR2004 - a contact needs two chains
             device = chain_atoms[0].device if chain_atoms else torch.device("cpu")
             return torch.zeros(n, n, dtype=torch.bool, device=device)
 
@@ -196,7 +204,7 @@ class XPredDecoupledDiffuser(Diffuser):
 
     # ── forward (training) ──────────────────────────────────────────────────
 
-    def sample(
+    def sample(  # noqa: PLR0915 - one training-noise draw, kept as released
         self,
         x0: torch.Tensor,
         mask: torch.Tensor | None,
@@ -226,7 +234,7 @@ class XPredDecoupledDiffuser(Diffuser):
             x0 = x0.to(device=device, dtype=dtype)
 
         # -- Expand for augmentation ------------------------------------------
-        if len(x0.shape) == 3:
+        if len(x0.shape) == 3:  # noqa: PLR2004 - (B, L, 3)
             x0 = x0.unsqueeze(0).expand(num_augment, -1, -1, -1)
             x0 = x0.reshape(num_augment * batch_size, *x0.shape[2:])
             atom_to_chain_idx = atom_to_chain_idx.expand(
@@ -245,7 +253,7 @@ class XPredDecoupledDiffuser(Diffuser):
             if mask is not None:
                 mask = mask.unsqueeze(0).expand(num_augment, -1, -1)
                 mask = mask.reshape(num_augment * batch_size, *mask.shape[2:])
-        elif len(x0.shape) == 4:
+        elif len(x0.shape) == 4:  # noqa: PLR2004 - (B, A, L, 3)
             num_expand = num_augment // x0.shape[1]
             num_augment = num_expand * x0.shape[1]
             atom_to_chain_idx = atom_to_chain_idx.unsqueeze(1).expand(
@@ -334,13 +342,13 @@ class XPredDecoupledDiffuser(Diffuser):
     def get_x0_hat(
         self,
         x0: Float[torch.Tensor, "... L 3"],
-        x_input: Float[torch.Tensor, "... L 3"],
+        x_input: Float[torch.Tensor, "... L 3"],  # noqa: ARG002 - shared get_x0_hat signature
         x_update: Float[torch.Tensor, "... L 3"],
-        sigma_y: Float[torch.Tensor, ...],
-        rotation_matrix: Float[torch.Tensor, ...],
-        translation_vector: Float[torch.Tensor, ...],
-        atom_to_combine: Int[torch.Tensor, "... L"],
-        mask: Bool[torch.Tensor, "... L"] | None = None,
+        sigma_y: Float[torch.Tensor, ...],  # noqa: ARG002 - shared get_x0_hat signature
+        rotation_matrix: Float[torch.Tensor, ...],  # noqa: ARG002 - shared get_x0_hat signature
+        translation_vector: Float[torch.Tensor, ...],  # noqa: ARG002 - shared get_x0_hat signature
+        atom_to_combine: Int[torch.Tensor, "... L"],  # noqa: ARG002 - shared get_x0_hat signature
+        mask: Bool[torch.Tensor, "... L"] | None = None,  # noqa: ARG002 - shared get_x0_hat signature
     ) -> Float[torch.Tensor, "... L 3"]:
         """Recover original coordinates: x0_hat = F_theta * sigma_data."""
         if x_update.dtype != self.dtype:

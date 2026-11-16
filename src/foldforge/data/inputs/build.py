@@ -52,9 +52,12 @@ _STANDARD = {
 
 
 def _modifications(chain: Chain) -> list[dict[str, Any]]:
-    """AF3's ``modifications`` of a polymer chain: every residue whose CCD is not a standard one keeps its own chemistry (its atoms come from
-    the CCD), in the form of the AF3 input format -- ``ptmType`` / ``ptmPosition`` for a protein, ``modificationType`` / ``basePosition``
-    for RNA and DNA. The one-letter sequence holds the parent (or X) at that position.
+    """AF3's ``modifications`` of a polymer chain.
+
+    Every residue whose CCD is not a standard one keeps its own chemistry (its atoms
+    come from the CCD), in the form of the AF3 input format -- ``ptmType`` /
+    ``ptmPosition`` for a protein, ``modificationType`` / ``basePosition`` for RNA and
+    DNA. The one-letter sequence holds the parent (or X) at that position.
     """
     standard = _STANDARD[chain.kind]
     out = []
@@ -70,11 +73,15 @@ def _modifications(chain: Chain) -> list[dict[str, Any]]:
 
 
 def _with_af3_query(a3m: str, chain: Chain, modifications: list[dict[str, Any]]) -> str:
-    """``a3m`` with its first row (the query) replaced by the chain sequence AF3 itself derives once the modifications are applied.
+    """``a3m`` with its query row replaced by the sequence AF3 derives.
 
-    AF3 replaces a modified residue by its parent in the CCD (``MSE`` -> M, ``AIB`` -> A) or, with no parent (a cap, a GFP chromophore), by
-    ``X``, and requires the MSA's first row to be feature-equivalent to that. The database's query carries the entity's canonical letter
-    there, so the row is rewritten by what AF3's own chain object reports -- the same object, not a second table.
+    The first row (the query) becomes the chain sequence AF3 itself derives once the
+    modifications are applied. AF3 replaces a modified residue by its parent in the CCD
+    (``MSE`` -> M, ``AIB`` -> A) or, with no parent (a cap, a GFP chromophore), by
+    ``X``, and requires the MSA's first row to be feature-equivalent to that. The
+    database's query carries the entity's canonical letter there, so the row is
+    rewritten by what AF3's own chain object reports -- the same object, not a second
+    table.
     """
     from alphafold3.common import folding_input
 
@@ -96,9 +103,8 @@ def _with_af3_query(a3m: str, chain: Chain, modifications: list[dict[str, Any]])
             ],
         ).sequence
     lines = a3m.split("\n")
-    if len(lines) < 2 or len(lines[1]) != len(
-        derived
-    ):  # not an aligned query row of this chain: leave the text to AF3's own check
+    # not an aligned query row of this chain: leave the text to AF3's own check
+    if len(lines) < 2 or len(lines[1]) != len(derived):  # noqa: PLR2004 - header + query row
         return a3m
     lines[1] = derived
     return "\n".join(lines)
@@ -320,7 +326,8 @@ def _load_chains(
         EntityType.RNA: "rna",
         EntityType.DNA: "dna",
         EntityType.NON_POLYMER: "ligand",
-        EntityType.BRANCHED: "ligand",  # a glycan: several CCD components joined by `bonded_atom_pairs`
+        # a glycan: several CCD components joined by `bonded_atom_pairs`
+        EntityType.BRANCHED: "ligand",
     }
     bonded = {int(end[0]) for pair in spec.bonded_atom_pairs for end in pair}
     chains = []

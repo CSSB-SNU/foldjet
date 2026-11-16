@@ -123,12 +123,12 @@ def _model_options(
         )
         raise ValueError(message)
     resolved = resolve_config(config)
+    # resolve_native: <model>.miniworld.pt; a missing file raises with the
+    # `foldforge weights convert` command
     weights = (
         Path(checkpoint).expanduser().resolve()
         if checkpoint is not None
-        else resolve_native(
-            model
-        )  # <model>.miniworld.pt; a missing file raises with the `foldforge weights convert` command
+        else resolve_native(model)
     )
     if not weights.exists():
         raise FileNotFoundError(weights)
@@ -509,9 +509,12 @@ class Predictor:
         seed: int | None = None,
         atoms_grouped: bool = True,
     ) -> list[PredictionResult]:
-        """Sample several retained trunks (trunk_seeds of one input) in ONE sampler run; one result per trunk, in order.
+        """Sample several retained trunks in ONE sampler run.
 
-        See `models.io.runtime.sample_diffusion_group`. Raises ``GroupedUnsupported`` when the model or the engine state cannot serve it; sample the trunks one by one then.
+        The trunks are the trunk_seeds of one input; one result per trunk, in order.
+        See `models.io.runtime.sample_diffusion_group`. Raises ``GroupedUnsupported``
+        when the model or the engine state cannot serve it; sample the trunks one by
+        one then.
         """
         from contextlib import ExitStack
 
