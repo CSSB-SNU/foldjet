@@ -131,8 +131,10 @@ ignore = [
 known-third-party = ["wandb"]
 
 [tool.ruff.lint.per-file-ignores]
-# Optional dependency fixtures/importorskip must run before backend imports.
-"tests/*" = ["D", "ANN201", "S101", "INP001", "ANN001", "PLR2004", "E402", "PLC0415"]
+# Optional dependency fixtures/importorskip must run before backend imports. Fakes and
+# monkeypatched stubs mirror the signature they replace (unused arguments), and tests
+# inspect private state on purpose.
+"tests/*" = ["D", "ANN201", "S101", "INP001", "ANN001", "PLR2004", "E402", "PLC0415", "ARG001", "ARG002", "ARG005", "SLF001"]
 "tools/*" = [
   "D",
   "ANN201",
@@ -153,6 +155,9 @@ known-third-party = ["wandb"]
 "src/foldforge/{modules,eval,guidance}/**" = ["E402", "PLC0414", "PLC0415", "RUF009", "S101", "B023", "SLF001", "A002", "ARG002", "SIM102", "B008", "BLE001", "E721", "N802", "N803", "N806", "ANN", "ARG001", "D", "E501", "PLR2004", "PLR0912", "C901", "TC001", "TC002", "FBT001", "FBT002", "ERA001", "RET504", "TRY003", "TRY004", "EM101", "EM102", "B905", "RUF005", "RUF013", "UP035", "B006", "C408", "SIM108", "RUF059", "TC003", "FURB171", "RUF046", "SIM201", "T201"]
 "src/foldforge/utils/{atom_layout,dense_geometry,gather_grad}.py" = ["E402", "PLC0414", "PLC0415", "RUF009", "S101", "B023", "SLF001", "A002", "ARG002", "SIM102", "B008", "BLE001", "E721", "N802", "N803", "N806", "ANN", "ARG001", "D", "E501", "PLR2004", "PLR0912", "C901", "TC001", "TC002", "FBT001", "FBT002", "ERA001", "RET504", "TRY003", "TRY004", "EM101", "EM102", "B905", "RUF005", "RUF013", "UP035", "B006", "C408", "SIM108", "RUF059", "TC003", "FURB171", "RUF046", "SIM201", "T201"]
 "src/foldforge/data/features/dense_protein.py" = ["E402", "PLC0414", "PLC0415", "RUF009", "S101", "B023", "SLF001", "A002", "ARG002", "SIM102", "B008", "BLE001", "E721", "N802", "N803", "N806", "ANN", "ARG001", "D", "E501", "PLR2004", "PLR0912", "C901", "TC001", "TC002", "FBT001", "FBT002", "ERA001", "RET504", "TRY003", "TRY004", "EM101", "EM102", "B905", "RUF005", "RUF013", "UP035", "B006", "C408", "SIM108", "RUF059", "TC003", "FURB171", "RUF046", "SIM201", "T201"]
+# The diffusion package follows the EDM / SE(3) paper notation (sigma, D_x, R, T): its
+# argument and field names are public API, so only the naming rules are relaxed here.
+"src/foldforge/diffusion/**" = ["N802", "N803", "N806", "N815"]
 "src/foldforge/models/execution.py" = ["E402", "PLC0414", "PLC0415", "RUF009", "S101", "B023", "SLF001", "A002", "ARG002", "SIM102", "B008", "BLE001", "E721", "N802", "N803", "N806", "ANN", "ARG001", "D", "E501", "PLR2004", "PLR0912", "C901", "TC001", "TC002", "FBT001", "FBT002", "ERA001", "RET504", "TRY003", "TRY004", "EM101", "EM102", "B905", "RUF005", "RUF013", "UP035", "B006", "C408", "SIM108", "RUF059", "TC003", "FURB171", "RUF046", "SIM201", "T201"]
 
 [tool.pytest.ini_options]
@@ -162,7 +167,8 @@ markers = ["checkpoints: requires all registered checkpoint files; run on a prov
 
 [tool.pyright]
 include = ["src/foldforge"]
-exclude = ["third_party"]
+# vendored ESM C stays excluded as in [tool.ruff]
+exclude = ["third_party", "src/foldforge/modules/esmc"]
 stubPath = "tools/typings"
 venvPath = ".pixi/envs"
 venv = "default"
