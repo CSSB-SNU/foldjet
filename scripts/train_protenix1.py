@@ -251,6 +251,14 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915 - one linear training driver
         "override it",
     )
     ap.add_argument(
+        "--precision",
+        choices=("bf16", "af3_default"),
+        default=None,
+        help="model precision (default: the recipe's; protenix -> af3_default, "
+        "miniworld -> bf16). af3_default: bf16 trunk on fp32 masters, the diffusion "
+        "head in fp32 (AF3 / Protenix); bf16: everything under the bf16 autocast",
+    )
+    ap.add_argument(
         "--grad-clip",
         type=float,
         default=None,
@@ -589,12 +597,18 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915 - one linear training driver
     # order or the rank count
     rng = prepare.seed_everything(cfg.seed + world.rank)
 
+    # the diffusion head runs in fp32 in the Protenix recipe (as AF3 / Protenix train)
+    precision = args.precision or (
+        "af3_default" if args.recipe == "protenix" else "bf16"
+    )
+    say("PRECISION", precision, flush=True)
     # dead modules must run in training (their parameters train): do not flag them at
     # load
     pred = ff.load_model(
         args.model,
         config={
             "backend": args.backend,
+            "precision": precision,
             "engine": {"skip_dead_modules": False, "unsupported": "fallback"},
         },  # atom_blocks: engine default (2.5.3 fixed the sm90 atom-DiT backward, R20)
         checkpoint=args.ckpt,

@@ -33,7 +33,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import torch
 
-from foldforge.modules.engine.configure import activation_autocast
+from foldforge.modules.engine.configure import activation_autocast, diffusion_autocast
 from foldforge.train.loss import atom_weights, bond_loss, diffusion_mse, distogram_loss
 from foldforge.train.loss.confidence import confidence_loss, confidence_targets
 from foldforge.train.loss.diffusion import random_rotation_translation, sample_sigma
@@ -512,17 +512,21 @@ def micro_step_device(  # noqa: C901, PLR0912, PLR0915 - one ordered step, kept 
                 )
                 noise = torch.randn_like(x0_aug) * sigma.view(m, 1, 1, 1)
                 x_noisy = (x0_aug + noise) * atom_mask[None, :, :, None]
-                table = head.conditioning_table(
-                    diffusion.batch, diffusion.embeddings, sigma
-                )
-                x_pred = head(
-                    x_noisy,
-                    sigma,
-                    diffusion.batch,
-                    diffusion.embeddings,
-                    True,  # noqa: FBT003 - the head's positional training flag
-                    single_cond=table,
-                )
+                # the head runs under the model's diffusion autocast: fp32 for the
+                # af3_default precision (AF3 / Protenix train the diffusion module in
+                # fp32), the activation autocast otherwise (as inference and rollout)
+                with diffusion_autocast(model):
+                    table = head.conditioning_table(
+                        diffusion.batch, diffusion.embeddings, sigma
+                    )
+                    x_pred = head(
+                        x_noisy,
+                        sigma,
+                        diffusion.batch,
+                        diffusion.embeddings,
+                        True,  # noqa: FBT003 - the head's positional training flag
+                        single_cond=table,
+                    )
                 # the fold's conditioning holds the autograd graph of this chunk
                 head._fold = None  # noqa: SLF001 - drop the fold-scoped conditioning
                 l_diffusion = diffusion_mse(

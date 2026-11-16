@@ -1,5 +1,7 @@
 # source this: the Protenix v1 fine-tune (Protenix recipe, PAE on, MiniWorld v2.4.0 data, 2 ranks, effective batch 256).
 #   - 1 epoch = 25600 samples = 100 optimizer steps; last.miniworld.pt overwritten at the end of every epoch, epoch<E>.miniworld.pt every 5 epochs
+#   - precision af3_default (the protenix recipe default): bf16 trunk on fp32 masters, the diffusion head in fp32
+#   - AUG_CHUNK 24: the 48 augmentations in two chunks (fp32 diffusion + compile + step graph at chunk 0 runs out of memory on 80 GB)
 #   - BACKEND=pytorch (compile + step graph) or BACKEND=miniworld (engine kernels + step graph; compile measured: no gain)
 #   - same data stream for both backends (FT_SEED, per-rank positions)
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
@@ -33,7 +35,7 @@ train() {
   cd "$FF_REPO"
   python -u -m torch.distributed.run --standalone --nproc-per-node 2 scripts/train_protenix1.py \
     --recipe protenix --batch-source ft_adapter:batches --model protenix1 --ckpt "$CKPT0" "${mode[@]}" \
-    --activation-checkpointing --augment-chunk "${AUG_CHUNK:-0}" \
+    --activation-checkpointing --augment-chunk "${AUG_CHUNK:-24}" \
     --effective-batch "$EFFECTIVE" --epoch-samples "$EPOCH_SAMPLES" --epochs "$epochs" \
     --save-every-epochs 5 --save-last \
     --run-dir "$run" --seed "${FT_SEED}" "${resume[@]}" "$@"
