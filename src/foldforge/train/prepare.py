@@ -22,13 +22,16 @@ if TYPE_CHECKING:
 
 def enable_training(model: nn.Module, cfg: TrainConfig) -> dict[str, object]:
     """``train()``, gradients on for every parameter except the frozen ones (``train/freeze.py``: parameters with no path to the loss, slots the original
-    model lacks, parameters the original keeps fixed), dead skip off, distogram / confidence logits kept for the loss."""
+    model lacks, parameters the original keeps fixed), dead skip off, distogram / confidence logits kept for the loss.
+    """
     cleared = clear_dead(model)
     model.train()
     model.requires_grad_(True)
     frozen = freeze.apply(model, cfg.loss)
     model.foldforge_sampler_scope = None  # no per-shape inference sampler graph in training (static_weights / refresh would go stale); rollout="graph" sets its own inline scope (train/rollout_graph.py)
-    model.confidence_head.save_logits = cfg.confidence  # the head returns its logits only when asked
+    model.confidence_head.save_logits = (
+        cfg.confidence
+    )  # the head returns its logits only when asked
     model.distogram_head.save_distogram = (
         True  # the head returns its logits only when asked
     )
@@ -53,7 +56,8 @@ def seed_everything(seed: int) -> random.Random:
 def disable_inference_only_ops(model: nn.Module) -> int:
     """The sampler's fused rigid-motion glue (``AugmentNoise`` / ``AlignEuler``) is inference-only (no autograd): set the module-level
     ``foldforge_sampler_glue = False`` (the switch ``af3`` reads). The atom encoder's ``PoolAtoms`` stays on: it is differentiable in ``x`` since
-    engine 2.5.3 (R17), so training no longer needs the torch gather. Returns the module count."""
+    engine 2.5.3 (R17), so training no longer needs the torch gather. Returns the module count.
+    """
     count = 0
     for module in model.modules():
         module.foldforge_sampler_glue = False
@@ -85,7 +89,8 @@ def ckpt_select(groups: dict[str, list[str]], policy: str) -> set[str]:
 
     ``all`` (every block, the default), ``none``, ``pairformer`` (trunk blocks only), ``evoformer`` (MSA blocks only), ``except:<group>``
     (all but one group: trunk / msa / template / confidence), and ``every:N`` / ``first:K`` / ``last:K``: those trunk pairformer blocks
-    (index % N == 0 / the first K / the last K) PLUS every block of the other groups."""
+    (index % N == 0 / the first K / the last K) PLUS every block of the other groups.
+    """
     names = {n for blocks in groups.values() for n in blocks}
     trunk = groups.get("trunk", [])
     others = names - set(trunk)
@@ -109,19 +114,24 @@ def ckpt_select(groups: dict[str, list[str]], policy: str) -> set[str]:
         else:
             chosen = trunk[len(trunk) - k :] if k < len(trunk) else trunk
         return others | set(chosen)
-    raise ValueError(f"unknown checkpoint policy {policy!r} (all | none | pairformer | evoformer | except:<{'|'.join(CKPT_GROUPS)}> | every:N | first:K | last:K)")
+    raise ValueError(
+        f"unknown checkpoint policy {policy!r} (all | none | pairformer | evoformer | except:<{'|'.join(CKPT_GROUPS)}> | every:N | first:K | last:K)"
+    )
 
 
 def enable_activation_checkpointing(model: nn.Module, policy: str = "all") -> int:
     """Wrap the forward of the pair-stack blocks ``policy`` selects (default ``all``: every block) in ``torch.utils.checkpoint`` (non-reentrant,
     RNG preserved) so its activations are recomputed in the backward instead of stored. Returns the number of blocks wrapped. Training only:
-    ``torch.is_grad_enabled()`` is the guard."""
+    ``torch.is_grad_enabled()`` is the guard.
+    """
     from torch.utils.checkpoint import checkpoint
 
     blocks: dict[str, nn.Module] = {}
     groups: dict[str, list[str]] = {}
     for name, module in model.named_modules():
-        if type(module).__name__ not in CHECKPOINTED_BLOCKS or getattr(module, "_ff_checkpointed", False):
+        if type(module).__name__ not in CHECKPOINTED_BLOCKS or getattr(
+            module, "_ff_checkpointed", False
+        ):
             continue
         blocks[name] = module
         groups.setdefault(_block_group(name), []).append(name)

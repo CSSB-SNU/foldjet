@@ -138,9 +138,13 @@ def convert(
 
     # Flatten input array and perform the gather.
     arr_flattened = arr.reshape(arr_flattened_shape)
-    if layout_axes_begin <= 4 and gather_grad.applies(arr_flattened, gather_info.gather_idxs, layout_axes_begin):
+    if layout_axes_begin <= 4 and gather_grad.applies(
+        arr_flattened, gather_info.gather_idxs, layout_axes_begin
+    ):
         # the same gather; its backward without torch's serial pile-ups on the padding targets, bitwise equal (utils/gather_grad.py)
-        out_arr = gather_grad.IndexGather.apply(arr_flattened, gather_info.gather_idxs, layout_axes_begin)
+        out_arr = gather_grad.IndexGather.apply(
+            arr_flattened, gather_info.gather_idxs, layout_axes_begin
+        )
     elif layout_axes_begin == 0:
         out_arr = arr_flattened[gather_info.gather_idxs, ...]
     elif layout_axes_begin == 1:

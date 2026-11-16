@@ -143,12 +143,15 @@ known-third-party = ["wandb"]
   "C901",
   "PLR0915", # Too many statements
 ]
+# The MiniWorld data adapter of the fine-tune and its tools: operational scripts run as `python file.py` / imported by
+# path (no package), lazy imports in the DataLoader workers, print logging. Imports, correctness and security still checked.
+"scripts/finetune/**" = ["D", "ANN", "S101", "INP001", "FBT001", "FBT002", "FBT003", "PLC0415", "C901", "PLR0912", "PLR0915", "T201", "E501", "PLR2004", "N803", "N806", "UP031", "TRY003", "EM101", "EM102", "PTH", "SLF001", "BLE001", "S301", "E402"]
 
 # Paper-notation numerical code, the gather/geometry tables and the compile/graph glue:
 # single-letter names, untyped tensor helpers and long equations are idiomatic there.
 # Every file is still checked for imports, correctness and security.
 "src/foldforge/{modules,eval,guidance}/**" = ["E402", "PLC0414", "PLC0415", "RUF009", "S101", "B023", "SLF001", "A002", "ARG002", "SIM102", "B008", "BLE001", "E721", "N802", "N803", "N806", "ANN", "ARG001", "D", "E501", "PLR2004", "PLR0912", "C901", "TC001", "TC002", "FBT001", "FBT002", "ERA001", "RET504", "TRY003", "TRY004", "EM101", "EM102", "B905", "RUF005", "RUF013", "UP035", "B006", "C408", "SIM108", "RUF059", "TC003", "FURB171", "RUF046", "SIM201", "T201"]
-"src/foldforge/utils/{atom_layout,dense_geometry}.py" = ["E402", "PLC0414", "PLC0415", "RUF009", "S101", "B023", "SLF001", "A002", "ARG002", "SIM102", "B008", "BLE001", "E721", "N802", "N803", "N806", "ANN", "ARG001", "D", "E501", "PLR2004", "PLR0912", "C901", "TC001", "TC002", "FBT001", "FBT002", "ERA001", "RET504", "TRY003", "TRY004", "EM101", "EM102", "B905", "RUF005", "RUF013", "UP035", "B006", "C408", "SIM108", "RUF059", "TC003", "FURB171", "RUF046", "SIM201", "T201"]
+"src/foldforge/utils/{atom_layout,dense_geometry,gather_grad}.py" = ["E402", "PLC0414", "PLC0415", "RUF009", "S101", "B023", "SLF001", "A002", "ARG002", "SIM102", "B008", "BLE001", "E721", "N802", "N803", "N806", "ANN", "ARG001", "D", "E501", "PLR2004", "PLR0912", "C901", "TC001", "TC002", "FBT001", "FBT002", "ERA001", "RET504", "TRY003", "TRY004", "EM101", "EM102", "B905", "RUF005", "RUF013", "UP035", "B006", "C408", "SIM108", "RUF059", "TC003", "FURB171", "RUF046", "SIM201", "T201"]
 "src/foldforge/data/features/dense_protein.py" = ["E402", "PLC0414", "PLC0415", "RUF009", "S101", "B023", "SLF001", "A002", "ARG002", "SIM102", "B008", "BLE001", "E721", "N802", "N803", "N806", "ANN", "ARG001", "D", "E501", "PLR2004", "PLR0912", "C901", "TC001", "TC002", "FBT001", "FBT002", "ERA001", "RET504", "TRY003", "TRY004", "EM101", "EM102", "B905", "RUF005", "RUF013", "UP035", "B006", "C408", "SIM108", "RUF059", "TC003", "FURB171", "RUF046", "SIM201", "T201"]
 "src/foldforge/models/execution.py" = ["E402", "PLC0414", "PLC0415", "RUF009", "S101", "B023", "SLF001", "A002", "ARG002", "SIM102", "B008", "BLE001", "E721", "N802", "N803", "N806", "ANN", "ARG001", "D", "E501", "PLR2004", "PLR0912", "C901", "TC001", "TC002", "FBT001", "FBT002", "ERA001", "RET504", "TRY003", "TRY004", "EM101", "EM102", "B905", "RUF005", "RUF013", "UP035", "B006", "C408", "SIM108", "RUF059", "TC003", "FURB171", "RUF046", "SIM201", "T201"]
 

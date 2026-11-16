@@ -1,20 +1,36 @@
 """Pair type (MiniWorld sampler bucket) of every catalog row, from the train_item TSV the catalog was built from (cluster prefixes, MiniWorld's
 own ``_pdb_edge_type``). The Arrow catalog keeps the rows in TSV order (only rows of sources in the resources index are kept), so row i of the
-catalog is row i of the filtered TSV; the item ids are compared as a check."""
+catalog is row i of the filtered TSV; the item ids are compared as a check.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
 
+import mwconfig  # noqa: F401
 import numpy as np
 
-import mwconfig  # noqa: F401
-
-TYPES = ("protein_protein", "protein_ligand", "protein_dna", "protein_rna", "antibody_protein", "dna_dna", "rna_rna", "dna_rna",
-         "antibody_antibody", "antibody_ligand", "na_ligand", "etc_interface", "sole")
+TYPES = (
+    "protein_protein",
+    "protein_ligand",
+    "protein_dna",
+    "protein_rna",
+    "antibody_protein",
+    "dna_dna",
+    "rna_rna",
+    "dna_rna",
+    "antibody_antibody",
+    "antibody_ligand",
+    "na_ligand",
+    "etc_interface",
+    "sole",
+)
 NON_PDB = 100  # code of a non-pdb row: NON_PDB + index of the source in ``sources``
 
 
-def build(train_item_path: str | Path, sources: dict[str, int], out: Path) -> np.ndarray:
+def build(
+    train_item_path: str | Path, sources: dict[str, int], out: Path
+) -> np.ndarray:
     from miniworld.data.dataloader.sources import _pdb_edge_type
 
     codes: list[int] = []
@@ -38,5 +54,9 @@ def build(train_item_path: str | Path, sources: dict[str, int], out: Path) -> np
                 ids[n] = f"{source}:{rid}:{asm}:{mdl}:{alt}:{':'.join(chains)}"
     arr = np.asarray(codes, dtype=np.uint8)
     np.save(out, arr)
-    np.save(out.with_suffix(".ids.npy"), np.array(sorted(ids.items()), dtype=object), allow_pickle=True)
+    np.save(
+        out.with_suffix(".ids.npy"),
+        np.array(sorted(ids.items()), dtype=object),
+        allow_pickle=True,
+    )
     return arr

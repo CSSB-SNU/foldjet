@@ -53,7 +53,9 @@ class FusedEMA(optim.EMA):
 
     @torch.no_grad()
     def update(self, model: nn.Module | None = None) -> None:
-        torch._foreach_lerp_(self._shadow_list, [p.detach() for p in self._param_list], 1.0 - self.decay)
+        torch._foreach_lerp_(
+            self._shadow_list, [p.detach() for p in self._param_list], 1.0 - self.decay
+        )
 
 
 class FusedOptimizer:
@@ -61,26 +63,52 @@ class FusedOptimizer:
 
     def __init__(self, model: nn.Module, cfg: TrainConfig, impl: str = "fused") -> None:
         if impl not in ("foreach", "fused", "triton"):
-            raise ValueError(f"impl must be 'foreach', 'fused' or 'triton', got {impl!r}")
+            raise ValueError(
+                f"impl must be 'foreach', 'fused' or 'triton', got {impl!r}"
+            )
         self.cfg = cfg
         self.impl = impl
         trunk, heads = optim.split_parameters(model)
-        cuda = any(p.is_cuda for _, p in trunk + heads) and impl != "triton"  # triton: Adam state is ours, lr tensor lives in TritonStep
+        cuda = (
+            any(p.is_cuda for _, p in trunk + heads) and impl != "triton"
+        )  # triton: Adam state is ours, lr tensor lives in TritonStep
         self.capturable = cuda
         self._opt_names = [n for n, _ in heads + trunk]
         device = next(p.device for _, p in trunk + heads) if cuda else None
 
         def lr(value: float):
-            return torch.tensor(value, dtype=torch.float32, device=device) if cuda else value
+            return (
+                torch.tensor(value, dtype=torch.float32, device=device)
+                if cuda
+                else value
+            )
 
         groups = [
-            {"params": [p for _, p in heads], "lr": lr(cfg.max_lr), "scale": 1.0, "name": "heads"},
-            {"params": [p for _, p in trunk], "lr": lr(cfg.max_lr * cfg.trunk_lr_scale), "scale": cfg.trunk_lr_scale, "name": "trunk"},
+            {
+                "params": [p for _, p in heads],
+                "lr": lr(cfg.max_lr),
+                "scale": 1.0,
+                "name": "heads",
+            },
+            {
+                "params": [p for _, p in trunk],
+                "lr": lr(cfg.max_lr * cfg.trunk_lr_scale),
+                "scale": cfg.trunk_lr_scale,
+                "name": "trunk",
+            },
         ]
         kw = {"fused": True} if impl == "fused" else {"foreach": impl == "foreach"}
         if impl == "triton" and cfg.weight_decay:
-            raise ValueError("impl='triton' has no weight decay (the Protenix recipe's 1e-8): use 'foreach' / 'fused' or the default per-tensor path")
-        self.optimizer = torch.optim.Adam(groups, betas=cfg.betas, capturable=cuda, weight_decay=cfg.weight_decay, **kw)
+            raise ValueError(
+                "impl='triton' has no weight decay (the Protenix recipe's 1e-8): use 'foreach' / 'fused' or the default per-tensor path"
+            )
+        self.optimizer = torch.optim.Adam(
+            groups,
+            betas=cfg.betas,
+            capturable=cuda,
+            weight_decay=cfg.weight_decay,
+            **kw,
+        )
         self.params = [p for g in self.optimizer.param_groups for p in g["params"]]
         self.ema = FusedEMA(model, cfg.ema_decay) if cfg.use_ema else None
         self.model = model
@@ -89,7 +117,9 @@ class FusedOptimizer:
             in_opt = {id(p) for p in self.params}
             frozen = [n for n, p in model.named_parameters() if id(p) not in in_opt]
             allp = dict(model.named_parameters())
-            self.ema_frozen_shadow = [self.ema.shadow[n] for n in frozen] if self.ema is not None else []
+            self.ema_frozen_shadow = (
+                [self.ema.shadow[n] for n in frozen] if self.ema is not None else []
+            )
             self.ema_frozen_params = [allp[n].detach() for n in frozen]
             self.triton = TritonStep(self)
 
@@ -97,7 +127,11 @@ class FusedOptimizer:
         """Same schedule as ``optim.set_lr`` (warmup, step decay, ``min_lr`` floor); the lr tensors are filled in place (graph friendly)."""
         cfg = cfg or self.cfg
         factor = optim.lr_factor(step, cfg)
-        base = max(cfg.min_lr, cfg.max_lr * factor) if step >= cfg.warmup_steps else cfg.max_lr * factor
+        base = (
+            max(cfg.min_lr, cfg.max_lr * factor)
+            if step >= cfg.warmup_steps
+            else cfg.max_lr * factor
+        )
         for group in self.optimizer.param_groups:
             value = base * group["scale"]
             if isinstance(group["lr"], torch.Tensor):
@@ -105,7 +139,11 @@ class FusedOptimizer:
             else:
                 group["lr"] = value
         if self.triton is not None:
-            self.triton.lrs.copy_(torch.tensor([g["lr"] for g in self.optimizer.param_groups], dtype=torch.float32))
+            self.triton.lrs.copy_(
+                torch.tensor(
+                    [g["lr"] for g in self.optimizer.param_groups], dtype=torch.float32
+                )
+            )
         return base
 
     def zero_grad(self, set_to_none: bool = True) -> None:
@@ -114,15 +152,21 @@ class FusedOptimizer:
     def step(self, max_norm: float | None = None) -> torch.Tensor:
         """Clip -> Adam -> EMA (after the gradient all-reduce). Returns the pre-clip global norm as a device tensor."""
         if self.triton is not None:
-            return self.triton.step(self.cfg.grad_clip_max_norm if max_norm is None else max_norm)
-        norm = foreach_clip_grad_norm(self.params, self.cfg.grad_clip_max_norm if max_norm is None else max_norm)
+            return self.triton.step(
+                self.cfg.grad_clip_max_norm if max_norm is None else max_norm
+            )
+        norm = foreach_clip_grad_norm(
+            self.params, self.cfg.grad_clip_max_norm if max_norm is None else max_norm
+        )
         self.optimizer.step()
         if self.ema is not None:
             self.ema.update(self.model)
         return norm
 
 
-def build_fused(model: nn.Module, cfg: TrainConfig, impl: str = "fused") -> FusedOptimizer:
+def build_fused(
+    model: nn.Module, cfg: TrainConfig, impl: str = "fused"
+) -> FusedOptimizer:
     return FusedOptimizer(model, cfg, impl)
 
 
@@ -169,7 +213,23 @@ if HAVE_TRITON:
 
     @triton.jit
     def _update_kernel(
-        pptr, gptr, mptr, vptr, sptr, numel, chunk_t, chunk_off, step_size, bc2s, scal, b1, b2, eps, ema_w, BLOCK: tl.constexpr, HAS_EMA: tl.constexpr
+        pptr,
+        gptr,
+        mptr,
+        vptr,
+        sptr,
+        numel,
+        chunk_t,
+        chunk_off,
+        step_size,
+        bc2s,
+        scal,
+        b1,
+        b2,
+        eps,
+        ema_w,
+        BLOCK: tl.constexpr,
+        HAS_EMA: tl.constexpr,
     ):
         c = tl.program_id(0)
         t = tl.load(chunk_t + c)
@@ -209,7 +269,9 @@ class TritonStep:
             raise RuntimeError("impl='triton' needs triton")
         cfg = fo.cfg
         if not (1.0 - cfg.betas[0] < 0.5):
-            raise ValueError("triton impl: lerp weight 1 - beta1 must be < 0.5 (torch's lerp formula branch)")
+            raise ValueError(
+                "triton impl: lerp weight 1 - beta1 must be < 0.5 (torch's lerp formula branch)"
+            )
         self.fo = fo
         self.params = fo.params
         dev = self.params[0].device
@@ -219,17 +281,34 @@ class TritonStep:
         for gi, g in enumerate(fo.optimizer.param_groups):
             gid += [gi] * len(g["params"])
         self.gid = torch.tensor(gid, dtype=torch.int64, device=dev)
-        self.lrs = torch.zeros(len(fo.optimizer.param_groups), dtype=torch.float32, device=dev)
+        self.lrs = torch.zeros(
+            len(fo.optimizer.param_groups), dtype=torch.float32, device=dev
+        )
         self.steps = torch.zeros(T, dtype=torch.float32, device=dev)
         self.m = [torch.zeros_like(p) for p in self.params]
         self.v = [torch.zeros_like(p) for p in self.params]
-        for i, p in enumerate(self.params):  # torch Adam's state layout (checkpoint.save -> optimizer.state_dict())
-            fo.optimizer.state[p] = {"step": self.steps[i], "exp_avg": self.m[i], "exp_avg_sq": self.v[i]}
-        self._ptr = lambda ts: torch.tensor([t.data_ptr() for t in ts], dtype=torch.int64).to(dev)
+        for i, p in enumerate(
+            self.params
+        ):  # torch Adam's state layout (checkpoint.save -> optimizer.state_dict())
+            fo.optimizer.state[p] = {
+                "step": self.steps[i],
+                "exp_avg": self.m[i],
+                "exp_avg_sq": self.v[i],
+            }
+        self._ptr = lambda ts: torch.tensor(
+            [t.data_ptr() for t in ts], dtype=torch.int64
+        ).to(dev)
         self._sig = None
         self.ema = fo.ema
-        self.shadow = [fo.ema.shadow[n] for n in fo._opt_names] if fo.ema is not None else None
-        self.hp = (float(cfg.betas[0]), float(cfg.betas[1]), 1e-8, 1.0 - float(cfg.ema_decay))
+        self.shadow = (
+            [fo.ema.shadow[n] for n in fo._opt_names] if fo.ema is not None else None
+        )
+        self.hp = (
+            float(cfg.betas[0]),
+            float(cfg.betas[1]),
+            1e-8,
+            1.0 - float(cfg.ema_decay),
+        )
         self.part = None
         self.scal = torch.zeros(2, dtype=torch.float32, device=dev)
 
@@ -240,27 +319,46 @@ class TritonStep:
         self.act = torch.tensor(act, dtype=torch.int64, device=dev)
         ps = [self.params[i] for i in act]
         for p in ps:
-            assert p.dtype == torch.float32 and p.is_contiguous() and p.grad.is_contiguous() and p.grad.dtype == torch.float32, "triton impl: fp32 contiguous"
+            assert (
+                p.dtype == torch.float32
+                and p.is_contiguous()
+                and p.grad.is_contiguous()
+                and p.grad.dtype == torch.float32
+            ), "triton impl: fp32 contiguous"
         numel = torch.tensor([p.numel() for p in ps], dtype=torch.int64, device=dev)
         counts = (numel + _BLOCK - 1) // _BLOCK
         self.nchunks = int(counts.sum())
         ids = torch.arange(len(act), device=dev)
         self.chunk_t = torch.repeat_interleave(ids, counts).to(torch.int32)
         starts = torch.cumsum(counts, 0) - counts
-        self.chunk_off = ((torch.arange(self.nchunks, device=dev) - starts[self.chunk_t.long()]) * _BLOCK).to(torch.int32)
+        self.chunk_off = (
+            (torch.arange(self.nchunks, device=dev) - starts[self.chunk_t.long()])
+            * _BLOCK
+        ).to(torch.int32)
         self.numel = numel
         self.pptr = self._ptr(ps)
         self.mptr = self._ptr([self.m[i] for i in act])
         self.vptr = self._ptr([self.v[i] for i in act])
-        self.sptr = self._ptr([self.shadow[i] for i in act]) if self.shadow is not None else self.pptr
-        self.mask_f = torch.tensor([float(a) for a in sig], dtype=torch.float32, device=dev)
+        self.sptr = (
+            self._ptr([self.shadow[i] for i in act])
+            if self.shadow is not None
+            else self.pptr
+        )
+        self.mask_f = torch.tensor(
+            [float(a) for a in sig], dtype=torch.float32, device=dev
+        )
         self.part = torch.empty(self.nchunks, dtype=torch.float32, device=dev)
         # EMA of the optimizer parameters that got no gradient (and of the frozen ones): foreach lerp, shadow follows the unchanged parameter
         rest = [i for i, a in enumerate(sig) if not a]
         self.rest = (
-            [self.shadow[i] for i in rest] + list(self.fo.ema_frozen_shadow),
-            [self.params[i].detach() for i in rest] + list(self.fo.ema_frozen_params),
-        ) if self.shadow is not None else None
+            (
+                [self.shadow[i] for i in rest] + list(self.fo.ema_frozen_shadow),
+                [self.params[i].detach() for i in rest]
+                + list(self.fo.ema_frozen_params),
+            )
+            if self.shadow is not None
+            else None
+        )
         self._sig = sig
 
     @torch.no_grad()
@@ -270,9 +368,13 @@ class TritonStep:
             return torch.zeros(())
         if sig != self._sig:
             self._tables(sig)
-        gptr = self._ptr([self.params[i].grad for i in self.act_list])  # new grad tensors after zero_grad(set_to_none): one small H2D copy per step
+        gptr = self._ptr(
+            [self.params[i].grad for i in self.act_list]
+        )  # new grad tensors after zero_grad(set_to_none): one small H2D copy per step
         b1, b2, eps, ema_w = self.hp
-        _sumsq_kernel[(self.nchunks,)](gptr, self.numel, self.chunk_t, self.chunk_off, self.part, BLOCK=_BLOCK)
+        _sumsq_kernel[(self.nchunks,)](
+            gptr, self.numel, self.chunk_t, self.chunk_off, self.part, BLOCK=_BLOCK
+        )
         _norm_kernel[(1,)](self.part, self.nchunks, self.scal, max_norm, BLOCK=1024)
         self.steps += self.mask_f  # the counters of the parameters that got a gradient (torch Adam skips the others)
         s = self.steps.double()
@@ -280,10 +382,24 @@ class TritonStep:
         bc2s = torch.sqrt(1.0 - b2**s)
         step_size = (self.lrs[self.gid].double() / bc1).float()
         _update_kernel[(self.nchunks,)](
-            self.pptr, gptr, self.mptr, self.vptr, self.sptr, self.numel, self.chunk_t, self.chunk_off,
-            step_size[self.act], bc2s.float()[self.act], self.scal, b1, b2, eps, ema_w, BLOCK=_BLOCK, HAS_EMA=self.shadow is not None,
+            self.pptr,
+            gptr,
+            self.mptr,
+            self.vptr,
+            self.sptr,
+            self.numel,
+            self.chunk_t,
+            self.chunk_off,
+            step_size[self.act],
+            bc2s.float()[self.act],
+            self.scal,
+            b1,
+            b2,
+            eps,
+            ema_w,
+            BLOCK=_BLOCK,
+            HAS_EMA=self.shadow is not None,
         )
         if self.rest is not None and self.rest[0]:
             torch._foreach_lerp_(self.rest[0], self.rest[1], ema_w)
         return self.scal[0]
-

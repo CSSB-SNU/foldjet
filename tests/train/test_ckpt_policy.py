@@ -29,8 +29,14 @@ class Fake(nn.Module):
 
 def wrapped(policy: str | None) -> tuple[int, set[str]]:
     model = Fake()
-    count = prepare.enable_activation_checkpointing(model) if policy is None else prepare.enable_activation_checkpointing(model, policy)
-    return count, {n for n, m in model.named_modules() if getattr(m, "_ff_checkpointed", False)}
+    count = (
+        prepare.enable_activation_checkpointing(model)
+        if policy is None
+        else prepare.enable_activation_checkpointing(model, policy)
+    )
+    return count, {
+        n for n, m in model.named_modules() if getattr(m, "_ff_checkpointed", False)
+    }
 
 
 @pytest.mark.parametrize(
@@ -57,9 +63,14 @@ def test_counts(policy, count):
 
 def test_positions():
     _, names = wrapped("every:4")
-    assert {f"trunk_pairformer.{i}" for i in (0, 4)} <= names and "trunk_pairformer.1" not in names
+    assert {
+        f"trunk_pairformer.{i}" for i in (0, 4)
+    } <= names and "trunk_pairformer.1" not in names
     _, names = wrapped("last:2")
-    assert {"trunk_pairformer.6", "trunk_pairformer.7"} <= names and "trunk_pairformer.5" not in names
+    assert {
+        "trunk_pairformer.6",
+        "trunk_pairformer.7",
+    } <= names and "trunk_pairformer.5" not in names
 
 
 def test_unknown_policy():

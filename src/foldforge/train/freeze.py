@@ -48,12 +48,20 @@ class Rule:
     #: zero weight leaves them without a gradient: "zero-weight", not a defect). ``None`` = the rule does not depend on the loss weights.
     zero_weight: str | None = None
 
-    def regex(self, spec: DenseSpec, weights: LossWeights | None = None) -> re.Pattern[str] | None:
+    def regex(
+        self, spec: DenseSpec, weights: LossWeights | None = None
+    ) -> re.Pattern[str] | None:
         if self.families is not None and spec.family not in self.families:
             return None
         if self.when is not None and not self.when(spec):
             return None
-        if self.zero_weight is not None and getattr(weights if weights is not None else LossWeights(), self.zero_weight) != 0.0:
+        if (
+            self.zero_weight is not None
+            and getattr(
+                weights if weights is not None else LossWeights(), self.zero_weight
+            )
+            != 0.0
+        ):
             return None
         pattern = self.pattern(spec) if callable(self.pattern) else self.pattern
         return re.compile(pattern) if pattern else None
@@ -61,7 +69,8 @@ class Rule:
 
 def _last_msa_block(spec: DenseSpec) -> str | None:
     """The last MSA block's MSA-side parameters: the block order is OPM first (AF3 / Protenix), so the MSA it updates is the next block's input
-    and the last block's is thrown away; only its pair update reaches the loss."""
+    and the last block's is thrown away; only its pair update reaches the loss.
+    """
     if not spec.msa_layers or spec.msa_update_before_opm:
         return None
     return rf"evoformer\.msa_stack\.{spec.msa_layers - 1}\.(?:msa_attention1|msa_transition)\..*"
@@ -140,11 +149,18 @@ DATA_DEPENDENT = re.compile(
 UNDERFLOW_RELATIVE = 1e-6
 
 
-def frozen_parameters(model: nn.Module, weights: LossWeights | None = None) -> dict[str, Rule]:
+def frozen_parameters(
+    model: nn.Module, weights: LossWeights | None = None
+) -> dict[str, Rule]:
     """``{parameter name: rule}`` of the parameters the policy freezes for ``model`` (its ``spec.family``) under the loss ``weights`` (``None`` = the
-    MiniWorld recipe's defaults). Zero-filled rules read the weights of the model."""
+    MiniWorld recipe's defaults). Zero-filled rules read the weights of the model.
+    """
     spec = model.spec
-    rules = [(rule, regex) for rule in RULES if (regex := rule.regex(spec, weights)) is not None]
+    rules = [
+        (rule, regex)
+        for rule in RULES
+        if (regex := rule.regex(spec, weights)) is not None
+    ]
     found: dict[str, Rule] = {}
     for name, param in model.named_parameters():
         for rule, regex in rules:

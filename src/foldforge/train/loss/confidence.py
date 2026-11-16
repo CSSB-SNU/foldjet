@@ -66,7 +66,9 @@ def _plddt_m_slot_table() -> tuple[list[int], list[bool]]:
     slots, valid = [], []
     for name in residue_names.POLYMER_TYPES_WITH_UNKNOWN_AND_GAP:
         order = atom_types.DENSE_ATOM_ORDER.get(name) or {}
-        found = next((order[a] for a in (atom_types.CA, atom_types.C1PRIME) if a in order), None)
+        found = next(
+            (order[a] for a in (atom_types.CA, atom_types.C1PRIME) if a in order), None
+        )
         slots.append(0 if found is None else found)
         valid.append(found is not None)
     return slots, valid
@@ -75,14 +77,17 @@ def _plddt_m_slot_table() -> tuple[list[int], list[bool]]:
 @lru_cache(maxsize=8)
 def _m_tables_on(device: torch.device) -> tuple[torch.Tensor, torch.Tensor]:
     slots, valid = _plddt_m_slot_table()
-    return torch.tensor(slots, dtype=torch.long, device=device), torch.tensor(valid, dtype=torch.bool, device=device)
+    return torch.tensor(slots, dtype=torch.long, device=device), torch.tensor(
+        valid, dtype=torch.bool, device=device
+    )
 
 
 def _error_breaks(breaks: torch.Tensor, protenix: bool) -> torch.Tensor:
     """The bin edges a PDE / PAE error is bucketised with. MiniWorld: the head's own ``breaks`` (bin ``k`` = ``(b[k-1], b[k]]``, so an error in
     ``(0, 0.5]`` is bin 1). Protenix (protenix/model/loss.py:693-725 PDE, :916-938 PAE): the label is ``#(boundaries < error) - 1`` clamped to
     ``[0, 63]`` over ``linspace(0, 32, 65)``, i.e. bin ``k`` = ``(0.5 k, 0.5 (k + 1)]``: the edges shifted up by one step (``b + step``). That is also
-    how the head's bin centres (``b[k] + step / 2``) read the logits, so the Protenix labels are the ones the released weights were trained on."""
+    how the head's bin centres (``b[k] + step / 2``) read the logits, so the Protenix labels are the ones the released weights were trained on.
+    """
     breaks = breaks.float()
     return breaks + (breaks[1] - breaks[0]) if protenix else breaks
 
@@ -120,7 +125,8 @@ def per_atom_lddt(
 
     ``atom_valid`` ``[N]`` (bool, optional): the fixed-length path -- ``N`` is a padded length and the ``False`` entries are padding, which is
     nobody's neighbour (the pair mask drops it), so the real atoms' values equal the unpadded call's; a padded entry's own output is
-    meaningless (its validity is ``False``)."""
+    meaningless (its validity is ``False``).
+    """
     pred_dist = torch.cdist(pred, pred)
     gt_dist = torch.cdist(gt, gt)
     # python-float scalars (a ``new_tensor`` is a host->device copy, a sync); ``where`` of two scalars is float32 like ``gt_dist``
@@ -135,10 +141,18 @@ def per_atom_lddt(
         pair &= ~torch.eye(pair.shape[0], dtype=torch.bool, device=pair.device)
     delta = (pred_dist - gt_dist).abs()
     # one comparison per bin (python-float bins: no device constant), the same ``[N, 4]`` integer counts as the broadcast ``delta[..., None] <= bins``
-    kept = torch.stack([(((delta < b) if protenix else (delta <= b)) & pair).sum(dim=-1) for b in distance_bins], dim=-1)
+    kept = torch.stack(
+        [
+            (((delta < b) if protenix else (delta <= b)) & pair).sum(dim=-1)
+            for b in distance_bins
+        ],
+        dim=-1,
+    )
     if protenix:
         weight = pair.sum(dim=-1).float()
-        return kept.sum(dim=-1).float() * 0.25 / (weight + 1e-6), torch.ones_like(weight, dtype=torch.bool)  # Protenix keeps an atom without neighbours (lDDT 0 -> bin 0)
+        return kept.sum(dim=-1).float() * 0.25 / (weight + 1e-6), torch.ones_like(
+            weight, dtype=torch.bool
+        )  # Protenix keeps an atom without neighbours (lDDT 0 -> bin 0)
     frac = kept.float() / (pair.sum(dim=-1, keepdim=True).float() + 1e-8)
     return frac.mean(dim=-1), pair.sum(dim=-1) > 0
 
@@ -147,7 +161,8 @@ def token_frames(
     atoms: torch.Tensor, frame_ok: torch.Tensor, colinear_cos: float = 0.9063
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Rigid frames ``(R [res, 3, 3], t [res, 3], valid [res])`` from the three frame atoms ``[res, 3, 3]`` (Gram-Schmidt; centre = atom 1;
-    near-colinear atoms (angle below 25 degrees) invalidate the frame)."""
+    near-colinear atoms (angle below 25 degrees) invalidate the frame).
+    """
     a0, a1, a2 = atoms[:, 0], atoms[:, 1], atoms[:, 2]
     v1, v2 = a2 - a1, a0 - a1
     e1 = v1 / (v1.norm(dim=-1, keepdim=True) + 1e-8)
@@ -160,12 +175,11 @@ def token_frames(
     return rot, a1, frame_ok & ~colinear
 
 
-def _local(
-    rot: torch.Tensor, t: torch.Tensor, x: torch.Tensor
-) -> torch.Tensor:
+def _local(rot: torch.Tensor, t: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
     """Representative atom ``j`` in the frame of token ``i``: ``R_i^T (x_j - t_i)`` -> ``[res_i, res_j, 3]`` (``rot`` columns are the basis
     vectors, so component ``k`` is ``sum_c rot[i, c, k] * d[c]``; MiniWorld's ``pae_target_bins`` contracts the other axis of ``rot``, i.e. applies
-    ``R`` instead of ``R^T`` -- not carried over)."""
+    ``R`` instead of ``R^T`` -- not carried over).
+    """
     return torch.einsum("ick,ijc->ijk", rot, x[None, :, :] - t[:, None, :])
 
 
@@ -196,7 +210,8 @@ def confidence_targets(
 
     ``present_index`` / ``present_valid`` (both or neither; ``TrainBatch.present_index`` / ``present_valid``): the flat indices of the true
     entries of ``atom_mask`` padded to a fixed length, and their validity. Then the pLDDT part has a static shape (no ``nonzero``, no host sync);
-    the targets equal the ``nonzero`` path's (padding is nobody's neighbour, the scatter back to the dense layout skips it)."""
+    the targets equal the ``nonzero`` path's (padding is nobody's neighbour, the scatter back to the dense layout skips it).
+    """
     res, atoms, _ = x_pred.shape
     x_pred, x_gt = x_pred.float(), x_gt.float()
     present = atom_mask.bool()
@@ -207,7 +222,9 @@ def confidence_targets(
             return None
         table, ok = _m_tables_on(aatype.device)
         token = aatype.long().clamp(0, table.shape[0] - 1)
-        usable = ok[token] & (aatype >= 0) & (aatype < table.shape[0]) & ~is_ligand.bool()
+        usable = (
+            ok[token] & (aatype >= 0) & (aatype < table.shape[0]) & ~is_ligand.bool()
+        )
         owner = index // atoms
         return usable[owner] & ((index % atoms) == table[token][owner])
 
@@ -224,7 +241,9 @@ def confidence_targets(
             neighbour_ok=m_atoms(index),
             protenix=protenix_targets,
         )
-        if protenix_targets:  # Protenix keeps an atom without neighbours (weight 0 -> lDDT 0 -> bin 0)
+        if (
+            protenix_targets
+        ):  # Protenix keeps an atom without neighbours (weight 0 -> lDDT 0 -> bin 0)
             valid = torch.ones_like(valid)
         lddt_dense = torch.zeros(res * atoms, device=x_pred.device)
         valid_dense = torch.zeros(res * atoms, dtype=torch.bool, device=x_pred.device)
@@ -246,7 +265,9 @@ def confidence_targets(
             valid = present_valid.clone()
         target = torch.where(present_valid, index, res * atoms)
         lddt_dense = torch.zeros(res * atoms + 1, device=x_pred.device)
-        valid_dense = torch.zeros(res * atoms + 1, dtype=torch.bool, device=x_pred.device)
+        valid_dense = torch.zeros(
+            res * atoms + 1, dtype=torch.bool, device=x_pred.device
+        )
         lddt_dense[target] = lddt
         valid_dense[target] = valid
         lddt_dense, valid_dense = lddt_dense[:-1], valid_dense[:-1]
@@ -254,13 +275,21 @@ def confidence_targets(
     if protenix_targets:
         # Protenix PLDDTLoss.bins_from_lddt (loss.py:1324-1349): ``#(lddt > linspace(0, 1, 51)) clamped to [1, 50]``, minus one -> bin k = (0.02 k, 0.02 (k + 1)]
         boundaries = torch.linspace(0.0, 1.0, num_bins + 1, device=lddt_dense.device)
-        plddt_bins = ((lddt_dense[:, None] > boundaries).sum(dim=-1).clamp(1, num_bins) - 1).reshape(res, atoms)
+        plddt_bins = (
+            (lddt_dense[:, None] > boundaries).sum(dim=-1).clamp(1, num_bins) - 1
+        ).reshape(res, atoms)
     else:
-        plddt_bins = (lddt_dense.clamp(0.0, 1.0 - 1e-6) * num_bins).long().reshape(res, atoms)
+        plddt_bins = (
+            (lddt_dense.clamp(0.0, 1.0 - 1e-6) * num_bins).long().reshape(res, atoms)
+        )
 
     # Representative atoms.
-    beta_pred = atom_layout.convert(token_atoms_to_pseudo_beta, x_pred, layout_axes=(-3, -2))
-    beta_gt = atom_layout.convert(token_atoms_to_pseudo_beta, x_gt, layout_axes=(-3, -2))
+    beta_pred = atom_layout.convert(
+        token_atoms_to_pseudo_beta, x_pred, layout_axes=(-3, -2)
+    )
+    beta_gt = atom_layout.convert(
+        token_atoms_to_pseudo_beta, x_gt, layout_axes=(-3, -2)
+    )
     beta_ok = (
         atom_layout.convert(
             token_atoms_to_pseudo_beta, present.float(), layout_axes=(-2, -1)
@@ -271,7 +300,9 @@ def confidence_targets(
     pair_ok = tok_ok[:, None] & tok_ok[None, :]
 
     pde_err = (torch.cdist(beta_pred, beta_pred) - torch.cdist(beta_gt, beta_gt)).abs()
-    pde_bins = torch.bucketize(pde_err, _error_breaks(head.distance_breaks, protenix_targets))
+    pde_bins = torch.bucketize(
+        pde_err, _error_breaks(head.distance_breaks, protenix_targets)
+    )
 
     targets: dict[str, tuple[torch.Tensor, torch.Tensor] | None] = {
         "plddt": (plddt_bins, valid_dense.reshape(res, atoms)),
@@ -291,16 +322,20 @@ def confidence_targets(
     observed = present[rows, slots].all(dim=-1)
     r_pred, t_pred, ok_pred = token_frames(pred_frame_atoms, has_frame)
     r_gt, t_gt, ok_gt = token_frames(gt_frame_atoms, has_frame & observed)
-    pae_err = (
-        _local(r_pred, t_pred, beta_pred) - _local(r_gt, t_gt, beta_gt)
-    ).norm(dim=-1)
-    pae_bins = torch.bucketize(pae_err, _error_breaks(head.pae_breaks, protenix_targets))
+    pae_err = (_local(r_pred, t_pred, beta_pred) - _local(r_gt, t_gt, beta_gt)).norm(
+        dim=-1
+    )
+    pae_bins = torch.bucketize(
+        pae_err, _error_breaks(head.pae_breaks, protenix_targets)
+    )
     pae_mask = (ok_pred & ok_gt & (token_mask > 0))[:, None] & tok_ok[None, :]
     targets["pae"] = (pae_bins, pae_mask)
     return targets
 
 
-def masked_ce(logits: torch.Tensor, target: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+def masked_ce(
+    logits: torch.Tensor, target: torch.Tensor, mask: torch.Tensor
+) -> torch.Tensor:
     """Mean cross entropy over the masked positions (``logits`` ``[..., C]``, ``target`` / ``mask`` ``[...]``)."""
     classes = logits.shape[-1]
     ce = F.cross_entropy(
@@ -323,17 +358,31 @@ def confidence_loss(
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
     """Weighted sum of the per-bin cross entropies of ``outputs["plddt_logits" | "pde_logits" | "pae_logits" | "resolved_logits"]`` (the head run with
     ``save_logits``). A term whose weight is exactly 0 is not computed (reported as 0.0), like a Protenix loss with ``weight * loss`` = 0 contributes
-    nothing. Returns ``(total, {name: loss})``: ``plddt`` / ``pde`` / ``pae`` always, ``resolved`` only when its weight is nonzero."""
+    nothing. Returns ``(total, {name: loss})``: ``plddt`` / ``pde`` / ``pae`` always, ``resolved`` only when its weight is nonzero.
+    """
     zero = outputs["plddt_logits"].new_zeros(()).float()
     parts = {
-        "plddt": masked_ce(outputs["plddt_logits"], *targets["plddt"]) if plddt_loss != 0.0 else zero,
-        "pde": masked_ce(outputs["pde_logits"], *targets["pde"]) if pde_loss != 0.0 else zero,
-        "pae": masked_ce(outputs["pae_logits"], *targets["pae"]) if pae_loss != 0.0 else zero,
+        "plddt": masked_ce(outputs["plddt_logits"], *targets["plddt"])
+        if plddt_loss != 0.0
+        else zero,
+        "pde": masked_ce(outputs["pde_logits"], *targets["pde"])
+        if pde_loss != 0.0
+        else zero,
+        "pae": masked_ce(outputs["pae_logits"], *targets["pae"])
+        if pae_loss != 0.0
+        else zero,
     }
     if resolved_loss != 0.0:
-        parts["resolved"] = resolved_loss_value(outputs["resolved_logits"], *targets["resolved"])
+        parts["resolved"] = resolved_loss_value(
+            outputs["resolved_logits"], *targets["resolved"]
+        )
     total = zero
-    for name, weight in (("plddt", plddt_loss), ("pde", pde_loss), ("pae", pae_loss), ("resolved", resolved_loss)):
+    for name, weight in (
+        ("plddt", plddt_loss),
+        ("pde", pde_loss),
+        ("pae", pae_loss),
+        ("resolved", resolved_loss),
+    ):
         if weight != 0.0:
             total = total + weight * parts[name]
     return total, parts
@@ -343,5 +392,6 @@ def resolved_loss_value(
     logits: torch.Tensor, resolved: torch.Tensor, real_mask: torch.Tensor
 ) -> torch.Tensor:
     """Experimentally-resolved loss of one sample: mean over the atoms of ``real_mask`` of the 2-class cross entropy of ``logits`` ``[res, atoms, 2]``
-    against ``resolved`` (the ground-truth atom is present). Protenix ``ExperimentallyResolvedLoss.forward`` (protenix/model/loss.py:1026-1060)."""
+    against ``resolved`` (the ground-truth atom is present). Protenix ``ExperimentallyResolvedLoss.forward`` (protenix/model/loss.py:1026-1060).
+    """
     return masked_ce(logits, resolved, real_mask)

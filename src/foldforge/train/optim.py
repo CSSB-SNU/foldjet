@@ -62,7 +62,8 @@ def build_optimizer(model: nn.Module, cfg: TrainConfig) -> torch.optim.Optimizer
 def lr_factor(step: int, cfg: TrainConfig) -> float:
     """MiniWorld ``get_step_decay_scheduler_with_warmup``: linear warmup 0 -> 1, then ``decay_factor ** ((step - warmup) // decay_steps)``.
     ``decay_from_warmup=False`` is Protenix's ``AlphaFold3LRScheduler._get_step_lr`` (protenix/utils/lr_scheduler.py:78-84): the decay count is
-    ``step // decay_steps`` (from step 0)."""
+    ``step // decay_steps`` (from step 0).
+    """
     if step < cfg.warmup_steps:
         return step / float(cfg.warmup_steps)
     since = step - cfg.warmup_steps if cfg.decay_from_warmup else step

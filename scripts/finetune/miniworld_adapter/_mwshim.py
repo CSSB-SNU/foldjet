@@ -1,6 +1,8 @@
 """Import shim: MiniWorld's data modules import ``miniworld_engine.utils.typecheck`` (engine 2.4.x); the engine in the FoldForge env (2.5.x) no longer ships it.
 In MiniWorld's engine that decorator is the identity unless ``settings.typecheck`` is on (default off), so an identity module is registered here.
-Nothing is installed or written into any env."""
+Nothing is installed or written into any env.
+"""
+
 from __future__ import annotations
 
 import sys

@@ -7,7 +7,10 @@ import torch
 
 from foldforge.utils import atom_layout, gather_grad
 
-pytestmark = pytest.mark.skipif(not (torch.cuda.is_available() and gather_grad.HAVE_TRITON), reason="CUDA + triton required")
+pytestmark = pytest.mark.skipif(
+    not (torch.cuda.is_available() and gather_grad.HAVE_TRITON),
+    reason="CUDA + triton required",
+)
 
 
 def _bits(t: torch.Tensor) -> torch.Tensor:
@@ -26,7 +29,9 @@ def _indices(n_in, idx_shape, gen, pile=0.0, target=0, negative=False):
         n *= s
     idx = torch.randint(0, n_in, (n,), generator=gen)
     if pile:
-        idx[torch.rand(n, generator=gen) < pile] = target  # padding slots: one target, thousands of times
+        idx[torch.rand(n, generator=gen) < pile] = (
+            target  # padding slots: one target, thousands of times
+        )
     if negative:
         flip = torch.rand(n, generator=gen) < 0.3
         idx[flip] -= n_in  # ATen wraps negative indices
@@ -34,10 +39,14 @@ def _indices(n_in, idx_shape, gen, pile=0.0, target=0, negative=False):
 
 
 def _gradient(shape, dtype, gen, zeros=0.5):
-    g = torch.randn(shape, generator=gen) * torch.exp(torch.randn(shape, generator=gen) * 3)
+    g = torch.randn(shape, generator=gen) * torch.exp(
+        torch.randn(shape, generator=gen) * 3
+    )
     z = torch.rand(shape, generator=gen)
     g[z < zeros] = 0.0
-    g[(z < zeros) & (torch.rand(shape, generator=gen) < 0.5)] = -0.0  # both signs of zero
+    g[
+        (z < zeros) & (torch.rand(shape, generator=gen) < 0.5)
+    ] = -0.0  # both signs of zero
     g = g.to(dtype)
     flat = g.view(-1)
     k = flat.numel()
@@ -52,11 +61,23 @@ def _gradient(shape, dtype, gen, zeros=0.5):
 
 CASES = [
     # (leading, n_in, idx_shape, slice shape, pile)
-    ((), 384, (128, 32), (128,), 0.4),  # queries -> tokens (generic kernel), pile on the padding token
+    (
+        (),
+        384,
+        (128, 32),
+        (128,),
+        0.4,
+    ),  # queries -> tokens (generic kernel), pile on the padding token
     ((), 9216, (128, 32), (128,), 0.4),  # token atoms -> queries
     ((), 4096, (128, 128), (128,), 0.05),  # queries -> keys
     ((), 4096, (384, 24), (384,), 0.7),  # queries -> token atoms, S = 384
-    ((), 147456, (64, 32, 128), (16,), 0.5),  # token pair -> atom pair (small-stride kernel), 19k-deep pile
+    (
+        (),
+        147456,
+        (64, 32, 128),
+        (16,),
+        0.5,
+    ),  # token pair -> atom pair (small-stride kernel), 19k-deep pile
     ((48,), 9216, (128, 32), (128,), 0.4),  # leading sample dim
     ((48,), 4096, (384, 24), (3,), 0.7),  # coordinates, S = 3
     ((2, 3), 500, (700,), (2,), 0.3),
@@ -74,7 +95,14 @@ def test_index_grad_bitwise(dtype, case):
     dim = len(lead)
     shape = (*lead, n_in, *feat)
     for trial in range(2):
-        idx = _indices(n_in, idx_shape, gen, pile=pile, target=n_in - 1 if trial else 0, negative=trial == 1)
+        idx = _indices(
+            n_in,
+            idx_shape,
+            gen,
+            pile=pile,
+            target=n_in - 1 if trial else 0,
+            negative=trial == 1,
+        )
         grad = _gradient((*lead, *idx_shape, *feat), dtype, gen)
         if trial == 1:
             g = grad.view(-1)
@@ -84,7 +112,9 @@ def test_index_grad_bitwise(dtype, case):
         ref = _torch_grad(shape, dtype, idx, dim, grad)
         ours = gather_grad.index_grad(grad, idx, torch.Size(shape), dim)
         assert ours.shape == ref.shape and ours.dtype == ref.dtype
-        assert torch.equal(_bits(ours), _bits(ref)), f"case {case} trial {trial}: {(_bits(ours) != _bits(ref)).sum().item()} elements differ"
+        assert torch.equal(_bits(ours), _bits(ref)), (
+            f"case {case} trial {trial}: {(_bits(ours) != _bits(ref)).sum().item()} elements differ"
+        )
 
 
 def test_index_grad_dense_duplicates_bitwise():
@@ -96,7 +126,9 @@ def test_index_grad_dense_duplicates_bitwise():
         grad = _gradient((5000, s), dtype, gen, zeros=0.0)
         grad[idx == 3] = 0.0  # a target whose whole pile is zero
         sparse = (idx == 5).nonzero().view(-1)
-        grad[sparse[(torch.rand(len(sparse), generator=gen) < 0.97).cuda()]] = 0.0  # mostly zero: one-nonzero tiles
+        grad[sparse[(torch.rand(len(sparse), generator=gen) < 0.97).cuda()]] = (
+            0.0  # mostly zero: one-nonzero tiles
+        )
         ref = _torch_grad((n_in, s), dtype, idx, 0, grad)
         ours = gather_grad.index_grad(grad, idx, torch.Size((n_in, s)), 0)
         assert torch.equal(_bits(ours), _bits(ref))
@@ -127,7 +159,9 @@ def test_applies_only_where_torch_is_reproduced(monkeypatch):
     idx = torch.zeros(3, dtype=torch.long, device="cuda")
     assert gather_grad.applies(x, idx, 0)
     assert not gather_grad.applies(x.detach(), idx, 0)  # no autograd graph
-    assert not gather_grad.applies(torch.zeros(10, device="cuda", requires_grad=True), idx, 0)  # S == 1: torch's warp reduction
+    assert not gather_grad.applies(
+        torch.zeros(10, device="cuda", requires_grad=True), idx, 0
+    )  # S == 1: torch's warp reduction
     assert not gather_grad.applies(x, idx.int(), 0)
     with torch.no_grad():
         assert not gather_grad.applies(x, idx, 0)

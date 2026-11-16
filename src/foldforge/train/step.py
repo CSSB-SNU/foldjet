@@ -44,7 +44,8 @@ def foreach_accumulation(params: list[torch.nn.Parameter]):
     the new gradient itself (no kernel; exactly what it does for a parameter without a gradient), and the old buffers get ``old + new`` from the
     multi-tensor add: the same fp32 addition per element with the same operands (``a + 1 * b``), so the result is bitwise the same. A parameter
     without an old gradient keeps the new one, as before. The ``.grad`` tensor objects are the old ones afterwards (a step graph accumulates
-    into them). ``FOLDFORGE_FOREACH_GRAD_ACCUM=0``: plain autograd accumulation."""
+    into them). ``FOLDFORGE_FOREACH_GRAD_ACCUM=0``: plain autograd accumulation.
+    """
     if os.environ.get("FOLDFORGE_FOREACH_GRAD_ACCUM", "1") == "0":
         yield
         return
@@ -58,7 +59,9 @@ def foreach_accumulation(params: list[torch.nn.Parameter]):
     finally:
         dst, src = [], []
         for p, old in zip(params, held, strict=True):
-            if old is None:  # the first gradient of this parameter: autograd stored it as it does without this context
+            if (
+                old is None
+            ):  # the first gradient of this parameter: autograd stored it as it does without this context
                 continue
             new = p.grad
             p.grad = old
@@ -76,16 +79,21 @@ def trainable(model) -> list[torch.nn.Parameter]:
 class DeviceParts:
     """Loss parts of one micro step as DEVICE scalars (no host read inside the step: every ``float(tensor)`` is a host sync that drains the
     CUDA queue and blocks graph capture). :meth:`floats` reads them ONCE and replays the host accumulation of the old per-chunk ``float()``
-    code in the same order (double arithmetic on the exact fp32 values), so the numbers are bit-identical to it."""
+    code in the same order (double arithmetic on the exact fp32 values), so the numbers are bit-identical to it.
+    """
 
     def __init__(self, passes: int, share_weights: tuple[float, float, float]):
         self.passes = passes
         self.w_diffusion, self.w_bond, self.w_distogram = share_weights
-        self.chunks: list[tuple[float, torch.Tensor, torch.Tensor, torch.Tensor]] = []  # (share, l_diffusion, l_bond, chunk_loss)
+        self.chunks: list[
+            tuple[float, torch.Tensor, torch.Tensor, torch.Tensor]
+        ] = []  # (share, l_diffusion, l_bond, chunk_loss)
         self.distogram: torch.Tensor | None = None
         self.confidence: torch.Tensor | None = None
         self.conf_parts: dict[str, torch.Tensor] = {}
-        self.plain: dict[str, torch.Tensor] = {}  # ``only`` modes: "loss" (trunk dummy loss) etc., read as is
+        self.plain: dict[
+            str, torch.Tensor
+        ] = {}  # ``only`` modes: "loss" (trunk dummy loss) etc., read as is
 
     def tensors(self) -> list[torch.Tensor]:
         flat: list[torch.Tensor] = []
@@ -100,9 +108,18 @@ class DeviceParts:
 
     def floats(self) -> dict[str, float]:
         flat = self.tensors()
-        values = torch.stack([t.detach().reshape(()).float() for t in flat]).tolist() if flat else []  # the ONE host read
+        values = (
+            torch.stack([t.detach().reshape(()).float() for t in flat]).tolist()
+            if flat
+            else []
+        )  # the ONE host read
         it = iter(values)
-        out: dict[str, float] = {"loss": 0.0, "diffusion": 0.0, "bond": 0.0, "distogram": 0.0}
+        out: dict[str, float] = {
+            "loss": 0.0,
+            "diffusion": 0.0,
+            "bond": 0.0,
+            "distogram": 0.0,
+        }
         for share, _, _, _ in self.chunks:
             d, b, c = next(it), next(it), next(it)
             out["diffusion"] += d * share
@@ -149,7 +166,10 @@ def run_trunk_train(
             if presample
             else batch_data
         )
-        with timer.phase(f"trunk_fwd_r{index}"), nullcontext() if last else torch.no_grad():
+        with (
+            timer.phase(f"trunk_fwd_r{index}"),
+            nullcontext() if last else torch.no_grad(),
+        ):
             embeddings = model.evoformer(
                 batch=pass_batch,
                 prev=embeddings,
@@ -165,19 +185,30 @@ def run_trunk_train(
 
 
 def mini_rollout(
-    model, features, batch_data, detached: dict[str, torch.Tensor], steps: int, graph: bool = False
+    model,
+    features,
+    batch_data,
+    detached: dict[str, torch.Tensor],
+    steps: int,
+    graph: bool = False,
 ) -> torch.Tensor:
     """No-grad structure of the (current) diffusion head from the detached trunk outputs: ``[res, atoms, 3]``. ``graph``: one CUDA graph per shape."""
     from foldforge.train import step_graph
 
-    if step_graph.inline_rollout(model):  # inside a step graph's warm-up / capture: the rollout as plain ops (no host read, no graph of its own)
+    if step_graph.inline_rollout(
+        model
+    ):  # inside a step graph's warm-up / capture: the rollout as plain ops (no host read, no graph of its own)
         from foldforge.train import rollout_graph
 
-        return rollout_graph.rollout_body(model, rollout_graph.rollout_batch(batch_data), detached, steps)
+        return rollout_graph.rollout_body(
+            model, rollout_graph.rollout_batch(batch_data), detached, steps
+        )
     if graph:
         from foldforge.train import rollout_graph
 
-        return rollout_graph.mini_rollout(model, features, batch_data, detached, steps, mini_rollout)
+        return rollout_graph.mini_rollout(
+            model, features, batch_data, detached, steps, mini_rollout
+        )
     head = model.diffusion_head
     saved = (model.num_samples, model.diffusion_steps)
     head.eval()
@@ -206,7 +237,8 @@ def confidence_step(
     example: TrainBatch | None = None,
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
     """Confidence head (trunk inputs detached) on the rollout structure ``x_mini`` -> pLDDT / PDE / PAE cross entropies against the targets of
-    ``x_mini`` and the ground truth ``x0`` ``[res, atoms, 3]``."""
+    ``x_mini`` and the ground truth ``x0`` ``[res, atoms, 3]``.
+    """
     tf = batch_data.token_features
     head_batch = model._head_batch(batch_data)
     gather = head_batch.pseudo_beta_info.token_atoms_to_pseudo_beta
@@ -230,7 +262,9 @@ def confidence_step(
         model.confidence_head,
         present_index=None if example is None else example.present_index,
         present_valid=None if example is None else example.present_valid,
-        real_mask=batch_data.predicted_structure_info.atom_mask.bool() if cfg.loss.resolved_loss != 0.0 else None,
+        real_mask=batch_data.predicted_structure_info.atom_mask.bool()
+        if cfg.loss.resolved_loss != 0.0
+        else None,
         with_pae=cfg.loss.pae_loss != 0.0,
         protenix_targets=cfg.targets_protenix,
     )
@@ -255,7 +289,9 @@ def micro_step(
     timer: PhaseTimer | None = None,
 ) -> dict[str, float]:
     """:func:`micro_step_device` + the ONE host read of the loss parts at its end (the callers want floats)."""
-    return micro_step_device(model, example, cfg, passes, scale=scale, timer=timer).floats()
+    return micro_step_device(
+        model, example, cfg, passes, scale=scale, timer=timer
+    ).floats()
 
 
 def micro_step_device(
@@ -273,12 +309,15 @@ def micro_step_device(
     (``augment_chunk`` samples at a time -- a smaller chunk holds fewer diffusion activations), the distogram head, then ONE backward through the
     trunk with the accumulated gradient of the leaves, then the confidence path. ``cfg.rollout`` places the mini-rollout: ``before`` (right after
     the trunk forward: its transient memory stacks on the saved trunk activations), ``side`` (on a second CUDA stream, overlapped with the
-    diffusion-train forward / backward) or ``after`` (after the trunk backward, when the activations are freed)."""
+    diffusion-train forward / backward) or ``after`` (after the trunk backward, when the activations are freed).
+    """
     if cfg.step_graph:  # the whole micro step as a CUDA graph (train/step_graph.py); None = not served (CPU, --only, a failed capture): run it eagerly
         from foldforge.train import step_graph
 
         if step_graph.mode(model) is None:
-            served = step_graph.micro_step_device(model, example, cfg, passes, scale=scale)
+            served = step_graph.micro_step_device(
+                model, example, cfg, passes, scale=scale
+            )
             if served is not None:
                 return served
     timer = timer or PhaseTimer(False)
@@ -288,15 +327,21 @@ def micro_step_device(
     chunk = cfg.augment_chunk if 0 < cfg.augment_chunk < n else n
     only = cfg.only  # "" = the whole step; "trunk" | "diffusion" | "rollout" | "confidence" = one part alone (memory / time measurements)
     mode = cfg.rollout if cfg.confidence and not only else "none"
-    mode = "after" if mode == "graph" else mode  # "graph": the rollout graph (train/rollout_graph.py) runs at the "after" placement
+    mode = (
+        "after" if mode == "graph" else mode
+    )  # "graph": the rollout graph (train/rollout_graph.py) runs at the "after" placement
     side_stream = (
         torch.cuda.Stream(device) if mode == "side" and device.type == "cuda" else None
     )
     if mode == "side" and side_stream is None:
         mode = "after"
     box: dict[str, torch.Tensor] = {}
-    out = DeviceParts(passes, (cfg.loss.diffusion_loss, cfg.loss.bond_loss, cfg.loss.distogram_loss))
-    params = trainable(model)  # the backwards accumulate into their .grad with one multi-tensor add each (foreach_accumulation)
+    out = DeviceParts(
+        passes, (cfg.loss.diffusion_loss, cfg.loss.bond_loss, cfg.loss.distogram_loss)
+    )
+    params = trainable(
+        model
+    )  # the backwards accumulate into their .grad with one multi-tensor add each (foreach_accumulation)
 
     with activation_autocast(model):
         features = {
@@ -304,7 +349,11 @@ def micro_step_device(
             for k, v in example.features.items()
         }
         batch_data = model._prepare_batch(features)
-        with torch.no_grad() if only in ("diffusion", "rollout", "confidence") else nullcontext():
+        with (
+            torch.no_grad()
+            if only in ("diffusion", "rollout", "confidence")
+            else nullcontext()
+        ):
             embeddings = run_trunk_train(model, batch_data, passes, timer)
         detached = {
             k: (v.detach() if torch.is_tensor(v) else v) for k, v in embeddings.items()
@@ -315,16 +364,28 @@ def micro_step_device(
             if torch.is_tensor(v) and v.requires_grad
         }
         head_inputs = {**embeddings, **leaves}
-        if only == "trunk":  # trunk forward + backward alone: a dummy loss on its outputs stands for the heads' gradient
-            dummy = sum(v.float().pow(2).mean() for v in embeddings.values() if torch.is_tensor(v) and v.requires_grad)
-            with timer.phase("trunk_bwd"):
-                with foreach_accumulation(params):
-                    (dummy * 1e-6 * scale).backward()
+        if (
+            only == "trunk"
+        ):  # trunk forward + backward alone: a dummy loss on its outputs stands for the heads' gradient
+            dummy = sum(
+                v.float().pow(2).mean()
+                for v in embeddings.values()
+                if torch.is_tensor(v) and v.requires_grad
+            )
+            with timer.phase("trunk_bwd"), foreach_accumulation(params):
+                (dummy * 1e-6 * scale).backward()
             out.plain["loss"] = dummy.detach()
             return out
         if only in ("rollout", "confidence"):
             with timer.phase("mini_rollout"):
-                box["x_mini"] = mini_rollout(model, features, batch_data, detached, cfg.rollout_steps, graph=cfg.rollout == "graph")
+                box["x_mini"] = mini_rollout(
+                    model,
+                    features,
+                    batch_data,
+                    detached,
+                    cfg.rollout_steps,
+                    graph=cfg.rollout == "graph",
+                )
             if only == "rollout":
                 return out
             x0 = example.atom_positions.float()
@@ -334,7 +395,17 @@ def micro_step_device(
                 else batch_data.predicted_structure_info.atom_mask
             ).bool()
             with timer.phase("confidence_fwd"):
-                l_conf, parts = confidence_step(model, features, batch_data, detached, box["x_mini"], x0, amask, cfg, example)
+                l_conf, parts = confidence_step(
+                    model,
+                    features,
+                    batch_data,
+                    detached,
+                    box["x_mini"],
+                    x0,
+                    amask,
+                    cfg,
+                    example,
+                )
             with timer.phase("confidence_bwd"):
                 with foreach_accumulation(params):
                     (l_conf * scale).backward()
@@ -408,7 +479,9 @@ def micro_step_device(
             with timer.phase("diffusion_train_bwd"):
                 with foreach_accumulation(params):
                     (chunk_loss * scale).backward()
-            out.chunks.append((share, l_diffusion.detach(), l_bond.detach(), chunk_loss.detach()))
+            out.chunks.append(
+                (share, l_diffusion.detach(), l_bond.detach(), chunk_loss.detach())
+            )
             del x_pred, x_noisy, x0_aug, noise, table, chunk_loss, l_diffusion, l_bond
         with timer.phase("distogram_fwd_bwd"):
             logits = model.distogram_head(model._head_batch(batch_data), head_inputs)[
@@ -432,7 +505,9 @@ def micro_step_device(
         # diffusion head reads ``structure_target_feat`` where the family has one (diffusion_head.py: ``embeddings.get("structure_target_feat",
         # embeddings["target_feat"])``; Protenix v1 does), so no head consumes ``target_feat``. Any other missing leaf is named in the log.
         expected = {"target_feat"} if "structure_target_feat" in embeddings else set()
-        missing = sorted(k for k in leaves if leaves[k].grad is None and k not in expected)
+        missing = sorted(
+            k for k in leaves if leaves[k].grad is None and k not in expected
+        )
         if missing:
             logging.getLogger("foldforge.train").warning(
                 "no gradient reached the trunk output(s): %s", ", ".join(missing)
@@ -453,7 +528,12 @@ def micro_step_device(
             elif mode == "after":
                 with timer.phase("mini_rollout"):
                     box["x_mini"] = mini_rollout(
-                        model, features, batch_data, detached, cfg.rollout_steps, graph=cfg.rollout == "graph"
+                        model,
+                        features,
+                        batch_data,
+                        detached,
+                        cfg.rollout_steps,
+                        graph=cfg.rollout == "graph",
                     )
             with timer.phase("confidence_fwd"):
                 l_conf, parts = confidence_step(
@@ -467,9 +547,8 @@ def micro_step_device(
                     cfg,
                     example,
                 )
-        with timer.phase("confidence_bwd"):
-            with foreach_accumulation(params):
-                (l_conf * scale).backward()
+        with timer.phase("confidence_bwd"), foreach_accumulation(params):
+            (l_conf * scale).backward()
         out.confidence = l_conf.detach()
         out.conf_parts = {k: v.detach() for k, v in parts.items()}
     return out

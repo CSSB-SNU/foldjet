@@ -1,4 +1,5 @@
 # LOCAL-NVMe variant of BioMolDB_20261014.yaml: the lmdb paths point at the copy on node02 (/local_data1/psk6950/BioMolDB_20261014); metadata, catalog inputs and CCD stay on NFS.
+# Paths: FT_DATA_ROOT (default /home/psk6950/data, the shared BioMol data on cssb) and FT_LOCAL_DATA (default /local_data1/psk6950, the node-local NVMe copy of BioMolDB_20261014).
 # AF3-style mixed-source training config on the BioMolDB_20261014 release (cssb_h100 local paths).
 # Same recipe as H100_default.yaml (source mix, crop, MSA, sampler); only the data location changes:
 #   * every source is ONE cif / template / MSA lmdb in the release layout (no 80 distillation_long shards),
@@ -9,7 +10,7 @@
 # The catalog cache is rebuilt on the first run (26M train_item rows).
 
 train_db:
-  ccd_preprocessed_path: /home/psk6950/data/CCD/preprocessed_CCD.lmdb
+  ccd_preprocessed_path: ${oc.env:FT_DATA_ROOT,/home/psk6950/data}/CCD/preprocessed_CCD.lmdb
 
   source_weights:
     pdb: 0.5
@@ -19,49 +20,49 @@ train_db:
 
   sample_with_replacement: true
   manifest_validation: paths
-  catalog_cache_path: /local_data1/psk6950/BioMolDB_20261014/catalog_trainitem_no_disordered_unified_v240_local_ft.arrow
+  catalog_cache_path: ${oc.env:FT_LOCAL_DATA,/local_data1/psk6950}/BioMolDB_20261014/catalog_trainitem_no_disordered_unified_v240_local_ft.arrow
 
   # Antibody chains by seq_id (the cif LMDB stamps them 'P'), as H100_default.yaml: without it no chain is an antibody, so the crop's
   # Ab-Ag interface focus (ab_ag_interface_only) and the distogram's ab_ag weight never apply. The same seq_ids are in this release
   # (metadata/ab_seq_id.tsv of this release is a superset of this train list).
-  antibody_seq_id_path: /home/psk6950/data/BioMol/metadata/ab_seq_id_train_20210930.tsv
+  antibody_seq_id_path: ${oc.env:FT_DATA_ROOT,/home/psk6950/data}/BioMol/metadata/ab_seq_id_train_20210930.tsv
 
-  train_item_path: /home/psk6950/data/filtering/edge_node/train_item_20210930.tsv
-  resources_index_path: /home/psk6950/data/BioMolDB_20261014/metadata/resources.lmdb
-  resources_base: /home/psk6950/data/BioMolDB_20261014/
+  train_item_path: ${oc.env:FT_DATA_ROOT,/home/psk6950/data}/filtering/edge_node/train_item_20210930.tsv
+  resources_index_path: ${oc.env:FT_DATA_ROOT,/home/psk6950/data}/BioMolDB_20261014/metadata/resources.lmdb
+  resources_base: ${oc.env:FT_DATA_ROOT,/home/psk6950/data}/BioMolDB_20261014/
 
   pdb:
-    cif_db_path: /local_data1/psk6950/BioMolDB_20261014/lmdb/pdb/cif_attached/cif_pdb_attached_train_20210930_res9_chain300.lmdb
-    a3m_db_path: /local_data1/psk6950/BioMolDB_20261014/lmdb/pdb/msa/a3m.lmdb
-    a3m_rna_db_path: /local_data1/psk6950/BioMolDB_20261014/lmdb/pdb/msa/msa_rna.lmdb
-    template_db_path: /local_data1/psk6950/BioMolDB_20261014/lmdb/chain/template/template.lmdb
-    edge_id_to_bias_path: /home/psk6950/data/BioMol/metadata/train_20210930_edge_node_reldate.tsv
-    ccd_preprocessed_path: /home/psk6950/data/CCD/preprocessed_CCD.lmdb
+    cif_db_path: ${oc.env:FT_LOCAL_DATA,/local_data1/psk6950}/BioMolDB_20261014/lmdb/pdb/cif_attached/cif_pdb_attached_train_20210930_res9_chain300.lmdb
+    a3m_db_path: ${oc.env:FT_LOCAL_DATA,/local_data1/psk6950}/BioMolDB_20261014/lmdb/pdb/msa/a3m.lmdb
+    a3m_rna_db_path: ${oc.env:FT_LOCAL_DATA,/local_data1/psk6950}/BioMolDB_20261014/lmdb/pdb/msa/msa_rna.lmdb
+    template_db_path: ${oc.env:FT_LOCAL_DATA,/local_data1/psk6950}/BioMolDB_20261014/lmdb/chain/template/template.lmdb
+    edge_id_to_bias_path: ${oc.env:FT_DATA_ROOT,/home/psk6950/data}/BioMol/metadata/train_20210930_edge_node_reldate.tsv
+    ccd_preprocessed_path: ${oc.env:FT_DATA_ROOT,/home/psk6950/data}/CCD/preprocessed_CCD.lmdb
 
   distillation_sources:
     - name: protein_monomer
-      cif_db_path: /local_data1/psk6950/BioMolDB_20261014/lmdb/distillation_long/cif_attached/cif_long_attached.lmdb
-      template_db_path: /local_data1/psk6950/BioMolDB_20261014/lmdb/distillation_long/template/template_topn_long.lmdb
+      cif_db_path: ${oc.env:FT_LOCAL_DATA,/local_data1/psk6950}/BioMolDB_20261014/lmdb/distillation_long/cif_attached/cif_long_attached.lmdb
+      template_db_path: ${oc.env:FT_LOCAL_DATA,/local_data1/psk6950}/BioMolDB_20261014/lmdb/distillation_long/template/template_topn_long.lmdb
       chain_ids: ["1"]
       lookup_mode: record_id
       a3m_db_paths:
-        - /local_data1/psk6950/BioMolDB_20261014/lmdb/distillation_long/msa/msa_long_d2k.lmdb
+        - ${oc.env:FT_LOCAL_DATA,/local_data1/psk6950}/BioMolDB_20261014/lmdb/distillation_long/msa/msa_long_d2k.lmdb
 
     - name: short_protein_monomer
-      cif_db_path: /local_data1/psk6950/BioMolDB_20261014/lmdb/distillation_short/cif_attached/cif_short_attached.lmdb
-      template_db_path: /local_data1/psk6950/BioMolDB_20261014/lmdb/distillation_short/template/template_topn_short.lmdb
+      cif_db_path: ${oc.env:FT_LOCAL_DATA,/local_data1/psk6950}/BioMolDB_20261014/lmdb/distillation_short/cif_attached/cif_short_attached.lmdb
+      template_db_path: ${oc.env:FT_LOCAL_DATA,/local_data1/psk6950}/BioMolDB_20261014/lmdb/distillation_short/template/template_topn_short.lmdb
       chain_ids: ["1"]
       lookup_mode: record_id
       a3m_db_paths:
-        - /local_data1/psk6950/BioMolDB_20261014/lmdb/distillation_short/msa/msa_short_d2k.lmdb
+        - ${oc.env:FT_LOCAL_DATA,/local_data1/psk6950}/BioMolDB_20261014/lmdb/distillation_short/msa/msa_short_d2k.lmdb
 
     - name: disordered_pdb
-      cif_db_path: /local_data1/psk6950/BioMolDB_20261014/lmdb/distillation_disordered/cif_attached/cif_disordered_attached.lmdb
-      template_db_path: /local_data1/psk6950/BioMolDB_20261014/lmdb/distillation_disordered/template/template_disordered.lmdb
+      cif_db_path: ${oc.env:FT_LOCAL_DATA,/local_data1/psk6950}/BioMolDB_20261014/lmdb/distillation_disordered/cif_attached/cif_disordered_attached.lmdb
+      template_db_path: ${oc.env:FT_LOCAL_DATA,/local_data1/psk6950}/BioMolDB_20261014/lmdb/distillation_disordered/template/template_disordered.lmdb
       chain_ids: ["1"]
       lookup_mode: record_id
       a3m_db_paths:
-        - /local_data1/psk6950/BioMolDB_20261014/lmdb/distillation_disordered/msa/msa_disordered_d2k.lmdb
+        - ${oc.env:FT_LOCAL_DATA,/local_data1/psk6950}/BioMolDB_20261014/lmdb/distillation_disordered/msa/msa_disordered_d2k.lmdb
 
 crop:
   max_tokens: 384

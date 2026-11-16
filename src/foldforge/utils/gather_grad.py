@@ -58,8 +58,7 @@ if HAVE_TRITON:
         v = tl.sum(tl.where(nz, c, 0.0), axis=0)
         if ROUND_EACH:
             return tl.where(cnt == 1, (acc + v).to(out_ty).to(tl.float32), acc)
-        else:
-            return tl.where(cnt == 1, acc + v, acc)
+        return tl.where(cnt == 1, acc + v, acc)
 
     @triton.jit
     def _gather_grad_kernel(
@@ -94,8 +93,12 @@ if HAVE_TRITON:
                 rm = kr < hi
                 js = tl.load(order_ptr + kr, mask=rm, other=0)
                 m2 = rm[:, None] & fmask[None, :]
-                c = tl.load(gbase + js[:, None] * S + f[None, :], mask=m2, other=0.0).to(tl.float32)
-                nz = (c != 0.0) & m2  # NaN compares unequal to 0: a nonzero contribution
+                c = tl.load(
+                    gbase + js[:, None] * S + f[None, :], mask=m2, other=0.0
+                ).to(tl.float32)
+                nz = (
+                    c != 0.0
+                ) & m2  # NaN compares unequal to 0: a nonzero contribution
                 if tl.max(tl.sum(nz.to(tl.int32), axis=0), axis=0) <= 1:
                     acc = _apply_tile(acc, c, nz, ROUND_EACH, out_ty)
                     done = 1
@@ -105,7 +108,9 @@ if HAVE_TRITON:
                     rm = kr < hi
                     js = tl.load(order_ptr + kr, mask=rm, other=0)
                     m2 = rm[:, None] & fmask[None, :]
-                    c = tl.load(gbase + js[:, None] * S + f[None, :], mask=m2, other=0.0).to(tl.float32)
+                    c = tl.load(
+                        gbase + js[:, None] * S + f[None, :], mask=m2, other=0.0
+                    ).to(tl.float32)
                     nz = (c != 0.0) & m2
                     if tl.max(tl.sum(nz.to(tl.int32), axis=0), axis=0) <= 1:
                         acc = _apply_tile(acc, c, nz, ROUND_EACH, out_ty)
@@ -113,15 +118,23 @@ if HAVE_TRITON:
                         for r in tl.static_range(SUB):
                             ok = ks + r < hi
                             j = tl.load(order_ptr + ks + r, mask=ok, other=0)
-                            cr = tl.load(gbase + j * S + f, mask=fmask & ok, other=0.0).to(tl.float32)
+                            cr = tl.load(
+                                gbase + j * S + f, mask=fmask & ok, other=0.0
+                            ).to(tl.float32)
                             nzr = (cr != 0.0) & fmask & ok
                             if ROUND_EACH:
-                                acc = tl.where(nzr, (acc + cr).to(out_ty).to(tl.float32), acc)
+                                acc = tl.where(
+                                    nzr, (acc + cr).to(out_ty).to(tl.float32), acc
+                                )
                             else:
                                 acc = tl.where(nzr, acc + cr, acc)
         if not ROUND_EACH:
-            acc = 0.0 + acc  # ATen: float(+0 gradient) + sum (a no-op: the sum is never -0)
-        tl.store(out_ptr + z * n_in * S + t.to(tl.int64) * S + f, acc.to(out_ty), mask=fmask)
+            acc = (
+                0.0 + acc
+            )  # ATen: float(+0 gradient) + sum (a no-op: the sum is never -0)
+        tl.store(
+            out_ptr + z * n_in * S + t.to(tl.int64) * S + f, acc.to(out_ty), mask=fmask
+        )
 
 
 def enabled() -> bool:
@@ -131,26 +144,40 @@ def enabled() -> bool:
 
 def applies(arr: torch.Tensor, idx: torch.Tensor, dim: int) -> bool:
     """Whether :class:`IndexGather` serves ``arr[(:,)*dim, idx]``: a CUDA gather that records an autograd graph, a dtype and slice size whose
-    torch backward is reproduced (``S >= 2``), int64 indices on the same device, outside torch.compile."""
-    if not (torch.is_grad_enabled() and arr.requires_grad and arr.is_cuda and enabled()):
+    torch backward is reproduced (``S >= 2``), int64 indices on the same device, outside torch.compile.
+    """
+    if not (
+        torch.is_grad_enabled() and arr.requires_grad and arr.is_cuda and enabled()
+    ):
         return False
     if arr.dtype not in DTYPES or idx.dtype != torch.int64 or idx.device != arr.device:
         return False
-    if math.prod(arr.shape[dim + 1 :]) < 2 or idx.numel() == 0 or arr.shape[dim] == 0 or math.prod(arr.shape[:dim]) > 65535:
+    if (
+        math.prod(arr.shape[dim + 1 :]) < 2
+        or idx.numel() == 0
+        or arr.shape[dim] == 0
+        or math.prod(arr.shape[:dim]) > 65535
+    ):
         return False
     return not torch.compiler.is_compiling()
 
 
-def index_grad(grad: torch.Tensor, idx: torch.Tensor, in_shape: torch.Size, dim: int) -> torch.Tensor:
+def index_grad(
+    grad: torch.Tensor, idx: torch.Tensor, in_shape: torch.Size, dim: int
+) -> torch.Tensor:
     """Gradient of ``x[(:,)*dim, idx]`` w.r.t. ``x`` (shape ``in_shape``) for the output gradient ``grad``: bitwise torch's ``index`` backward."""
     outer = math.prod(in_shape[:dim])
     n_in = in_shape[dim]
     s = math.prod(in_shape[dim + 1 :])
     flat = idx.reshape(-1)
     n_idx = flat.numel()
-    flat = torch.where(flat < 0, flat + n_in, flat)  # ATen wraps negative indices before it sorts
+    flat = torch.where(
+        flat < 0, flat + n_in, flat
+    )  # ATen wraps negative indices before it sorts
     keys, order = torch.sort(flat, stable=True)
-    offs = torch.searchsorted(keys, torch.arange(n_in + 1, device=idx.device, dtype=keys.dtype))
+    offs = torch.searchsorted(
+        keys, torch.arange(n_in + 1, device=idx.device, dtype=keys.dtype)
+    )
     g = grad.contiguous()
     out = torch.empty((outer, n_in, s), dtype=grad.dtype, device=grad.device)
     block_f = min(128, triton.next_power_of_2(s))
@@ -173,7 +200,8 @@ def index_grad(grad: torch.Tensor, idx: torch.Tensor, in_shape: torch.Size, dim:
 
 class IndexGather(torch.autograd.Function):
     """``arr[(:,)*dim, idx]`` (the same ``aten::index`` forward) whose backward is :func:`index_grad` instead of torch's sort + serial
-    ``index_put_``. Bitwise equal in forward and backward."""
+    ``index_put_``. Bitwise equal in forward and backward.
+    """
 
     @staticmethod
     def forward(ctx, arr: torch.Tensor, idx: torch.Tensor, dim: int) -> torch.Tensor:  # noqa: ANN001
