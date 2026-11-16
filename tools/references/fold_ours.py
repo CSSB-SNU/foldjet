@@ -28,7 +28,10 @@ parser.add_argument("--mode", choices=("fast", "exact"), default="fast")
 parser.add_argument(
     "--backend",
     default="pytorch",
-    help="the engine backend (the references run on pytorch; miniworld = the engine kernels)",
+    help=(
+        "the engine backend (the references run on pytorch; "
+        "miniworld = the engine kernels)"
+    ),
 )
 args = parser.parse_args()
 family = FAMILIES[args.family]

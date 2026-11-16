@@ -1,8 +1,12 @@
-"""RF3 template input for the 5I28 benchmark: a threaded backbone PDB per n (query sequence; 5syd_A N/CA/C/O coordinates on the
-query positions its hit row aligns; occupancy 0 elsewhere). RF3's only template track is the input structure's CA distogram
-(template_selection), one coordinate set per chain, so the one template is 5syd_A -- FoldForge's first of its 4.
-Same construction as ~/foldforge-scratch/anthropic-kits/mkreal_rf3.py; sources here are the benchmark's: cif_raw/sy/5syd.cif.gz
-(gunzipped to inputs/src/5syd.cif) and the 20-hit LMDB a3m (inputs/src/5i28_templates_hits20.a3m).
+"""RF3 template input for the 5I28 benchmark: a threaded backbone PDB per n.
+
+Query sequence; 5syd_A N/CA/C/O coordinates on the query positions its hit row aligns;
+occupancy 0 elsewhere. RF3's only template track is the input structure's CA distogram
+(template_selection), one coordinate set per chain, so the one template is 5syd_A --
+FoldForge's first of its 4.
+Same construction as ~/foldforge-scratch/anthropic-kits/mkreal_rf3.py; sources here are
+the benchmark's: cif_raw/sy/5syd.cif.gz (gunzipped to inputs/src/5syd.cif) and the
+20-hit LMDB a3m (inputs/src/5i28_templates_hits20.a3m).
 usage: mkthread.py OUTROOT N [N ...]   -> OUTROOT/x<N>/tpl_x<N>.pdb + tpl_info.json
 """
 
@@ -17,29 +21,31 @@ import numpy as np
 
 HERE = Path(__file__).resolve().parent
 SRC = HERE / "inputs" / "src"
-AA3 = dict(
-    A="ALA",
-    R="ARG",
-    N="ASN",
-    D="ASP",
-    C="CYS",
-    Q="GLN",
-    E="GLU",
-    G="GLY",
-    H="HIS",
-    I="ILE",
-    L="LEU",
-    K="LYS",
-    M="MET",
-    F="PHE",
-    P="PRO",
-    S="SER",
-    T="THR",
-    W="TRP",
-    Y="TYR",
-    V="VAL",
-)
+AA3 = {
+    "A": "ALA",
+    "R": "ARG",
+    "N": "ASN",
+    "D": "ASP",
+    "C": "CYS",
+    "Q": "GLN",
+    "E": "GLU",
+    "G": "GLY",
+    "H": "HIS",
+    "I": "ILE",
+    "L": "LEU",
+    "K": "LYS",
+    "M": "MET",
+    "F": "PHE",
+    "P": "PRO",
+    "S": "SER",
+    "T": "THR",
+    "W": "TRP",
+    "Y": "TYR",
+    "V": "VAL",
+}
 TID = "5syd_A"
+TOKENS_PER_CHAIN = 128
+N_BACKBONE_ATOMS = 4  # N, CA, C, O
 
 lines = (SRC / "5i28_templates_hits20.a3m").read_text().split("\n")
 rows = {
@@ -53,17 +59,16 @@ q = next(
     for l in (HERE / "inputs" / "msa" / "5i28.a3m").read_text().split("\n")
     if l and not l.startswith(">")
 )
-assert len(q) == len(row) == 128, (len(q), len(row))
+assert len(q) == len(row) == TOKENS_PER_CHAIN, (len(q), len(row))
 aa = pdbx.get_structure(
     pdbx.CIFFile.read(SRC / "5syd.cif"), model=1, use_author_fields=False
 )
 aa = aa[
     (aa.chain_id == "A") & np.isin(aa.atom_name, ["N", "CA", "C", "O"]) & ~aa.hetero
 ]
-mapping, t = (
-    {},
-    0,
-)  # query position (0-based) -> template label_seq_id (the hit row is query-aligned, residues 1..88)
+# query position (0-based) -> template label_seq_id (the hit row is query-aligned,
+# residues 1..88)
+mapping, t = {}, 0
 for qi, ch in enumerate(row):
     if ch != "-":
         t += 1
@@ -71,7 +76,7 @@ for qi, ch in enumerate(row):
 atoms, nal, nmis = [], 0, 0
 for qi in range(128):
     res = aa[aa.res_id == mapping[qi]] if qi in mapping else aa[:0]
-    ok = len(res) == 4 and set(res.atom_name) == {"N", "CA", "C", "O"}
+    ok = len(res) == N_BACKBONE_ATOMS and set(res.atom_name) == {"N", "CA", "C", "O"}
     if ok:
         nal += 1
         nmis += res.res_name[0] != AA3[q[qi]]
@@ -86,7 +91,8 @@ resid = sorted(qi + 1 for qi in mapping)
 lo, hi = resid[0], resid[-1]
 assert hi - lo + 1 == len(resid)  # contiguous: one template_selection range per chain
 print(
-    f"template {TID}: aligned query positions {len(mapping)} ({lo}-{hi}), complete backbone {nal}, residue-type mismatches {nmis}"
+    f"template {TID}: aligned query positions {len(mapping)} ({lo}-{hi}), "
+    f"complete backbone {nal}, residue-type mismatches {nmis}"
 )
 for n in map(int, sys.argv[2:]):
     out = Path(sys.argv[1]) / f"x{n}"
@@ -108,14 +114,15 @@ for n in map(int, sys.argv[2:]):
     f = pdb.PDBFile()
     pdb.set_structure(f, struc.concatenate(arrs))
     f.write(out / f"tpl_x{n}.pdb")
-    json.dump(
-        dict(
-            template=TID,
-            aligned=len(mapping),
-            complete_backbone=nal,
-            mismatches=int(nmis),
-            res_range=[lo, hi],
-        ),
-        open(out / "tpl_info.json", "w"),
-    )
+    with (out / "tpl_info.json").open("w") as fh:
+        json.dump(
+            {
+                "template": TID,
+                "aligned": len(mapping),
+                "complete_backbone": nal,
+                "mismatches": int(nmis),
+                "res_range": [lo, hi],
+            },
+            fh,
+        )
     print(f"wrote {out}/tpl_x{n}.pdb")

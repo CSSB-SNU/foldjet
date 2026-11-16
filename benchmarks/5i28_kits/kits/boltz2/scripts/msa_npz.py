@@ -1,5 +1,9 @@
-"""Rows of the MSA Boltz-2 itself processed for the run (<out>/boltz_results_*/processed/msa/*.npz, written by boltz's preprocessing from the
-yaml's msa: path with max_msa_seqs 8192; no --subsample_msa passed, upstream default off). usage: msa_npz.py <out_dir>
+"""Rows of the MSA Boltz-2 itself processed for the run.
+
+<out>/boltz_results_*/processed/msa/*.npz, written by boltz's preprocessing from the
+yaml's msa: path with max_msa_seqs 8192; no --subsample_msa passed, upstream default
+off.
+usage: msa_npz.py <out_dir>
 """
 
 import glob
@@ -7,7 +11,9 @@ import sys
 
 import numpy as np
 
-fs = sorted(glob.glob(sys.argv[1] + "/**/processed/msa/*.npz", recursive=True))
+pattern = sys.argv[1] + "/**/processed/msa/*.npz"
+# glob.glob kept: string paths are printed as they are (stdlib-only kit script)
+fs = sorted(glob.glob(pattern, recursive=True))  # noqa: PTH207
 for f in fs:
     z = np.load(f, allow_pickle=True)
     print(

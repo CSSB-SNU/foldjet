@@ -1,11 +1,13 @@
-"""ESMFold2 kit timing driver, ALL sizes in ONE process (derived from the kit harness esm_fwd_kit_msa.py: same MSA, builder.fold call, synchronized
-timer span; model + MSA loaded once). SIZES (default 1 2 4 8 12 16) ascending; FWD_CALLS forwards per size (first = cold for that shape).
-An out-of-memory in one size is recorded (`FWDOOM <n>`) and the caches are emptied; the process goes on with the next size.
+"""ESMFold2 kit timing driver, ALL sizes in ONE process.
+
+Derived from the kit harness esm_fwd_kit_msa.py: same MSA, builder.fold call,
+synchronized timer span; model + MSA loaded once. SIZES (default 1 2 4 8 12 16)
+ascending; FWD_CALLS forwards per size (first = cold for that shape). An out-of-memory
+in one size is recorded (`FWDOOM <n>`) and the caches are emptied; the process goes on
+with the next size.
 """
 
-import json
 import os
-import sys
 import time
 
 import torch
@@ -14,7 +16,10 @@ from esm.utils.msa import MSA
 from esm.utils.structure.input_builder import ProteinInput, StructurePredictionInput
 from transformers.models.esmfold2.modeling_esmfold2 import ESMFold2Model
 
-SEQ = "AECSVDIQGNDQMQFNTNAITVDKSCKQFCVNLSHPGNLPKNVMGHNWVLSTAADMQGVVTDGMASGLDKDYLKPDDSRVIAHTKLIGSGEKDSVTFDVSKLKEGEQYMFFCTFPGHSALMKGTLTLK"
+SEQ = (
+    "AECSVDIQGNDQMQFNTNAITVDKSCKQFCVNLSHPGNLPKNVMGHNWVLSTAADMQGVV"
+    "TDGMASGLDKDYLKPDDSRVIAHTKLIGSGEKDSVTFDVSKLKEGEQYMFFCTFPGHSALMKGTLTLK"
+)
 A3M = os.environ.get("A3M") or os.environ["A3M_5I28"]
 seed = 0
 sizes = [int(x) for x in os.environ.get("SIZES", "1 2 4 8 12 16").split()]
@@ -62,7 +67,8 @@ for n in sizes:
             torch.cuda.empty_cache()
             break
     print(
-        f"[harness] SIZE n={n} done peak_mem_GB {torch.cuda.max_memory_allocated() / 2**30:.1f} {time.strftime('%H:%M:%S')}",
+        f"[harness] SIZE n={n} done peak_mem_GB "
+        f"{torch.cuda.max_memory_allocated() / 2**30:.1f} {time.strftime('%H:%M:%S')}",
         flush=True,
     )
     torch.cuda.reset_peak_memory_stats()

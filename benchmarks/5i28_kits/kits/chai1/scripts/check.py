@@ -1,6 +1,9 @@
-"""CPU check (no GPU, no ESM): chai's own feature-context build for 5I28 x<N> with the bench inputs -- the MSA directory and the m8 hits
-with the offline mmCIF shim -- and what it loaded: chai_lab's 'Loaded k templates: [...]' line per chain (INFO, via the shim), the merged
-TemplateContext and the MSA depth. usage (inside the container, chai venv130, PYTHONPATH=shim, REAL_CIF_DIR set): check.py N [N ...]
+"""CPU check (no GPU, no ESM): chai's own feature-context build for 5I28 x<N>.
+
+Built with the bench inputs -- the MSA directory and the m8 hits with the offline mmCIF
+shim -- and what it loaded: chai_lab's 'Loaded k templates: [...]' line per chain (INFO,
+via the shim), the merged TemplateContext and the MSA depth. usage (inside the
+container, chai venv130, PYTHONPATH=shim, REAL_CIF_DIR set): check.py N [N ...]
 """
 
 import os
@@ -31,7 +34,10 @@ for n in map(int, sys.argv[1:]):
             f"[check] n={n} tokens={ctx.structure_context.num_tokens} {tc}", flush=True
         )
         print(
-            f"[check] n={n} num_templates={tc.num_templates} nonnull_templates={tc.num_nonnull_templates} msa_depth={ctx.msa_context.depth} "
-            f"restype_tokens_per_slot={tc.template_mask.sum(-1).tolist()} cb_tokens_per_slot={tc.template_pseudo_beta_mask.sum(-1).tolist()}",
+            f"[check] n={n} num_templates={tc.num_templates} "
+            f"nonnull_templates={tc.num_nonnull_templates} "
+            f"msa_depth={ctx.msa_context.depth} "
+            f"restype_tokens_per_slot={tc.template_mask.sum(-1).tolist()} "
+            f"cb_tokens_per_slot={tc.template_pseudo_beta_mask.sum(-1).tolist()}",
             flush=True,
         )

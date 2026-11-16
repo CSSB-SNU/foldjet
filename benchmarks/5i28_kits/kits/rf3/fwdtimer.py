@@ -1,9 +1,14 @@
-"""Forward timer for the RF3 kit (same timer as ~/foldforge-scratch/anthropic-kits/fwdtimer_real.py: torch.cuda.synchronize() before and
-after RF3WithConfidence.forward, one `FWDTIME <i> <s>` line per call), plus input evidence printed OUTSIDE the timed region:
-- `REALINPUT call=<i> ...`: the model's input at that forward -- per-recycle MSA stack shape, templated tokens (diagonal of
-  has_distogram_condition) and template pairs;
-- `MSAFULL rows=<r> tokens=<t>`: the full MSA depth handed to atomworks' FeaturizeMSALikeAF3 (before RF3 subsamples n_msa rows per
-  recycle). The kit's prefetch helper is forked from this process, so it prints this line too (item 0 is featurised twice by design).
+"""Forward timer for the RF3 kit, plus input evidence printed OUTSIDE the timed region.
+
+Same timer as ~/foldforge-scratch/anthropic-kits/fwdtimer_real.py:
+torch.cuda.synchronize() before and after RF3WithConfidence.forward, one
+`FWDTIME <i> <s>` line per call. Input evidence:
+- `REALINPUT call=<i> ...`: the model's input at that forward -- per-recycle MSA stack
+  shape, templated tokens (diagonal of has_distogram_condition) and template pairs;
+- `MSAFULL rows=<r> tokens=<t>`: the full MSA depth handed to atomworks'
+  FeaturizeMSALikeAF3 (before RF3 subsamples n_msa rows per recycle). The kit's prefetch
+  helper is forked from this process, so it prints this line too (item 0 is featurised
+  twice by design).
 usage: fwdtimer.py <model class path> <entry module:function | script.py> [args...]
 """
 
@@ -15,17 +20,18 @@ import time
 import torch
 
 
-def _patch_msa_probe():
+def _patch_msa_probe() -> None:
     try:
         from atomworks.ml.transforms.msa import msa as _m
 
         orig = _m.FeaturizeMSALikeAF3.forward
 
-        def forward(self, data):
+        def forward(self: object, data: dict) -> object:
             try:
                 r, t = data["encoded"]["msa"].shape[:2]
                 print(
-                    f"MSAFULL rows={int(r)} tokens={int(t)} n_msa={self.n_msa} n_recycles={self.n_recycles}",
+                    f"MSAFULL rows={int(r)} tokens={int(t)} n_msa={self.n_msa} "
+                    f"n_recycles={self.n_recycles}",
                     flush=True,
                 )
             except Exception as e:  # noqa: BLE001
@@ -45,14 +51,17 @@ def main():
     orig = cls.forward
     count = [0]
 
-    def forward(self, *a, **k):
+    def forward(self: object, *a: object, **k: object) -> object:
         try:
             f = (a[0] if a else k["input"])["f"]
             h = f["has_distogram_condition"]
             print(
-                f"REALINPUT call={count[0]} msa_stack={tuple(f['msa_stack'].shape)} n_token={h.shape[0]} "
-                f"templated_tokens={int(h.diagonal().sum())} template_pairs={int(h.sum())} "
-                f"distogram_condition_onehot_nonmask_pairs={int((f['distogram_condition'][..., :-1].sum(-1) > 0).sum())}",
+                f"REALINPUT call={count[0]} msa_stack={tuple(f['msa_stack'].shape)} "
+                f"n_token={h.shape[0]} "
+                f"templated_tokens={int(h.diagonal().sum())} "
+                f"template_pairs={int(h.sum())} "
+                "distogram_condition_onehot_nonmask_pairs="
+                f"{int((f['distogram_condition'][..., :-1].sum(-1) > 0).sum())}",
                 flush=True,
             )
         except Exception as e:  # noqa: BLE001

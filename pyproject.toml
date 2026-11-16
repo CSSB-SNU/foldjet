@@ -145,6 +145,19 @@ known-third-party = ["wandb"]
   "C901",
   "PLR0915", # Too many statements
 ]
+# Benchmark harness scripts (5I28 FoldForge side and the kit-side scripts that run inside other projects' environments):
+# operational scripts like tools/*, run as `python file.py` (no package); their printed lines are the benchmark records.
+"benchmarks/**" = [
+  "D",
+  "ANN201",
+  "S101",
+  "INP001",
+  "FBT001",
+  "PLC0415",
+  "C901",
+  "PLR0915",
+  "T201",
+]
 # The MiniWorld data adapter of the fine-tune and its tools: operational scripts run as `python file.py` / imported by
 # path (no package), lazy imports in the DataLoader workers, print logging. Imports, correctness and security still checked.
 "scripts/finetune/**" = ["D", "ANN", "S101", "INP001", "FBT001", "FBT002", "FBT003", "PLC0415", "C901", "PLR0912", "PLR0915", "T201", "E501", "PLR2004", "N803", "N806", "UP031", "TRY003", "EM101", "EM102", "PTH", "SLF001", "BLE001", "S301", "E402"]

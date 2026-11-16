@@ -1,13 +1,23 @@
-"""CPU prep for the 5I28 benchmark (benchmarks/5i28.md), run INSIDE the cu130 container with the Chai-1 kit's venv130 (scripts/prep_inner.sh).
+"""CPU prep for the 5I28 benchmark (benchmarks/5i28.md).
+
+Run INSIDE the cu130 container with the Chai-1 kit's venv130 (scripts/prep_inner.sh).
 
 Writes under bench5i28/chai1/inputs:
-  msa/<sha256(query)>.aligned.pqt   the real MSA (5i28_unpaired.a3m, all rows) as chai's aligned parquet (UNIREF90 tag, no pairing key; as the
-                                     kit's earlier real runs, anthropic-kits/chai1/real/prep.py)
-  templates_n<N>.m8                 4 hits per chain, in this order (e-values 1e-30..4e-30; chai sorts by e-value): 5SYD_A, 6KOL_A, 5YT7_A, 6TFD_A
-                                     subject ranges = the span kalign aligns, so chai's TemplateHit consistency check passes (as real/prep2.py)
+  msa/<sha256(query)>.aligned.pqt   the real MSA (5i28_unpaired.a3m, all rows) as chai's
+                                     aligned parquet (UNIREF90 tag, no pairing key; as
+                                     the kit's earlier real runs,
+                                     anthropic-kits/chai1/real/prep.py)
+  templates_n<N>.m8                 4 hits per chain, in this order (e-values
+                                     1e-30..4e-30; chai sorts by e-value): 5SYD_A,
+                                     6KOL_A, 5YT7_A, 6TFD_A
+                                     subject ranges = the span kalign aligns, so chai's
+                                     TemplateHit consistency check passes (as
+                                     real/prep2.py)
   5i28_x<N>.fasta                   N identical chains, names A, B, ...
-Also prints, per template, the mmCIF chains (auth name -> label subchain, resolved polymer length) and whether the query-aligned row of the
-20-hit a3m (kitv2real/in/5i28_templates_hits20.a3m, = FoldForge's template) is the polymer of auth chain A (chai) and of label chain A (Boltz).
+Also prints, per template, the mmCIF chains (auth name -> label subchain, resolved
+polymer length) and whether the query-aligned row of the 20-hit a3m
+(kitv2real/in/5i28_templates_hits20.a3m, = FoldForge's template) is the polymer of auth
+chain A (chai) and of label chain A (Boltz).
 """
 
 import os
@@ -31,15 +41,17 @@ A3M = Path(os.environ["A3M_5I28"])
 HITS = Path(os.environ["INPUT_SCRATCH"] + "/in/5i28_templates_hits20.a3m")
 TPL = [("5SYD", "A"), ("6KOL", "A"), ("5YT7", "A"), ("6TFD", "A")]
 NS = (1, 2, 4, 8, 12, 16)
+TOKENS_PER_CHAIN = 128
 
 lines = A3M.read_text().split("\n")
 query = lines[1].strip()
-assert len(query) == 128, len(query)
+assert len(query) == TOKENS_PER_CHAIN, len(query)
 (IN / "msa").mkdir(parents=True, exist_ok=True)
 fr = a3m_to_aligned_dataframe(A3M, MSADataSource.UNIREF90, insert_pairing_key=False)
 fr.to_parquet(IN / "msa" / expected_basename(query))
 print(
-    f"[prep] MSA {A3M}: {A3M.read_text().count('>')} a3m records -> {len(fr)} parquet rows -> {IN / 'msa' / expected_basename(query)}",
+    f"[prep] MSA {A3M}: {A3M.read_text().count('>')} a3m records -> {len(fr)} "
+    f"parquet rows -> {IN / 'msa' / expected_basename(query)}",
     flush=True,
 )
 
@@ -53,7 +65,7 @@ for ln in HITS.read_text().splitlines():
         name = None
 
 
-def resolved_seq(ch):
+def resolved_seq(ch: gemmi.Chain) -> str:
     return ch.get_polymer().make_one_letter_sequence().replace("-", "")
 
 
@@ -73,12 +85,14 @@ for pid, ch in TPL:
         if psub == ch:
             label_a = c.name
         print(
-            f"[prep]   auth={c.name} polymer_label={psub} subchains={subs} resolved_polymer_len={len(resolved_seq(c))}",
+            f"[prep]   auth={c.name} polymer_label={psub} subchains={subs} "
+            f"resolved_polymer_len={len(resolved_seq(c))}",
             flush=True,
         )
     auth_seq = resolved_seq(st[0][ch])
     print(
-        f"[prep]   hits20 row {pid.lower()}_{ch}: {len(tseq)} aligned residues; in auth chain {ch} resolved polymer: {tseq in auth_seq}; "
+        f"[prep]   hits20 row {pid.lower()}_{ch}: {len(tseq)} aligned residues; "
+        f"in auth chain {ch} resolved polymer: {tseq in auth_seq}; "
         f"label chain {ch} = auth chain {label_a}",
         flush=True,
     )
@@ -101,7 +115,8 @@ for pid, ch in TPL:
             )
             assert h.query_start_end == al.reference_span
             print(
-                f"[prep]   kalign: OK subject [{s0},{e0}) of {len(auth_seq)} resolved residues; query span {h.query_start_end}; "
+                f"[prep]   kalign: OK subject [{s0},{e0}) of {len(auth_seq)} "
+                f"resolved residues; query span {h.query_start_end}; "
                 f"aligned residues {len(h.indices_hit)}",
                 flush=True,
             )
@@ -113,12 +128,14 @@ for pid, ch in TPL:
                 raise
             a, b = map(int, m.groups())
             print(
-                f"[prep]   kalign: iter {it} range [{s0},{e0}) -> aligned hit idx {a}..{b}",
+                f"[prep]   kalign: iter {it} range [{s0},{e0}) "
+                f"-> aligned hit idx {a}..{b}",
                 flush=True,
             )
             s0, e0 = s0 + a, s0 + b + 1
     else:
-        raise SystemExit(f"{pid}_{ch}: no consistent subject range")
+        msg = f"{pid}_{ch}: no consistent subject range"
+        raise SystemExit(msg)
 
 for n in NS:
     ids = [chr(ord("A") + i) for i in range(n)]

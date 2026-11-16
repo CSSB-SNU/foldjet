@@ -1,14 +1,19 @@
 """The 5I28 benchmark, FoldForge side (protocol: docs/guides/BENCHMARK-5I28.md).
 
-One process per model: load the model once, then run n = 1, 2, 4, 8, 12, 16 identical 5I28 chains in ascending order. Every n is one
-``Predictor`` call with ``execution.benchmark_repeats`` warm repeats: the first forward of a size is cold, the median of the warm forwards
-is the number (``model_seconds_warm_median``; scope: one complete model forward, CUDA-synchronized, without featurization / loading / output
-decoding, see ``foldforge.models.execution.measured_forward``). Each cell is written as soon as it finishes (``cells/<model>_x<n>.json`` and a
-line in ``cells.jsonl``), so a run is resumable and an out-of-memory cell does not lose the earlier ones.
+One process per model: load the model once, then run n = 1, 2, 4, 8, 12, 16 identical
+5I28 chains in ascending order. Every n is one ``Predictor`` call with
+``execution.benchmark_repeats`` warm repeats: the first forward of a size is cold, the
+median of the warm forwards is the number (``model_seconds_warm_median``; scope: one
+complete model forward, CUDA-synchronized, without featurization / loading / output
+decoding, see ``foldforge.models.execution.measured_forward``). Each cell is written as
+soon as it finishes (``cells/<model>_x<n>.json`` and a line in ``cells.jsonl``), so a
+run is resumable and an out-of-memory cell does not lose the earlier ones.
 
 Environment (no paths in the code):
-  FOLDFORGE_5I28_FASTA        the 5I28 chain fasta (tests/release_references/inputs/5i28/A.fasta in the repository)
-  FOLDFORGE_5I28_MSA_DB       MSA LMDB with key P0113359 (a3m_16k.lmdb of BioMolDB_20260224)
+  FOLDFORGE_5I28_FASTA        the 5I28 chain fasta
+                              (tests/release_references/inputs/5i28/A.fasta in the repo)
+  FOLDFORGE_5I28_MSA_DB       MSA LMDB with key P0113359
+                              (a3m_16k.lmdb of BioMolDB_20260224)
   FOLDFORGE_5I28_TEMPLATE_DB  template LMDB with key P0113359
 Checkpoints come from FOLDFORGE_CHECKPOINT_DIR / the default checkpoint directory.
 """
@@ -35,9 +40,11 @@ KEY = "P0113359"
 TOKENS_PER_CHAIN = 128
 SIZES = (1, 2, 4, 8, 12, 16)
 
-#: model -> (recycles, template_n, extra config). Trunk passes are 4 everywhere, as the kits: ``recycles`` counts total passes except for
-#: AF3, which counts additional ones (3 -> 4 passes); ESMFold2's kit runs num_loops 3 = 4 steps. RoseTTAFold3 takes one coordinate set
-#: per chain (template_n 1) and its family turns input templates off by default: switched on here, as in the 2026-10-29 run.
+#: model -> (recycles, template_n, extra config). Trunk passes are 4 everywhere, as the
+#: kits: ``recycles`` counts total passes except for AF3, which counts additional ones
+#: (3 -> 4 passes); ESMFold2's kit runs num_loops 3 = 4 steps. RoseTTAFold3 takes one
+#: coordinate set per chain (template_n 1) and its family turns input templates off by
+#: default: switched on here, as in the 2026-10-29 run.
 MODELS: dict[str, tuple[int, int, dict]] = {
     "protenix1": (4, 4, {}),
     "protenix2": (4, 4, {}),
@@ -60,7 +67,10 @@ def letters(n: int) -> list[str]:
 
 
 def make_spec(n: int, template_n: int) -> dict:
-    """N identical 5I28 chains, the real MSA and the real templates of key P0113359 (``template_dedup`` stays at its default: 4 distinct)."""
+    """N identical 5I28 chains, the real MSA and the real templates of key P0113359.
+
+    ``template_dedup`` stays at its default: 4 distinct.
+    """
     fasta, msa_db, template_db = (
         os.environ[k]
         for k in (
@@ -93,9 +103,8 @@ def make_spec(n: int, template_n: int) -> dict:
 def make_config(recycles: int, extra: dict, repeats: int) -> dict:
     config = {
         "backend": "miniworld",
-        "precision": os.environ.get(
-            "FOLDFORGE_5I28_PRECISION", "bf16"
-        ),  # bf16 (the benchmark), af3_default | fp32 for precision checks
+        # bf16 (the benchmark), af3_default | fp32 for precision checks
+        "precision": os.environ.get("FOLDFORGE_5I28_PRECISION", "bf16"),
         "mode": "exact",
         "trunk_seed": 0,
         "diffusion_seed": 0,
@@ -123,31 +132,33 @@ def oom_of(error: BaseException) -> BaseException | None:
 
 
 def release_size_memory() -> tuple[int, int]:
-    """Drop what one size leaves on the GPU before the next: every captured CUDA graph (each keeps a private memory pool; the sizes run
-    once each, ascending, so none is replayed again) and the allocator's cached blocks. The compiled code and the weights stay.
-    Returns the reserved bytes before and after.
+    """Drop what one size leaves on the GPU before the next.
+
+    That is every captured CUDA graph (each keeps a private memory pool; the sizes run
+    once each, ascending, so none is replayed again) and the allocator's cached blocks.
+    The compiled code and the weights stay. Returns the reserved bytes before and after.
     """
     from foldforge.models.execution import ExecutedCallable
 
     try:
         from foldforge.models.sampler_graph import SamplerGraphCache
     except ImportError:  # a FoldForge without the per-shape sampler graph cache
-        SamplerGraphCache = ()
+        SamplerGraphCache = ()  # noqa: N806 - class alias fallback
 
     torch.cuda.synchronize()
     before = torch.cuda.memory_reserved()
     for item in gc.get_objects():
-        if (
-            type(item) is ExecutedCallable and item.graphs
-        ):  # type(), not isinstance: a dead weakref proxy raises on isinstance
+        # type(), not isinstance: a dead weakref proxy raises on isinstance
+        if type(item) is ExecutedCallable and item.graphs:
             item.graphs.clear()
             item.last_capture_bytes = 0
+        # the sampler graphs cached per shape (R26), with their static folds
         elif (
             SamplerGraphCache
             and type(item) is SamplerGraphCache
             and item.entries
             and not os.environ.get("FF_5I28_KEEP_SAMPLER_CACHE")
-        ):  # the sampler graphs cached per shape (R26), with their static folds
+        ):
             item.clear()
     gc.collect()
     torch.cuda.empty_cache()
@@ -156,8 +167,8 @@ def release_size_memory() -> tuple[int, int]:
 
 def git(*args: str) -> str:
     try:
-        return subprocess.run(
-            ["git", *args],
+        return subprocess.run(  # noqa: S603 - fixed git argv, no untrusted input
+            ["git", *args],  # noqa: S607 - git resolved from PATH on purpose
             cwd=Path(__file__).resolve().parent,
             capture_output=True,
             text=True,
@@ -185,7 +196,8 @@ def meta(model: str, config: dict) -> dict:
         "gpu": torch.cuda.get_device_name(0),
         "torch": torch.__version__,
         "miniworld_engine": version("miniworld-engine"),
-        "miniworld_engine_loaded_from": engine_modules.__file__,  # the installed version above can differ (PYTHONPATH)
+        # the installed version above can differ (PYTHONPATH)
+        "miniworld_engine_loaded_from": engine_modules.__file__,
         "miniworld_engine_kernels": version("miniworld-engine-kernels-sm90-cu129"),
         "foldforge_commit": git("rev-parse", "HEAD"),
         "foldforge_dirty": bool(git("status", "--porcelain", "--untracked-files=no")),
@@ -216,7 +228,11 @@ def main() -> int:
     parser.add_argument(
         "--retry-fragmented",
         action="store_true",
-        help="only the cells that failed with an out-of-memory error of the 'reserved but unallocated' kind (run with PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True: the last fallback)",
+        help=(
+            "only the cells that failed with an out-of-memory error of the "
+            "'reserved but unallocated' kind (run with "
+            "PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True: the last fallback)"
+        ),
     )
     args = parser.parse_args()
 
@@ -234,12 +250,12 @@ def main() -> int:
         if args.retry_fragmented:
             if previous and previous["status"] == "oom" and previous.get("fragmented"):
                 todo.append(n)
-        elif (
-            previous is None or previous["status"] == "failed"
-        ):  # ok and oom cells are final (a fragmented oom waits for --retry-fragmented)
+        # ok and oom cells are final (a fragmented oom waits for --retry-fragmented)
+        elif previous is None or previous["status"] == "failed":
             todo.append(n)
     print(
-        f"RUN model={args.model} sizes={todo} repeats={args.repeats} recycles={recycles}",
+        f"RUN model={args.model} sizes={todo} repeats={args.repeats} "
+        f"recycles={recycles}",
         flush=True,
     )
     if not todo:
@@ -285,8 +301,9 @@ def main() -> int:
             }
             if not oom:
                 cell["traceback"] = repr(error)[:600]
-            # The exception's traceback holds the failed forward's frames and every tensor they had: drop them, or the next
-            # size starts with the out-of-memory size's activations still allocated.
+            # The exception's traceback holds the failed forward's frames and every
+            # tensor they had: drop them, or the next size starts with the
+            # out-of-memory size's activations still allocated.
             traceback.clear_frames(error.__traceback__)
             error = oom = None
             result = None
@@ -296,16 +313,19 @@ def main() -> int:
             handle.write(json.dumps(cell) + "\n")
         warm = cell.get("model_seconds_warm_median")
         print(
-            f"CELL {args.model} n={n} status={cell['status']} warm_median={warm} warm={cell.get('model_seconds_warm')} "
-            f"cold={cell.get('model_seconds_cold')} compile={cell.get('compile')} wall={cell['wall_seconds']}s",
+            f"CELL {args.model} n={n} status={cell['status']} warm_median={warm} "
+            f"warm={cell.get('model_seconds_warm')} "
+            f"cold={cell.get('model_seconds_cold')} compile={cell.get('compile')} "
+            f"wall={cell['wall_seconds']}s",
             flush=True,
         )
         del result
-        before, after = (
-            release_size_memory()
-        )  # each size starts from the weights alone: no pools of the smaller sizes (OOM at n=16)
+        # each size starts from the weights alone: no pools of the smaller sizes
+        # (OOM at n=16)
+        before, after = release_size_memory()
         print(
-            f"FREE after n={n}: reserved {before / 2**30:.1f} -> {after / 2**30:.1f} GiB",
+            f"FREE after n={n}: reserved {before / 2**30:.1f} -> "
+            f"{after / 2**30:.1f} GiB",
             flush=True,
         )
     return 0

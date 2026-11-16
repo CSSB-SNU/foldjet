@@ -1,10 +1,15 @@
-# CPU featurisation probe with the kit's OWN alphafold3 package (the interpreter the kit featurises with) on the exact input JSON
-# the kit runs. Gives the MSA and template evidence the kit's run log does not print.
-# usage: <kit alphafold3 python> -I featprobe.py <input.json> <resolve_msa_overlaps 0|1> <kit tag>
-#   af3_jax  : af3_jax/venv/bin/python, resolve_msa_overlaps=1 (run_alphafold_fast.py flag default, used by the kit run)
-#   af3_torch: af3_torch/alphafold3_venv/bin/python, resolve_msa_overlaps=0 (af3_torch_opt/featurise.py featurise_one)
-# Prints one line: FEATPROBE kit=... msa_rows=<rows of the featurised msa with any unmasked position> tmpl_real_min=<real slots,
-# min over chains> tmpl_distinct_min=<distinct real slots by coordinates, min over chains> ...
+# CPU featurisation probe with the kit's OWN alphafold3 package (the interpreter the kit
+# featurises with) on the exact input JSON the kit runs. Gives the MSA and template
+# evidence the kit's run log does not print.
+# usage: <kit alphafold3 python> -I featprobe.py <input.json> <resolve_msa_overlaps 0|1>
+#        <kit tag>
+#   af3_jax  : af3_jax/venv/bin/python, resolve_msa_overlaps=1
+#              (run_alphafold_fast.py flag default, used by the kit run)
+#   af3_torch: af3_torch/alphafold3_venv/bin/python, resolve_msa_overlaps=0
+#              (af3_torch_opt/featurise.py featurise_one)
+# Prints one line: FEATPROBE kit=... msa_rows=<rows of the featurised msa with any
+# unmasked position> tmpl_real_min=<real slots, min over chains>
+# tmpl_distinct_min=<distinct real slots by coordinates, min over chains> ...
 import hashlib
 import json
 import os
@@ -20,12 +25,11 @@ from alphafold3.constants import chemical_components
 from alphafold3.data import featurisation
 
 src, resolve, kit = sys.argv[1], bool(int(sys.argv[2])), sys.argv[3]
-j = json.load(open(src))
-j["modelSeeds"] = j["modelSeeds"][
-    :1
-]  # rows/templates do not depend on the seed; one example is enough
+j = json.loads(pathlib.Path(src).read_text())
+# rows/templates do not depend on the seed; one example is enough
+j["modelSeeds"] = j["modelSeeds"][:1]
 tmp = (
-    pathlib.Path(os.environ.get("TMPDIR", "/tmp"))
+    pathlib.Path(os.environ.get("TMPDIR", "/tmp"))  # noqa: S108 - per-pid scratch file
     / f"featprobe_{kit}_{os.getpid()}.json"
 )
 tmp.write_text(json.dumps(j))
@@ -62,9 +66,12 @@ for c in chains:
     real.append(len(r))
     distinct.append(len(h))
 print(
-    f"FEATPROBE kit={kit} resolve_msa_overlaps={int(resolve)} chains={len(chains)} tokens={int(np.asarray(ex['seq_length']))} "
-    f"msa_shape={tuple(msa_mask.shape)} msa_rows={rows} msa_rows_in_first1024={first1024} tmpl_slots={am.shape[0]} "
-    f"tmpl_real_min={min(real)} tmpl_distinct_min={min(distinct)} atom_mask_sum={[int(am[s].sum()) for s in range(am.shape[0])]} "
+    f"FEATPROBE kit={kit} resolve_msa_overlaps={int(resolve)} chains={len(chains)} "
+    f"tokens={int(np.asarray(ex['seq_length']))} "
+    f"msa_shape={tuple(msa_mask.shape)} msa_rows={rows} "
+    f"msa_rows_in_first1024={first1024} tmpl_slots={am.shape[0]} "
+    f"tmpl_real_min={min(real)} tmpl_distinct_min={min(distinct)} "
+    f"atom_mask_sum={[int(am[s].sum()) for s in range(am.shape[0])]} "
     f"feat_s={feat_s:.1f}",
     flush=True,
 )
