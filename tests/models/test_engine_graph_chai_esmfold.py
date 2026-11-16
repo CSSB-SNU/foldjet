@@ -66,19 +66,37 @@ def randomise(model: torch.nn.Module, seed: int) -> None:
 def pair_of_models(request):
     """(dense model, engine model with the dense weights converted into it)."""
     family, mode = request.param
-    modules.OPM_COUNT_OFFSET = 1e-3  # AF3's exact divisor (the dense graph's), where the family divides at all
+    modules.OPM_COUNT_OFFSET = (
+        1e-3  # AF3's exact divisor (the dense graph's), where the family divides at all
+    )
     try:
-        dense = dense_model(small(family, mode), num_recycles=1, num_samples=1, diffusion_steps=1)
+        dense = dense_model(
+            small(family, mode), num_recycles=1, num_samples=1, diffusion_steps=1
+        )
         randomise(dense, 1)
-        if family == "chai1":  # the engine class holds ONE AdaLN for the atoms' queries and keys / values: the release ties them (the converter demands it)
+        if (
+            family == "chai1"
+        ):  # the engine class holds ONE AdaLN for the atoms' queries and keys / values: the release ties them (the converter demands it)
             parameters = dict(dense.named_parameters())
             with torch.no_grad():
                 for name, p in parameters.items():
                     if "k_adaptive_layernorm" in name:
-                        p.copy_(parameters[name.replace("k_adaptive_layernorm", "q_adaptive_layernorm")])
-        dense.diffusion_head.fourier_embeddings.register_buffer("weight", torch.randn(256))
-        dense.diffusion_head.fourier_embeddings.register_buffer("bias", torch.randn(256))
-        engine = AlphaFold3(num_recycles=1, num_samples=1, diffusion_steps=1, spec=small(family, mode))
+                        p.copy_(
+                            parameters[
+                                name.replace(
+                                    "k_adaptive_layernorm", "q_adaptive_layernorm"
+                                )
+                            ]
+                        )
+        dense.diffusion_head.fourier_embeddings.register_buffer(
+            "weight", torch.randn(256)
+        )
+        dense.diffusion_head.fourier_embeddings.register_buffer(
+            "bias", torch.randn(256)
+        )
+        engine = AlphaFold3(
+            num_recycles=1, num_samples=1, diffusion_steps=1, spec=small(family, mode)
+        )
     finally:
         modules.OPM_COUNT_OFFSET = None
     state = miniworld.convert_state(dense.state_dict(), engine)
@@ -106,21 +124,41 @@ def test_the_graph_holds_engine_classes_with_engine_keys(pair_of_models):
     assert "evoformer.trunk_pairformer.0.tri_multi_outgoing.to_left.weight" in keys
     assert "diffusion_head.transformer.blocks.1.attention.to_bias.weight" in keys
     assert "diffusion_head.pair_transition_0.squeeze.weight" in keys
-    assert not any("pair_logits_projection" in k or "pair_input_layer_norm" in k for k in keys if "diffusion_head.transformer" in k)
+    assert not any(
+        "pair_logits_projection" in k or "pair_input_layer_norm" in k
+        for k in keys
+        if "diffusion_head.transformer" in k
+    )
     decoder = engine.diffusion_head.atom_cross_att_decoder.atom_transformer_decoder
     if _is_chai(engine):
         assert isinstance(decoder, AtomDiTStack)
-        assert "confidence_head.confidence_pairformer.0.tri_atten_starting.to_out_t.weight" in keys  # the dual-output confidence attention
-        assert "evoformer.msa_stack.0.outer_product_mean.product_norm.weight" in keys  # grouped
+        assert (
+            "confidence_head.confidence_pairformer.0.tri_atten_starting.to_out_t.weight"
+            in keys
+        )  # the dual-output confidence attention
+        assert (
+            "evoformer.msa_stack.0.outer_product_mean.product_norm.weight" in keys
+        )  # grouped
         assert "evoformer.trunk_pairformer.0.single_attention.to_query.weight" in keys
-        assert "diffusion_head.transformer.blocks.0.attention.ada_ln_in.ln_cond.weight" not in keys  # the identity AdaLN has no cond norm
-        assert not any(k.endswith("attention.to_gate.weight") for k in keys if "diffusion_head.transformer" in k)  # no gating query
-        assert not any("ada_ln_kv" in k for k in keys if "atom_transformer" in k)  # one shared atom AdaLN
+        assert (
+            "diffusion_head.transformer.blocks.0.attention.ada_ln_in.ln_cond.weight"
+            not in keys
+        )  # the identity AdaLN has no cond norm
+        assert not any(
+            k.endswith("attention.to_gate.weight")
+            for k in keys
+            if "diffusion_head.transformer" in k
+        )  # no gating query
+        assert not any(
+            "ada_ln_kv" in k for k in keys if "atom_transformer" in k
+        )  # one shared atom AdaLN
     else:
         # engine 2.5.3+: the ESMFold2 atom block with the atom pair + rotary (AtomDiT("esmfold2_pair"), FoldForge R6) is the engine's
         assert isinstance(decoder, AtomDiTStack) and decoder.rotary
         assert type(decoder.blocks[0]).__name__ == "AtomDiTESMFold2Pair"
-        assert not any("single_attention" in k for k in keys if "trunk_pairformer" in k)  # pair-only trunk
+        assert not any(
+            "single_attention" in k for k in keys if "trunk_pairformer" in k
+        )  # pair-only trunk
 
 
 def _pair_inputs(length, d_pair, d_single, seed=0):
@@ -146,15 +184,31 @@ def test_trunk_block_matches_dense(pair_of_models):
     x = _pair_inputs(24, d_pair, engine.evoformer.seq_channel)
     with torch.no_grad():
         if engine.spec.trunk_single_track:
-            want_pair, want_single = dense.evoformer.trunk_pairformer[0](x["pair"], x["pair_mask"], x["single"].clone(), x["seq_mask"])
-            got_pair, got_single = graph.run_block(
-                engine.evoformer.trunk_pairformer[0], x["pair"], x["pair_mask"], x["single"].clone(), x["seq_mask"]
+            want_pair, want_single = dense.evoformer.trunk_pairformer[0](
+                x["pair"], x["pair_mask"], x["single"].clone(), x["seq_mask"]
             )
-            torch.testing.assert_close(_valid(got_single, x["seq_mask"]), _valid(want_single, x["seq_mask"]), **TOLERANCE)
+            got_pair, got_single = graph.run_block(
+                engine.evoformer.trunk_pairformer[0],
+                x["pair"],
+                x["pair_mask"],
+                x["single"].clone(),
+                x["seq_mask"],
+            )
+            torch.testing.assert_close(
+                _valid(got_single, x["seq_mask"]),
+                _valid(want_single, x["seq_mask"]),
+                **TOLERANCE,
+            )
         else:
-            want_pair = dense.evoformer.trunk_pairformer[0](x["pair"], pair_mask=x["pair_mask"])
-            got_pair = graph.run_block(engine.evoformer.trunk_pairformer[0], x["pair"], x["pair_mask"])
-    torch.testing.assert_close(_valid(got_pair, x["pair_mask"]), _valid(want_pair, x["pair_mask"]), **TOLERANCE)
+            want_pair = dense.evoformer.trunk_pairformer[0](
+                x["pair"], pair_mask=x["pair_mask"]
+            )
+            got_pair = graph.run_block(
+                engine.evoformer.trunk_pairformer[0], x["pair"], x["pair_mask"]
+            )
+    torch.testing.assert_close(
+        _valid(got_pair, x["pair_mask"]), _valid(want_pair, x["pair_mask"]), **TOLERANCE
+    )
 
 
 def test_chai_trunk_block_is_the_parallel_one(pair_of_models):
@@ -164,7 +218,10 @@ def test_chai_trunk_block_is_the_parallel_one(pair_of_models):
     block = engine.evoformer.trunk_pairformer[0]
     assert block.config.parallel and block.config.model == "chai1"
     assert block.config.single_gate_bias == 1.0
-    assert engine.confidence_head.confidence_pairformer[0].config.model == "chai1_confidence"
+    assert (
+        engine.confidence_head.confidence_pairformer[0].config.model
+        == "chai1_confidence"
+    )
 
 
 def test_pair_only_blocks_match_dense_and_take_a_batch_axis(pair_of_models):
@@ -172,16 +229,26 @@ def test_pair_only_blocks_match_dense_and_take_a_batch_axis(pair_of_models):
     for several slots."""
     dense, engine = pair_of_models
     if engine.evoformer.template_embedding is not None:
-        want_block = dense.evoformer.template_embedding.single_template_embedding.template_embedding_iteration[0]
-        got_block = engine.evoformer.template_embedding.single_template_embedding.template_embedding_iteration[0]
+        want_block = dense.evoformer.template_embedding.single_template_embedding.template_embedding_iteration[
+            0
+        ]
+        got_block = engine.evoformer.template_embedding.single_template_embedding.template_embedding_iteration[
+            0
+        ]
         width = 64
         assert got_block.supports_template_batch
     else:
-        want_block, got_block, width = dense.evoformer.lm_encoder[0], engine.evoformer.lm_encoder[0], engine.evoformer.pair_channel
+        want_block, got_block, width = (
+            dense.evoformer.lm_encoder[0],
+            engine.evoformer.lm_encoder[0],
+            engine.evoformer.pair_channel,
+        )
     x = _pair_inputs(20, width, 1)
     slots = torch.randn(3, 20, 20, width)
     with torch.no_grad():
-        want = torch.stack([want_block(slot, pair_mask=x["pair_mask"]) for slot in slots])
+        want = torch.stack(
+            [want_block(slot, pair_mask=x["pair_mask"]) for slot in slots]
+        )
         got = graph.run_block(got_block, slots, x["pair_mask"])
     assert got.shape == slots.shape
     torch.testing.assert_close(got[:, :-3, :-3], want[:, :-3, :-3], **TOLERANCE)
@@ -198,10 +265,17 @@ def test_confidence_block_takes_samples_in_one_call(pair_of_models):
     want_block = dense.confidence_head.confidence_pairformer[0]
     assert got_block.supports_sample_batch
     with torch.no_grad():
-        want = [want_block(pairs[i], x["pair_mask"], singles[i].clone(), x["seq_mask"]) for i in range(2)]
-        got_pair, got_single = graph.run_block(got_block, pairs, x["pair_mask"], singles.clone(), x["seq_mask"])
+        want = [
+            want_block(pairs[i], x["pair_mask"], singles[i].clone(), x["seq_mask"])
+            for i in range(2)
+        ]
+        got_pair, got_single = graph.run_block(
+            got_block, pairs, x["pair_mask"], singles.clone(), x["seq_mask"]
+        )
     for i in range(2):
-        torch.testing.assert_close(got_pair[i][:-3, :-3], want[i][0][:-3, :-3], **TOLERANCE)
+        torch.testing.assert_close(
+            got_pair[i][:-3, :-3], want[i][0][:-3, :-3], **TOLERANCE
+        )
         torch.testing.assert_close(got_single[i][:-3], want[i][1][:-3], **TOLERANCE)
 
 
@@ -218,10 +292,16 @@ def test_msa_block_matches_dense(pair_of_models):
     msa_mask = (torch.rand(6, 20, generator=generator) > 0.2).float() * x["seq_mask"]
     msa_mask[0] = x["seq_mask"]
     with torch.no_grad():
-        want_msa, want_pair = dense.evoformer.msa_stack[0](msa.clone(), x["pair"], msa_mask, x["pair_mask"])
-        got_msa, got_pair = engine.evoformer.msa_stack[0](msa.clone(), x["pair"], msa_mask, x["pair_mask"])
+        want_msa, want_pair = dense.evoformer.msa_stack[0](
+            msa.clone(), x["pair"], msa_mask, x["pair_mask"]
+        )
+        got_msa, got_pair = engine.evoformer.msa_stack[0](
+            msa.clone(), x["pair"], msa_mask, x["pair_mask"]
+        )
     torch.testing.assert_close(got_msa[:, :-3], want_msa[:, :-3], **TOLERANCE)
-    torch.testing.assert_close(_valid(got_pair, x["pair_mask"]), _valid(want_pair, x["pair_mask"]), **TOLERANCE)
+    torch.testing.assert_close(
+        _valid(got_pair, x["pair_mask"]), _valid(want_pair, x["pair_mask"]), **TOLERANCE
+    )
 
 
 def test_diffusion_transformer_and_conditioning_transitions_match_dense(pair_of_models):
@@ -236,7 +316,9 @@ def test_diffusion_transformer_and_conditioning_transitions_match_dense(pair_of_
     mask[-3:] = 0
     key_mask = (mask > 0)[None]
     with torch.no_grad():
-        want = dense.diffusion_head.transformer(act.clone(), mask, single, pair, key_mask=key_mask)
+        want = dense.diffusion_head.transformer(
+            act.clone(), mask, single, pair, key_mask=key_mask
+        )
         got = head.transformer(act.clone(), mask, single, pair, key_mask=key_mask)
         x = torch.randn(length, length, head.pair_channel, generator=generator)
         want_t = x + dense.diffusion_head.pair_transition_0(x)
@@ -254,7 +336,10 @@ def test_chai_adaln_epsilon_follows_the_mode(pair_of_models):
     exact = engine.spec.atom_key_window == "circular"  # the exact-mode spec
     want = 0.1 if exact else 1e-5
     assert engine.spec.adaptive_norm_eps == want
-    stacks = [engine.diffusion_head.transformer, engine.diffusion_head.atom_cross_att_decoder.atom_transformer_decoder]
+    stacks = [
+        engine.diffusion_head.transformer,
+        engine.diffusion_head.atom_cross_att_decoder.atom_transformer_decoder,
+    ]
     for stack in stacks:
         for block in stack.blocks:
             assert block.attention.ada_ln_in.ln_in.eps == want
@@ -285,14 +370,26 @@ def _atom_case(atoms: int, window: str, *, seed: int = 7):
     uid[:atoms] = torch.arange(atoms) // 24
     uid_q = uid.reshape(windows, 32)
     uid_k = atom_layout.convert(gather, uid_q, layout_axes=(-2, -1))
-    pair_mask = (uid_q[:, :, None] == uid_k[:, None, :]) & (queries_mask[:, :, None] > 0) & (keys_mask[:, None, :] > 0)
+    pair_mask = (
+        (uid_q[:, :, None] == uid_k[:, None, :])
+        & (queries_mask[:, :, None] > 0)
+        & (keys_mask[:, None, :] > 0)
+    )
     act = torch.randn(windows, 32, 128, generator=generator) * queries_mask[..., None]
     cond = torch.randn(windows, 32, 128, generator=generator)
     keys_cond = atom_layout.convert(gather, cond, layout_axes=(-3, -2))
     pair = torch.randn(windows, 32, 128, 16, generator=generator)
     return {
-        "act": act, "queries_mask": queries_mask, "gather": gather, "keys_mask": keys_mask, "cond": cond, "keys_cond": keys_cond,
-        "pair": pair, "pair_mask": pair_mask, "uid": uid[None], "mask": queries_mask,
+        "act": act,
+        "queries_mask": queries_mask,
+        "gather": gather,
+        "keys_mask": keys_mask,
+        "cond": cond,
+        "keys_cond": keys_cond,
+        "pair": pair,
+        "pair_mask": pair_mask,
+        "uid": uid[None],
+        "mask": queries_mask,
     }
 
 
@@ -300,10 +397,26 @@ def _run_atom_stacks(dense, engine, case):
     want_stack = dense.evoformer_conditioning.atom_transformer_encoder
     got_stack = engine.evoformer_conditioning.atom_transformer_encoder
     with torch.no_grad():
-        want = want_stack(case["act"].clone(), case["queries_mask"], case["gather"], case["keys_mask"], case["cond"], case["keys_cond"],
-                          case["pair"], pair_mask=case["pair_mask"])
-        got = got_stack(case["act"].clone(), case["queries_mask"], case["gather"], case["keys_mask"], case["cond"], case["keys_cond"],
-                        case["pair"], engine_inputs=(None, None, case["uid"]))
+        want = want_stack(
+            case["act"].clone(),
+            case["queries_mask"],
+            case["gather"],
+            case["keys_mask"],
+            case["cond"],
+            case["keys_cond"],
+            case["pair"],
+            pair_mask=case["pair_mask"],
+        )
+        got = got_stack(
+            case["act"].clone(),
+            case["queries_mask"],
+            case["gather"],
+            case["keys_mask"],
+            case["cond"],
+            case["keys_cond"],
+            case["pair"],
+            engine_inputs=(None, None, case["uid"]),
+        )
     mask = case["mask"][..., None]
     return got * mask, want * mask
 
@@ -319,7 +432,9 @@ def test_chai_atom_transformer_matches_dense(pair_of_models, atoms):
     torch.testing.assert_close(got, want, **TOLERANCE)
 
 
-def test_circular_key_window_is_the_padded_window_when_conformers_do_not_wrap(pair_of_models):
+def test_circular_key_window_is_the_padded_window_when_conformers_do_not_wrap(
+    pair_of_models,
+):
     """The engine removed Chai-1's ``circular`` key window (the exact mode wrapped the window modulo the real atom count): the exact mode
     now runs ``pad`` + the conformer ids. The two windows hold the same keys wherever a wrapped key would be masked anyway; the
     same-conformer mask masks it unless the conformer spans the wrap-around, which these 24-atom conformers do not. So here the exact
@@ -328,8 +443,13 @@ def test_circular_key_window_is_the_padded_window_when_conformers_do_not_wrap(pa
     dense, engine = pair_of_models
     if not _is_chai(engine) or engine.spec.atom_key_window != "circular":
         pytest.skip("Chai-1 exact mode")
-    assert engine_key_window("circular")[0] == "pad" and engine_key_window("circular")[1]
-    assert all(block.key_window == "pad" for block in engine.diffusion_head.atom_cross_att_decoder.atom_transformer_decoder.blocks)
+    assert (
+        engine_key_window("circular")[0] == "pad" and engine_key_window("circular")[1]
+    )
+    assert all(
+        block.key_window == "pad"
+        for block in engine.diffusion_head.atom_cross_att_decoder.atom_transformer_decoder.blocks
+    )
     got, want = _run_atom_stacks(dense, engine, _atom_case(200, "circular"))
     torch.testing.assert_close(got, want, **TOLERANCE)
 
@@ -340,17 +460,25 @@ def test_circular_key_window_differs_when_one_conformer_spans_the_ends(pair_of_m
     if not _is_chai(engine) or engine.spec.atom_key_window != "circular":
         pytest.skip("Chai-1 exact mode")
     case = _atom_case(200, "circular")
-    uid = torch.zeros(case["uid"].shape[-1], dtype=torch.int64)  # ONE conformer for every atom: every wrapped key is a same-conformer key
+    uid = torch.zeros(
+        case["uid"].shape[-1], dtype=torch.int64
+    )  # ONE conformer for every atom: every wrapped key is a same-conformer key
     uid_q = uid.reshape(case["act"].shape[0], 32)
     uid_k = atom_layout.convert(case["gather"], uid_q, layout_axes=(-2, -1))
-    case["pair_mask"] = (uid_q[:, :, None] == uid_k[:, None, :]) & (case["queries_mask"][:, :, None] > 0) & (case["keys_mask"][:, None, :] > 0)
+    case["pair_mask"] = (
+        (uid_q[:, :, None] == uid_k[:, None, :])
+        & (case["queries_mask"][:, :, None] > 0)
+        & (case["keys_mask"][:, None, :] > 0)
+    )
     case["uid"] = uid[None]
     got, want = _run_atom_stacks(dense, engine, case)
     assert (got - want).abs().max() > 1e-3
 
 
 # ------------------------------------------------------------------------------------------------------------------ the converter
-def test_the_converter_demands_every_released_key_is_read_or_a_known_discard(pair_of_models):
+def test_the_converter_demands_every_released_key_is_read_or_a_known_discard(
+    pair_of_models,
+):
     dense, engine = pair_of_models
     state = dict(dense.state_dict())
     state["evoformer.trunk_pairformer.0.surprise.weight"] = torch.zeros(1)
@@ -362,25 +490,46 @@ def test_the_converter_demands_every_released_key_is_read_or_a_known_discard(pai
         miniworld.convert_state(state, engine)
 
 
-def test_known_discards_are_the_softmax_invariant_offsets_and_the_shared_adaln(pair_of_models):
+def test_known_discards_are_the_softmax_invariant_offsets_and_the_shared_adaln(
+    pair_of_models,
+):
     from foldforge.models.checkpoints.legacy.released import is_discarded
 
     dense, engine = pair_of_models
     discarded = {k for k in dense.state_dict() if is_discarded(k)}
-    assert "confidence_head.confidence_pairformer.0.single_pair_logits_norm.bias" in discarded
+    assert (
+        "confidence_head.confidence_pairformer.0.single_pair_logits_norm.bias"
+        in discarded
+    )
     if _is_chai(engine):
         # Chai-1's atom blocks hold one AdaLN for queries and keys / values: the released K AdaLN is the discard
-        assert any("k_adaptive_layernorm" in k and "atom_transformer" in k for k in discarded)
+        assert any(
+            "k_adaptive_layernorm" in k and "atom_transformer" in k for k in discarded
+        )
     assert all(k.endswith(".bias") or "k_adaptive_layernorm" in k for k in discarded)
 
 
 def test_miniworld_file_round_trip(pair_of_models, tmp_path):
     dense, engine = pair_of_models
-    family, mode = dense.spec.family, "exact" if dense.spec.atom_key_window == "circular" else "fast"
+    family, mode = (
+        dense.spec.family,
+        "exact" if dense.spec.atom_key_window == "circular" else "fast",
+    )
     state = miniworld.convert_state(dense.state_dict(), engine)
     path = tmp_path / "x.miniworld.pt"
-    torch.save({"format": miniworld.FORMAT, "version": miniworld.VERSION, "family": family, "source": "t", "state_dict": state}, path)
-    fresh = AlphaFold3(num_recycles=1, num_samples=1, diffusion_steps=1, spec=small(family, mode))
+    torch.save(
+        {
+            "format": miniworld.FORMAT,
+            "version": miniworld.VERSION,
+            "family": family,
+            "source": "t",
+            "state_dict": state,
+        },
+        path,
+    )
+    fresh = AlphaFold3(
+        num_recycles=1, num_samples=1, diffusion_steps=1, spec=small(family, mode)
+    )
     report = miniworld.load_into(fresh, path, family=family)
     assert report["format_version"] == miniworld.VERSION
     for key, value in engine.state_dict().items():

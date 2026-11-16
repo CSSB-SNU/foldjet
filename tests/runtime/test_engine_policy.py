@@ -22,14 +22,20 @@ def test_a_refused_call_runs_the_pytorch_backend_and_logs_once(caplog):
     layer = modules.transition(16, 2)
     x = torch.randn(1, 4, 16)
     expected = layer(x)
-    layer.set_backend(_kernel_backend(layer))  # CPU tensors: the kernel backends refuse them
+    layer.set_backend(
+        _kernel_backend(layer)
+    )  # CPU tensors: the kernel backends refuse them
     policy.guard(layer, "fallback")
     with caplog.at_level(logging.WARNING, logger="foldforge.backend"):
         first, second = layer(x), layer(x)
     torch.testing.assert_close(first, expected)
     torch.testing.assert_close(second, expected)
-    assert layer.backend == _kernel_backend(layer)  # the chosen backend is restored after the call
-    assert sum("refuses a call" in record.getMessage() for record in caplog.records) == 1
+    assert layer.backend == _kernel_backend(
+        layer
+    )  # the chosen backend is restored after the call
+    assert (
+        sum("refuses a call" in record.getMessage() for record in caplog.records) == 1
+    )
 
 
 def test_the_error_policy_raises_the_engine_reason():
@@ -48,7 +54,9 @@ def test_the_plan_gives_each_op_module_a_backend_and_keeps_composites_on_pytorch
     plan = BackendPlan.make("miniworld", None, "fallback")
     report = policy.apply_plan(model, plan, torch.device("cpu"))
     assert set(report) == {"block", "norm"}  # only engine op modules are in the plan
-    assert {entry["backend"] for entry in report.values()} == {"pytorch"}  # no CUDA device: nothing kernel-served
+    assert {entry["backend"] for entry in report.values()} == {
+        "pytorch"
+    }  # no CUDA device: nothing kernel-served
     assert report["block"]["op"] == "transition"
 
 
@@ -56,11 +64,24 @@ def test_the_pairformer_block_stays_on_pytorch_and_its_children_are_planned_alon
     from foldforge.modules.engine.pairformer import pairformer_block
 
     model = nn.Module()
-    model.block = pairformer_block(d_pair=16, triangle_model="af3", d_single=32, n_head_single=2, n_head_tri_attention=2,
-                                   d_hidden_tri_attention=8)
-    report = policy.apply_plan(model, BackendPlan.make("pytorch", None, "fallback"), torch.device("cpu"))
+    model.block = pairformer_block(
+        d_pair=16,
+        triangle_model="af3",
+        d_single=32,
+        n_head_single=2,
+        n_head_tri_attention=2,
+        d_hidden_tri_attention=8,
+    )
+    report = policy.apply_plan(
+        model, BackendPlan.make("pytorch", None, "fallback"), torch.device("cpu")
+    )
     assert model.block.backend == "pytorch"
-    assert {"block.tri_multi_outgoing", "block.tri_atten_ending", "block.transition_pair", "block.single_attention"} <= set(report)
+    assert {
+        "block.tri_multi_outgoing",
+        "block.tri_atten_ending",
+        "block.transition_pair",
+        "block.single_attention",
+    } <= set(report)
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA required")
@@ -71,7 +92,9 @@ def test_the_token_dit_stack_graph_replays_the_eager_result(compile_):
     from foldforge.modules.engine.transformers import token_dit_stack
 
     torch.manual_seed(7)
-    stack = token_dit_stack("alphafold3", n_blocks=4, d_single=768, d_cond=384, d_pair=128, n_head=16)
+    stack = token_dit_stack(
+        "alphafold3", n_blocks=4, d_single=768, d_cond=384, d_pair=128, n_head=16
+    )
     with torch.no_grad():
         for name, p in stack.named_parameters():
             if p.ndim > 1:
@@ -81,7 +104,9 @@ def test_the_token_dit_stack_graph_replays_the_eager_result(compile_):
             else:
                 p.zero_()
     stack = configure_model(stack, "miniworld", torch.bfloat16, "cuda")
-    policy.apply_plan(stack, BackendPlan.make("miniworld", None, "fallback"), torch.device("cuda"))
+    policy.apply_plan(
+        stack, BackendPlan.make("miniworld", None, "fallback"), torch.device("cuda")
+    )
     length = 256
     act = torch.randn(2, length, 768, device="cuda", dtype=torch.bfloat16)
     single = torch.randn(2, length, 384, device="cuda", dtype=torch.bfloat16)

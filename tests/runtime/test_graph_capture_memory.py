@@ -24,7 +24,9 @@ def test_an_out_of_memory_capture_stays_an_out_of_memory_error(monkeypatch):
     monkeypatch.setattr(ExecutedCallable, "_make_room", lambda self: None)
     graphed = _callable()
     with torch.no_grad(), pytest.raises(torch.OutOfMemoryError) as caught:
-        graphed(torch.ones(4, dtype=torch.int64))  # a small integer CPU tensor is the one CPU input a graph signature accepts
+        graphed(
+            torch.ones(4, dtype=torch.int64)
+        )  # a small integer CPU tensor is the one CPU input a graph signature accepts
     assert "test.site" in str(caught.value)
     assert isinstance(caught.value.__cause__, torch.OutOfMemoryError)
 
@@ -38,7 +40,10 @@ def test_another_capture_failure_is_still_a_runtime_error(monkeypatch):
     monkeypatch.setattr(torch.cuda, "memory_reserved", lambda *a, **k: 0)
     monkeypatch.setattr(ExecutedCallable, "_make_room", lambda self: None)
     graphed = _callable()
-    with torch.no_grad(), pytest.raises(RuntimeError, match="capture failed at test.site"):
+    with (
+        torch.no_grad(),
+        pytest.raises(RuntimeError, match="capture failed at test.site"),
+    ):
         graphed(torch.ones(4, dtype=torch.int64))
 
 
@@ -53,7 +58,9 @@ def test_make_room_drops_the_oldest_graphs_until_enough_memory_is_free(monkeypat
         return free["value"], 1000
 
     def empty_cache():
-        free["value"] += 80  # every dropped graph frees 80 bytes (empty_cache runs after each pop)
+        free["value"] += (
+            80  # every dropped graph frees 80 bytes (empty_cache runs after each pop)
+        )
 
     monkeypatch.setattr(torch.cuda, "mem_get_info", mem_get_info)
     monkeypatch.setattr(torch.cuda, "synchronize", lambda *a, **k: None)
@@ -63,7 +70,9 @@ def test_make_room_drops_the_oldest_graphs_until_enough_memory_is_free(monkeypat
     assert graphed.evictions == 2
 
 
-def test_make_room_does_nothing_before_the_first_capture_or_with_enough_memory(monkeypatch):
+def test_make_room_does_nothing_before_the_first_capture_or_with_enough_memory(
+    monkeypatch,
+):
     graphed = _callable()
     monkeypatch.setattr(torch.cuda, "mem_get_info", lambda *a, **k: (0, 1000))
     graphed._make_room()  # noqa: SLF001 - no graphs, no capture size yet
@@ -84,7 +93,9 @@ def test_flatten_leaves_no_reference_cycle_holding_the_graph_inputs():
     gc.collect()
     gc.disable()
     try:
-        tensor = torch.empty(4, device="meta")  # not a CPU tensor: `_flatten` keeps it as a graph input (CPU integer metadata is inlined)
+        tensor = torch.empty(
+            4, device="meta"
+        )  # not a CPU tensor: `_flatten` keeps it as a graph input (CPU integer metadata is inlined)
         alive = weakref.ref(tensor)
         signature, tensors = execution._flatten({"a": [tensor], "b": (None, 1)})
         assert len(tensors) == 1 and tensors[0] is tensor

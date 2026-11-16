@@ -25,7 +25,12 @@ def _stack(blocks: int = 3):
 
 
 def _inputs(dtype=torch.float32):
-    return (torch.randn(2, 5, 4).to(dtype), torch.ones(5), torch.randn(5, 4).to(dtype), torch.randn(5, 5, 6).to(dtype))
+    return (
+        torch.randn(2, 5, 4).to(dtype),
+        torch.ones(5),
+        torch.randn(5, 4).to(dtype),
+        torch.randn(5, 5, 6).to(dtype),
+    )
 
 
 def test_fp32_inputs_are_cast_once_under_autocast_and_the_output_keeps_the_input_dtype():
@@ -35,7 +40,9 @@ def test_fp32_inputs_are_cast_once_under_autocast_and_the_output_keeps_the_input
         out = stack(act, mask, single, pair)
     assert all(t.dtype is torch.bfloat16 for call in calls for t in call)
     assert out.dtype is torch.float32
-    torch.testing.assert_close(out, (act.to(torch.bfloat16) + 1 + 1 + 1).float(), rtol=0, atol=0)
+    torch.testing.assert_close(
+        out, (act.to(torch.bfloat16) + 1 + 1 + 1).float(), rtol=0, atol=0
+    )
 
 
 def test_the_pair_is_one_tensor_object_across_blocks_and_steps_and_follows_a_new_fold():
@@ -47,12 +54,16 @@ def test_the_pair_is_one_tensor_object_across_blocks_and_steps_and_follows_a_new
         assert len({id(call[2]) for call in calls}) == 1
         stack(act, mask, single, pair.clone())  # the next fold
         assert calls[-1][2] is not calls[0][2]
-        stack(act, mask, single, pair)  # in-place edit of the source invalidates the cached cast
+        stack(
+            act, mask, single, pair
+        )  # in-place edit of the source invalidates the cached cast
         before = calls[-1][2]
         pair.add_(1)
         stack(act, mask, single, pair)
         assert calls[-1][2] is not before
-        torch.testing.assert_close(calls[-1][2][0].float(), pair.to(torch.bfloat16).float(), rtol=0, atol=0)
+        torch.testing.assert_close(
+            calls[-1][2][0].float(), pair.to(torch.bfloat16).float(), rtol=0, atol=0
+        )
 
 
 def test_bf16_inputs_and_fp32_precision_pass_through_unchanged():
@@ -61,8 +72,12 @@ def test_bf16_inputs_and_fp32_precision_pass_through_unchanged():
     with torch.autocast("cpu", dtype=torch.bfloat16):
         out = stack(act, mask, single, pair)
     assert out.dtype is torch.bfloat16
-    assert calls[0][0].untyped_storage().data_ptr() == act.untyped_storage().data_ptr()  # no copy of a bf16 activation
-    assert calls[0][2].untyped_storage().data_ptr() == pair.untyped_storage().data_ptr()  # no copy of a bf16 pair
+    assert (
+        calls[0][0].untyped_storage().data_ptr() == act.untyped_storage().data_ptr()
+    )  # no copy of a bf16 activation
+    assert (
+        calls[0][2].untyped_storage().data_ptr() == pair.untyped_storage().data_ptr()
+    )  # no copy of a bf16 pair
     stack, calls = _stack(2)
     act, mask, single, pair = _inputs()  # no autocast (fp32 precision): fp32 stays fp32
     out = stack(act, mask, single, pair)

@@ -168,6 +168,7 @@ class PairformerBlock(nn.Module):
 
         Returns:
             tuple[torch.Tensor, Optional[torch.Tensor]]: pair, single
+
         """
         if self.parallel:
             # The fused residual helpers below add into the running activation,

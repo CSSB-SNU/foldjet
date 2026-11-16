@@ -53,6 +53,10 @@ def pairformer_block(
     block = PairformerBlock(config)
     if rf3_plain:
         hidden = config.d_hidden_tri_multi
-        block.tri_multi_outgoing = triangle_multiplication(d_pair, outgoing=True, d_hidden=hidden, precision=precision)
-        block.tri_multi_incoming = triangle_multiplication(d_pair, outgoing=False, d_hidden=hidden, precision=precision)
+        block.tri_multi_outgoing = triangle_multiplication(
+            d_pair, outgoing=True, d_hidden=hidden, precision=precision
+        )
+        block.tri_multi_incoming = triangle_multiplication(
+            d_pair, outgoing=False, d_hidden=hidden, precision=precision
+        )
     return finish(block, precision, norm_eps=norm_eps)

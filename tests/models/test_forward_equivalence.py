@@ -2,7 +2,7 @@ from support import REFERENCE_ROOT, production_module
 
 """Independent released-code comparisons for the second unification pass."""
 
-# ruff: noqa: SLF001 - lazy model imports and explicit module-state checks
+
 import __future__
 
 import ast
@@ -15,11 +15,11 @@ from pathlib import Path
 import pytest
 import torch
 
+from foldforge.models.checkpoints.legacy import _DenseBlocks
 from foldforge.models.checkpoints.legacy.reference.attention import (
     dot_product_attention,
 )
 from foldforge.models.checkpoints.legacy.reference.composition import msa_row_update
-from foldforge.models.checkpoints.legacy import _DenseBlocks
 from foldforge.modules.engine import graph as engine_graph
 from foldforge.modules.engine.configure import activation_autocast, configure_model
 
@@ -169,7 +169,9 @@ def test_template_aggregation_and_masked_pair_stack(count):
     torch.manual_seed(57)
     oldmod = original_module("af3", "nn/template.py")
     newmod = production_module("af3", "nn/template.py")
-    with engine_graph.use_dense_blocks(_DenseBlocks()):  # the released-layout template stack (the runtime one is engine blocks)
+    with engine_graph.use_dense_blocks(
+        _DenseBlocks()
+    ):  # the released-layout template stack (the runtime one is engine blocks)
         old = randomize(oldmod.TemplateEmbedding())
         new = newmod.TemplateEmbedding()
     new.load_state_dict(old.state_dict(), strict=True)

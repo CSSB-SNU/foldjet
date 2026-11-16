@@ -33,18 +33,39 @@ BACKENDS = ("miniworld", "cuequivariance", *ENGINE_BACKENDS)
 
 #: op -> the engine classes (by name, in ``miniworld_engine.modules``) that carry it. The keys are the names ``engine.ops`` takes.
 OP_CLASSES: dict[str, tuple[str, ...]] = {
-    "trimul": ("TriangleMultiplication", "TriangleMultiplicationRF3", "BidirectionalTriangleMultiplication"),
-    "triangle_attention": ("TriangleAttention", "TriangleAttentionAF3", "TriangleAttentionRF3", "TriangleAttentionChai1",
-                           "TriangleAttentionChai1Confidence"),
+    "trimul": (
+        "TriangleMultiplication",
+        "TriangleMultiplicationRF3",
+        "BidirectionalTriangleMultiplication",
+    ),
+    "triangle_attention": (
+        "TriangleAttention",
+        "TriangleAttentionAF3",
+        "TriangleAttentionRF3",
+        "TriangleAttentionChai1",
+        "TriangleAttentionChai1Confidence",
+    ),
     "opm": ("OuterProductMean",),
     "msa_pwa": ("MSAPairWeightedAveraging",),
     "single_attention": ("AttentionPairBias",),
     "transition": ("Transition",),
     "layernorm": ("LayerNorm",),
-    "conditioning": ("ConditionedTransition", "AdaptiveLayerNorm", "IdentityAdaptiveLayerNorm", "AdaptiveRMSNorm"),
+    "conditioning": (
+        "ConditionedTransition",
+        "AdaptiveLayerNorm",
+        "IdentityAdaptiveLayerNorm",
+        "AdaptiveRMSNorm",
+    ),
     "dit_blocks": ("TokenDiTProtenix", "TokenDiTMiniWorldBiasOnly"),
-    "atom_blocks": ("AtomDiTProtenix", "AtomDiTOpenFold3", "AtomDiTBoltz2", "AtomDiTRoseTTAFold3", "AtomDiTChai1", "AtomDiTMiniWorld",
-                    "AtomDiTESMFold2Pair"),
+    "atom_blocks": (
+        "AtomDiTProtenix",
+        "AtomDiTOpenFold3",
+        "AtomDiTBoltz2",
+        "AtomDiTRoseTTAFold3",
+        "AtomDiTChai1",
+        "AtomDiTMiniWorld",
+        "AtomDiTESMFold2Pair",
+    ),
     "sampler_ops": ("AugmentNoise", "AlignEuler", "PoolAtoms"),
 }
 OPS = tuple(OP_CLASSES)
@@ -61,7 +82,9 @@ def op_classes(op: str) -> tuple[type, ...]:
     """The engine classes of ``op`` (imports the engine)."""
     import miniworld_engine.modules as modules
 
-    return tuple(getattr(modules, name) for name in OP_CLASSES[op] if hasattr(modules, name))  # a class newer than the engine is skipped
+    return tuple(
+        getattr(modules, name) for name in OP_CLASSES[op] if hasattr(modules, name)
+    )  # a class newer than the engine is skipped
 
 
 def op_of(module: object) -> str | None:
@@ -76,7 +99,13 @@ def serves(op: str) -> tuple[str, ...]:
     """The backends some class of ``op`` has, in the policy's names (``miniworld`` when any class has ``cuda`` or ``triton``)."""
     have = {b for cls in op_classes(op) for b in cls.backends}
     named = [b for b in ENGINE_BACKENDS if b in have]
-    return tuple([*(["miniworld"] if have & {"cuda", "triton"} else []), *named, *(["cuequivariance"] if "cueq" in have else [])])
+    return tuple(
+        [
+            *(["miniworld"] if have & {"cuda", "triton"} else []),
+            *named,
+            *(["cuequivariance"] if "cueq" in have else []),
+        ]
+    )
 
 
 def __getattr__(name: str) -> object:
@@ -109,7 +138,9 @@ def capability(device: object | None) -> tuple[int, int] | None:
     return torch.cuda.get_device_capability(index)
 
 
-def choose_backend(requested: str, cls: type, device: object | None = None) -> tuple[str, str | None]:
+def choose_backend(
+    requested: str, cls: type, device: object | None = None
+) -> tuple[str, str | None]:
     """``(backend, reason)`` of one engine class: the backend it runs under ``requested`` and, when that is not what was asked for, why.
 
     ``miniworld`` is the policy of the engine's own kernels: ``cuda`` where the class has it and the card is an H100, else ``triton`` where
@@ -128,7 +159,10 @@ def choose_backend(requested: str, cls: type, device: object | None = None) -> t
     if name == "pytorch":
         return "pytorch", None
     if name not in have:
-        return "pytorch", f"{cls.__name__} has no {name!r} backend (available: {', '.join(have)})"
+        return (
+            "pytorch",
+            f"{cls.__name__} has no {name!r} backend (available: {', '.join(have)})",
+        )
     if name == "cuda" and cc != _H100:
         return "pytorch", "the cuda backend is H100 only (sm_90)"
     if name in ("cuda", "triton") and cc is None:
@@ -153,16 +187,25 @@ class BackendPlan:
     backend: str = "miniworld"
     ops: tuple[tuple[str, str], ...] = ()
     unsupported: str = "fallback"
-    resolved: dict[str, Resolved] = field(default_factory=dict, compare=False, hash=False)
+    resolved: dict[str, Resolved] = field(
+        default_factory=dict, compare=False, hash=False
+    )
 
     @classmethod
-    def make(cls, backend: str = "miniworld", ops: Mapping[str, str] | None = None, unsupported: str = "fallback") -> BackendPlan:
+    def make(
+        cls,
+        backend: str = "miniworld",
+        ops: Mapping[str, str] | None = None,
+        unsupported: str = "fallback",
+    ) -> BackendPlan:
         """A plan; ``backend`` and ``ops`` are validated here."""
         if backend not in BACKENDS:
             message = f"Unknown backend: {backend}"
             raise ValueError(message)
         if unsupported not in UNSUPPORTED:
-            message = f"engine.unsupported must be one of {UNSUPPORTED}, got {unsupported!r}"
+            message = (
+                f"engine.unsupported must be one of {UNSUPPORTED}, got {unsupported!r}"
+            )
             raise ValueError(message)
         return cls(backend, tuple(sorted(validate_ops(ops or {}).items())), unsupported)
 
@@ -178,9 +221,14 @@ class BackendPlan:
     def uses(self, *backends: str) -> bool:
         """Whether any op is asked to run on one of ``backends`` (policy or engine names)."""
         names = {ALIASES.get(b, b) or b for b in backends} | set(backends)
-        return any(self.requested(op) in names or ALIASES.get(self.requested(op)) in names for op in OPS)
+        return any(
+            self.requested(op) in names or ALIASES.get(self.requested(op)) in names
+            for op in OPS
+        )
 
-    def for_class(self, cls: type, device: object | None = None) -> tuple[str, str | None]:
+    def for_class(
+        self, cls: type, device: object | None = None
+    ) -> tuple[str, str | None]:
         """:func:`choose_backend` for ``cls`` under this plan's request for its op."""
         op = next(op for op in OPS if issubclass(cls, op_classes(op)))
         return choose_backend(self.requested(op), cls, device)
@@ -207,7 +255,11 @@ class BackendPlan:
             raise BackendUnsupportedError(message)
         if missing:
             lines = "; ".join(f"{r.op} ({r.requested}: {r.reason})" for r in missing)
-            logger.warning("backend %s: running the engine pytorch backend for %s", self.backend, lines)
+            logger.warning(
+                "backend %s: running the engine pytorch backend for %s",
+                self.backend,
+                lines,
+            )
         return self
 
     def report(self) -> dict[str, object]:
@@ -215,6 +267,10 @@ class BackendPlan:
         return {
             "backend": self.backend,
             "ops": {op: r.backend for op, r in self.resolved.items()},
-            "fallbacks": {op: f"{r.requested}: {r.reason}" for op, r in self.resolved.items() if r.reason is not None},
+            "fallbacks": {
+                op: f"{r.requested}: {r.reason}"
+                for op, r in self.resolved.items()
+                if r.reason is not None
+            },
             "unsupported": self.unsupported,
         }

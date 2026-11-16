@@ -65,9 +65,13 @@ MODEL_KEYS: dict[str, ModelKeys] = {
     "alphafold3": ModelKeys("af3", "af3", "af3"),
     "intellifold2": ModelKeys("intellifold2", "intellifold2", "intellifold2"),
     "openbind0": ModelKeys("openfold3", "openfold3", "openfold3"),
-    "openfold3": ModelKeys("openfold3_preview2", "openfold3_preview2", "openfold3_preview2"),
+    "openfold3": ModelKeys(
+        "openfold3_preview2", "openfold3_preview2", "openfold3_preview2"
+    ),
     "protenix1": ModelKeys("protenix", "protenix", "protenix"),
-    "protenix2": ModelKeys("protenix", "protenix_v2", "protenix_v2"),  # triangle map has no ``protenix_v2``
+    "protenix2": ModelKeys(
+        "protenix", "protenix_v2", "protenix_v2"
+    ),  # triangle map has no ``protenix_v2``
     "opendde": ModelKeys("opendde", "opendde", "opendde"),
     "boltz2": ModelKeys("boltz2", "boltz2", "boltz2"),
     "rosettafold3": ModelKeys("rf3", "rosettafold3", "rosettafold3"),
@@ -91,7 +95,9 @@ def model_keys(family: str) -> ModelKeys:
         keys = MODEL_KEYS[family]
     except KeyError:
         known = ", ".join(sorted(MODEL_KEYS))
-        raise ValueError(f"no engine selector keys for family {family!r}; known: {known}") from None
+        raise ValueError(
+            f"no engine selector keys for family {family!r}; known: {known}"
+        ) from None
     if keys.atom_dit is not None and not engine_has_atom_dit(keys.atom_dit):
         return replace(keys, atom_dit=None)
     return keys
@@ -106,7 +112,9 @@ def set_norm_eps(module: nn.Module, eps: float) -> None:
 
 
 # -------------------------------------------------------------------------------------------------------------------- precision
-def finish(module: nn.Module, precision: Precision = "master", *, norm_eps: float | None = None) -> nn.Module:
+def finish(
+    module: nn.Module, precision: Precision = "master", *, norm_eps: float | None = None
+) -> nn.Module:
     """Give a freshly built engine module FoldForge's parameter dtype: ``master`` pins fp32 masters (``set_master_weights``; a module
     without the mixin is plain fp32, its norms already fp32-pinned), ``fp32`` is plain fp32. ``norm_eps`` sets the eps of the LayerNorms
     that still have the default (a family whose released norms differ)."""
@@ -123,7 +131,11 @@ def finish(module: nn.Module, precision: Precision = "master", *, norm_eps: floa
 
 # -------------------------------------------------------------------------------------------------------------------- pair-track ops
 def transition(
-    d_hidden: int, n: int = 4, *, precision: Precision = "master", norm_eps: float | None = None
+    d_hidden: int,
+    n: int = 4,
+    *,
+    precision: Precision = "master",
+    norm_eps: float | None = None,
 ) -> Transition:
     """``Transition`` (residual included): pair, single, MSA and template transitions of every family."""
     return finish(Transition(d_hidden, n), precision, norm_eps=norm_eps)
@@ -142,7 +154,11 @@ def triangle_multiplication(
     contraction divided by the real length); its fast mode and every other family build the plain class. ``d_hidden``: a stack that widens
     only its projections (the protenix1 template: hidden 128 on pair 64)."""
     module = TriangleMultiplication(
-        d_pair, d_hidden=d_hidden, outgoing=outgoing, p_drop=0.0, model="rf3" if divide_by_length else None
+        d_pair,
+        d_hidden=d_hidden,
+        outgoing=outgoing,
+        p_drop=0.0,
+        model="rf3" if divide_by_length else None,
     )
     return finish(module, precision, norm_eps=norm_eps)
 
@@ -159,7 +175,9 @@ def triangle_attention(
 ) -> nn.Module:
     """``TriangleAttention(model=...)`` (residual included); ``model`` is a ``ModelKeys.triangle`` / ``.confidence`` key. ``d_hidden`` is
     the TOTAL hidden width (heads may span more than the pair: the template stacks, pair 64 with 4 x 32)."""
-    module = TriangleAttention(d_pair, n_head, d_hidden=d_hidden, starting=starting, p_drop=0.0, model=model)
+    module = TriangleAttention(
+        d_pair, n_head, d_hidden=d_hidden, starting=starting, p_drop=0.0, model=model
+    )
     return finish(module, precision, norm_eps=norm_eps)
 
 
@@ -180,21 +198,41 @@ def outer_product_mean(
     ``projection_bias`` RoseTTAFold3's, ``groups`` Chai-1's. ``count_offset`` (AF3's ``n + 1e-3`` divisor) is served by the pytorch backend
     only: the default ``None`` is the engine's ``clamp(n, 1)`` divisor the kernels serve (see ``docs/ENGINE-UNSUPPORTED.md``)."""
     module = OuterProductMean(
-        d_msa, d_pair, d_hidden, normalize_before_proj=normalize_before_proj, projection_bias=projection_bias, groups=groups,
-        product_norm_eps=product_norm_eps, count_offset=count_offset,
+        d_msa,
+        d_pair,
+        d_hidden,
+        normalize_before_proj=normalize_before_proj,
+        projection_bias=projection_bias,
+        groups=groups,
+        product_norm_eps=product_norm_eps,
+        count_offset=count_offset,
     )
     return finish(module, precision, norm_eps=norm_eps)
 
 
 def msa_pair_weighted_averaging(
-    d_msa: int, d_pair: int, n_head: int = 8, d_hidden: int | None = None, *, precision: Precision = "master", norm_eps: float | None = None
+    d_msa: int,
+    d_pair: int,
+    n_head: int = 8,
+    d_hidden: int | None = None,
+    *,
+    precision: Precision = "master",
+    norm_eps: float | None = None,
 ) -> MSAPairWeightedAveraging:
     """``MSAPairWeightedAveraging`` (residual included)."""
-    return finish(MSAPairWeightedAveraging(d_msa, d_pair, n_head, d_hidden, p_drop=0.0), precision, norm_eps=norm_eps)
+    return finish(
+        MSAPairWeightedAveraging(d_msa, d_pair, n_head, d_hidden, p_drop=0.0),
+        precision,
+        norm_eps=norm_eps,
+    )
 
 
 def layer_norm(
-    d: int | tuple[int, ...], *, eps: float = 1e-5, bias: bool = True, elementwise_affine: bool = True
+    d: int | tuple[int, ...],
+    *,
+    eps: float = 1e-5,
+    bias: bool = True,
+    elementwise_affine: bool = True,
 ) -> LayerNorm:
     """The engine ``LayerNorm`` (fp32 affine under any cast)."""
     return LayerNorm(d, eps=eps, bias=bias, elementwise_affine=elementwise_affine)

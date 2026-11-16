@@ -133,8 +133,10 @@ class GridSelfAttention(nn.Module):
 
             pair (torch.Tensor): [N_token, N_token, c_pair]
             mask (torch.Tensor): [N_token, N_token]
+
         Returns:
             torch.Tensor: [N_token, N_token, c_pair]
+
         """
         pair = self.act_norm(pair)
         nonbatched_bias = self.pair_bias_projection(pair).permute(2, 0, 1)

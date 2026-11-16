@@ -47,7 +47,9 @@ def _gather(slot: int = 4) -> GatherInfo:
     """Pseudo-beta = slot ``slot`` (CB for an alanine) of every token."""
     idx = torch.arange(RES) * ATOMS + slot
     return GatherInfo(
-        gather_idxs=idx, gather_mask=torch.ones(RES, dtype=torch.bool), input_shape=(RES, ATOMS)
+        gather_idxs=idx,
+        gather_mask=torch.ones(RES, dtype=torch.bool),
+        input_shape=(RES, ATOMS),
     )
 
 
@@ -57,7 +59,9 @@ def _structure(seed: int = 0) -> torch.Tensor:
 
 
 def _rigid(x: torch.Tensor) -> torch.Tensor:
-    q, _ = torch.linalg.qr(torch.randn(3, 3, generator=torch.Generator().manual_seed(7)))
+    q, _ = torch.linalg.qr(
+        torch.randn(3, 3, generator=torch.Generator().manual_seed(7))
+    )
     if torch.det(q) < 0:
         q[:, 0] = -q[:, 0]
     return x @ q.T + torch.tensor([3.0, -2.0, 5.0])
@@ -96,7 +100,9 @@ def test_a_perfect_structure_has_top_lddt_and_zero_errors():
     assert (plddt == 49).all(), "lDDT 1.0 is the last of the 50 bins"
     assert (targets["pde"][0] == 0).all() and targets["pde"][1].all()
     pae, pae_mask = targets["pae"]
-    assert (pae[pae_mask] == 0).all() and pae_mask.any(), "a random frame can be near colinear and drop out; the rest are exact"
+    assert (pae[pae_mask] == 0).all() and pae_mask.any(), (
+        "a random frame can be near colinear and drop out; the rest are exact"
+    )
 
 
 def test_the_targets_are_invariant_to_a_rigid_motion_of_the_prediction():
@@ -158,7 +164,9 @@ def test_confidence_loss_weights_the_three_terms():
         "pae_logits": torch.zeros(RES, RES, 64),
     }
     targets = _targets(_structure(), _structure())
-    total, parts = conf.confidence_loss(outputs, targets, plddt_loss=1.0, pde_loss=2.0, pae_loss=0.0)
+    total, parts = conf.confidence_loss(
+        outputs, targets, plddt_loss=1.0, pde_loss=2.0, pae_loss=0.0
+    )
     assert float(parts["plddt"]) == pytest.approx(math.log(50))
     assert float(parts["pde"]) == pytest.approx(math.log(64))
     assert float(total) == pytest.approx(math.log(50) + 2.0 * math.log(64))
@@ -222,7 +230,14 @@ def test_confidence_step_detaches_the_trunk_rolls_out_without_grad_and_restores_
     detached = {k: v.detach() for k, v in embeddings.items()}
     x_mini = mini_rollout(model, {}, _batch(), detached, cfg.rollout_steps)
     total, parts = confidence_step(
-        model, {}, _batch(), detached, x_mini, gt, torch.ones(RES, ATOMS, dtype=torch.bool), cfg
+        model,
+        {},
+        _batch(),
+        detached,
+        x_mini,
+        gt,
+        torch.ones(RES, ATOMS, dtype=torch.bool),
+        cfg,
     )
     total.backward()
 
@@ -233,7 +248,10 @@ def test_confidence_step_detaches_the_trunk_rolls_out_without_grad_and_restores_
     assert model.diffusion_head.training and model.diffusion_head._fold is None
     # stop gradient: the confidence loss reaches the confidence head only
     assert trunk_single.grad is None and trunk_pair.grad is None
-    assert all(p.grad is not None and p.grad.abs().sum() > 0 for p in model.confidence_head.parameters())
+    assert all(
+        p.grad is not None and p.grad.abs().sum() > 0
+        for p in model.confidence_head.parameters()
+    )
     # the head reads the rollout structure, not the ground truth
     assert torch.equal(model.confidence_head.seen_positions, gt + 0.5)
     assert not model.prepared_with["single"].requires_grad
@@ -249,15 +267,24 @@ def test_the_phase_timer_is_inert_when_disabled_and_reports_nothing():
     timer.between("y", "a", "a")
     arm_trunk_grad_marker(timer, [torch.zeros(1, requires_grad=True)])
     assert timer.result() == {}
-    assert tensor_bytes({"a": torch.zeros(4, dtype=torch.bfloat16), "b": [torch.zeros(2)]}) == 8 + 8
+    assert (
+        tensor_bytes({"a": torch.zeros(4, dtype=torch.bfloat16), "b": [torch.zeros(2)]})
+        == 8 + 8
+    )
 
 
 def test_the_recipe_trains_the_confidence_head_in_the_same_stage():
     cfg = TrainConfig()
     assert cfg.confidence is True
-    assert (cfg.loss.plddt_loss, cfg.loss.pde_loss, cfg.loss.pae_loss) == (1.0, 1.0, 1.0)
+    assert (cfg.loss.plddt_loss, cfg.loss.pde_loss, cfg.loss.pae_loss) == (
+        1.0,
+        1.0,
+        1.0,
+    )
     assert cfg.rollout_steps == 20
-    assert not hasattr(cfg, "freeze_trunk"), "single-stage full finetuning has no frozen part"
+    assert not hasattr(cfg, "freeze_trunk"), (
+        "single-stage full finetuning has no frozen part"
+    )
 
 
 # ---------------------------------------------------------------------------------------------------- fixed-length present-atom path
@@ -278,14 +305,32 @@ def _targets_fixed(pred, gt, mask, is_nuc, is_lig, length):
     res, atoms, _ = pred.shape
     index, valid = fixed_atom_index(mask, length)
     idx = torch.arange(res) * atoms
-    gather = GatherInfo(gather_idxs=idx, gather_mask=torch.ones(res, dtype=torch.bool), input_shape=(res, atoms))
-    args = (pred, gt, mask, gather, torch.ones(res), torch.full((res,), ALA), is_nuc, is_lig, FakeHead())
-    return conf.confidence_targets(*args), conf.confidence_targets(*args, present_index=index, present_valid=valid)
+    gather = GatherInfo(
+        gather_idxs=idx,
+        gather_mask=torch.ones(res, dtype=torch.bool),
+        input_shape=(res, atoms),
+    )
+    args = (
+        pred,
+        gt,
+        mask,
+        gather,
+        torch.ones(res),
+        torch.full((res,), ALA),
+        is_nuc,
+        is_lig,
+        FakeHead(),
+    )
+    return conf.confidence_targets(*args), conf.confidence_targets(
+        *args, present_index=index, present_valid=valid
+    )
 
 
 @pytest.mark.parametrize("seed", range(6))
 @pytest.mark.parametrize("length", [64, 400])
-def test_fixed_length_present_index_gives_the_nonzero_path_targets_bit_for_bit(seed, length):
+def test_fixed_length_present_index_gives_the_nonzero_path_targets_bit_for_bit(
+    seed, length
+):
     pred, gt, mask, is_nuc, is_lig = _random_inputs(seed)
     old, new = _targets_fixed(pred, gt, mask, is_nuc, is_lig, length)
     for name in ("plddt", "pde", "pae"):
@@ -299,10 +344,17 @@ def test_fixed_atom_index_is_ascending_padded_and_grows_past_its_length():
     mask = torch.zeros(4, 5, dtype=torch.bool)
     mask[0, 1] = mask[2, 3] = mask[3, 4] = True
     index, valid = fixed_atom_index(mask, 8)
-    assert index.tolist() == [1, 13, 19, 0, 0, 0, 0, 0] and valid.tolist() == [True] * 3 + [False] * 5
+    assert (
+        index.tolist() == [1, 13, 19, 0, 0, 0, 0, 0]
+        and valid.tolist() == [True] * 3 + [False] * 5
+    )
     big = torch.ones(30, 40, dtype=torch.bool)  # 1200 atoms > 8
     index, valid = fixed_atom_index(big, 8)
-    assert index.shape == (1536,) and int(valid.sum()) == 1200 and index[:1200].tolist() == list(range(1200))
+    assert (
+        index.shape == (1536,)
+        and int(valid.sum()) == 1200
+        and index[:1200].tolist() == list(range(1200))
+    )
 
 
 def test_per_atom_lddt_scalars_equal_the_old_tensor_constants():
@@ -318,4 +370,6 @@ def test_per_atom_lddt_scalars_equal_the_old_tensor_constants():
     bins = torch.tensor((0.5, 1.0, 2.0, 4.0))
     kept = ((pd - gd).abs()[..., None] <= bins) & pair[..., None]
     frac = kept.sum(dim=-2).float() / (pair.sum(dim=-1, keepdim=True).float() + 1e-8)
-    assert torch.equal(lddt, frac.mean(dim=-1)) and torch.equal(valid, pair.sum(dim=-1) > 0)
+    assert torch.equal(lddt, frac.mean(dim=-1)) and torch.equal(
+        valid, pair.sum(dim=-1) > 0
+    )

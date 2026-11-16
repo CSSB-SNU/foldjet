@@ -39,7 +39,10 @@ def test_other_dtypes_masks_and_none_are_left_alone():
 
 def test_a_disabled_autocast_region_inside_an_enabled_one_keeps_fp32():
     x = torch.randn(2, 3)
-    with torch.autocast("cpu", dtype=torch.bfloat16), torch.autocast("cpu", enabled=False):
+    with (
+        torch.autocast("cpu", dtype=torch.bfloat16),
+        torch.autocast("cpu", enabled=False),
+    ):
         assert engine_activation(x) is x
 
 
@@ -48,4 +51,6 @@ def test_rf3_template_distogram_edges_are_the_released_ones():
     released = torch.cat([torch.arange(1.0, 4.0, 0.1), torch.arange(4.0, 20.5, 0.5)])
     assert edges.shape == (63,)  # 64 distogram bins
     torch.testing.assert_close(edges, released, rtol=0, atol=0)
-    assert edges.device.type == "cpu"  # moved to the device once, through on_device (cached), never inside a CUDA-graph capture
+    assert (
+        edges.device.type == "cpu"
+    )  # moved to the device once, through on_device (cached), never inside a CUDA-graph capture

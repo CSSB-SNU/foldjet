@@ -132,7 +132,8 @@ class Evoformer(nn.Module):
 
         With ``foldforge_msa_presampled`` the caller does this BEFORE the evoformer call (as MiniWorld's ``subsample_msa_rows`` does for a
         static-shape trunk), so a CUDA graph of the evoformer sees ``num_msa`` rows whatever the size of the alignment pool, instead of the pool
-        (1024 .. 16384 rows, a different graph per target)."""
+        (1024 .. 16384 rows, a different graph per target).
+        """
         policy = self.spec.msa_subsample
         if policy == "keep_query":
             msa_batch = featurization.subsample_msa_keep_query(msa_batch, self.num_msa)
@@ -217,15 +218,10 @@ class Evoformer(nn.Module):
                 # One module under every index: ``state_dict`` still lists ``msa_stack.<i>.*`` for each i (same tensors), ``parameters()`` /
                 # ``named_parameters()`` list it once (as ``msa_stack.0.*``), so Adam, the EMA and the gradients see one parameter set.
                 shared = self._msa_block(spec)
-                self.msa_stack = nn.ModuleList(
-                    [shared] * self.msa_stack_num_layer
-                )
+                self.msa_stack = nn.ModuleList([shared] * self.msa_stack_num_layer)
             else:
                 self.msa_stack = nn.ModuleList(
-                    [
-                        self._msa_block(spec)
-                        for _ in range(self.msa_stack_num_layer)
-                    ]
+                    [self._msa_block(spec) for _ in range(self.msa_stack_num_layer)]
                 )
 
         self.single_activations = nn.Linear(
@@ -279,12 +275,16 @@ class Evoformer(nn.Module):
                 c_target_feat=self.c_target_feat,
             )
             self.structural_token_refiner = nn.ModuleList(
-                [self._refiner_block(spec) for _ in range(spec.structural_refiner_layers)]
+                [
+                    self._refiner_block(spec)
+                    for _ in range(spec.structural_refiner_layers)
+                ]
             )
 
     def _refiner_block(self, spec: DenseSpec) -> nn.Module:
         """One block of OpenDDE's structural-token refiner (the engine class; its single attention takes the expander's
-        bias through ``extra_pair_bias``)."""
+        bias through ``extra_pair_bias``).
+        """
         return engine_graph.make_pairformer_block(
             spec,
             d_pair=self.pair_channel,
@@ -307,12 +307,17 @@ class Evoformer(nn.Module):
 
     def _msa_block(self, spec: DenseSpec) -> nn.Module:
         """One MSA-stack block: engine parts."""
-        return engine_graph.make_evoformer_block(spec, self.msa_channel, self.pair_channel, spec.pair_heads)
+        return engine_graph.make_evoformer_block(
+            spec, self.msa_channel, self.pair_channel, spec.pair_heads
+        )
 
     def _pair_only_block(self, spec: DenseSpec) -> nn.Module:
         """Build one trunk block with neither a single track nor pair attentions."""
         return engine_graph.make_pairformer_block(
-            spec, d_pair=self.pair_channel, qkv_dim=spec.pair_qkv_dim, pair_attention=spec.pair_attention
+            spec,
+            d_pair=self.pair_channel,
+            qkv_dim=spec.pair_qkv_dim,
+            pair_attention=spec.pair_attention,
         )
 
     def _embed_lm_pair(
@@ -610,7 +615,9 @@ class Evoformer(nn.Module):
             self.prev_single_embedding_layer_norm(prev["single"].to(single_init.dtype))
         )
         for block in self.trunk_pairformer:
-            pair_activations = engine_graph.run_block(block, pair_activations, pair_mask)
+            pair_activations = engine_graph.run_block(
+                block, pair_activations, pair_mask
+            )
 
         pair_pre_coda = pair_activations
         pair_activations = self._finalize_pair_only(
@@ -863,7 +870,8 @@ class AlphaFold3(nn.Module):
     def activation_dtype(self) -> torch.dtype:
         """The dtype the trunk's activations start in: bf16 for a ``master`` model (fp32 parameters, activations under
         :func:`~foldforge.modules.engine.configure.activation_autocast`), fp32 otherwise. Set by ``configure_model``; parameters are
-        always fp32."""
+        always fp32.
+        """
         return getattr(self, "foldforge_activation_dtype", torch.float32)
 
     def create_target_feat_embedding(
@@ -958,7 +966,8 @@ class AlphaFold3(nn.Module):
 
         def pieces(batch: feat_batch.Batch, embeddings: dict[str, torch.Tensor]):
             """``(denoise, augment, align, atom_mask)`` of a fold's ``batch`` / ``embeddings``: the fold itself, or the static clone of the first
-            fold of a shape that the per-shape sampler graph is captured on."""
+            fold of a shape that the per-shape sampler graph is captured on.
+            """
             atom_mask = batch.predicted_structure_info.atom_mask
 
             def denoise(
@@ -994,7 +1003,12 @@ class AlphaFold3(nn.Module):
                 """
                 return weighted_rigid_align(noisy, denoised, atom_mask)
 
-            return denoise, augment, realign if self.spec.realign_sampler else None, atom_mask
+            return (
+                denoise,
+                augment,
+                realign if self.spec.realign_sampler else None,
+                atom_mask,
+            )
 
         denoise, augment, realign, _ = pieces(batch, embeddings)
 
@@ -1011,7 +1025,9 @@ class AlphaFold3(nn.Module):
             else contextlib.nullcontext()
         )
         scope = getattr(self, "foldforge_sampler_scope", None)
-        fold = self._sampler_fold(batch, embeddings, pieces) if scope is not None else None
+        fold = (
+            self._sampler_fold(batch, embeddings, pieces) if scope is not None else None
+        )
         try:
             with fp32_sampler:
                 if scope is not None:
@@ -1069,7 +1085,8 @@ class AlphaFold3(nn.Module):
         fold conditioning (``DiffusionHead.fold_tree``: single base, pair, key mask, atom state) -- or, in the grouped multi-fold sampler
         (``models.grouped``), its ``fold_tree`` (the NT folds' state and the stacked tensors). ``embeddings`` are read only to make the
         conditioning (outside the graph), so they are not part of it. The step also reads tensors made OUTSIDE the graph from those: the
-        glue's float atom mask (``sampler_graph``) and the token DiT stack's engine-dtype copy of the pair (``engine_pair_cast``)."""
+        glue's float atom mask (``sampler_graph``) and the token DiT stack's engine-dtype copy of the pair (``engine_pair_cast``).
+        """
         head = self.diffusion_head
         extra = getattr(self, "foldforge_fold_extra", None)
 
@@ -1090,12 +1107,23 @@ class AlphaFold3(nn.Module):
                     head.adopt_fold(static["batch"], embeddings, static["head"])
                     stack.callback(setattr, head, "_fold", saved)
                 yield
-                if static["extra"] is None and (head._fold is None or head._fold[2] is not static["head"]["pair_cond"]):  # noqa: SLF001
-                    raise RuntimeError("the sampler capture remade the fold conditioning instead of reading the static one")
+                if static["extra"] is None and (
+                    head._fold is None
+                    or head._fold[2] is not static["head"]["pair_cond"]
+                ):
+                    raise RuntimeError(
+                        "the sampler capture remade the fold conditioning instead of reading the static one"
+                    )
 
         def casts() -> list[tuple[torch.Tensor, torch.Tensor]]:
-            found = (getattr(module, "engine_pair_cast", None) for module in head.modules())
-            return [cast for cast in (find() for find in found if find is not None) if cast is not None]
+            found = (
+                getattr(module, "engine_pair_cast", None) for module in head.modules()
+            )
+            return [
+                cast
+                for cast in (find() for find in found if find is not None)
+                if cast is not None
+            ]
 
         return sampler_graph.Fold(
             model=self,
@@ -1131,9 +1159,13 @@ class AlphaFold3(nn.Module):
             and chunk == 1
             and getattr(head, "reembed_pair", False)
             and hasattr(head, "fold_state")
-            and not (torch.cuda.is_available() and torch.cuda.is_current_stream_capturing())
+            and not (
+                torch.cuda.is_available() and torch.cuda.is_current_stream_capturing()
+            )
         ):
-            extra["fold"] = head.fold_state(embeddings, batch_data.token_features.mask, batch_data)
+            extra["fold"] = head.fold_state(
+                embeddings, batch_data.token_features.mask, batch_data
+            )
         with getattr(head, "fold_scope", contextlib.nullcontext)():
             for start in range(0, count, chunk):
                 part = positions[start : start + chunk]
@@ -1167,10 +1199,17 @@ class AlphaFold3(nn.Module):
 
     def _head_batch(self, batch_data: feat_batch.Batch) -> feat_batch.Batch:
         """The batch a head receives. The heads read only the alignment STATISTICS (profile, deletion mean), never its rows, but the batch carries the
-        whole row pool, whose size would make every alignment depth a different CUDA graph; with the pre-sampled MSA mode it is cut to ``num_msa`` rows."""
+        whole row pool, whose size would make every alignment depth a different CUDA graph; with the pre-sampled MSA mode it is cut to ``num_msa`` rows.
+        """
         evoformer = self.evoformer
-        if getattr(evoformer, "foldforge_msa_presampled", False) and evoformer.msa_stack_num_layer:
-            return replace(batch_data, msa=featurization.truncate_msa_batch(batch_data.msa, evoformer.num_msa))
+        if (
+            getattr(evoformer, "foldforge_msa_presampled", False)
+            and evoformer.msa_stack_num_layer
+        ):
+            return replace(
+                batch_data,
+                msa=featurization.truncate_msa_batch(batch_data.msa, evoformer.num_msa),
+            )
         return batch_data
 
     def _run_trunk(self, batch_data: feat_batch.Batch) -> dict[str, torch.Tensor]:
@@ -1202,9 +1241,14 @@ class AlphaFold3(nn.Module):
         self.recycle_dropout_applied = bool(recycle_dropout)
         for pass_index in range(passes):
             pass_batch = batch_data
-            if getattr(self.evoformer, "foldforge_msa_presampled", False) and self.evoformer.msa_stack_num_layer:
+            if (
+                getattr(self.evoformer, "foldforge_msa_presampled", False)
+                and self.evoformer.msa_stack_num_layer
+            ):
                 # A fresh iid row draw for this recycle, made here, outside the (graphed) evoformer call.
-                pass_batch = replace(batch_data, msa=self.evoformer.sample_msa(batch_data.msa))
+                pass_batch = replace(
+                    batch_data, msa=self.evoformer.sample_msa(batch_data.msa)
+                )
             embeddings = self.evoformer(
                 batch=pass_batch,
                 prev=embeddings,
@@ -1279,12 +1323,17 @@ class AlphaFold3(nn.Module):
 
     def run_trunk(self, batch: dict[str, torch.Tensor]) -> TrunkOutput:
         """Prepare residue/structural representations once for repeated sampling."""
-        release_fold_state = getattr(self, "foldforge_release_fold_state", None)  # set by `models.execution.Execution`
+        release_fold_state = getattr(
+            self, "foldforge_release_fold_state", None
+        )  # set by `models.execution.Execution`
         if release_fold_state is not None:
             release_fold_state()  # the previous fold's diffusion state goes before this fold's trunk runs
         # Featurisation may hand float64 arrays (reference conformer positions of some families); autocast leaves float64 alone, so a
         # float64 input would meet a bf16 weight. Single precision is what every family's graph computes in.
-        batch = {key: value.float() if value.dtype == torch.float64 else value for key, value in batch.items()}
+        batch = {
+            key: value.float() if value.dtype == torch.float64 else value
+            for key, value in batch.items()
+        }
         batch_data = self._prepare_batch(batch)
         embeddings = self._run_trunk(batch_data)
         diffusion = self._prepare_diffusion_inputs(batch, batch_data, embeddings)
@@ -1298,7 +1347,9 @@ class AlphaFold3(nn.Module):
             trunk.diffusion.batch, trunk.diffusion.embeddings
         )
         samples = trunk.diffusion.restore(samples)
-        release_fold_state = getattr(self, "foldforge_release_fold_state", None)  # set by `models.execution.Execution`
+        release_fold_state = getattr(
+            self, "foldforge_release_fold_state", None
+        )  # set by `models.execution.Execution`
         if release_fold_state is not None:
             release_fold_state()  # a big fold's diffusion state (the kept pair and the engine tables keyed on it) goes before the heads run
         return self._predict_heads(trunk.batch, trunk.embeddings, samples)

@@ -99,7 +99,10 @@ def _flatten(value):
                 # `input_shape` of an atom-layout gather is only a validity check (the padded layout must be at least as large as the real input).
                 # It holds the UNPADDED token count and would make every target of one bucket a different graph; it never shapes a computation.
                 tuple(
-                    (f.name, None if f.name == "input_shape" else visit(getattr(v, f.name)))
+                    (
+                        f.name,
+                        None if f.name == "input_shape" else visit(getattr(v, f.name)),
+                    )
                     for f in dataclasses.fields(v)
                     if f.init
                 ),
@@ -193,11 +196,16 @@ class _Graph:
         # `torch.cuda.memory_snapshot(pool)` runs only under `execution.graph_pool_snapshot` (default off, see ExecutionConfig): the number is read only
         # by `release_large_graphs`, which nothing calls, and a process that captured a few hundred graphs crashed with heap corruption after it.
         pool_bytes = (
-            sum(segment["total_size"] for segment in torch.cuda.memory_snapshot(self.graph.pool()))
+            sum(
+                segment["total_size"]
+                for segment in torch.cuda.memory_snapshot(self.graph.pool())
+            )
             if pool_snapshot
             else 0
         )
-        self.retained_bytes = pool_bytes + sum(value.numel() * value.element_size() for value in self.inputs)
+        self.retained_bytes = pool_bytes + sum(
+            value.numel() * value.element_size() for value in self.inputs
+        )
         # The tensor object and version last copied into each static input: a caller
         # that passes
         # the very same, unmodified tensor again (a fold's conditioning, the batch
@@ -376,22 +384,37 @@ class SamplerScope:
 
     #: Counters reset by ``Execution.begin_request`` and reported by ``Execution.report``.
     COUNTERS = (
-        "captures", "replays", "refreshes", "cache_hits", "cache_misses", "cache_evictions", "stale_recaptures", "uncached",
+        "captures",
+        "replays",
+        "refreshes",
+        "cache_hits",
+        "cache_misses",
+        "cache_evictions",
+        "stale_recaptures",
+        "uncached",
     )
 
-    def __init__(self, denoiser: ExecutedCallable, config: ExecutionPolicy | None = None) -> None:
+    def __init__(
+        self, denoiser: ExecutedCallable, config: ExecutionPolicy | None = None
+    ) -> None:
         from foldforge.models import sampler_graph
         from foldforge.modules.engine import capture as engine_capture
 
         self.denoiser = denoiser
         self.reset_counters()
         self.cache = None
-        if config is not None and getattr(config, "sampler_graph_cache", True) and engine_capture.refresh_available():
+        if (
+            config is not None
+            and getattr(config, "sampler_graph_cache", True)
+            and engine_capture.refresh_available()
+        ):
             self.cache = sampler_graph.SamplerGraphCache(
                 self,
                 max_entries=config.max_graphs,
                 budget_fraction=getattr(config, "sampler_graph_cache_fraction", 0.3),
-                max_fold_bytes=getattr(config, "sampler_graph_cache_max_fold_bytes", 2 << 30),
+                max_fold_bytes=getattr(
+                    config, "sampler_graph_cache_max_fold_bytes", 2 << 30
+                ),
             )
 
     def reset_counters(self) -> None:
@@ -462,7 +485,9 @@ class Execution:
             diffusion_tf32=bool(getattr(model, "reference_precision", False)),
         )
         _autocast_entries(model)
-        model.foldforge_release_fold_state = self.release_fold_state  # called by `AlphaFold3.run_trunk` before a new fold's trunk
+        model.foldforge_release_fold_state = (
+            self.release_fold_state
+        )  # called by `AlphaFold3.run_trunk` before a new fold's trunk
         self.autocast_scopes = getattr(model, "reference_autocast_scopes", [])
         head = getattr(model, "confidence_head", None)
         if head is not None and hasattr(head, "sample_chunk_override"):
@@ -556,7 +581,9 @@ class Execution:
             capture = importlib.import_module("miniworld_engine.kernels._capture")
         except ImportError:  # no engine: nothing of it to release
             capture = None
-        release_dead_inputs = getattr(capture, "release_dead_inputs", None)  # engines before 2.5.5 have none
+        release_dead_inputs = getattr(
+            capture, "release_dead_inputs", None
+        )  # engines before 2.5.5 have none
         if release_dead_inputs is not None:
             release_dead_inputs()
 
@@ -638,7 +665,10 @@ class Execution:
             "sampler_graph_replays": getattr(self.sampler_scope, "replays", 0),
             # one graph per shape (R26): refreshes = folds served by writing into a cached graph's buffers; the rest are the cache's own ledger
             "sampler_graph_refreshes": getattr(self.sampler_scope, "refreshes", 0),
-            **{f"sampler_graph_cache_{name}": value for name, value in self.sampler_cache_report().items()},
+            **{
+                f"sampler_graph_cache_{name}": value
+                for name, value in self.sampler_cache_report().items()
+            },
             "uncaptured_calls": sum(x.uncaptured for x in self.wrappers),
         }
 

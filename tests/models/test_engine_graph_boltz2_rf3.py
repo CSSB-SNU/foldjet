@@ -24,7 +24,11 @@ from foldforge.modules.engine.transformers import AtomDiTStack, TokenDiTStack
 from foldforge.utils import atom_layout
 
 TOLERANCE = {"rtol": 1e-4, "atol": 1e-4}
-CASES = [(family, mode) for family in ("boltz2", "rosettafold3") for mode in ("fast", "exact")]
+CASES = [
+    (family, mode)
+    for family in ("boltz2", "rosettafold3")
+    for mode in ("fast", "exact")
+]
 
 
 @pytest.fixture(autouse=True)
@@ -40,7 +44,14 @@ def bounded_cpu_threads():
 
 def small(family: str, mode: str):
     spec = spec_for(family, mode)
-    return replace(spec, trunk_layers=1, msa_layers=1, confidence_layers=1, diffusion_blocks=4, template_layers=1)
+    return replace(
+        spec,
+        trunk_layers=1,
+        msa_layers=1,
+        confidence_layers=1,
+        diffusion_blocks=4,
+        template_layers=1,
+    )
 
 
 def randomise(model: torch.nn.Module, seed: int) -> None:
@@ -63,8 +74,14 @@ def tie_to_the_engine_layout(model: torch.nn.Module) -> None:
     with torch.no_grad():
         for name, p in parameters.items():
             if ".q_adaptive_layernorm." in name:
-                parameters[name.replace(".q_adaptive_layernorm.", ".k_adaptive_layernorm.")].copy_(p)
-            if model.spec.family == "rosettafold3" and name.endswith(".q_projection.bias") and ("self_attention" in name or "cross_attention" in name):
+                parameters[
+                    name.replace(".q_adaptive_layernorm.", ".k_adaptive_layernorm.")
+                ].copy_(p)
+            if (
+                model.spec.family == "rosettafold3"
+                and name.endswith(".q_projection.bias")
+                and ("self_attention" in name or "cross_attention" in name)
+            ):
                 p.zero_()
 
 
@@ -74,12 +91,20 @@ def pair_of_models(request):
     family, mode = request.param
     modules.OPM_COUNT_OFFSET = 1e-3  # the dense graph's exact AF3 divisor (the exact mode's clamp is the spec's own)
     try:
-        dense = dense_model(small(family, mode), num_recycles=1, num_samples=1, diffusion_steps=1)
+        dense = dense_model(
+            small(family, mode), num_recycles=1, num_samples=1, diffusion_steps=1
+        )
         randomise(dense, 1)
         tie_to_the_engine_layout(dense)
-        dense.diffusion_head.fourier_embeddings.register_buffer("weight", torch.randn(256))
-        dense.diffusion_head.fourier_embeddings.register_buffer("bias", torch.randn(256))
-        engine = AlphaFold3(num_recycles=1, num_samples=1, diffusion_steps=1, spec=small(family, mode))
+        dense.diffusion_head.fourier_embeddings.register_buffer(
+            "weight", torch.randn(256)
+        )
+        dense.diffusion_head.fourier_embeddings.register_buffer(
+            "bias", torch.randn(256)
+        )
+        engine = AlphaFold3(
+            num_recycles=1, num_samples=1, diffusion_steps=1, spec=small(family, mode)
+        )
     finally:
         modules.OPM_COUNT_OFFSET = None
     state = miniworld.convert_state(dense.state_dict(), engine)
@@ -101,28 +126,53 @@ def test_the_graph_holds_engine_classes_with_engine_keys(pair_of_models):
     assert "evoformer.trunk_pairformer.0.tri_multi_outgoing.to_left.weight" in keys
     assert "evoformer.msa_stack.0.msa_attention1.ln_pair.weight" in keys
     assert "diffusion_head.transformer.blocks.3.attention.to_bias.weight" in keys
-    assert not any("pair_logits_projection" in k or "pair_input_layer_norm" in k or "k_adaptive_layernorm" in k for k in keys)
-    assert not any("ada_ln_kv" in k for k in keys), "the atom blocks of both families share ONE AdaLN"
+    assert not any(
+        "pair_logits_projection" in k
+        or "pair_input_layer_norm" in k
+        or "k_adaptive_layernorm" in k
+        for k in keys
+    )
+    assert not any("ada_ln_kv" in k for k in keys), (
+        "the atom blocks of both families share ONE AdaLN"
+    )
     assert all(p.dtype == torch.float32 for p in engine.parameters())
     assert isinstance(engine.diffusion_head.transformer, TokenDiTStack)
-    assert isinstance(engine.diffusion_head.atom_cross_att_decoder.atom_transformer_decoder, AtomDiTStack)
+    assert isinstance(
+        engine.diffusion_head.atom_cross_att_decoder.atom_transformer_decoder,
+        AtomDiTStack,
+    )
     if family == "boltz2":
-        assert "diffusion_head.transformer.blocks.0.transition.up.weight" in keys  # the up-gated ConditionedTransition
+        assert (
+            "diffusion_head.transformer.blocks.0.transition.up.weight" in keys
+        )  # the up-gated ConditionedTransition
         assert not any(k.endswith("norm_query.weight") for k in keys)
     else:
-        assert "diffusion_head.transformer.blocks.0.attention.norm_query.weight" in keys  # FlatQKNorm
+        assert (
+            "diffusion_head.transformer.blocks.0.attention.norm_query.weight" in keys
+        )  # FlatQKNorm
         assert "diffusion_head.transformer.blocks.0.attention.norm_key.weight" in keys
-        assert not any(k.endswith("attention.to_query.bias") for k in keys if "diffusion_head" in k)  # bias-free query
-        assert "evoformer.msa_stack.0.outer_product_mean.to_left.bias" in keys  # OPM projection_bias
+        assert not any(
+            k.endswith("attention.to_query.bias") for k in keys if "diffusion_head" in k
+        )  # bias-free query
+        assert (
+            "evoformer.msa_stack.0.outer_product_mean.to_left.bias" in keys
+        )  # OPM projection_bias
 
 
 def test_engine_classes_are_the_families_own(pair_of_models):
     dense, engine = pair_of_models
-    family, mode = dense.spec.family, "exact" if dense.spec.triangle_mul_divide_by_length or dense.spec.opm_clamped_norm else "fast"
+    family, mode = (
+        dense.spec.family,
+        "exact"
+        if dense.spec.triangle_mul_divide_by_length or dense.spec.opm_clamped_norm
+        else "fast",
+    )
     block = engine.evoformer.trunk_pairformer[0]
     attention = type(block.tri_atten_starting).__name__
     multiplication = type(block.tri_multi_outgoing).__name__
-    atom = type(engine.evoformer_conditioning.atom_transformer_encoder.blocks[0]).__name__
+    atom = type(
+        engine.evoformer_conditioning.atom_transformer_encoder.blocks[0]
+    ).__name__
     token = type(engine.diffusion_head.transformer.blocks[0]).__name__
     if family == "boltz2":
         assert (atom, token) == ("AtomDiTBoltz2", "TokenDiTBoltz2")
@@ -131,7 +181,9 @@ def test_engine_classes_are_the_families_own(pair_of_models):
         assert (atom, token) == ("AtomDiTRoseTTAFold3", "TokenDiTRoseTTAFold3")
         assert attention == "TriangleAttentionRF3"
         # fast mode builds the PLAIN multiplication explicitly, exact mode the RF3 one (contraction divided by the real length)
-        assert multiplication == ("TriangleMultiplicationRF3" if mode == "exact" else "TriangleMultiplication")
+        assert multiplication == (
+            "TriangleMultiplicationRF3" if mode == "exact" else "TriangleMultiplication"
+        )
 
 
 def _pair_inputs(length, d_pair, d_single, seed=0):
@@ -155,12 +207,24 @@ def test_trunk_pairformer_block_matches_dense(pair_of_models):
     spec = dense.spec
     x = _pair_inputs(24, spec.pair_channel, spec.seq_channel)
     with torch.no_grad():
-        want_pair, want_single = dense.evoformer.trunk_pairformer[0](x["pair"], x["pair_mask"], x["single"].clone(), x["seq_mask"])
-        got_pair, got_single = graph.run_block(
-            engine.evoformer.trunk_pairformer[0], x["pair"], x["pair_mask"], x["single"].clone(), x["seq_mask"]
+        want_pair, want_single = dense.evoformer.trunk_pairformer[0](
+            x["pair"], x["pair_mask"], x["single"].clone(), x["seq_mask"]
         )
-    torch.testing.assert_close(_valid(got_pair, x["pair_mask"]), _valid(want_pair, x["pair_mask"]), **TOLERANCE)
-    torch.testing.assert_close(_valid(got_single, x["seq_mask"]), _valid(want_single, x["seq_mask"]), **TOLERANCE)
+        got_pair, got_single = graph.run_block(
+            engine.evoformer.trunk_pairformer[0],
+            x["pair"],
+            x["pair_mask"],
+            x["single"].clone(),
+            x["seq_mask"],
+        )
+    torch.testing.assert_close(
+        _valid(got_pair, x["pair_mask"]), _valid(want_pair, x["pair_mask"]), **TOLERANCE
+    )
+    torch.testing.assert_close(
+        _valid(got_single, x["seq_mask"]),
+        _valid(want_single, x["seq_mask"]),
+        **TOLERANCE,
+    )
 
 
 def test_template_blocks_match_dense_and_take_a_batch_axis(pair_of_models):
@@ -172,7 +236,9 @@ def test_template_blocks_match_dense_and_take_a_batch_axis(pair_of_models):
     x = _pair_inputs(20, channels, 1)
     slots = torch.randn(3, 20, 20, channels)
     with torch.no_grad():
-        want = torch.stack([want_block(slot, pair_mask=x["pair_mask"]) for slot in slots])
+        want = torch.stack(
+            [want_block(slot, pair_mask=x["pair_mask"]) for slot in slots]
+        )
         got = graph.run_block(got_block, slots, x["pair_mask"])
     assert got.shape == slots.shape
     torch.testing.assert_close(got[:, :-3, :-3], want[:, :-3, :-3], **TOLERANCE)
@@ -188,10 +254,17 @@ def test_confidence_block_takes_samples_in_one_call(pair_of_models):
     want_block = dense.confidence_head.confidence_pairformer[0]
     assert got_block.supports_sample_batch
     with torch.no_grad():
-        want = [want_block(pairs[i], x["pair_mask"], singles[i].clone(), x["seq_mask"]) for i in range(2)]
-        got_pair, got_single = graph.run_block(got_block, pairs, x["pair_mask"], singles.clone(), x["seq_mask"])
+        want = [
+            want_block(pairs[i], x["pair_mask"], singles[i].clone(), x["seq_mask"])
+            for i in range(2)
+        ]
+        got_pair, got_single = graph.run_block(
+            got_block, pairs, x["pair_mask"], singles.clone(), x["seq_mask"]
+        )
     for i in range(2):
-        torch.testing.assert_close(got_pair[i][:-3, :-3], want[i][0][:-3, :-3], **TOLERANCE)
+        torch.testing.assert_close(
+            got_pair[i][:-3, :-3], want[i][0][:-3, :-3], **TOLERANCE
+        )
         torch.testing.assert_close(got_single[i][:-3], want[i][1][:-3], **TOLERANCE)
 
 
@@ -204,10 +277,16 @@ def test_msa_block_matches_dense(pair_of_models):
     msa_mask = (torch.rand(6, 20, generator=generator) > 0.2).float() * x["seq_mask"]
     msa_mask[0] = x["seq_mask"]
     with torch.no_grad():
-        want_msa, want_pair = dense.evoformer.msa_stack[0](msa.clone(), x["pair"], msa_mask, x["pair_mask"])
-        got_msa, got_pair = engine.evoformer.msa_stack[0](msa.clone(), x["pair"], msa_mask, x["pair_mask"])
+        want_msa, want_pair = dense.evoformer.msa_stack[0](
+            msa.clone(), x["pair"], msa_mask, x["pair_mask"]
+        )
+        got_msa, got_pair = engine.evoformer.msa_stack[0](
+            msa.clone(), x["pair"], msa_mask, x["pair_mask"]
+        )
     torch.testing.assert_close(got_msa[:, :-3], want_msa[:, :-3], **TOLERANCE)
-    torch.testing.assert_close(_valid(got_pair, x["pair_mask"]), _valid(want_pair, x["pair_mask"]), **TOLERANCE)
+    torch.testing.assert_close(
+        _valid(got_pair, x["pair_mask"]), _valid(want_pair, x["pair_mask"]), **TOLERANCE
+    )
 
 
 def test_diffusion_transformer_matches_dense(pair_of_models):
@@ -222,7 +301,9 @@ def test_diffusion_transformer_matches_dense(pair_of_models):
     mask[-3:] = 0
     key_mask = (mask > 0)[None]
     with torch.no_grad():
-        want = dense.diffusion_head.transformer(act.clone(), mask, single, pair, key_mask=key_mask)
+        want = dense.diffusion_head.transformer(
+            act.clone(), mask, single, pair, key_mask=key_mask
+        )
         got = head.transformer(act.clone(), mask, single, pair, key_mask=key_mask)
     torch.testing.assert_close(got[:, :-3], want[:, :-3], **TOLERANCE)
 
@@ -250,23 +331,36 @@ def test_atom_transformer_matches_dense(pair_of_models, atoms):
     want_stack = dense.evoformer_conditioning.atom_transformer_encoder
     got_stack = engine.evoformer_conditioning.atom_transformer_encoder
     channels = got_stack.blocks[0].attention.to_query.weight.shape[1]
-    act = torch.randn(windows, 32, channels, generator=generator) * queries_mask[..., None]
+    act = (
+        torch.randn(windows, 32, channels, generator=generator)
+        * queries_mask[..., None]
+    )
     cond = torch.randn(windows, 32, channels, generator=generator)
     keys_cond = atom_layout.convert(gather, cond, layout_axes=(-3, -2))
     pair = torch.randn(windows, 32, 128, 16, generator=generator)
     with torch.no_grad():
-        want = want_stack(act.clone(), queries_mask, gather, keys_mask, cond, keys_cond, pair)
-        got = got_stack(act.clone(), queries_mask, gather, keys_mask, cond, keys_cond, pair)
-    torch.testing.assert_close(got * queries_mask[..., None], want * queries_mask[..., None], **TOLERANCE)
+        want = want_stack(
+            act.clone(), queries_mask, gather, keys_mask, cond, keys_cond, pair
+        )
+        got = got_stack(
+            act.clone(), queries_mask, gather, keys_mask, cond, keys_cond, pair
+        )
+    torch.testing.assert_close(
+        got * queries_mask[..., None], want * queries_mask[..., None], **TOLERANCE
+    )
 
 
 # ------------------------------------------------------------------------------------------------------------------ the discards
-def test_shared_kv_adaln_is_discarded_only_when_equal_to_the_query_adaln(pair_of_models):
+def test_shared_kv_adaln_is_discarded_only_when_equal_to_the_query_adaln(
+    pair_of_models,
+):
     dense, engine = pair_of_models
     state = dict(dense.state_dict())
     key = "evoformer_conditioning.atom_transformer_encoder.cross_attention.1.k_adaptive_layernorm.single_cond_scale.weight"
     assert torch.equal(state[key], state[key.replace("k_adaptive", "q_adaptive")])
-    miniworld.convert_state(state, engine)  # equal: converts, and the K / V keys count as read
+    miniworld.convert_state(
+        state, engine
+    )  # equal: converts, and the K / V keys count as read
     state[key] = state[key] + 1e-3
     with pytest.raises(ValueError, match="differs from"):
         miniworld.convert_state(state, engine)
@@ -290,8 +384,19 @@ def test_miniworld_file_round_trip(pair_of_models, tmp_path):
     family, mode = dense.spec.family, "exact" if dense.spec.opm_clamped_norm else "fast"
     state = miniworld.convert_state(dense.state_dict(), engine)
     path = tmp_path / "x.miniworld.pt"
-    torch.save({"format": miniworld.FORMAT, "version": miniworld.VERSION, "family": family, "source": "t", "state_dict": state}, path)
-    fresh = AlphaFold3(num_recycles=1, num_samples=1, diffusion_steps=1, spec=small(family, mode))
+    torch.save(
+        {
+            "format": miniworld.FORMAT,
+            "version": miniworld.VERSION,
+            "family": family,
+            "source": "t",
+            "state_dict": state,
+        },
+        path,
+    )
+    fresh = AlphaFold3(
+        num_recycles=1, num_samples=1, diffusion_steps=1, spec=small(family, mode)
+    )
     report = miniworld.load_into(fresh, path, family=family)
     assert report["format_version"] == miniworld.VERSION
     for key, value in engine.state_dict().items():

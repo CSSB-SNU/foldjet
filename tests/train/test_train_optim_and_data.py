@@ -62,7 +62,9 @@ def test_every_parameter_is_in_the_optimizer_and_the_confidence_head_keeps_the_h
     opt = optim.build_optimizer(model, TrainConfig(trunk_lr_scale=0.1))
     assert [g["name"] for g in opt.param_groups] == ["heads", "trunk"]
     in_optimizer = {id(p) for g in opt.param_groups for p in g["params"]}
-    assert all(id(p) in in_optimizer for p in model.parameters()), "single stage: nothing is left out"
+    assert all(id(p) in in_optimizer for p in model.parameters()), (
+        "single stage: nothing is left out"
+    )
     scale = {g["name"]: g["scale"] for g in opt.param_groups}
     assert scale == {"heads": 1.0, "trunk": 0.1}
 
@@ -186,13 +188,20 @@ def test_resume_without_training_state_starts_at_step_zero(tmp_path):
 
 
 def test_train_batch_fixed_index_fields_are_optional_and_with_fixed_atom_index_fills_them():
-    batch = data.TrainBatch(features={"pred_dense_atom_mask": torch.tensor([[1, 0, 1], [0, 0, 1]])}, atom_positions=torch.zeros(2, 3, 3))
+    batch = data.TrainBatch(
+        features={"pred_dense_atom_mask": torch.tensor([[1, 0, 1], [0, 0, 1]])},
+        atom_positions=torch.zeros(2, 3, 3),
+    )
     assert batch.present_index is None and batch.present_valid is None
     filled = data.with_fixed_atom_index(batch, length=8)
     assert filled.present_index.tolist() == [0, 2, 5, 0, 0, 0, 0, 0]
     assert filled.present_valid.tolist() == [True, True, True] + [False] * 5
     assert data.with_fixed_atom_index(filled) is filled
-    masked = data.TrainBatch(features={}, atom_positions=torch.zeros(2, 3, 3), atom_mask=torch.tensor([[0, 1, 0], [0, 0, 0]]).bool())
+    masked = data.TrainBatch(
+        features={},
+        atom_positions=torch.zeros(2, 3, 3),
+        atom_mask=torch.tensor([[0, 1, 0], [0, 0, 0]]).bool(),
+    )
     assert data.with_fixed_atom_index(masked, 4).present_index.tolist() == [1, 0, 0, 0]
 
 
@@ -201,7 +210,14 @@ def test_features_to_device_keeps_the_gather_shape_metadata_on_the_host():
     out = data.features_to_device(features, torch.device("cpu"))
     from foldforge.utils.atom_layout import GatherInfo
 
-    info = GatherInfo.from_dict({"a:gather_idxs": out["a:gather_idxs"], "a:gather_mask": torch.ones(3, dtype=torch.bool), "a:input_shape": out["a:input_shape"]}, "a")
+    info = GatherInfo.from_dict(
+        {
+            "a:gather_idxs": out["a:gather_idxs"],
+            "a:gather_mask": torch.ones(3, dtype=torch.bool),
+            "a:input_shape": out["a:input_shape"],
+        },
+        "a",
+    )
     assert info.input_shape == (3, 4) and out["a:input_shape"].device.type == "cpu"
 
 

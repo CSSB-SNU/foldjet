@@ -84,7 +84,8 @@ def weighted_align(
 
 def sample_sigma(noise: EDMNoise, n: int, device: torch.device) -> torch.Tensor:
     """EDM noise levels ``sigma_data * exp(P_mean + P_std * N(0,1))`` clamped to ``[sigma_min, sigma_max] * sigma_data`` ... as MiniWorld's
-    ``sample_noise_gs`` (uniform -> ndtri on the GPU)."""
+    ``sample_noise_gs`` (uniform -> ndtri on the GPU).
+    """
     u = torch.rand(n, device=device)
     sigma = noise.sigma_data * torch.exp(
         noise.P_mean + noise.P_std * torch.special.ndtri(u)
@@ -141,7 +142,8 @@ def diffusion_mse(
     """EDM-weighted, atom-weighted MSE between the prediction and the ground truth aligned onto it (AF3 Eq. 2-4).
 
     ``x_pred`` / ``x0`` ``[S, res, atoms, 3]`` (``x0`` augmented like the noisy input), ``sigma`` ``[S]``, ``atom_mask`` / ``atom_weight``
-    ``[res, atoms]``. The alignment uses the same atom weights as the MSE and carries no gradient."""
+    ``[res, atoms]``. The alignment uses the same atom weights as the MSE and carries no gradient.
+    """
     s = x_pred.shape[0]
     pred = x_pred.reshape(s, -1, 3).float()
     truth = x0.reshape(s, -1, 3).float()
@@ -170,7 +172,8 @@ def bond_loss(
     sigma_data: float,
 ) -> torch.Tensor:
     """AF3 Eq. 5: MSE of bonded-atom-pair distances, per sample weighted by the EDM weight. ``bond_pairs`` ``[P, 4]`` int
-    ``(token_i, atom_i, token_j, atom_j)`` on the dense layout, ``-1`` rows are padding; ``None`` (no bonds) gives 0."""
+    ``(token_i, atom_i, token_j, atom_j)`` on the dense layout, ``-1`` rows are padding; ``None`` (no bonds) gives 0.
+    """
     if bond_pairs is None or bond_pairs.numel() == 0:
         return x_pred.sum() * 0.0
     valid = (bond_pairs >= 0).all(dim=-1)

@@ -38,9 +38,13 @@ def test_missing_file_with_blob_names_the_exact_convert_command(empty_root):
     blob = empty_root / "boltz2" / "boltz2.bin.zst"
     blob.parent.mkdir()
     blob.write_bytes(b"x")
-    with pytest.raises(FileNotFoundError, match=r"convert it once: foldforge weights convert boltz2"):
+    with pytest.raises(
+        FileNotFoundError, match=r"convert it once: foldforge weights convert boltz2"
+    ):
         miniworld.resolve_native("boltz2")
-    assert not (blob.parent / "boltz2.miniworld.pt").exists()  # nothing was converted behind the caller's back
+    assert not (
+        blob.parent / "boltz2.miniworld.pt"
+    ).exists()  # nothing was converted behind the caller's back
 
 
 def test_every_registered_model_has_a_native_file_name():
@@ -57,7 +61,9 @@ def test_load_model_without_a_converted_file_fails_with_the_command(empty_root):
 def test_the_loader_refuses_a_released_blob(tmp_path):
     from foldforge.models.loading import load_checkpoint
 
-    blob = tmp_path / "weights.bin.zst"  # not a locked blob name: the size gate is not the subject
+    blob = (
+        tmp_path / "weights.bin.zst"
+    )  # not a locked blob name: the size gate is not the subject
     blob.write_bytes(b"x")
     with pytest.raises(ValueError, match="foldforge weights convert af3"):
         load_checkpoint("af3", blob, device="cpu")
@@ -73,7 +79,9 @@ def test_runtime_imports_nothing_of_the_legacy_released_graph():
         "assert not bad, bad\n"
         "assert 'foldforge.modules.dense.pairformer' not in sys.modules\n"
     )
-    done = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=False)
+    done = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=False
+    )
     assert done.returncode == 0, done.stderr[-2000:]
 
 
@@ -88,7 +96,9 @@ def test_weights_convert_command_arguments(empty_root):
     assert unknown.exit_code != 0 and "Unknown models" in unknown.output
     both = runner.invoke(weights, ["convert", "af3", "--all"])
     assert both.exit_code != 0
-    skipped = runner.invoke(weights, ["convert", "--all"])  # no blob installed anywhere: every model is skipped, nothing converted
+    skipped = runner.invoke(
+        weights, ["convert", "--all"]
+    )  # no blob installed anywhere: every model is skipped, nothing converted
     assert skipped.exit_code == 0, skipped.output
     assert skipped.output.count("SKIP") == len(miniworld.NATIVE_FILES)
     assert "foldforge weights download af3" in skipped.output

@@ -61,7 +61,12 @@ def test_sampler_calls_one_batched_denoiser_per_step():
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA required")
 def test_token_attention_batched_matches_separate():
     torch.manual_seed(7)
-    model = configure_model(SelfAttention(192, 96, 4, use_single_cond=True), "pytorch", torch.bfloat16, "cuda")
+    model = configure_model(
+        SelfAttention(192, 96, 4, use_single_cond=True),
+        "pytorch",
+        torch.bfloat16,
+        "cuda",
+    )
     x = torch.randn(5, 128, 192, device="cuda", dtype=torch.bfloat16)
     cond = torch.randn(128, 96, device="cuda", dtype=torch.bfloat16)
     mask = torch.ones(128, device="cuda", dtype=torch.bool)

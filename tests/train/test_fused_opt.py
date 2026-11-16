@@ -23,7 +23,16 @@ class Tiny(nn.Module):
 
 
 def _cfg(**kw):
-    base = dict(max_lr=1e-2, min_lr=1e-3, warmup_steps=3, decay_steps=2, decay_factor=0.5, trunk_lr_scale=0.1, ema_decay=0.9, grad_clip_max_norm=1.0)
+    base = dict(
+        max_lr=1e-2,
+        min_lr=1e-3,
+        warmup_steps=3,
+        decay_steps=2,
+        decay_factor=0.5,
+        trunk_lr_scale=0.1,
+        ema_decay=0.9,
+        grad_clip_max_norm=1.0,
+    )
     base.update(kw)
     return TrainConfig(**base)
 
@@ -49,12 +58,18 @@ def test_fused_step_equals_the_reference_over_several_steps(scale):
     f = fused_opt.build_fused(fus, cfg)
     assert {g["name"] for g in f.optimizer.param_groups} == {"heads", "trunk"}
     params_ref = [p for g in opt_ref.param_groups for p in g["params"]]
-    assert len(f.params) == len(params_ref) and all(not n.startswith("frozen") for n, p in fus.named_parameters() if any(p is q for q in f.params))
+    assert len(f.params) == len(params_ref) and all(
+        not n.startswith("frozen")
+        for n, p in fus.named_parameters()
+        if any(p is q for q in f.params)
+    )
     for step in range(8):
         lr_ref = optim.set_lr(opt_ref, step, cfg)
         lr_fus = f.set_lr(step, cfg)
         assert lr_ref == lr_fus
-        assert [g["lr"] for g in opt_ref.param_groups] == [g["lr"] for g in f.optimizer.param_groups]
+        assert [g["lr"] for g in opt_ref.param_groups] == [
+            g["lr"] for g in f.optimizer.param_groups
+        ]
         _grads(ref, step, scale)
         _grads(fus, step, scale)
         norm_ref = optim.clip_grad_norm(params_ref, cfg.grad_clip_max_norm)
@@ -70,7 +85,10 @@ def test_fused_step_equals_the_reference_over_several_steps(scale):
             assert bool(sa) == bool(sb)  # grad None: no state in either
             if not sa:
                 continue
-            assert _rel(sb["exp_avg"], sa["exp_avg"]) <= 1e-6 and _rel(sb["exp_avg_sq"], sa["exp_avg_sq"]) <= 1e-6
+            assert (
+                _rel(sb["exp_avg"], sa["exp_avg"]) <= 1e-6
+                and _rel(sb["exp_avg_sq"], sa["exp_avg_sq"]) <= 1e-6
+            )
             assert float(sb["step"]) == float(sa["step"])
         opt_ref.zero_grad(set_to_none=True)
         f.zero_grad()
@@ -93,7 +111,9 @@ def test_clip_scale_matches_and_clips_to_max_norm():
     assert abs(total.item() - total_ref.item()) <= 1e-6 * total_ref.item()
     for p, c in zip(params, clipped_ref):
         assert _rel(p.grad, c) <= 1e-6
-    assert torch.linalg.vector_norm(torch.stack([p.grad.norm() for p in params])).item() == pytest.approx(1.0, rel=1e-4)
+    assert torch.linalg.vector_norm(
+        torch.stack([p.grad.norm() for p in params])
+    ).item() == pytest.approx(1.0, rel=1e-4)
 
 
 def test_no_gradients_returns_zero_and_leaves_parameters():
@@ -107,11 +127,15 @@ def test_no_gradients_returns_zero_and_leaves_parameters():
 
 
 def test_fused_set_lr_matches_the_schedule():
-    cfg = _cfg(max_lr=1e-2, min_lr=1e-3, warmup_steps=4, decay_steps=1, decay_factor=0.1)
+    cfg = _cfg(
+        max_lr=1e-2, min_lr=1e-3, warmup_steps=4, decay_steps=1, decay_factor=0.1
+    )
     f = fused_opt.build_fused(Tiny(), cfg)
     for step, expect in [(2, 5e-3), (4, 1e-2), (40, 1e-3)]:
         assert f.set_lr(step) == pytest.approx(expect)
-    assert {g["name"]: g["lr"] for g in f.optimizer.param_groups}["trunk"] == pytest.approx(1e-4)
+    assert {g["name"]: g["lr"] for g in f.optimizer.param_groups}[
+        "trunk"
+    ] == pytest.approx(1e-4)
 
 
 def test_ema_off_and_bad_impl():

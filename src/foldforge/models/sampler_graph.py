@@ -111,7 +111,9 @@ def _rigid_glue(
     config = sampler.config
     if rigid_mask is None or config.batched_sigma or coordinate_dims != 2:  # noqa: PLR2004 - dense token and atom axes
         return None
-    from foldforge.modules.engine.sampler_ops import augment_align  # noqa: PLC0415 - engine is optional here
+    from foldforge.modules.engine.sampler_ops import (
+        augment_align,
+    )
 
     window = config.churn_gamma is not None
     churn = {
@@ -124,7 +126,9 @@ def _rigid_glue(
         "variance_floor": config.variance_floor,
         "clamp": bool(config.clamp_variance or config.variance_floor),
     }
-    modules = augment_align(rigid_mask.device, churn=churn, step_scale=config.step_scale)
+    modules = augment_align(
+        rigid_mask.device, churn=churn, step_scale=config.step_scale
+    )
     if modules is None:
         return None
     mask = rigid_mask.reshape(-1).to(torch.float32).contiguous()
@@ -335,21 +339,30 @@ class Fold:
 
     model: torch.nn.Module
     tree: Callable[[], Any]
-    pieces: Callable[[Any], tuple[Callable, Callable | None, Callable | None, torch.Tensor | None]]
+    pieces: Callable[
+        [Any], tuple[Callable, Callable | None, Callable | None, torch.Tensor | None]
+    ]
     bind: Callable[[Any], contextlib.AbstractContextManager]
-    casts: Callable[[], list[tuple[torch.Tensor, torch.Tensor]]] = lambda: []
+    casts: Callable[[], list[tuple[torch.Tensor, torch.Tensor]]] = list
 
 
 def _unique_part(t: torch.Tensor) -> tuple[slice, ...] | None:
     """The index of the part of an expanded tensor that owns its storage (size 1 along every stride-0 dim), or None for an ordinary tensor."""
-    if not any(stride == 0 and size > 1 for size, stride in zip(t.shape, t.stride(), strict=True)):
+    if not any(
+        stride == 0 and size > 1
+        for size, stride in zip(t.shape, t.stride(), strict=True)
+    ):
         return None
-    return tuple(slice(0, 1) if stride == 0 and size > 1 else slice(None) for size, stride in zip(t.shape, t.stride(), strict=True))
+    return tuple(
+        slice(0, 1) if stride == 0 and size > 1 else slice(None)
+        for size, stride in zip(t.shape, t.stride(), strict=True)
+    )
 
 
 def _static_clone(t: torch.Tensor) -> torch.Tensor:
     """A tensor of fixed identity holding t's values, with t's expanded (stride 0) dims kept expanded: the engine reads a shared mask / conditioning
-    by its stride 0 (one fold's mask served to the NT folds of a grouped call) and takes a slower general path for a dense copy."""
+    by its stride 0 (one fold's mask served to the NT folds of a grouped call) and takes a slower general path for a dense copy.
+    """
     t = t.detach()
     keep = _unique_part(t)
     return t.clone() if keep is None else t[keep].clone().expand(t.shape)
@@ -388,7 +401,9 @@ class _Entry:
     def load(self, leaves: list[torch.Tensor], model: torch.nn.Module) -> int:
         """Write another fold of the same shape into the static buffers and refresh the engine's tables made from them; returns the tables refreshed."""
         if len(leaves) != len(self.leaves):
-            raise _LayoutMismatch(f"{len(leaves)} tensors for {len(self.leaves)} static buffers")
+            raise _LayoutMismatch(
+                f"{len(leaves)} tensors for {len(self.leaves)} static buffers"
+            )
         for dst, src in zip(self.leaves, leaves, strict=True):
             keep = _unique_part(dst)
             if keep is None:
@@ -408,7 +423,9 @@ class _Entry:
             self.tables.release()
             self.tables = None
         self.captured = None
-        self.tree = self.leaves = self.casts = self.mask_copies = self.keepalive = self.engine_held = None
+        self.tree = self.leaves = self.casts = self.mask_copies = self.keepalive = (
+            self.engine_held
+        ) = None
 
 
 class _LayoutMismatch(RuntimeError):
@@ -433,7 +450,8 @@ def release_all_caches() -> None:
 
 def weights_token(model: torch.nn.Module) -> tuple[int, int]:
     """``(hash, count)`` of the identity (address) and in-place version of every parameter and buffer: changes when a weight is replaced or
-    updated in place. Host metadata only."""
+    updated in place. Host metadata only.
+    """
     items = []
     for tensor in itertools.chain(model.parameters(), model.buffers()):
         try:
@@ -513,12 +531,15 @@ class SamplerGraphCache:
     def insert(self, key: Any, entry: _Entry, budget_bytes: int) -> bool:
         """Keep ``entry`` unless it alone exceeds the budget; then drop the least recently used ones until the entries fit the count and the bytes.
 
-        Returns whether the entry was kept (the caller releases it after its fold when not)."""
+        Returns whether the entry was kept (the caller releases it after its fold when not).
+        """
         if entry.retained > budget_bytes:
             self.bump("uncached")
             return False
         self.entries[key] = entry
-        while len(self.entries) > self.max_entries or (self.retained_bytes > budget_bytes and len(self.entries) > 1):
+        while len(self.entries) > self.max_entries or (
+            self.retained_bytes > budget_bytes and len(self.entries) > 1
+        ):
             self.evict_oldest()
         return True
 
@@ -540,7 +561,10 @@ class SamplerGraphCache:
     # -- device (memory) ---------------------------------------------------------------------------------------------------------------------------
     @property
     def budget_bytes(self) -> int:
-        return int(self.budget_fraction * torch.cuda.get_device_properties(torch.cuda.current_device()).total_memory)
+        return int(
+            self.budget_fraction
+            * torch.cuda.get_device_properties(torch.cuda.current_device()).total_memory
+        )
 
     def make_room(self) -> None:
         """Before a capture: with less than 1.5x the previous capture's reserved memory free, drop the least recently used graphs."""
@@ -575,9 +599,14 @@ class SamplerGraphCache:
 
 def _sampler_signature(sampler: EulerSampler) -> tuple:
     config = sampler.config
-    return tuple(
-        (field.name, getattr(config, field.name)) for field in dataclasses.fields(config)
-    ) if dataclasses.is_dataclass(config) else (repr(config),)
+    return (
+        tuple(
+            (field.name, getattr(config, field.name))
+            for field in dataclasses.fields(config)
+        )
+        if dataclasses.is_dataclass(config)
+        else (repr(config),)
+    )
 
 
 def _fold_key(
@@ -591,8 +620,8 @@ def _fold_key(
     glue_on: bool,
 ) -> tuple:
     """The per-shape key: the structure and layout of the fold's tensors, the engine's own signature of them, the iterate and conditioning row,
-    the sampler's configuration, and the precision state a capture bakes in."""
-
+    the sampler's configuration, and the precision state a capture bakes in.
+    """
     return (
         structure,
         engine_capture.signature(fold.model, *leaves, coords, row),
@@ -630,7 +659,6 @@ def _capture_entry(
     use_glue: bool,
 ) -> _Entry:
     """Capture the step on a STATIC clone of the fold (the caller's tensors stay the caller's; later folds are written into the clone)."""
-
     marks = engine_capture.cache_marks()
     static = _map(tree, _static_clone)
     _, leaves = _flatten(static)
@@ -645,11 +673,19 @@ def _capture_entry(
             coordinate_dims=coordinate_dims,
             rigid_mask=rigid_mask if use_glue else None,
         )
-        captured = _CapturedStep(step, coords, sigmas[0], sigmas[1], row, generator=generator, scopes=scopes)
+        captured = _CapturedStep(
+            step, coords, sigmas[0], sigmas[1], row, generator=generator, scopes=scopes
+        )
     glue = getattr(step, "glue", None)
     mask_copies = []
-    if glue is not None and rigid_mask is not None and glue.mask.data_ptr() != rigid_mask.data_ptr():
-        mask_copies.append((glue.mask, rigid_mask))  # the float flat mask the glue made from the atom mask: a copy outside the graph
+    if (
+        glue is not None
+        and rigid_mask is not None
+        and glue.mask.data_ptr() != rigid_mask.data_ptr()
+    ):
+        mask_copies.append(
+            (glue.mask, rigid_mask)
+        )  # the float flat mask the glue made from the atom mask: a copy outside the graph
     # only copies of a leaf of this fold's tree (a stale entry of some other call is not ours to rewrite)
     casts = [cast for cast in fold.casts() if any(cast[0] is leaf for leaf in leaves)]
     entry = _Entry(captured, static, leaves, casts, mask_copies)
@@ -677,7 +713,6 @@ def _sample_cached(
     use_glue: bool,
 ) -> torch.Tensor | None:
     """Run the steps through the per-shape cache; ``None`` when this fold cannot use it (the caller then runs the per-fold capture)."""
-
     tree = fold.tree()
     try:
         structure, leaves = _flatten(tree)
@@ -706,11 +741,22 @@ def _sample_cached(
     if entry is None:
         entry = cache.build(
             lambda: _capture_entry(
-                cache, fold, sampler, tree, coords, sigmas, row0,
-                generator=generator, coordinate_dims=coordinate_dims, scopes=scopes, use_glue=use_glue,
+                cache,
+                fold,
+                sampler,
+                tree,
+                coords,
+                sigmas,
+                row0,
+                generator=generator,
+                coordinate_dims=coordinate_dims,
+                scopes=scopes,
+                use_glue=use_glue,
             )
         )
-        if entry.tables is None:  # no engine handle: nothing could refresh it for another fold
+        if (
+            entry.tables is None
+        ):  # no engine handle: nothing could refresh it for another fold
             kept = False
             cache.bump("uncached")
         else:
@@ -756,10 +802,21 @@ def sample(
     a shape, served to every later fold by writing the fold into the graph's static buffers. Without them the graph is built for this fold and
     dropped (``denoise`` / ``augment`` / ``align`` / ``rigid_mask`` then read the fold's own tensors).
     """
-    if getattr(scopes, "inline", False):  # the training rollout graph (train/rollout_graph.py): the loop runs in the caller's capture
+    if getattr(
+        scopes, "inline", False
+    ):  # the training rollout graph (train/rollout_graph.py): the loop runs in the caller's capture
         return sample_inline(
-            sampler, denoise, shape, sigmas, device=device, generator=generator, augment=augment, align=align,
-            coordinate_dims=coordinate_dims, dtype=dtype, conditioning=conditioning,
+            sampler,
+            denoise,
+            shape,
+            sigmas,
+            device=device,
+            generator=generator,
+            augment=augment,
+            align=align,
+            coordinate_dims=coordinate_dims,
+            dtype=dtype,
+            conditioning=conditioning,
         )
     coords = sigmas[0] * torch.randn(
         shape, device=device, dtype=dtype, generator=generator
@@ -772,8 +829,17 @@ def sample(
     if cache is not None:
         use_glue = rigid_mask is not None
         result = _sample_cached(
-            cache, fold, sampler, coords, table, pairs, sigmas,
-            generator=generator, coordinate_dims=coordinate_dims, scopes=scopes, use_glue=use_glue,
+            cache,
+            fold,
+            sampler,
+            coords,
+            table,
+            pairs,
+            sigmas,
+            generator=generator,
+            coordinate_dims=coordinate_dims,
+            scopes=scopes,
+            use_glue=use_glue,
         )
         if result is not None:
             return result
@@ -820,10 +886,28 @@ def sample_inline(
     """The whole trajectory as one straight-line sequence of ops: no host read (the churn branch is a ``where`` on the device scalars of
     :func:`build_step`), no capture of its own and no cache. A caller that captures (the training mini-rollout, ``train/rollout_graph.py``) or
     runs it eagerly gets the same arithmetic. ``conditioning`` is evaluated here, so a capture around this call records it too: every replay
-    makes the conditioning table from the weights of that moment."""
-    coords = sigmas[0] * torch.randn(shape, device=device, dtype=dtype, generator=generator)
-    table = None if conditioning is None else conditioning(_hatted(sampler.config, sigmas))
-    step = build_step(sampler, denoise, generator=generator, augment=augment, align=align, coordinate_dims=coordinate_dims, rigid_mask=None)
+    makes the conditioning table from the weights of that moment.
+    """
+    coords = sigmas[0] * torch.randn(
+        shape, device=device, dtype=dtype, generator=generator
+    )
+    table = (
+        None if conditioning is None else conditioning(_hatted(sampler.config, sigmas))
+    )
+    step = build_step(
+        sampler,
+        denoise,
+        generator=generator,
+        augment=augment,
+        align=align,
+        coordinate_dims=coordinate_dims,
+        rigid_mask=None,
+    )
     for index in range(len(sigmas) - 1):
-        coords = step(coords, sigmas[index], sigmas[index + 1], None if table is None else table[index])
+        coords = step(
+            coords,
+            sigmas[index],
+            sigmas[index + 1],
+            None if table is None else table[index],
+        )
     return coords

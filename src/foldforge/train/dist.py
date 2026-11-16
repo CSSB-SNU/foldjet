@@ -70,7 +70,9 @@ def barrier(info: WorldInfo) -> None:
 
 
 @torch.no_grad()
-def broadcast_parameters(params: Iterable[torch.Tensor], info: WorldInfo, src: int = 0) -> None:
+def broadcast_parameters(
+    params: Iterable[torch.Tensor], info: WorldInfo, src: int = 0
+) -> None:
     """Make the parameters (and buffers passed in) identical on every rank: copy rank ``src``'s values, once, in a few flattened buckets."""
     if info.world_size == 1:
         return
@@ -86,7 +88,11 @@ def _buckets(tensors: list[torch.Tensor], max_numel: int) -> list[list[torch.Ten
     current: list[torch.Tensor] = []
     size = 0
     for t in tensors:
-        if current and (t.dtype != current[0].dtype or t.device != current[0].device or size + t.numel() > max_numel):
+        if current and (
+            t.dtype != current[0].dtype
+            or t.device != current[0].device
+            or size + t.numel() > max_numel
+        ):
             buckets.append(current)
             current, size = [], 0
         current.append(t)
@@ -105,10 +111,16 @@ def _scatter(flat: torch.Tensor, tensors: list[torch.Tensor]) -> None:
 
 
 @torch.no_grad()
-def allreduce_gradients(params: Iterable[torch.Tensor], info: WorldInfo, bucket_numel: int = 2**26, group=None) -> int:
+def allreduce_gradients(
+    params: Iterable[torch.Tensor],
+    info: WorldInfo,
+    bucket_numel: int = 2**26,
+    group=None,
+) -> int:
     """SUM the ``.grad`` of every parameter over the ranks, flattened into buckets of ``bucket_numel`` elements (default 64 Mi = 256 MiB fp32).
     A parameter without a gradient on this rank contributes zeros (every rank must call this with the same parameter list: a parameter some rank
-    never reached still takes part). Returns the number of all-reduce calls."""
+    never reached still takes part). Returns the number of all-reduce calls.
+    """
     if info.world_size == 1:
         return 0
     grads = []
@@ -126,12 +138,16 @@ def allreduce_gradients(params: Iterable[torch.Tensor], info: WorldInfo, bucket_
 
 
 @torch.no_grad()
-def mean_over_ranks(values: Mapping[str, float], info: WorldInfo, device: torch.device) -> dict[str, float]:
+def mean_over_ranks(
+    values: Mapping[str, float], info: WorldInfo, device: torch.device
+) -> dict[str, float]:
     """Average a dict of floats over the ranks (the printed loss parts); one all-reduce."""
     if info.world_size == 1:
         return dict(values)
     keys = sorted(values)
-    t = torch.tensor([float(values[k]) for k in keys], dtype=torch.float64, device=device)
+    t = torch.tensor(
+        [float(values[k]) for k in keys], dtype=torch.float64, device=device
+    )
     torch_dist.all_reduce(t, op=torch_dist.ReduceOp.SUM)
     t /= info.world_size
     return dict(zip(keys, t.tolist(), strict=True))

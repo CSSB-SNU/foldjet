@@ -1,4 +1,4 @@
-# ruff: noqa: E501, PLR2004
+# ruff: noqa: E501
 """The 5I28 ESMFold2 forward fixes: the relative encoding built in its target dtype, the confidence head's per-fold re-embedding terms built once.
 
 Both are exact rewrites: the same values, the same operations in the same order, fewer launches and no int64 one-hot.
@@ -39,10 +39,16 @@ def _tokens(n: int = 12, chains: int = 3) -> features.TokenFeatures:
 
 @pytest.mark.parametrize("dtype", [torch.float32, torch.bfloat16, torch.float16])
 @pytest.mark.parametrize("same_chain", [False, True])
-def test_relative_encoding_in_the_target_dtype_equals_the_int64_encoding_cast(dtype, same_chain):
+def test_relative_encoding_in_the_target_dtype_equals_the_int64_encoding_cast(
+    dtype, same_chain
+):
     tokens = _tokens()
-    old = featurization.create_relative_encoding(tokens, 32, 2, chain_bucket_on_same_chain=same_chain)
-    new = featurization.create_relative_encoding(tokens, 32, 2, chain_bucket_on_same_chain=same_chain, dtype=dtype)
+    old = featurization.create_relative_encoding(
+        tokens, 32, 2, chain_bucket_on_same_chain=same_chain
+    )
+    new = featurization.create_relative_encoding(
+        tokens, 32, 2, chain_bucket_on_same_chain=same_chain, dtype=dtype
+    )
     assert old.dtype == torch.int64
     assert new.dtype == dtype
     assert torch.equal(new, old.to(dtype))
@@ -104,7 +110,9 @@ def test_the_sample_loop_builds_the_fold_terms_once_per_fold(monkeypatch):
     confidence.reembed_pair = spec.confidence_reembed_pair
     confidence.row_pool_attn = None
     confidence._fold_cache = None  # noqa: SLF001
-    out = confidence._forward_samples(torch.ones(3, 2, 2, 3), {}, None, None, None, None)  # noqa: SLF001
+    out = confidence._forward_samples(
+        torch.ones(3, 2, 2, 3), {}, None, None, None, None
+    )
     assert out["x"].shape == (3, 1)
     assert len(seen) == 3
     assert isinstance(seen[0], dict)
@@ -126,7 +134,7 @@ def test_fold_scope_opens_and_drops_the_cache():
 
 def test_the_per_sample_confidence_calls_share_one_fold_scope():
     """``_confidence_over_samples`` calls the head once per sample (chunk 1): all calls of a fold see the same cache dict."""
-    from foldforge.models.architectures.af3 import AlphaFold3 as Model  # noqa: PLC0415
+    from foldforge.models.architectures.af3 import AlphaFold3 as Model
 
     seen = []
 
@@ -169,7 +177,9 @@ def _stub_reembedding_head(monkeypatch):
     class Head(ConfidenceHead):
         def __init__(self):
             torch.nn.Module.__init__(self)
-            self.spec = SimpleNamespace(confidence_global_norm=False, confidence_single_clamp=False)
+            self.spec = SimpleNamespace(
+                confidence_global_norm=False, confidence_single_clamp=False
+            )
             self.reembed_pair = True
             self.left_half_distance_logits = torch.nn.Linear(2, 2)
             self.reembedding = Reembedding()
@@ -180,7 +190,9 @@ def _stub_reembedding_head(monkeypatch):
         def _output_heads(self, pair, single, *args):
             return {"pair": pair, "single": single}
 
-    monkeypatch.setattr(head.atom_layout, "convert", lambda info, positions, layout_axes: positions)
+    monkeypatch.setattr(
+        head.atom_layout, "convert", lambda info, positions, layout_axes: positions
+    )
     return Head(), calls
 
 
@@ -191,7 +203,11 @@ def _fold_inputs():
         "single": torch.randn(4, 3, generator=generator),
         "target_feat": torch.randn(4, 5, generator=generator),
     }
-    return embeddings, torch.ones(4), [torch.randn(4, 3, generator=generator) for _ in range(3)]
+    return (
+        embeddings,
+        torch.ones(4),
+        [torch.randn(4, 3, generator=generator) for _ in range(3)],
+    )
 
 
 def test_a_call_with_the_fold_state_equals_the_call_that_builds_it(monkeypatch):
@@ -199,21 +215,34 @@ def test_a_call_with_the_fold_state_equals_the_call_that_builds_it(monkeypatch):
     embeddings, seq_mask, samples = _fold_inputs()
     batch = SimpleNamespace()
     with torch.no_grad():
-        expected = [confidence(s, embeddings, seq_mask, None, None, batch) for s in samples]
-        assert calls["fold_terms"] == len(samples)  # no fold scope, no state: every call builds its own
+        expected = [
+            confidence(s, embeddings, seq_mask, None, None, batch) for s in samples
+        ]
+        assert calls["fold_terms"] == len(
+            samples
+        )  # no fold scope, no state: every call builds its own
         calls["fold_terms"] = 0
         state = confidence.fold_state(embeddings, seq_mask, batch)
         assert calls["fold_terms"] == 1
         base = [state["terms"][0].clone(), state["terms"][1].clone()]
-        got = [confidence(s, embeddings, seq_mask, None, None, batch, fold=state) for s in samples]
-        assert calls["fold_terms"] == 1  # the calls that were given the state build nothing
+        got = [
+            confidence(s, embeddings, seq_mask, None, None, batch, fold=state)
+            for s in samples
+        ]
+        assert (
+            calls["fold_terms"] == 1
+        )  # the calls that were given the state build nothing
     for a, b in zip(expected, got, strict=True):
-        assert torch.equal(a["pair"], b["pair"]) and torch.equal(a["single"], b["single"])
-    assert torch.equal(state["terms"][0], base[0]) and torch.equal(state["terms"][1], base[1])  # the state is only read
+        assert torch.equal(a["pair"], b["pair"]) and torch.equal(
+            a["single"], b["single"]
+        )
+    assert torch.equal(state["terms"][0], base[0]) and torch.equal(
+        state["terms"][1], base[1]
+    )  # the state is only read
 
 
 def test_the_sample_loop_builds_the_fold_state_once_and_hands_it_to_every_sample():
-    from foldforge.models.architectures.af3 import AlphaFold3 as Model  # noqa: PLC0415
+    from foldforge.models.architectures.af3 import AlphaFold3 as Model
 
     seen = {"built": 0, "folds": []}
 
@@ -246,6 +275,14 @@ def test_the_sample_loop_builds_the_fold_state_once_and_hands_it_to_every_sample
         return seen["built"], list(seen["folds"])
 
     built, folds = run(True, 3)
-    assert built == 1 and len(folds) == 3 and folds[0] is not None and all(f is folds[0] for f in folds)
+    assert (
+        built == 1
+        and len(folds) == 3
+        and folds[0] is not None
+        and all(f is folds[0] for f in folds)
+    )
     assert run(True, 1) == (0, [None])  # one sample: nothing to share
-    assert run(False, 3) == (0, [None] * 3)  # a head that does not re-embed has no fold state
+    assert run(False, 3) == (
+        0,
+        [None] * 3,
+    )  # a head that does not re-embed has no fold state

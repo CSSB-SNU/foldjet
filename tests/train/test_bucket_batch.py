@@ -20,7 +20,13 @@ from foldforge.train.data import TrainBatch
 features = pytest.importorskip("alphafold3.model.features")
 atom_layout = pytest.importorskip("alphafold3.model.atom_layout.atom_layout")
 
-TABLES = ("token_atoms_to_queries", "tokens_to_queries", "tokens_to_keys", "queries_to_keys", "queries_to_token_atoms")
+TABLES = (
+    "token_atoms_to_queries",
+    "tokens_to_queries",
+    "tokens_to_keys",
+    "queries_to_keys",
+    "queries_to_token_atoms",
+)
 
 
 def make_layout(atoms_per_token: list[int]):
@@ -34,7 +40,12 @@ def make_layout(atoms_per_token: list[int]):
         res[i, :] = i + 1
     other = np.full((t, 24), "", dtype=object)
     return atom_layout.AtomLayout(
-        atom_name=name, res_id=res, chain_id=chain, atom_element=other.copy(), res_name=other.copy(), chain_type=other.copy()
+        atom_name=name,
+        res_id=res,
+        chain_id=chain,
+        atom_element=other.copy(),
+        res_name=other.copy(),
+        chain_type=other.copy(),
     )
 
 
@@ -43,7 +54,13 @@ def af3_tables(layout, tokens: int, atoms: int) -> dict[str, torch.Tensor]:
         all_token_atoms_layout=layout,
         queries_subset_size=32,
         keys_subset_size=128,
-        padding_shapes=features.PaddingShapes(num_tokens=tokens, msa_size=0, num_chains=0, num_templates=0, num_atoms=atoms),
+        padding_shapes=features.PaddingShapes(
+            num_tokens=tokens,
+            msa_size=0,
+            num_chains=0,
+            num_templates=0,
+            num_atoms=atoms,
+        ),
     ).as_data_dict()
     return {k: torch.as_tensor(np.asarray(v)) for k, v in result.items()}
 
@@ -58,7 +75,14 @@ def counts(n_tokens: int, n_atoms: int) -> list[int]:
 
 
 def fake_example(
-    t_real: int, n_atoms: int, t_bucket: int, a_bucket: int, msa_rows: int, templates: int = 4, name: str = "fake", msa_valid: int | None = None
+    t_real: int,
+    n_atoms: int,
+    t_bucket: int,
+    a_bucket: int,
+    msa_rows: int,
+    templates: int = 4,
+    name: str = "fake",
+    msa_valid: int | None = None,
 ) -> TrainBatch:
     layout = make_layout(counts(t_real, n_atoms))
     f = af3_tables(layout, t_bucket, a_bucket)
@@ -75,25 +99,42 @@ def fake_example(
         {
             "seq_mask": seq_mask,
             "pred_dense_atom_mask": dense,
-            "aatype": torch.randint(0, 20, (t_bucket,), generator=g, dtype=torch.int32) * seq_mask,
-            "msa": (torch.randint(0, 20, (msa_rows, t_bucket), generator=g) * msa_mask).to(torch.int8),
+            "aatype": torch.randint(0, 20, (t_bucket,), generator=g, dtype=torch.int32)
+            * seq_mask,
+            "msa": (
+                torch.randint(0, 20, (msa_rows, t_bucket), generator=g) * msa_mask
+            ).to(torch.int8),
             "msa_mask": msa_mask,
             "deletion_matrix": torch.zeros(msa_rows, t_bucket, dtype=torch.int8),
             "profile": torch.rand(t_bucket, 31, generator=g) * seq_mask[:, None],
             "num_alignments": torch.tensor([valid], dtype=torch.int32),
             "template_aatype": torch.zeros(templates, t_bucket, dtype=torch.int32),
-            "template_atom_mask": torch.zeros(templates, t_bucket, 24, dtype=torch.bool),
+            "template_atom_mask": torch.zeros(
+                templates, t_bucket, 24, dtype=torch.bool
+            ),
             "template_atom_positions": torch.zeros(templates, t_bucket, 24, 3),
             "ref_pos": torch.rand(t_bucket, 24, 3, generator=g, dtype=torch.float64),
-            "tokens_to_ligand_ligand_bonds:gather_idxs": torch.zeros(t_bucket * 10, 2, dtype=torch.int64),
-            "tokens_to_ligand_ligand_bonds:gather_mask": torch.zeros(t_bucket * 10, 2, dtype=torch.bool),
+            "tokens_to_ligand_ligand_bonds:gather_idxs": torch.zeros(
+                t_bucket * 10, 2, dtype=torch.int64
+            ),
+            "tokens_to_ligand_ligand_bonds:gather_mask": torch.zeros(
+                t_bucket * 10, 2, dtype=torch.bool
+            ),
             "ligand_ligand_bond_order": torch.zeros(t_bucket * 10, dtype=torch.int32),
-            "tokens_to_polymer_ligand_bonds:gather_idxs": torch.zeros(t_bucket, 2, dtype=torch.int64),
+            "tokens_to_polymer_ligand_bonds:gather_idxs": torch.zeros(
+                t_bucket, 2, dtype=torch.int64
+            ),
             "tokens_to_polymer_ligand_bonds:input_shape": torch.tensor([t_real]),
-            "token_atoms_to_polymer_ligand_bonds:input_shape": torch.tensor([t_bucket, 24]),
+            "token_atoms_to_polymer_ligand_bonds:input_shape": torch.tensor(
+                [t_bucket, 24]
+            ),
         }
     )
-    return TrainBatch(features=f, atom_positions=torch.rand(t_bucket, 24, 3, generator=g) * dense[..., None], name=name)
+    return TrainBatch(
+        features=f,
+        atom_positions=torch.rand(t_bucket, 24, 3, generator=g) * dense[..., None],
+        name=name,
+    )
 
 
 # (tokens, atoms) of the real content; old bucket; new bucket
@@ -161,26 +202,39 @@ def test_padding_is_masked_and_real_content_unchanged():
     assert not g["profile"][24:].any()
     assert torch.equal(out.atom_positions[:24], ex.atom_positions)
     assert not out.atom_positions[24:].any()
-    assert torch.equal(out.atom_mask, g["pred_dense_atom_mask"])  # None -> the model's own mask
+    assert torch.equal(
+        out.atom_mask, g["pred_dense_atom_mask"]
+    )  # None -> the model's own mask
     assert out.bond_pairs is None
     # dtypes never change
     assert {k: v.dtype for k, v in f.items()} == {k: v.dtype for k, v in g.items()}
     # already at the bucket shape: the same tensors (bit-identical)
     again = bucket_example(out, spec)
-    assert all(again.features[k] is out.features[k] or torch.equal(again.features[k], out.features[k]) for k in out.features)
+    assert all(
+        again.features[k] is out.features[k]
+        or torch.equal(again.features[k], out.features[k])
+        for k in out.features
+    )
     assert count_signatures([out, again]) == {shape_signature(out): 2}
 
 
 def test_bond_pairs_padded_with_minus_one():
     ex = fake_example(20, 160, 24, 192, msa_rows=8)
     ex.bond_pairs = torch.tensor([[0, 1, 2, 3], [4, 0, 5, 1]])
-    out = bucket_example(ex, BucketSpec(tokens=32, atoms=288, msa_pool_rows=8, bond_pairs=6))
+    out = bucket_example(
+        ex, BucketSpec(tokens=32, atoms=288, msa_pool_rows=8, bond_pairs=6)
+    )
     assert out.bond_pairs.shape == (6, 4)
     assert torch.equal(out.bond_pairs[:2], ex.bond_pairs)
     assert (out.bond_pairs[2:] == -1).all()
-    assert bucket_example(fake_example(20, 160, 24, 192, msa_rows=8), BucketSpec(tokens=32, atoms=288, msa_pool_rows=8, bond_pairs=6)).bond_pairs.shape == (6, 4)
+    assert bucket_example(
+        fake_example(20, 160, 24, 192, msa_rows=8),
+        BucketSpec(tokens=32, atoms=288, msa_pool_rows=8, bond_pairs=6),
+    ).bond_pairs.shape == (6, 4)
     with pytest.raises(BucketOverflow):
-        bucket_example(ex, BucketSpec(tokens=32, atoms=288, msa_pool_rows=8, bond_pairs=1))
+        bucket_example(
+            ex, BucketSpec(tokens=32, atoms=288, msa_pool_rows=8, bond_pairs=1)
+        )
 
 
 def test_overflow_is_rejected():
@@ -198,7 +252,9 @@ def test_msa_pool_above_the_bucket_keeps_the_query_and_valid_rows():
     b = bucket_example(ex, spec)
     assert a.features["msa"].shape == (16, 24)
     assert a.features["msa_mask"].any(-1).all()  # 16 valid rows, no padding row
-    assert torch.equal(a.features["msa"][0], ex.features["msa"][0])  # the query stays on top
+    assert torch.equal(
+        a.features["msa"][0], ex.features["msa"][0]
+    )  # the query stays on top
     assert torch.equal(a.features["msa"], b.features["msa"])  # deterministic
     # fewer valid rows than the bucket: only empty rows are cut, valid ones keep their order
     ex2 = fake_example(20, 160, 24, 192, msa_rows=40, msa_valid=5)

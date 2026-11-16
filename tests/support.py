@@ -23,4 +23,3 @@ def production_module(family, path):
     return SimpleNamespace(
         **(vars(module) | {old: getattr(module, new) for old, new in names.items()})
     )
-

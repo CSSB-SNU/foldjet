@@ -57,7 +57,9 @@ PAIR_BAND_THRESHOLD_BYTES = 4 << 30
 PAIR_BAND_BYTES = 1 << 30
 
 
-def fourier_features(value: torch.Tensor, weight: torch.Tensor, bias: torch.Tensor) -> torch.Tensor:
+def fourier_features(
+    value: torch.Tensor, weight: torch.Tensor, bias: torch.Tensor
+) -> torch.Tensor:
     """``cos(2 pi (value * weight + bias))`` for scalar noise levels, with the checkpoint's fixed projection."""
     return torch.cos(2 * torch.pi * (value[..., None] * weight + bias))
 
@@ -190,7 +192,11 @@ class DiffusionHead(nn.Module):
         )
 
         self.transformer = engine_graph.make_token_transformer(
-            spec, c_act=self.c_act, d_cond=seq_channel, d_pair=pair_channel, num_blocks=spec.diffusion_blocks
+            spec,
+            c_act=self.c_act,
+            d_cond=seq_channel,
+            d_pair=pair_channel,
+            num_blocks=spec.diffusion_blocks,
         )
 
         self.output_norm = nn.LayerNorm(self.c_act, bias="output_norm" in affine)
@@ -267,7 +273,9 @@ class DiffusionHead(nn.Module):
                 second = self.relpe_projection(second)
         features_2d = torch.concatenate([pair_embedding, second], dim=-1)
 
-        pair_cond = self.pair_cond_initial_projection(self.pair_cond_initial_norm(features_2d))
+        pair_cond = self.pair_cond_initial_projection(
+            self.pair_cond_initial_norm(features_2d)
+        )
 
         pair_cond = _plus_transition(self.pair_transition_0, pair_cond)
         pair_cond = _plus_transition(self.pair_transition_1, pair_cond)
@@ -302,7 +310,9 @@ class DiffusionHead(nn.Module):
                 ],
                 dim=-1,
             )
-        return self.single_cond_initial_projection(self.single_cond_initial_norm(features_1d))
+        return self.single_cond_initial_projection(
+            self.single_cond_initial_norm(features_1d)
+        )
 
     def _pair_band_rows(self, pair: torch.Tensor) -> int | None:
         """Rows per band when the fold's pair conditioning runs banded, else None (the unbanded path)."""
@@ -318,19 +328,31 @@ class DiffusionHead(nn.Module):
         pair = embeddings["pair"]
         rows = self._pair_band_rows(pair)
         # The fp32 trunk-embedding boundary, for the token-sized tensors only (the pair ones are cast band by band).
-        small = {name: embeddings[name] for name in ("single", "target_feat", "structure_target_feat") if name in embeddings}
+        small = {
+            name: embeddings[name]
+            for name in ("single", "target_feat", "structure_target_feat")
+            if name in embeddings
+        }
         if f32:
             small = {name: value.float() for name, value in small.items()}
-        single_cond = self._single_conditioning(small, use_conditioning * small["single"])
+        single_cond = self._single_conditioning(
+            small, use_conditioning * small["single"]
+        )
         dtype = torch.float32 if f32 else pair.dtype
         pair_cond = None
         for start in range(0, pair.shape[0], rows):
             band = slice(start, start + rows)
             pair_embedding = use_conditioning * pair[band].to(dtype)
             if self.compress_trunk_pair:
-                pair_embedding = self.z_trunk_projection(self.z_trunk_norm(pair_embedding))
+                pair_embedding = self.z_trunk_projection(
+                    self.z_trunk_norm(pair_embedding)
+                )
             if self.pair_init_cond:
-                second = embeddings["pair_init"][band].to(dtype).to(dtype=pair_embedding.dtype)
+                second = (
+                    embeddings["pair_init"][band]
+                    .to(dtype)
+                    .to(dtype=pair_embedding.dtype)
+                )
             else:
                 second = featurization.create_relative_encoding(
                     batch.token_features,
@@ -342,7 +364,11 @@ class DiffusionHead(nn.Module):
                 )
                 if self.relpe_projection is not None:
                     second = self.relpe_projection(second)
-            piece = self.pair_cond_initial_projection(self.pair_cond_initial_norm(torch.concatenate([pair_embedding, second], dim=-1)))
+            piece = self.pair_cond_initial_projection(
+                self.pair_cond_initial_norm(
+                    torch.concatenate([pair_embedding, second], dim=-1)
+                )
+            )
             piece = _plus_transition(self.pair_transition_0, piece)
             piece = _plus_transition(self.pair_transition_1, piece)
             if self.cond_final_norm:
@@ -363,7 +389,9 @@ class DiffusionHead(nn.Module):
             trunk_single_cond=embeddings["single"],
             trunk_pair_cond=pair_cond,
         )
-        return hoist_conditioning(state, self.atom_cross_att_encoder, self.atom_cross_att_decoder)
+        return hoist_conditioning(
+            state, self.atom_cross_att_encoder, self.atom_cross_att_decoder
+        )
 
     def _noise_term(self, noise_level: torch.Tensor) -> torch.Tensor:
         """Run  noise term.
@@ -374,7 +402,9 @@ class DiffusionHead(nn.Module):
         noise_embedding = self.fourier_embeddings(
             (1 / 4) * torch.log(noise_level / SIGMA_DATA)
         )
-        return self.noise_embedding_initial_projection(self.noise_embedding_initial_norm(noise_embedding))
+        return self.noise_embedding_initial_projection(
+            self.noise_embedding_initial_norm(noise_embedding)
+        )
 
     def _finish_single_conditioning(self, single_cond: torch.Tensor) -> torch.Tensor:
         """Run  finish single conditioning.
@@ -496,7 +526,9 @@ class DiffusionHead(nn.Module):
             "atom_state": entry[6],
         }
 
-    def adopt_fold(self, batch, embeddings, tree: dict[str, Any], use_conditioning: bool = True) -> None:
+    def adopt_fold(
+        self, batch, embeddings, tree: dict[str, Any], use_conditioning: bool = True
+    ) -> None:
         """Make ``tree`` (a ``fold_tree``, possibly cloned) the conditioning of the fold ``(batch, embeddings)``: the next ``_conditioned`` of
         that pair serves it instead of making it."""
         self._fold = (
@@ -597,7 +629,9 @@ class DiffusionHead(nn.Module):
             # no-op even at scale one, because it re-centres and re-scales.
             act = act + self.single_cond_embedding_projection(trunk_single_cond)
         else:
-            act += self.single_cond_embedding_projection(self.single_cond_embedding_norm(trunk_single_cond))
+            act += self.single_cond_embedding_projection(
+                self.single_cond_embedding_norm(trunk_single_cond)
+            )
 
         act = self.transformer(
             act=act,

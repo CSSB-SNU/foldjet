@@ -44,7 +44,9 @@ FIXED_LENGTH = 4096
 class MicroPlan:
     example: int  # index into the pool
     passes: int  # trunk passes (recycles) of this micro step
-    torch_seed: int  # seed of the torch RNG (noise, rotations, sigma) before the micro step
+    torch_seed: (
+        int  # seed of the torch RNG (noise, rotations, sigma) before the micro step
+    )
 
 
 def global_micro_index(it: int, micro: int, accum: int, rank: int, world: int) -> int:
@@ -52,13 +54,18 @@ def global_micro_index(it: int, micro: int, accum: int, rank: int, world: int) -
     return (it * accum + micro) * world + rank
 
 
-def micro_plan(base_seed: int, global_index: int, pool_size: int, cfg: TrainConfig) -> MicroPlan:
+def micro_plan(
+    base_seed: int, global_index: int, pool_size: int, cfg: TrainConfig
+) -> MicroPlan:
     """Pool example, recycle count and RNG seed of one micro step: a pure function of ``(base_seed, global_index)``. The three backends and every
-    rank draw the same data stream, and a data-parallel run equals the single-process run that takes the same global indices."""
+    rank draw the same data stream, and a data-parallel run equals the single-process run that takes the same global indices.
+    """
     rng = random.Random(base_seed * 1_000_003 + global_index)
     example = rng.randrange(pool_size)
     passes = rng.randint(cfg.recycles_min, cfg.recycles_max)
-    forced = os.environ.get("FF_BENCH_PASSES_SEQ")  # e.g. "1,2,3,4": measurement only, recycle counts cycle by global micro index (capture-order test)
+    forced = os.environ.get(
+        "FF_BENCH_PASSES_SEQ"
+    )  # e.g. "1,2,3,4": measurement only, recycle counts cycle by global micro index (capture-order test)
     if forced:
         seq = [int(x) for x in forced.split(",")]
         passes = seq[global_index % len(seq)]
@@ -86,14 +93,18 @@ def pick_pool(
     max_atoms: int = 4096,
 ) -> list[str]:
     """``count`` targets whose size-table tokens lie in ``low_fraction .. high_fraction`` x ``tokens``, evenly spread over that range (a target above ``tokens`` or with more than ``max_atoms`` atoms would be
-    cropped by the recipe; below it the batch is padded up to the token bucket). Deterministic: sorted by (tokens, name)."""
+    cropped by the recipe; below it the batch is padded up to the token bucket). Deterministic: sorted by (tokens, name).
+    """
     atoms = (read_sizes(column=2) if sizes is None else {}) if atoms is None else atoms
     sizes = read_sizes() if sizes is None else sizes
     low, high = int(low_fraction * tokens), int(high_fraction * tokens)
     rows = sorted(
         (n, name)
         for name, n in sizes.items()
-        if low <= n <= high and atoms.get(name, 0) <= max_atoms and (spec_dir / f"{name}.yaml").exists() and name.endswith("-assembly1")
+        if low <= n <= high
+        and atoms.get(name, 0) <= max_atoms
+        and (spec_dir / f"{name}.yaml").exists()
+        and name.endswith("-assembly1")
     )
     if len(rows) < count:
         message = f"only {len(rows)} FoldBench targets have {low}..{high} tokens, {count} wanted"
@@ -102,7 +113,9 @@ def pick_pool(
     return [rows[round(i * step)][1] for i in range(count)]
 
 
-def parse_pool(spec: str, tokens: int = RECIPE_TOKENS, count: int = 8, max_atoms: int = 4096) -> list[str]:
+def parse_pool(
+    spec: str, tokens: int = RECIPE_TOKENS, count: int = 8, max_atoms: int = 4096
+) -> list[str]:
     """``--bench-pool``: ``default`` (the targets near ``tokens``) or a comma separated list of FoldBench targets."""
     if spec in ("", "default"):
         return pick_pool(tokens, count, max_atoms=max_atoms)
@@ -116,7 +129,8 @@ def real_tokens(example: TrainBatch) -> int:
 
 def standin_example(pred, target: str, seed: int | None = None) -> TrainBatch:
     """One example: FoldForge's featurisation of a FoldBench target; the ground truth is the model's own pre-training prediction of it (a STAND-IN:
-    the real ground-truth atoms are not mapped to the dense layout in phase 0/1). ``seed`` seeds the torch RNG before the prediction."""
+    the real ground-truth atoms are not mapped to the dense layout in phase 0/1). ``seed`` seeds the torch RNG before the prediction.
+    """
     net = pred._network
     captured: dict = {}
     original = net.run_trunk
@@ -136,11 +150,19 @@ def standin_example(pred, target: str, seed: int | None = None) -> TrainBatch:
         torch.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
     with torch.no_grad(), pred._scope():
-        samples = net.sample_diffusion(captured["trunk"])["diffusion_samples"]["atom_positions"]
+        samples = net.sample_diffusion(captured["trunk"])["diffusion_samples"][
+            "atom_positions"
+        ]
     state.close()
-    features = {k: v.clone() for k, v in captured["batch"].items()}  # leave inference mode: autograd needs ordinary tensors
-    features = features_to_device(features, samples.device)  # the GatherInfo input_shape metadata stays on the host (no sync per micro step)
-    index, valid = fixed_atom_index(features["pred_dense_atom_mask"].cpu(), FIXED_LENGTH)
+    features = {
+        k: v.clone() for k, v in captured["batch"].items()
+    }  # leave inference mode: autograd needs ordinary tensors
+    features = features_to_device(
+        features, samples.device
+    )  # the GatherInfo input_shape metadata stays on the host (no sync per micro step)
+    index, valid = fixed_atom_index(
+        features["pred_dense_atom_mask"].cpu(), FIXED_LENGTH
+    )
     return TrainBatch(
         features=features,
         atom_positions=samples[0].clone().float(),
@@ -164,16 +186,23 @@ def build_pool(
     """The examples of ``targets`` on the GPU. With ``cache`` the pool is built ONCE (rank 0) and loaded by every rank and every later run: the
     stand-in ground truth is then identical for the three backends. Without it each process builds its own (the ground truth is the
     prediction of the backend being measured). With ``bucket`` every example is then padded to that ONE shape (``train/bucket_batch.py``, in memory after
-    the build / load: the cache file keeps the raw examples, so one cache serves the bucketed and the plain pool); without it the pool is unchanged."""
+    the build / load: the cache file keeps the raw examples, so one cache serves the bucketed and the plain pool); without it the pool is unchanged.
+    """
 
     def build() -> list[TrainBatch]:
         out = []
         for i, target in enumerate(targets):
             example = standin_example(pred, target, seed=base_seed + i)
-            if max_tokens is not None and real_tokens(example) > max_tokens:  # the recipe would crop it; the stand-in cannot
-                log(f"POOL skipped {target} tokens={real_tokens(example)} > {max_tokens}")
+            if (
+                max_tokens is not None and real_tokens(example) > max_tokens
+            ):  # the recipe would crop it; the stand-in cannot
+                log(
+                    f"POOL skipped {target} tokens={real_tokens(example)} > {max_tokens}"
+                )
                 continue
-            log(f"POOL built {target} tokens={real_tokens(example)} padded_tokens={example.atom_positions.shape[0]}")
+            log(
+                f"POOL built {target} tokens={real_tokens(example)} padded_tokens={example.atom_positions.shape[0]}"
+            )
             out.append(example)
         return out
 
@@ -182,7 +211,9 @@ def build_pool(
             log(f"POOL signatures={len(count_signatures(pool))}")
             return pool
         out = [bucket_example(e, bucket) for e in pool]
-        log(f"POOL bucketed to {bucket}: signatures {len(count_signatures(pool))} -> {len(count_signatures(out))}")
+        log(
+            f"POOL bucketed to {bucket}: signatures {len(count_signatures(pool))} -> {len(count_signatures(out))}"
+        )
         return out
 
     device = pred.device
@@ -224,8 +255,14 @@ def _load_pool(path: Path, device: torch.device) -> tuple[list[str], list[TrainB
     def to(t):
         return None if t is None else t.to(device)
 
-    def fixed(b):  # sample-fixed present-atom index of the mask the step uses, computed here on the host data
-        mask = b["atom_mask"] if b["atom_mask"] is not None else b["features"]["pred_dense_atom_mask"]
+    def fixed(
+        b,
+    ):  # sample-fixed present-atom index of the mask the step uses, computed here on the host data
+        mask = (
+            b["atom_mask"]
+            if b["atom_mask"] is not None
+            else b["features"]["pred_dense_atom_mask"]
+        )
         index, valid = fixed_atom_index(mask, FIXED_LENGTH)
         return index.to(device), valid.to(device)
 
@@ -246,7 +283,9 @@ def _load_pool(path: Path, device: torch.device) -> tuple[list[str], list[TrainB
     return saved["requested"], pool
 
 
-def pool_source(pool: Sequence[TrainBatch]) -> Iterator[TrainBatch]:  # pragma: no cover - trivial
+def pool_source(
+    pool: Sequence[TrainBatch],
+) -> Iterator[TrainBatch]:  # pragma: no cover - trivial
     while True:
         yield from pool
 
@@ -255,7 +294,12 @@ def pool_source(pool: Sequence[TrainBatch]) -> Iterator[TrainBatch]:  # pragma: 
 def engine_table(observations: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """``report_observations(model)`` aggregated per engine class: module count, served host calls per backend, refused calls per reason."""
     rows: dict[str, dict[str, Any]] = defaultdict(
-        lambda: {"modules": 0, "selected": Counter(), "served": Counter(), "refused": Counter()}
+        lambda: {
+            "modules": 0,
+            "selected": Counter(),
+            "served": Counter(),
+            "refused": Counter(),
+        }
     )
     for module in observations["modules"].values():
         row = rows[module["class"]]
@@ -264,16 +308,21 @@ def engine_table(observations: dict[str, Any]) -> dict[str, dict[str, Any]]:
         row["served"].update(module["served_host_calls"])
         row["refused"].update(module["refused_host_calls"])
     return {
-        cls: {k: (dict(v) if isinstance(v, Counter) else v) for k, v in row.items()} for cls, row in sorted(rows.items())
+        cls: {k: (dict(v) if isinstance(v, Counter) else v) for k, v in row.items()}
+        for cls, row in sorted(rows.items())
     }
 
 
 def format_table(table: dict[str, dict[str, Any]], title: str = "ENGINE") -> list[str]:
     """One line per class: ``selected`` = the backend each module of the class is set to, ``served`` = calls that ran on each backend (a refused
-    call is served by pytorch), ``refused`` = calls the selected backend refused, by reason."""
+    call is served by pytorch), ``refused`` = calls the selected backend refused, by reason.
+    """
     lines = [f"{title} class modules selected served refused(reason)"]
     for cls, row in table.items():
-        refused = "; ".join(f"{n}x {reason}" for reason, n in sorted(row["refused"].items())) or "-"
+        refused = (
+            "; ".join(f"{n}x {reason}" for reason, n in sorted(row["refused"].items()))
+            or "-"
+        )
         lines.append(
             f"{title} {cls:34s} n={row['modules']:<4d} selected={_fmt(row['selected'])} served={_fmt(row['served'])} refused={refused}"
         )
@@ -302,7 +351,11 @@ def git_commit(path: Path | None = None) -> str:
     here = path or Path(__file__).resolve().parent
     try:
         return subprocess.run(
-            ["git", "-C", str(here), "rev-parse", "HEAD"], capture_output=True, text=True, check=True, timeout=10
+            ["git", "-C", str(here), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=10,
         ).stdout.strip()
     except Exception:  # noqa: BLE001 - informational only
         return "unknown"

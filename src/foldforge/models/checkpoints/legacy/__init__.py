@@ -41,15 +41,32 @@ class _DenseBlocks:
             tri_hidden_dim=o["tri_hidden"],
         )
 
-    def evoformer_block(self, spec: DenseSpec, c_msa: int, c_pair: int, n_heads_pair: int) -> nn.Module:
+    def evoformer_block(
+        self, spec: DenseSpec, c_msa: int, c_pair: int, n_heads_pair: int
+    ) -> nn.Module:
         from foldforge.models.checkpoints.legacy.pairformer import EvoformerBlock
 
-        return EvoformerBlock(c_msa=c_msa, c_pair=c_pair, n_heads_pair=n_heads_pair, spec=spec)
+        return EvoformerBlock(
+            c_msa=c_msa, c_pair=c_pair, n_heads_pair=n_heads_pair, spec=spec
+        )
 
-    def token_transformer(self, spec: DenseSpec, c_act: int, c_single_cond: int, c_pair_cond: int, num_blocks: int) -> nn.Module:
+    def token_transformer(
+        self,
+        spec: DenseSpec,
+        c_act: int,
+        c_single_cond: int,
+        c_pair_cond: int,
+        num_blocks: int,
+    ) -> nn.Module:
         from foldforge.models.checkpoints.legacy.transformer import DiffusionTransformer
 
-        return DiffusionTransformer(c_act=c_act, c_single_cond=c_single_cond, c_pair_cond=c_pair_cond, num_blocks=num_blocks, spec=spec)
+        return DiffusionTransformer(
+            c_act=c_act,
+            c_single_cond=c_single_cond,
+            c_pair_cond=c_pair_cond,
+            num_blocks=num_blocks,
+            spec=spec,
+        )
 
     def conditioning_transition(self, width: int) -> nn.Module:
         from foldforge.modules.dense.diffusion_transformer import DiffusionTransition

@@ -54,7 +54,9 @@ def install_engine(
     if not modules or "engine_modules" in set(skip):
         plan = BackendPlan.make("pytorch", None, plan.unsupported)
     choices = apply_plan(model, plan, _torch.device(device))
-    model.foldforge_sampler_ops = True  # atom-encoder pooling (PoolAtoms, differentiable since engine 2.5.3)
+    model.foldforge_sampler_ops = (
+        True  # atom-encoder pooling (PoolAtoms, differentiable since engine 2.5.3)
+    )
     model.foldforge_sampler_glue = True  # sampler rigid-motion glue (inference only)
     report: dict[str, Any] = getattr(model, "foldforge_load_report", {})
     report["engine_backends"] = {"plan": plan.report(), "modules": choices}

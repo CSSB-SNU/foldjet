@@ -64,4 +64,3 @@ def test_af3_glycan_sets_follow_selected_database(tmp_path):
         with sets.use_ccd_sets(b.chemical_component_sets):
             assert set(sets.GLYCAN_LINKING_LIGANDS) == {"B"}
         assert set(sets.GLYCAN_LINKING_LIGANDS) == {"A"}
-

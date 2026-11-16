@@ -83,7 +83,9 @@ _WILDCARD = {"protein": frozenset("X"), "rna": frozenset("XN"), "dna": frozenset
 
 def _agree(a: str, b: str, wildcard: frozenset[str]) -> bool:
     """Equal length, and equal letter by letter wherever neither side is an unknown / modified residue."""
-    return len(a) == len(b) and all(x == y or x in wildcard or y in wildcard for x, y in zip(a, b, strict=True))
+    return len(a) == len(b) and all(
+        x == y or x in wildcard or y in wildcard for x, y in zip(a, b, strict=True)
+    )
 
 
 def alphabet_of(kind: str, order: str) -> dict[int, str]:
@@ -169,10 +171,18 @@ class Alignment:
         if len(decoded) > len(sequence):
             extra = len(decoded) - len(sequence)
             for p, s in enumerate(sequence):
-                if s in wildcard and _agree(decoded[:p], sequence[:p], wildcard) and _agree(decoded[p + 1 + extra :], sequence[p + 1 :], wildcard):
+                if (
+                    s in wildcard
+                    and _agree(decoded[:p], sequence[:p], wildcard)
+                    and _agree(decoded[p + 1 + extra :], sequence[p + 1 :], wildcard)
+                ):
                     keep = np.ones(len(decoded), dtype=bool)
                     keep[p + 1 : p + 1 + extra] = False
-                    query, tokens, deletions = query[keep], tokens[:, keep], deletions[:, keep]
+                    query, tokens, deletions = (
+                        query[keep],
+                        tokens[:, keep],
+                        deletions[:, keep],
+                    )
                     decoded = "".join(alphabet[int(x)] for x in query)
                     break
         # the FASTA spells an unknown / modified residue X (its parent is not in the parser's table); the MSA query carries the entity's
@@ -197,18 +207,31 @@ class Alignment:
         ):
             msg = f"{key}: invalid profile/deletion_mean shape"
             raise ValueError(msg)
-        return cls(query, tokens, deletions, species, profile, mean, kind, alphabet if alphabet is not ALPHABETS[kind] else None)
+        return cls(
+            query,
+            tokens,
+            deletions,
+            species,
+            profile,
+            mean,
+            kind,
+            alphabet if alphabet is not ALPHABETS[kind] else None,
+        )
 
     def merge_query(self, sequence: str) -> str:
         """``sequence`` with its unknown / modified positions (``X``; ``N`` for nucleic acids) replaced by the MSA query's canonical letter.
 
         An MSA is written for the entity's canonical sequence, so where the FASTA names a modified residue the query carries its parent; the
         AF3 parser requires the MSA's first row to equal the chain's sequence exactly. The chain's modified residues are one-letter in the
-        released adapters (``modifications`` is empty), so taking the parent letter changes nothing else."""
+        released adapters (``modifications`` is empty), so taking the parent letter changes nothing else.
+        """
         wildcard = _WILDCARD[self.kind]
         alphabet = self.alphabet or ALPHABETS[self.kind]
         decoded = "".join(alphabet[int(x)] for x in self.query)
-        return "".join(d if s in wildcard and d not in wildcard else s for s, d in zip(sequence, decoded, strict=True))
+        return "".join(
+            d if s in wildcard and d not in wildcard else s
+            for s, d in zip(sequence, decoded, strict=True)
+        )
 
     def a3m(self, aliases: dict[str, str], depth: int | None = None) -> str:
         # Only insertion counts are retained in MiniWorld's DB. Lowercase x
@@ -383,7 +406,8 @@ def _template_start(template: str, query: str, offset: int) -> int | None:
 
     The template records are aligned to the entity's full sequence; a FoldBench input may carry a trimmed one. Same length: start 0. An
     explicit ``offset`` (the residues trimmed from the front) is taken as given. A longer template with no offset: the start whose letters
-    agree best with the query over the aligned residues (a homolog, so a clear winner and not a perfect match is what to look for)."""
+    agree best with the query over the aligned residues (a homolog, so a clear winner and not a perfect match is what to look for).
+    """
     length, full = len(query), len(template)
     if offset:
         return offset if full >= offset + length else None
@@ -393,7 +417,11 @@ def _template_start(template: str, query: str, offset: int) -> int | None:
         return None
     best, best_start = 0.0, None
     for start in range(full - length + 1):
-        pairs = [(a, b) for a, b in zip(template[start : start + length], query, strict=True) if a != "-" and a != "X" and b != "X"]
+        pairs = [
+            (a, b)
+            for a, b in zip(template[start : start + length], query, strict=True)
+            if a != "-" and a != "X" and b != "X"
+        ]
         if len(pairs) >= MIN_ALIGNED_BACKBONES:
             identity = sum(a == b for a, b in pairs) / len(pairs)
             if identity > best:
@@ -404,7 +432,7 @@ def _template_start(template: str, query: str, offset: int) -> int | None:
 def load_templates(
     path: Path,
     key: str,
-    query: "str | int",
+    query: str | int,
     count: int,
     offset: int = 0,
     *,
@@ -413,7 +441,8 @@ def load_templates(
     """Load the templates of ``key`` placed on ``query``. ``query`` is the chain length (int): every template must be aligned to exactly that
     many residues, else the record is refused. ``query`` as the chain's one-letter sequence (str) also takes a template aligned in a longer
     frame: placed by ``offset`` (residues trimmed from the front of the chain, FoldBench's ``template_offset``) or, with none, by the start that
-    agrees best with the sequence; a template that cannot be placed is skipped."""
+    agrees best with the sequence; a template that cannot be placed is skipped.
+    """
     if count == 0:
         return ()
     exact = isinstance(query, int)

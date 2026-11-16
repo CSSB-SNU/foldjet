@@ -25,7 +25,10 @@ def test_imports_stay_inside_the_subpackage():
         for module in _imports(path):
             top = module.split(".")[0]
             if top == "foldforge":
-                if not (module == "foldforge.diffusion" or module.startswith("foldforge.diffusion.")):
+                if not (
+                    module == "foldforge.diffusion"
+                    or module.startswith("foldforge.diffusion.")
+                ):
                     offenders.append((str(path.relative_to(ROOT)), module))
             elif top == "miniworld_engine":
                 offenders.append((str(path.relative_to(ROOT)), module))

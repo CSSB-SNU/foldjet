@@ -25,8 +25,13 @@ def _glue_available() -> bool:
     scalar = torch.empty((), device="cuda")
     mask = torch.empty(8, device="cuda")
     augment = AugmentNoise(backend=backend).unsupported(
-        coords, mask, torch.empty(2, 2, 3, device="cuda"),
-        torch.empty(2, 3, device="cuda"), coords, scalar, scalar,
+        coords,
+        mask,
+        torch.empty(2, 2, 3, device="cuda"),
+        torch.empty(2, 3, device="cuda"),
+        coords,
+        scalar,
+        scalar,
     )
     align = AlignEuler(backend=backend).unsupported(
         coords, coords, mask, torch.empty(2, device="cuda"), scalar

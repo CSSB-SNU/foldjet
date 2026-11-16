@@ -111,8 +111,8 @@ def centre_random_augmentation(
     Returns:
         torch.Tensor:  the Augmentation version of input coords
             [..., N_sample, N_atom, 3]
-    """
 
+    """
     N_atom = x_input_coords.size(-2)
     device = x_input_coords.device
 
@@ -172,6 +172,7 @@ def uniform_random_rotation(
     Returns:
         torch.Tensor: N_sample rot matrics
             [N_sample, 3, 3]
+
     """
     rotation = Rotation.random(num=N_sample, random_state=numpy_rng)
     rot_matrix = torch.from_numpy(rotation.as_matrix()).float()  # [N_sample, 3, 3]
@@ -207,8 +208,8 @@ def masked_dense_rigid_motion(
 
     Returns:
       Transformed positions with the same shape as input positions.
-    """
 
+    """
     weights = mask[..., None]
     center = (weights * positions).sum(dim=(-2, -3), keepdim=True) / weights.sum(
         dim=(-2, -3), keepdim=True

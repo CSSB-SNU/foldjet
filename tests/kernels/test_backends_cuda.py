@@ -20,24 +20,37 @@ pytestmark = pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA requ
 
 def rms(a: torch.Tensor, b: torch.Tensor) -> float:
     a, b = a.float(), b.float()
-    return ((a - b).square().mean().sqrt() / b.square().mean().sqrt().clamp_min(1e-6)).item()
+    return (
+        (a - b).square().mean().sqrt() / b.square().mean().sqrt().clamp_min(1e-6)
+    ).item()
 
 
 def test_pairformer_block_policy_matches_pytorch():
     torch.manual_seed(1)
-    block = pairformer_block(d_pair=128, triangle_model="af3", d_single=384, n_head_single=16).cuda().eval()
+    block = (
+        pairformer_block(
+            d_pair=128, triangle_model="af3", d_single=384, n_head_single=16
+        )
+        .cuda()
+        .eval()
+    )
     with torch.no_grad():
         for p in block.parameters():
             if p.ndim > 1:
                 p.normal_(0, 0.05)
     reference = copy.deepcopy(block)
     plan = backends.BackendPlan.make("miniworld").resolve(torch.device("cuda"))
-    choices = policy.apply_plan(torch.nn.ModuleList([block]), plan, torch.device("cuda"))
+    choices = policy.apply_plan(
+        torch.nn.ModuleList([block]), plan, torch.device("cuda")
+    )
     assert choices, "no engine op module found"
     pair = torch.randn(1, 128, 128, 128, device="cuda", dtype=torch.bfloat16)
     single = torch.randn(1, 128, 384, device="cuda", dtype=torch.bfloat16)
     mask = torch.ones(1, 128, device="cuda", dtype=torch.bool)
-    with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16):  # master weights: bf16 activations under autocast
+    with (
+        torch.no_grad(),
+        torch.autocast("cuda", dtype=torch.bfloat16),
+    ):  # master weights: bf16 activations under autocast
         expected = reference(pair.clone(), mask, single.clone())
         actual = block(pair.clone(), mask, single.clone())
     assert rms(actual[0], expected[0]) < 0.03 and rms(actual[1], expected[1]) < 0.03

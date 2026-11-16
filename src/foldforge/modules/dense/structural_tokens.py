@@ -169,7 +169,9 @@ class StructuralTokenExpander(nn.Module):
             delta = torch.zeros_like(parent_pair)
             # One role pair at a time: all of them at once keeps every projection of the band live.
             for index in present:
-                masked = torch.where((block[rows] == index)[..., None], parent_pair, 0.0)
+                masked = torch.where(
+                    (block[rows] == index)[..., None], parent_pair, 0.0
+                )
                 delta = delta + masked @ self.pair_block_proj[index]
             band = parent_pair + delta
             for name, table in (
@@ -179,7 +181,9 @@ class StructuralTokenExpander(nn.Module):
                 ("next_bb", self.next_bb_chain_embedding),
             ):
                 band = band + table(features[name][rows].to(torch.int64))
-            band = band + self.role_pair_type_embedding(features["role_pair_type"][rows])
+            band = band + self.role_pair_type_embedding(
+                features["role_pair_type"][rows]
+            )
             out[rows] = band.to(out.dtype)
         return out
 

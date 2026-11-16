@@ -243,7 +243,8 @@ def load_checkpoint(  # noqa: C901, PLR0912, PLR0915 - one explicit checkpoint l
     model = install_engine(
         model,
         device,
-        modules=torch.device(device).type == "cuda",  # every engine backend (cueq, cuda, triton too) needs its modules applied; a plan.uses("miniworld", "anthropic") test here ran cueq / cuda / triton on pytorch silently
+        modules=torch.device(device).type
+        == "cuda",  # every engine backend (cueq, cuda, triton too) needs its modules applied; a plan.uses("miniworld", "anthropic") test here ran cueq / cuda / triton on pytorch silently
         skip=engine_skip,
         plan=plan,
     )

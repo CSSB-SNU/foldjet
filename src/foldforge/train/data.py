@@ -44,9 +44,12 @@ class TrainBatch:
 FIXED_ATOMS = 4096
 
 
-def fixed_atom_index(atom_mask: torch.Tensor, length: int = FIXED_ATOMS) -> tuple[torch.Tensor, torch.Tensor]:
+def fixed_atom_index(
+    atom_mask: torch.Tensor, length: int = FIXED_ATOMS
+) -> tuple[torch.Tensor, torch.Tensor]:
     """``(index [K] int64, valid [K] bool)`` of the true entries of ``atom_mask`` ``[res, atoms]`` (flat, ascending), padded with 0. Call it on host
-    (CPU) data: it uses ``nonzero``. ``K = length``, or the count rounded up to a multiple of 512 when the mask has more atoms than ``length``."""
+    (CPU) data: it uses ``nonzero``. ``K = length``, or the count rounded up to a multiple of 512 when the mask has more atoms than ``length``.
+    """
     import torch
 
     flat = atom_mask.reshape(-1).bool()
@@ -61,10 +64,16 @@ def fixed_atom_index(atom_mask: torch.Tensor, length: int = FIXED_ATOMS) -> tupl
     return out, valid
 
 
-def features_to_device(features: dict[str, torch.Tensor], device) -> dict[str, torch.Tensor]:
+def features_to_device(
+    features: dict[str, torch.Tensor], device
+) -> dict[str, torch.Tensor]:
     """``features`` on ``device``, except the atom-layout ``GatherInfo.input_shape`` metadata (``<prefix>:input_shape``), which stays on the HOST:
-    ``GatherInfo.from_dict`` reads it as Python ints in every micro step, and a device copy would be a device->host sync each time."""
-    return {k: (v.cpu() if k.endswith(":input_shape") else v.to(device)) for k, v in features.items()}
+    ``GatherInfo.from_dict`` reads it as Python ints in every micro step, and a device copy would be a device->host sync each time.
+    """
+    return {
+        k: (v.cpu() if k.endswith(":input_shape") else v.to(device))
+        for k, v in features.items()
+    }
 
 
 def with_fixed_atom_index(example: TrainBatch, length: int = FIXED_ATOMS) -> TrainBatch:
@@ -73,10 +82,16 @@ def with_fixed_atom_index(example: TrainBatch, length: int = FIXED_ATOMS) -> Tra
 
     if example.present_index is not None:
         return example
-    mask = example.atom_mask if example.atom_mask is not None else example.features["pred_dense_atom_mask"]
+    mask = (
+        example.atom_mask
+        if example.atom_mask is not None
+        else example.features["pred_dense_atom_mask"]
+    )
     index, valid = fixed_atom_index(mask.cpu(), length)
     device = example.atom_positions.device
-    return replace(example, present_index=index.to(device), present_valid=valid.to(device))
+    return replace(
+        example, present_index=index.to(device), present_valid=valid.to(device)
+    )
 
 
 BatchSource = "Callable[[TrainConfig, torch.device], Iterator[TrainBatch]]"

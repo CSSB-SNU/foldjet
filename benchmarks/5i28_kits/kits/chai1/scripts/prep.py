@@ -9,6 +9,7 @@ Writes under bench5i28/chai1/inputs:
 Also prints, per template, the mmCIF chains (auth name -> label subchain, resolved polymer length) and whether the query-aligned row of the
 20-hit a3m (kitv2real/in/5i28_templates_hits20.a3m, = FoldForge's template) is the polymer of auth chain A (chai) and of label chain A (Boltz).
 """
+
 import os
 import re
 from pathlib import Path
@@ -16,7 +17,10 @@ from pathlib import Path
 import gemmi
 import torch
 from chai_lab.data.parsing.msas.a3m import tokenize_sequences_to_arrays
-from chai_lab.data.parsing.msas.aligned_pqt import a3m_to_aligned_dataframe, expected_basename
+from chai_lab.data.parsing.msas.aligned_pqt import (
+    a3m_to_aligned_dataframe,
+    expected_basename,
+)
 from chai_lab.data.parsing.msas.data_source import MSADataSource
 from chai_lab.data.parsing.templates.template_hit import TemplateHit
 from chai_lab.tools.kalign import kalign_query_to_reference
@@ -34,7 +38,10 @@ assert len(query) == 128, len(query)
 (IN / "msa").mkdir(parents=True, exist_ok=True)
 fr = a3m_to_aligned_dataframe(A3M, MSADataSource.UNIREF90, insert_pairing_key=False)
 fr.to_parquet(IN / "msa" / expected_basename(query))
-print(f"[prep] MSA {A3M}: {A3M.read_text().count('>')} a3m records -> {len(fr)} parquet rows -> {IN / 'msa' / expected_basename(query)}", flush=True)
+print(
+    f"[prep] MSA {A3M}: {A3M.read_text().count('>')} a3m records -> {len(fr)} parquet rows -> {IN / 'msa' / expected_basename(query)}",
+    flush=True,
+)
 
 # the 20-hit a3m: header '>5yt7_A/1-114 ...' -> query-aligned row
 hits, name = {}, None
@@ -42,7 +49,8 @@ for ln in HITS.read_text().splitlines():
     if ln.startswith(">"):
         name = ln[1:].split("/")[0]
     elif name:
-        hits[name] = ln.strip(); name = None
+        hits[name] = ln.strip()
+        name = None
 
 
 def resolved_seq(ch):
@@ -64,20 +72,39 @@ for pid, ch in TPL:
         psub = poly.subchain_id() if len(poly) else "-"
         if psub == ch:
             label_a = c.name
-        print(f"[prep]   auth={c.name} polymer_label={psub} subchains={subs} resolved_polymer_len={len(resolved_seq(c))}", flush=True)
+        print(
+            f"[prep]   auth={c.name} polymer_label={psub} subchains={subs} resolved_polymer_len={len(resolved_seq(c))}",
+            flush=True,
+        )
     auth_seq = resolved_seq(st[0][ch])
-    print(f"[prep]   hits20 row {pid.lower()}_{ch}: {len(tseq)} aligned residues; in auth chain {ch} resolved polymer: {tseq in auth_seq}; "
-          f"label chain {ch} = auth chain {label_a}", flush=True)
+    print(
+        f"[prep]   hits20 row {pid.lower()}_{ch}: {len(tseq)} aligned residues; in auth chain {ch} resolved polymer: {tseq in auth_seq}; "
+        f"label chain {ch} = auth chain {label_a}",
+        flush=True,
+    )
     s0, e0 = 0, len(auth_seq)
     for it in range(8):
         al = kalign_query_to_reference(ref=query, query=auth_seq[s0:e0])
         ms, md = tokenize_sequences_to_arrays([al.query_a3m_line])
         try:
-            h = TemplateHit(query_pdb_id="A", query_sequence=query, index=0, pdb_id=pid, chain_id=ch, hit_start=s0, hit_end=e0,
-                            hit_tokens=torch.from_numpy(ms[0]).int(), deletion_matrix=torch.from_numpy(md[0]), query_seq_realigned=al.query_a3m_line)
+            h = TemplateHit(
+                query_pdb_id="A",
+                query_sequence=query,
+                index=0,
+                pdb_id=pid,
+                chain_id=ch,
+                hit_start=s0,
+                hit_end=e0,
+                hit_tokens=torch.from_numpy(ms[0]).int(),
+                deletion_matrix=torch.from_numpy(md[0]),
+                query_seq_realigned=al.query_a3m_line,
+            )
             assert h.query_start_end == al.reference_span
-            print(f"[prep]   kalign: OK subject [{s0},{e0}) of {len(auth_seq)} resolved residues; query span {h.query_start_end}; "
-                  f"aligned residues {len(h.indices_hit)}", flush=True)
+            print(
+                f"[prep]   kalign: OK subject [{s0},{e0}) of {len(auth_seq)} resolved residues; query span {h.query_start_end}; "
+                f"aligned residues {len(h.indices_hit)}",
+                flush=True,
+            )
             rng[(pid, ch)] = (s0, e0)
             break
         except ValueError as e:
@@ -85,7 +112,10 @@ for pid, ch in TPL:
             if not m:
                 raise
             a, b = map(int, m.groups())
-            print(f"[prep]   kalign: iter {it} range [{s0},{e0}) -> aligned hit idx {a}..{b}", flush=True)
+            print(
+                f"[prep]   kalign: iter {it} range [{s0},{e0}) -> aligned hit idx {a}..{b}",
+                flush=True,
+            )
             s0, e0 = s0 + a, s0 + b + 1
     else:
         raise SystemExit(f"{pid}_{ch}: no consistent subject range")
@@ -96,8 +126,28 @@ for n in NS:
     for c in ids:
         for k, (pid, ch) in enumerate(TPL):
             s0, e0 = rng[(pid, ch)]
-            rows.append("\t".join([c, f"{pid}_{ch}", "90.0", str(e0 - s0), "0", "0", "1", "128", str(s0 + 1), str(e0), f"{k + 1}e-30", "200.0", "-"]))
+            rows.append(
+                "\t".join(
+                    [
+                        c,
+                        f"{pid}_{ch}",
+                        "90.0",
+                        str(e0 - s0),
+                        "0",
+                        "0",
+                        "1",
+                        "128",
+                        str(s0 + 1),
+                        str(e0),
+                        f"{k + 1}e-30",
+                        "200.0",
+                        "-",
+                    ]
+                )
+            )
     (IN / f"templates_n{n}.m8").write_text("\n".join(rows) + "\n")
-    (IN / f"5i28_x{n}.fasta").write_text("".join(f">protein|name={c}\n{query}\n" for c in ids))
+    (IN / f"5i28_x{n}.fasta").write_text(
+        "".join(f">protein|name={c}\n{query}\n" for c in ids)
+    )
 print("[prep] templates_n1.m8:\n" + (IN / "templates_n1.m8").read_text(), flush=True)
 print("[prep] done", flush=True)

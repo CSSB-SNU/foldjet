@@ -90,4 +90,6 @@ def dihedral_error_gradient(
     )
     grad_d = through(zero, project)
     per_centre = torch.stack([grad_a, grad_b, grad_c, grad_d], dim=-2)  # (..., n, 4, 3)
-    return _segment_sum(per_centre.flatten(-3, -2), centres.reshape(-1), positions.shape[-2])
+    return _segment_sum(
+        per_centre.flatten(-3, -2), centres.reshape(-1), positions.shape[-2]
+    )

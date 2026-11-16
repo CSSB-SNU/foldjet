@@ -209,7 +209,11 @@ def finish_case(
         "recycles": request.recycles,
         "autocast": False,
         # the default keeps the call every caller / test double already knows; only the grouped path relaxes the compiled-graph requirement
-        **(execution.report() if require_compile else execution.report(require_compile=False)),
+        **(
+            execution.report()
+            if require_compile
+            else execution.report(require_compile=False)
+        ),
         **measurements,
         **(extra or {}),
     }
@@ -357,13 +361,19 @@ def run(request: Request) -> int:
 
 
 def sample_diffusion_group(
-    records: list[TrunkRecord], request: Request, *, model: AlphaFold3, execution: Execution, atoms_grouped: bool = True
+    records: list[TrunkRecord],
+    request: Request,
+    *,
+    model: AlphaFold3,
+    execution: Execution,
+    atoms_grouped: bool = True,
 ) -> list[PredictionResult]:
     """NT retained trunks sampled TOGETHER (trunk_seed x diffusion_seed batching, ``models.grouped``); one result per trunk, built like `sample_diffusion`'s.
 
     The folds share ``request`` (samples, steps, diffusion seed); each result carries its own trunk_seed. The noise of the NT * A samples comes from ONE stream seeded with
     ``request.diffusion_seed``, so a fold's samples are not the ones a separate `sample_diffusion` of that fold would draw: same distribution, other draws.
-    Raises ``GroupedUnsupported`` before sampling anything when the model cannot be grouped."""
+    Raises ``GroupedUnsupported`` before sampling anything when the model cannot be grouped.
+    """
     from dataclasses import replace
 
     from foldforge.models.grouped import GroupedSampler
@@ -394,7 +404,12 @@ def sample_diffusion_group(
             for b, rec in enumerate(records):
                 tr = rec.value
                 mask = tr.diffusion.batch.predicted_structure_info.atom_mask
-                samples = tr.diffusion.restore({"atom_positions": view[:, b].contiguous(), "mask": torch.tile(mask[None], (a, 1))})
+                samples = tr.diffusion.restore(
+                    {
+                        "atom_positions": view[:, b].contiguous(),
+                        "mask": torch.tile(mask[None], (a, 1)),
+                    }
+                )
                 outputs.append(model._predict_heads(tr.batch, tr.embeddings, samples))
             torch.cuda.synchronize()
         elapsed = time.monotonic() - start
@@ -415,7 +430,7 @@ def sample_diffusion_group(
                     "trunk_passes": request.recycles,
                     "grouped_trunks": nt,
                 },
-                require_compile=False,      # the grouped denoiser replaces the compiled per-fold step, so "a compiled graph executed" cannot be required
+                require_compile=False,  # the grouped denoiser replaces the compiled per-fold step, so "a compiled graph executed" cannot be required
             )
             for rec, output in zip(records, outputs, strict=True)
         ]

@@ -15,38 +15,56 @@ import time
 import numpy as np
 
 os.environ.setdefault("JAX_PLATFORMS", "cpu")
-from alphafold3.common import folding_input  # noqa: E402
-from alphafold3.constants import chemical_components  # noqa: E402
-from alphafold3.data import featurisation  # noqa: E402
+from alphafold3.common import folding_input
+from alphafold3.constants import chemical_components
+from alphafold3.data import featurisation
 
 src, resolve, kit = sys.argv[1], bool(int(sys.argv[2])), sys.argv[3]
 j = json.load(open(src))
-j["modelSeeds"] = j["modelSeeds"][:1]                      # rows/templates do not depend on the seed; one example is enough
-tmp = pathlib.Path(os.environ.get("TMPDIR", "/tmp")) / f"featprobe_{kit}_{os.getpid()}.json"
+j["modelSeeds"] = j["modelSeeds"][
+    :1
+]  # rows/templates do not depend on the seed; one example is enough
+tmp = (
+    pathlib.Path(os.environ.get("TMPDIR", "/tmp"))
+    / f"featprobe_{kit}_{os.getpid()}.json"
+)
 tmp.write_text(json.dumps(j))
 fis = list(folding_input.load_fold_inputs_from_path(tmp))
 assert len(fis) == 1
 fi = fis[0]
 t = time.time()
-ex = featurisation.featurise_input(fold_input=fi, buckets=None, ccd=chemical_components.Ccd(user_ccd=fi.user_ccd),
-                                   verbose=False, resolve_msa_overlaps=resolve)[0]
+ex = featurisation.featurise_input(
+    fold_input=fi,
+    buckets=None,
+    ccd=chemical_components.Ccd(user_ccd=fi.user_ccd),
+    verbose=False,
+    resolve_msa_overlaps=resolve,
+)[0]
 feat_s = time.time() - t
 tmp.unlink()
 msa_mask = np.asarray(ex["msa_mask"])
 rows = int((msa_mask.sum(1) > 0).sum())
 first1024 = int((msa_mask[:1024].sum(1) > 0).sum())
-pos = np.asarray(ex["template_atom_positions"])            # [slots, tokens, 24, 3]
-am = np.asarray(ex["template_atom_mask"])                  # [slots, tokens, 24]
+pos = np.asarray(ex["template_atom_positions"])  # [slots, tokens, 24, 3]
+am = np.asarray(ex["template_atom_mask"])  # [slots, tokens, 24]
 asym = np.asarray(ex["asym_id"])
 chains = sorted(set(asym.tolist()))
 real, distinct = [], []
 for c in chains:
     sel = asym == c
     r = [s for s in range(am.shape[0]) if am[s, sel].sum() > 0]
-    h = {hashlib.sha256(np.round(pos[s, sel] * am[s, sel][..., None], 2).tobytes()).hexdigest() for s in r}
+    h = {
+        hashlib.sha256(
+            np.round(pos[s, sel] * am[s, sel][..., None], 2).tobytes()
+        ).hexdigest()
+        for s in r
+    }
     real.append(len(r))
     distinct.append(len(h))
-print(f"FEATPROBE kit={kit} resolve_msa_overlaps={int(resolve)} chains={len(chains)} tokens={int(np.asarray(ex['seq_length']))} "
-      f"msa_shape={tuple(msa_mask.shape)} msa_rows={rows} msa_rows_in_first1024={first1024} tmpl_slots={am.shape[0]} "
-      f"tmpl_real_min={min(real)} tmpl_distinct_min={min(distinct)} atom_mask_sum={[int(am[s].sum()) for s in range(am.shape[0])]} "
-      f"feat_s={feat_s:.1f}", flush=True)
+print(
+    f"FEATPROBE kit={kit} resolve_msa_overlaps={int(resolve)} chains={len(chains)} tokens={int(np.asarray(ex['seq_length']))} "
+    f"msa_shape={tuple(msa_mask.shape)} msa_rows={rows} msa_rows_in_first1024={first1024} tmpl_slots={am.shape[0]} "
+    f"tmpl_real_min={min(real)} tmpl_distinct_min={min(distinct)} atom_mask_sum={[int(am[s].sum()) for s in range(am.shape[0])]} "
+    f"feat_s={feat_s:.1f}",
+    flush=True,
+)

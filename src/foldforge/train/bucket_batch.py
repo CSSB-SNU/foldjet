@@ -56,8 +56,18 @@ _TOKEN_AXIS = {
 _MSA_ROWS = ("msa", "msa_mask", "deletion_matrix")
 _TEMPLATES = ("template_aatype", "template_atom_positions", "template_atom_mask")
 #: The atom-attention tables and the keys derived from the token axis by a fixed factor.
-_WINDOW_TABLES = ("token_atoms_to_queries", "tokens_to_queries", "tokens_to_keys", "queries_to_keys", "queries_to_token_atoms")
-_LIGAND_BONDS = ("tokens_to_ligand_ligand_bonds:gather_idxs", "tokens_to_ligand_ligand_bonds:gather_mask", "ligand_ligand_bond_order")
+_WINDOW_TABLES = (
+    "token_atoms_to_queries",
+    "tokens_to_queries",
+    "tokens_to_keys",
+    "queries_to_keys",
+    "queries_to_token_atoms",
+)
+_LIGAND_BONDS = (
+    "tokens_to_ligand_ligand_bonds:gather_idxs",
+    "tokens_to_ligand_ligand_bonds:gather_mask",
+    "ligand_ligand_bond_order",
+)
 _LIGAND_BONDS_PER_TOKEN = 10  # first dimension of those keys = 10 x tokens
 
 
@@ -70,7 +80,9 @@ class BucketSpec:
     """The ONE shape of every example of a run (MiniWorld's recipe crop: 384 tokens, 4096 atoms)."""
 
     tokens: int = 384
-    atoms: int = 4096  # flat atoms: a multiple of 32 (the number of query windows is atoms / 32)
+    atoms: int = (
+        4096  # flat atoms: a multiple of 32 (the number of query windows is atoms / 32)
+    )
     #: raw MSA rows before the per-recycle draw. 16384 = the largest MSA bucket FoldForge's featurisation produces (``bucketing.MSA_SHAPES``):
     #: nothing is ever cut; the cost is 3 int8/bool arrays [rows, tokens] = 18.9 MB per example at 384 tokens.
     msa_pool_rows: int = 16384
@@ -80,7 +92,10 @@ class BucketSpec:
     seed: int = 0  # the sample of an MSA pool above ``msa_pool_rows``
 
     def __post_init__(self) -> None:
-        if self.atoms % QUERY_BLOCK or min(self.tokens, self.atoms, self.msa_pool_rows, self.templates) < 1:
+        if (
+            self.atoms % QUERY_BLOCK
+            or min(self.tokens, self.atoms, self.msa_pool_rows, self.templates) < 1
+        ):
             message = f"invalid BucketSpec {self}"
             raise ValueError(message)
 
@@ -88,7 +103,8 @@ class BucketSpec:
 # ---------------------------------------------------------------------------------------------------------------- signature
 def shape_signature(example: TrainBatch | dict[str, torch.Tensor]) -> tuple:
     """Hashable ``(key, shape, dtype)`` of every tensor of ``features`` plus ``atom_positions`` / ``atom_mask`` / ``bond_pairs`` (``None`` kept as
-    such): two examples with the same signature run the same graph. A CUDA graph of the step is keyed on exactly this."""
+    such): two examples with the same signature run the same graph. A CUDA graph of the step is keyed on exactly this.
+    """
     if isinstance(example, TrainBatch):
         items = {f"features.{k}": v for k, v in example.features.items()}
         items["atom_positions"] = example.atom_positions
@@ -97,11 +113,14 @@ def shape_signature(example: TrainBatch | dict[str, torch.Tensor]) -> tuple:
     else:
         items = dict(example)
     return tuple(
-        (k, None if v is None else (tuple(v.shape), str(v.dtype))) for k, v in sorted(items.items())
+        (k, None if v is None else (tuple(v.shape), str(v.dtype)))
+        for k, v in sorted(items.items())
     )
 
 
-def count_signatures(examples: Iterable[TrainBatch | dict[str, torch.Tensor]]) -> Counter:
+def count_signatures(
+    examples: Iterable[TrainBatch | dict[str, torch.Tensor]],
+) -> Counter:
     """``Counter`` of the distinct :func:`shape_signature` values of ``examples`` (the number of graphs a shape-keyed capture would take)."""
     return Counter(shape_signature(e) for e in examples)
 
@@ -109,7 +128,11 @@ def count_signatures(examples: Iterable[TrainBatch | dict[str, torch.Tensor]]) -
 def signature_diff(a: TrainBatch, b: TrainBatch) -> dict[str, tuple]:
     """Keys whose ``(shape, dtype)`` differ between two examples (debugging aid)."""
     sa, sb = dict(shape_signature(a)), dict(shape_signature(b))
-    return {k: (sa.get(k), sb.get(k)) for k in sorted(set(sa) | set(sb)) if sa.get(k) != sb.get(k)}
+    return {
+        k: (sa.get(k), sb.get(k))
+        for k in sorted(set(sa) | set(sb))
+        if sa.get(k) != sb.get(k)
+    }
 
 
 # ---------------------------------------------------------------------------------------------------------------- helpers
@@ -136,7 +159,13 @@ def real_counts(features: dict[str, torch.Tensor]) -> tuple[int, int]:
 
 
 def _pad_atom_tables(
-    f: dict[str, torch.Tensor], out: dict[str, torch.Tensor], t_real: int, n_atoms: int, t_old: int, t_new: int, a_new: int
+    f: dict[str, torch.Tensor],
+    out: dict[str, torch.Tensor],
+    t_real: int,
+    n_atoms: int,
+    t_old: int,
+    t_new: int,
+    a_new: int,
 ) -> None:
     """Rebuild the five atom-attention gather tables for ``t_new`` tokens and ``a_new`` flat atoms from the old ones (real entries untouched).
 
@@ -155,7 +184,9 @@ def _pad_atom_tables(
     tq = "token_atoms_to_queries"
     pad_source = t_real < t_new
     flat_pad_idx = t_new * ATOMS_PER_TOKEN - 1 if pad_source else 0
-    flat_query = torch.arange(nw_new * QUERY_BLOCK, device=f[tq + ":gather_idxs"].device).view(nw_new, QUERY_BLOCK)
+    flat_query = torch.arange(
+        nw_new * QUERY_BLOCK, device=f[tq + ":gather_idxs"].device
+    ).view(nw_new, QUERY_BLOCK)
     is_pad = flat_query >= n_atoms  # [nw, 32]
 
     for name, pad_idx, pad_mask in (
@@ -164,14 +195,22 @@ def _pad_atom_tables(
     ):
         idx = _resize(f[name + ":gather_idxs"], 0, nw_new)
         mask = _resize(f[name + ":gather_mask"], 0, nw_new)
-        out[name + ":gather_idxs"] = torch.where(is_pad, torch.full_like(idx, pad_idx), idx)
-        out[name + ":gather_mask"] = torch.where(is_pad, torch.full_like(mask, pad_mask), mask)
+        out[name + ":gather_idxs"] = torch.where(
+            is_pad, torch.full_like(idx, pad_idx), idx
+        )
+        out[name + ":gather_mask"] = torch.where(
+            is_pad, torch.full_like(mask, pad_mask), mask
+        )
 
     for name in ("tokens_to_keys", "queries_to_keys"):
         for part in (":gather_idxs", ":gather_mask"):
             old = f[name + part]
             tail = old[-1:].expand(max(nw_new - old.shape[0], 0), *old.shape[1:])
-            out[name + part] = torch.cat([old[:nw_new], tail]) if nw_new > old.shape[0] else old[:nw_new]
+            out[name + part] = (
+                torch.cat([old[:nw_new], tail])
+                if nw_new > old.shape[0]
+                else old[:nw_new]
+            )
 
     # token atoms <- queries, [tokens, 24]; real tokens' rows are unchanged, the rows of pad tokens are rebuilt
     name = "queries_to_token_atoms"
@@ -179,16 +218,24 @@ def _pad_atom_tables(
     mask = _resize(f[name + ":gather_mask"], 0, t_new)
     pad_token = (torch.arange(t_new, device=idx.device) >= t_real)[:, None]
     pad_query = a_new > n_atoms
-    out[name + ":gather_idxs"] = torch.where(pad_token, torch.full_like(idx, a_new - 1 if pad_query else 0), idx)
-    out[name + ":gather_mask"] = torch.where(pad_token, torch.full_like(mask, pad_query), mask)
+    out[name + ":gather_idxs"] = torch.where(
+        pad_token, torch.full_like(idx, a_new - 1 if pad_query else 0), idx
+    )
+    out[name + ":gather_mask"] = torch.where(
+        pad_token, torch.full_like(mask, pad_query), mask
+    )
 
     # the recorded source shapes follow the tables they describe
     key = tq + ":input_shape"
-    out[key] = torch.tensor([t_new, ATOMS_PER_TOKEN], dtype=f[key].dtype, device=f[key].device)
+    out[key] = torch.tensor(
+        [t_new, ATOMS_PER_TOKEN], dtype=f[key].dtype, device=f[key].device
+    )
     for key in ("tokens_to_queries:input_shape", "tokens_to_keys:input_shape"):
         out[key] = torch.tensor([t_new], dtype=f[key].dtype, device=f[key].device)
     for key in ("queries_to_keys:input_shape", "queries_to_token_atoms:input_shape"):
-        out[key] = torch.tensor([nw_new, QUERY_BLOCK], dtype=f[key].dtype, device=f[key].device)
+        out[key] = torch.tensor(
+            [nw_new, QUERY_BLOCK], dtype=f[key].dtype, device=f[key].device
+        )
 
 
 def _sample_pool(msa_mask: torch.Tensor, rows: int, seed: int) -> torch.Tensor:
@@ -207,7 +254,8 @@ def bucket_example(example: TrainBatch, spec: BucketSpec) -> TrainBatch:
     """``example`` padded (or trimmed of padding) to ``spec``: identical shapes and dtypes for every example, masks keep the loss unchanged.
 
     Raises :class:`BucketOverflow` when the real tokens / atoms do not fit. Tensors that already have the bucket shape are returned as they are
-    (the same objects), so an example that the featurisation already padded to the bucket is bit-identical."""
+    (the same objects), so an example that the featurisation already padded to the bucket is bit-identical.
+    """
     f = example.features
     t_old = f["seq_mask"].shape[0]
     t_real, n_atoms = real_counts(f)
@@ -219,7 +267,11 @@ def bucket_example(example: TrainBatch, spec: BucketSpec) -> TrainBatch:
         raise ValueError(message)
     t_new = spec.tokens
     out: dict[str, torch.Tensor] = {}
-    atom_keys = {f"{n}:{p}" for n in _WINDOW_TABLES for p in ("gather_idxs", "gather_mask", "input_shape")}
+    atom_keys = {
+        f"{n}:{p}"
+        for n in _WINDOW_TABLES
+        for p in ("gather_idxs", "gather_mask", "input_shape")
+    }
     for key, value in f.items():
         if key in atom_keys:
             continue
@@ -241,12 +293,20 @@ def bucket_example(example: TrainBatch, spec: BucketSpec) -> TrainBatch:
         if key.endswith(":input_shape") and key not in atom_keys:
             shape = out[key].tolist()
             if shape[0] == t_old:
-                out[key] = torch.tensor([t_new, *shape[1:]], dtype=out[key].dtype, device=out[key].device)
+                out[key] = torch.tensor(
+                    [t_new, *shape[1:]], dtype=out[key].dtype, device=out[key].device
+                )
     # MSA pool rows
     if f["msa"].shape[0] != spec.msa_pool_rows:
-        index = _sample_pool(f["msa_mask"], spec.msa_pool_rows, spec.seed ^ zlib.crc32(example.name.encode())) if (
-            f["msa_mask"].shape[0] > spec.msa_pool_rows
-        ) else None
+        index = (
+            _sample_pool(
+                f["msa_mask"],
+                spec.msa_pool_rows,
+                spec.seed ^ zlib.crc32(example.name.encode()),
+            )
+            if (f["msa_mask"].shape[0] > spec.msa_pool_rows)
+            else None
+        )
         for key in _MSA_ROWS:
             rows = out[key] if index is None else out[key][index]
             out[key] = _resize(rows, 0, spec.msa_pool_rows)
@@ -255,21 +315,35 @@ def bucket_example(example: TrainBatch, spec: BucketSpec) -> TrainBatch:
 
     positions = _resize(example.atom_positions, 0, t_new)
     atom_mask = example.atom_mask
-    atom_mask = out["pred_dense_atom_mask"].clone() if atom_mask is None else _resize(atom_mask, 0, t_new)
+    atom_mask = (
+        out["pred_dense_atom_mask"].clone()
+        if atom_mask is None
+        else _resize(atom_mask, 0, t_new)
+    )
     bonds = example.bond_pairs
     if spec.bond_pairs:
         if bonds is None:
-            bonds = torch.full((spec.bond_pairs, 4), -1, dtype=torch.int64, device=positions.device)
+            bonds = torch.full(
+                (spec.bond_pairs, 4), -1, dtype=torch.int64, device=positions.device
+            )
         elif bonds.shape[0] > spec.bond_pairs:
             message = f"{bonds.shape[0]} bond pairs exceed the bucket {spec.bond_pairs}"
             raise BucketOverflow(message)
         else:
             bonds = _resize(bonds, 0, spec.bond_pairs, fill=-1)
     # keep the dtype order of the features (and their key order) so that the signature is comparable
-    return replace(example, features={k: out[k] for k in f}, atom_positions=positions, atom_mask=atom_mask, bond_pairs=bonds)
+    return replace(
+        example,
+        features={k: out[k] for k in f},
+        atom_positions=positions,
+        atom_mask=atom_mask,
+        bond_pairs=bonds,
+    )
 
 
-def bucket_source(source: Iterable[TrainBatch], spec: BucketSpec) -> Iterator[TrainBatch]:
+def bucket_source(
+    source: Iterable[TrainBatch], spec: BucketSpec
+) -> Iterator[TrainBatch]:
     """A stream of examples (a ``--batch-source`` iterator) bucketed to ``spec``."""
     for example in source:
         yield bucket_example(example, spec)

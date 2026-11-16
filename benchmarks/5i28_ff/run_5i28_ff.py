@@ -47,7 +47,11 @@ MODELS: dict[str, tuple[int, int, dict]] = {
     "boltz2": (4, 4, {}),
     "chai1": (4, 4, {}),
     "openfold3": (4, 4, {}),
-    "rosettafold3": (4, 1, {"debug": {"dense_spec_override": {"use_input_templates": True}}}),
+    "rosettafold3": (
+        4,
+        1,
+        {"debug": {"dense_spec_override": {"use_input_templates": True}}},
+    ),
 }
 
 
@@ -56,8 +60,15 @@ def letters(n: int) -> list[str]:
 
 
 def make_spec(n: int, template_n: int) -> dict:
-    """n identical 5I28 chains, the real MSA and the real templates of key P0113359 (``template_dedup`` stays at its default: 4 distinct)."""
-    fasta, msa_db, template_db = (os.environ[k] for k in ("FOLDFORGE_5I28_FASTA", "FOLDFORGE_5I28_MSA_DB", "FOLDFORGE_5I28_TEMPLATE_DB"))
+    """N identical 5I28 chains, the real MSA and the real templates of key P0113359 (``template_dedup`` stays at its default: 4 distinct)."""
+    fasta, msa_db, template_db = (
+        os.environ[k]
+        for k in (
+            "FOLDFORGE_5I28_FASTA",
+            "FOLDFORGE_5I28_MSA_DB",
+            "FOLDFORGE_5I28_TEMPLATE_DB",
+        )
+    )
     ids = letters(n)
     spec = {
         "name": "5i28",
@@ -82,13 +93,21 @@ def make_spec(n: int, template_n: int) -> dict:
 def make_config(recycles: int, extra: dict, repeats: int) -> dict:
     config = {
         "backend": "miniworld",
-        "precision": os.environ.get("FOLDFORGE_5I28_PRECISION", "bf16"),  # bf16 (the benchmark), af3_default | fp32 for precision checks
+        "precision": os.environ.get(
+            "FOLDFORGE_5I28_PRECISION", "bf16"
+        ),  # bf16 (the benchmark), af3_default | fp32 for precision checks
         "mode": "exact",
         "trunk_seed": 0,
         "diffusion_seed": 0,
         "trunk": {"recycles": recycles},
         "diffusion": {"steps": 200},
-        "execution": {"benchmark_repeats": repeats, "compile": True, "cuda_graph": True, "bucketing": True, "scope": "trunk"},
+        "execution": {
+            "benchmark_repeats": repeats,
+            "compile": True,
+            "cuda_graph": True,
+            "bucketing": True,
+            "scope": "trunk",
+        },
     }
     for key, value in extra.items():
         config.setdefault(key, {}).update(value)
@@ -106,8 +125,10 @@ def oom_of(error: BaseException) -> BaseException | None:
 def release_size_memory() -> tuple[int, int]:
     """Drop what one size leaves on the GPU before the next: every captured CUDA graph (each keeps a private memory pool; the sizes run
     once each, ascending, so none is replayed again) and the allocator's cached blocks. The compiled code and the weights stay.
-    Returns the reserved bytes before and after."""
+    Returns the reserved bytes before and after.
+    """
     from foldforge.models.execution import ExecutedCallable
+
     try:
         from foldforge.models.sampler_graph import SamplerGraphCache
     except ImportError:  # a FoldForge without the per-shape sampler graph cache
@@ -116,10 +137,17 @@ def release_size_memory() -> tuple[int, int]:
     torch.cuda.synchronize()
     before = torch.cuda.memory_reserved()
     for item in gc.get_objects():
-        if type(item) is ExecutedCallable and item.graphs:  # type(), not isinstance: a dead weakref proxy raises on isinstance
+        if (
+            type(item) is ExecutedCallable and item.graphs
+        ):  # type(), not isinstance: a dead weakref proxy raises on isinstance
             item.graphs.clear()
             item.last_capture_bytes = 0
-        elif SamplerGraphCache and type(item) is SamplerGraphCache and item.entries and not os.environ.get("FF_5I28_KEEP_SAMPLER_CACHE"):  # the sampler graphs cached per shape (R26), with their static folds
+        elif (
+            SamplerGraphCache
+            and type(item) is SamplerGraphCache
+            and item.entries
+            and not os.environ.get("FF_5I28_KEEP_SAMPLER_CACHE")
+        ):  # the sampler graphs cached per shape (R26), with their static folds
             item.clear()
     gc.collect()
     torch.cuda.empty_cache()
@@ -128,13 +156,20 @@ def release_size_memory() -> tuple[int, int]:
 
 def git(*args: str) -> str:
     try:
-        return subprocess.run(["git", *args], cwd=Path(__file__).resolve().parent, capture_output=True, text=True, check=False).stdout.strip()
+        return subprocess.run(
+            ["git", *args],
+            cwd=Path(__file__).resolve().parent,
+            capture_output=True,
+            text=True,
+            check=False,
+        ).stdout.strip()
     except OSError:
         return ""
 
 
 def meta(model: str, config: dict) -> dict:
     from importlib import metadata
+
     import miniworld_engine.modules as engine_modules
 
     def version(name: str) -> str | None:
@@ -161,13 +196,28 @@ def meta(model: str, config: dict) -> dict:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--model", required=True, choices=sorted(MODELS))
-    parser.add_argument("--out", type=Path, required=True, help="run directory (cells/, specs/, meta.json)")
+    parser.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        help="run directory (cells/, specs/, meta.json)",
+    )
     parser.add_argument("--sizes", type=int, nargs="+", default=list(SIZES))
-    parser.add_argument("--repeats", type=int, default=3, help="warm repeats per cell (the 2026-10-29 run used 3)")
-    parser.add_argument("--retry-fragmented", action="store_true",
-                        help="only the cells that failed with an out-of-memory error of the 'reserved but unallocated' kind (run with PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True: the last fallback)")
+    parser.add_argument(
+        "--repeats",
+        type=int,
+        default=3,
+        help="warm repeats per cell (the 2026-10-29 run used 3)",
+    )
+    parser.add_argument(
+        "--retry-fragmented",
+        action="store_true",
+        help="only the cells that failed with an out-of-memory error of the 'reserved but unallocated' kind (run with PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True: the last fallback)",
+    )
     args = parser.parse_args()
 
     recycles, template_n, extra = MODELS[args.model]
@@ -184,9 +234,14 @@ def main() -> int:
         if args.retry_fragmented:
             if previous and previous["status"] == "oom" and previous.get("fragmented"):
                 todo.append(n)
-        elif previous is None or previous["status"] == "failed":  # ok and oom cells are final (a fragmented oom waits for --retry-fragmented)
+        elif (
+            previous is None or previous["status"] == "failed"
+        ):  # ok and oom cells are final (a fragmented oom waits for --retry-fragmented)
             todo.append(n)
-    print(f"RUN model={args.model} sizes={todo} repeats={args.repeats} recycles={recycles}", flush=True)
+    print(
+        f"RUN model={args.model} sizes={todo} repeats={args.repeats} recycles={recycles}",
+        flush=True,
+    )
     if not todo:
         return 0
 
@@ -194,8 +249,13 @@ def main() -> int:
     for n in todo:
         spec_path = specs / f"{args.model}_x{n}.yaml"
         spec_path.write_text(yaml.safe_dump(make_spec(n, template_n), sort_keys=False))
-        cell = {"model": args.model, "n": n, "tokens": TOKENS_PER_CHAIN * n, "repeats": args.repeats,
-                "retry": "expandable_segments" if args.retry_fragmented else None}
+        cell = {
+            "model": args.model,
+            "n": n,
+            "tokens": TOKENS_PER_CHAIN * n,
+            "repeats": args.repeats,
+            "retry": "expandable_segments" if args.retry_fragmented else None,
+        }
         started = time.time()
         try:
             result = predictor(ff.load_inputs(spec_path))
@@ -216,8 +276,13 @@ def main() -> int:
             }
         except Exception as error:  # noqa: BLE001 - a failed cell is data, not a crash
             oom = oom_of(error)
-            cell |= {"status": "oom" if oom else "failed", "error": str(oom or error).splitlines()[0][:300],
-                     "fragmented": bool(oom and "reserved by PyTorch but unallocated" in str(oom))}
+            cell |= {
+                "status": "oom" if oom else "failed",
+                "error": str(oom or error).splitlines()[0][:300],
+                "fragmented": bool(
+                    oom and "reserved by PyTorch but unallocated" in str(oom)
+                ),
+            }
             if not oom:
                 cell["traceback"] = repr(error)[:600]
             # The exception's traceback holds the failed forward's frames and every tensor they had: drop them, or the next
@@ -230,11 +295,19 @@ def main() -> int:
         with (args.out / "cells.jsonl").open("a") as handle:
             handle.write(json.dumps(cell) + "\n")
         warm = cell.get("model_seconds_warm_median")
-        print(f"CELL {args.model} n={n} status={cell['status']} warm_median={warm} warm={cell.get('model_seconds_warm')} "
-              f"cold={cell.get('model_seconds_cold')} compile={cell.get('compile')} wall={cell['wall_seconds']}s", flush=True)
+        print(
+            f"CELL {args.model} n={n} status={cell['status']} warm_median={warm} warm={cell.get('model_seconds_warm')} "
+            f"cold={cell.get('model_seconds_cold')} compile={cell.get('compile')} wall={cell['wall_seconds']}s",
+            flush=True,
+        )
         del result
-        before, after = release_size_memory()  # each size starts from the weights alone: no pools of the smaller sizes (OOM at n=16)
-        print(f"FREE after n={n}: reserved {before / 2**30:.1f} -> {after / 2**30:.1f} GiB", flush=True)
+        before, after = (
+            release_size_memory()
+        )  # each size starts from the weights alone: no pools of the smaller sizes (OOM at n=16)
+        print(
+            f"FREE after n={n}: reserved {before / 2**30:.1f} -> {after / 2**30:.1f} GiB",
+            flush=True,
+        )
     return 0
 
 

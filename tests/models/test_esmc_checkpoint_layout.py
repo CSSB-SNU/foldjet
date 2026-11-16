@@ -20,9 +20,15 @@ D_MODEL, HEADS, LAYERS, FFN = 64, 4, 2, 96
 def _tiny() -> ESMCModel:
     torch.manual_seed(0)
     config = ESMCConfig(d_model=D_MODEL, n_heads=HEADS, n_layers=LAYERS)
-    config.hidden_size, config.intermediate_size, config.num_hidden_layers = D_MODEL, FFN, LAYERS
+    config.hidden_size, config.intermediate_size, config.num_hidden_layers = (
+        D_MODEL,
+        FFN,
+        LAYERS,
+    )
     model = ESMCModel(config).eval()
-    for parameter in model.parameters():  # no all-zero tensors: a mismatched layout must show up as a different value
+    for parameter in (
+        model.parameters()
+    ):  # no all-zero tensors: a mismatched layout must show up as a different value
         torch.nn.init.normal_(parameter, std=0.1)
     return model
 
@@ -30,27 +36,38 @@ def _tiny() -> ESMCModel:
 def _to_port_layout(model: ESMCModel) -> dict[str, torch.Tensor]:
     """The inverse of ``_esmc_from_port``, written out independently: what the Transformers port stores."""
     state = model.state_dict()
-    out = {"esmc.embed_tokens.weight": state["embed.weight"], "esmc.norm.weight": state["transformer.norm.weight"]}
+    out = {
+        "esmc.embed_tokens.weight": state["embed.weight"],
+        "esmc.norm.weight": state["transformer.norm.weight"],
+    }
     for i in range(LAYERS):
         src, dst = f"transformer.blocks.{i}.", f"esmc.layers.{i}."
         q, k, v = state[src + "attn.layernorm_qkv.weight"].chunk(3)
         gate, up = state[src + "ffn.fc1_weight"].chunk(2)
         out |= {
-            dst + "input_layernorm.weight": state[src + "attn.layernorm_qkv.layer_norm_weight"],
-            dst + "input_layernorm.bias": state[src + "attn.layernorm_qkv.layer_norm_bias"],
+            dst + "input_layernorm.weight": state[
+                src + "attn.layernorm_qkv.layer_norm_weight"
+            ],
+            dst + "input_layernorm.bias": state[
+                src + "attn.layernorm_qkv.layer_norm_bias"
+            ],
             dst + "self_attn.q_proj.weight": q,
             dst + "self_attn.k_proj.weight": k,
             dst + "self_attn.v_proj.weight": v,
             dst + "self_attn.o_proj.weight": state[src + "attn.out_proj.weight"],
             dst + "self_attn.q_norm.weight": state[src + "attn.q_ln.weight"],
             dst + "self_attn.k_norm.weight": state[src + "attn.k_ln.weight"],
-            dst + "post_attention_layernorm.weight": state[src + "ffn.layer_norm_weight"],
+            dst + "post_attention_layernorm.weight": state[
+                src + "ffn.layer_norm_weight"
+            ],
             dst + "post_attention_layernorm.bias": state[src + "ffn.layer_norm_bias"],
             dst + "mlp.gate_proj.weight": gate,
             dst + "mlp.up_proj.weight": up,
             dst + "mlp.down_proj.weight": state[src + "ffn.fc2_weight"],
         }
-    out["lm_head.dense.weight"] = torch.zeros(D_MODEL, D_MODEL)  # the masked-LM head the tower does not use
+    out["lm_head.dense.weight"] = torch.zeros(
+        D_MODEL, D_MODEL
+    )  # the masked-LM head the tower does not use
     return {key: value.contiguous().clone() for key, value in out.items()}
 
 
@@ -71,7 +88,9 @@ def test_port_layout_loads_to_the_same_weights(tmp_path):
     assert expected.keys() == got.keys()
     for key, value in expected.items():
         torch.testing.assert_close(got[key], value, rtol=0, atol=0, msg=key)
-    assert not any(bool((p == 0).all()) for p in loaded.parameters()), "a weight was left at zero / uninitialised"
+    assert not any(bool((p == 0).all()) for p in loaded.parameters()), (
+        "a weight was left at zero / uninitialised"
+    )
 
 
 def test_port_layout_gives_the_same_forward(tmp_path):

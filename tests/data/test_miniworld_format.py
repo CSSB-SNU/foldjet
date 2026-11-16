@@ -37,7 +37,9 @@ DATABASE = Path(os.environ.get("FOLDFORGE_TEST_CCD_DB", str(paths.ccd_db())))
 @pytest.mark.parametrize("dtype", [torch.float32, torch.bfloat16])
 @pytest.mark.parametrize("family", ["protenix", "opendde"])
 def test_released_attention_equation(family, dtype, efficient):
-    module = importlib.import_module("foldforge.models.checkpoints.legacy.reference.attention")
+    module = importlib.import_module(
+        "foldforge.models.checkpoints.legacy.reference.attention"
+    )
     original = json.loads((REFERENCE_ROOT / "attention_oracles.json").read_text())[
         family
     ]

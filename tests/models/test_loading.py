@@ -65,7 +65,9 @@ def test_every_backend_spelling_reaches_one_loading_lifecycle(
     monkeypatch.setattr(
         loading, "import_module", lambda _: SimpleNamespace(AlphaFold3=DenseModel)
     )
-    model = load("boltz2", tmp_path / "boltz2.miniworld.pt", backend=requested, device="cpu")
+    model = load(
+        "boltz2", tmp_path / "boltz2.miniworld.pt", backend=requested, device="cpu"
+    )
     report = model.foldforge_load_report
     assert [path for path, _ in seen] == [tmp_path / "boltz2.miniworld.pt"]
     assert report["backend"] == recorded
@@ -116,7 +118,9 @@ def test_miniworld_checkpoint_is_loaded_before_precision(tmp_path, monkeypatch):
     monkeypatch.setattr(
         loading, "import_module", lambda _: SimpleNamespace(AlphaFold3=DenseModel)
     )
-    model = load("boltz2", tmp_path / "boltz2.miniworld.pt", backend="pytorch", device="cpu")
+    model = load(
+        "boltz2", tmp_path / "boltz2.miniworld.pt", backend="pytorch", device="cpu"
+    )
     assert model.projection.weight.dtype == torch.float32
     assert model.foldforge_precision == "master"
     assert model.norm.weight.dtype == torch.float32
@@ -129,7 +133,9 @@ def test_miniworld_checkpoint_is_loaded_before_precision(tmp_path, monkeypatch):
     assert model.foldforge_load_report["parameter_dtype"] == str(torch.float32)
 
 
-def test_af3_default_keeps_released_values_in_fp32_master_parameters(tmp_path, monkeypatch):
+def test_af3_default_keeps_released_values_in_fp32_master_parameters(
+    tmp_path, monkeypatch
+):
     from foldforge.models.checkpoints import miniworld
 
     class DenseModel(TinyModel):

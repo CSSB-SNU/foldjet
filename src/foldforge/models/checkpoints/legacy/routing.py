@@ -32,15 +32,21 @@ def _inverse_length(x: torch.Tensor, mask: torch.Tensor | None) -> torch.Tensor:
     return count.float().reciprocal()
 
 
-def triangle_residual(module: nn.Module, x: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
+def triangle_residual(
+    module: nn.Module, x: torch.Tensor, mask: torch.Tensor | None = None
+) -> torch.Tensor:
     """The complete triangle multiplication including its residual (RoseTTAFold3: the contraction divided by the real length)."""
-    scale = _inverse_length(x, mask) if getattr(module, "divide_by_length", False) else None
+    scale = (
+        _inverse_length(x, mask) if getattr(module, "divide_by_length", False) else None
+    )
     return x + reference_triangle(module, x, mask, contraction_scale=scale)
 
 
 # Frozen configurations must be built outside forward: Pydantic validation inside a compiled call breaks its graph.
 _DEFAULT_TRANSITION_CONFIG = TransitionConfig()
-_TRIANGLE_CONFIGS = {outgoing: TriangleConfig(outgoing=outgoing) for outgoing in (False, True)}
+_TRIANGLE_CONFIGS = {
+    outgoing: TriangleConfig(outgoing=outgoing) for outgoing in (False, True)
+}
 
 
 def reference_transition(module: nn.Module, x: torch.Tensor) -> torch.Tensor:
@@ -48,7 +54,9 @@ def reference_transition(module: nn.Module, x: torch.Tensor) -> torch.Tensor:
     return transition(
         x,
         normalize=module.input_layer_norm,
-        project_a=lambda value: value.to(module.transition1.weight.dtype) @ module.transition1.weight.T,
+        project_a=lambda value: (
+            value.to(module.transition1.weight.dtype) @ module.transition1.weight.T
+        ),
         project_b=None,
         project_out=module.transition2,
         config=getattr(module, "transition_config", _DEFAULT_TRANSITION_CONFIG),
@@ -57,7 +65,10 @@ def reference_transition(module: nn.Module, x: torch.Tensor) -> torch.Tensor:
 
 
 def reference_triangle(
-    module: nn.Module, x: torch.Tensor, mask: torch.Tensor | None, contraction_scale: torch.Tensor | None = None
+    module: nn.Module,
+    x: torch.Tensor,
+    mask: torch.Tensor | None,
+    contraction_scale: torch.Tensor | None = None,
 ) -> torch.Tensor:
     """Map the packed checkpoint weights to the shared contraction (a raw delta)."""
     return triangle_update(

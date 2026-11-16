@@ -27,6 +27,7 @@ def rot_vec_mul(r: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
 
     Returns:
         torch.Tensor: the rotated coordinates
+
     """
     if t.dtype != torch.float32:
         t = t.to(dtype=torch.float32)
@@ -54,6 +55,7 @@ def flatten_final_dims(t: torch.Tensor, num_dims: int) -> torch.Tensor:
 
     Returns:
         torch.Tensor: the flattened tensor
+
     """
     return t.reshape(shape=(*t.shape[:-num_dims], -1))
 
@@ -69,9 +71,11 @@ def one_hot(
             [bins]
         upper_bins (torch.Tensor): the upper bounds of bins
             [bins]
+
     Returns:
         torch.Tensor: the one hot embedding of x from v_bins
             [..., bins]
+
     """
     dgram = (x[..., None] > lower_bins) * (x[..., None] < upper_bins).float()
     return dgram
@@ -91,8 +95,8 @@ def broadcast_token_to_atom(
     Returns:
         torch.Tensor: atom embedding
             [..., N_atom, d]
-    """
 
+    """
     if len(atom_to_token_idx.shape) == 1:
         # shape = [N_atom], easy index
         return x_token[..., atom_to_token_idx, :]
@@ -107,7 +111,7 @@ def broadcast_token_to_atom(
 
 
 def expand_at_dim(x: torch.Tensor, dim: int, n: int) -> torch.Tensor:
-    """expand a tensor at specific dim by n times
+    """Expand a tensor at specific dim by n times
 
     Args:
         x (torch.Tensor): input
@@ -116,6 +120,7 @@ def expand_at_dim(x: torch.Tensor, dim: int, n: int) -> torch.Tensor:
 
     Returns:
         torch.Tensor: expanded tensor of shape [..., n, ...]
+
     """
     x = x.unsqueeze(dim=dim)
     if dim < 0:
@@ -126,8 +131,7 @@ def expand_at_dim(x: torch.Tensor, dim: int, n: int) -> torch.Tensor:
 
 
 def move_final_dim_to_dim(x: torch.Tensor, dim: int) -> torch.Tensor:
-    """
-    Move the final dimension of a tensor to a specified dimension.
+    """Move the final dimension of a tensor to a specified dimension.
 
     Args:
         x (torch.Tensor): Input tensor.
@@ -135,6 +139,7 @@ def move_final_dim_to_dim(x: torch.Tensor, dim: int) -> torch.Tensor:
 
     Returns:
         torch.Tensor: Tensor with the final dimension moved to the specified dimension.
+
     """
     # permute_final_dims
     n_dim = len(x.shape)
@@ -187,8 +192,8 @@ def rearrange_qk_to_dense_trunk(
                 mask_trunked: torch.Tensor
                     [n_trunks, n_queries, n_keys]
                 q_pad: query padded dimension
-    """
 
+    """
     assert n_keys >= n_queries
     assert n_queries & 0x01 == 0
     assert n_keys & 0x01 == 0
@@ -284,6 +289,7 @@ def optimized_concat_split(attn_bias: torch.Tensor, n_queries: int) -> torch.Ten
     Returns:
         torch.Tensor: The reshaped and permuted attention bias tensor.
             Shape: [..., n_queries, D // n_queries * E]
+
     """
     D = attn_bias.size(-2)
     E = attn_bias.size(-1)
@@ -298,8 +304,7 @@ def optimized_concat_split(attn_bias: torch.Tensor, n_queries: int) -> torch.Ten
 def gather_pair_embedding_in_dense_trunk(
     x: torch.Tensor, idx_q: torch.Tensor, idx_k: torch.Tensor
 ) -> torch.Tensor:
-    """
-    Selectively gather elements from a tensor using two sets of indices.
+    """Selectively gather elements from a tensor using two sets of indices.
 
     Args:
         x: [..., N_token, N_token, d]
@@ -309,6 +314,7 @@ def gather_pair_embedding_in_dense_trunk(
     Return:
         y: [..., N_b, N_q, N_k, d]
             where y[..., b, i, j, :] = x[..., idx_q[b, i], idx_k[b, j], :]
+
     """
     idx_q = idx_q.long()
     idx_k = idx_k.long()
@@ -344,8 +350,8 @@ def batched_gather(
     Returns:
         torch.Tensor: gathered data
             [..., N, ...]
-    """
 
+    """
     # for the naive case
     if len(inds.shape) == 1 and no_batch_dims == 0 and dim == 0:
         return data[inds]
@@ -368,7 +374,7 @@ def pad_at_dim(
     pad_length: tuple[int] | list[int],
     value: float = 0,
 ) -> torch.Tensor:
-    """pad to input x at dimension dim with length pad_length[0] to the left and and pad_length[1] to the right.
+    """Pad to input x at dimension dim with length pad_length[0] to the left and and pad_length[1] to the right.
 
     Args:
         x (torch.Tensor): input
@@ -377,6 +383,7 @@ def pad_at_dim(
 
     Returns:
         torch.Tensor: padded tensor
+
     """
     n_dim = len(x.shape)
     if dim < 0:
@@ -395,7 +402,7 @@ def pad_at_dim(
 def reshape_at_dim(
     x: torch.Tensor, dim: int, target_shape: tuple[int] | list[int]
 ) -> torch.Tensor:
-    """reshape dimension dim of x to target_shape
+    """Reshape dimension dim of x to target_shape
 
     Args:
         x (torch.Tensor): input
@@ -404,6 +411,7 @@ def reshape_at_dim(
 
     Returns:
         torch.Tensor: reshaped tensor
+
     """
     n_dim = len(x.shape)
     if dim < 0:
@@ -426,6 +434,7 @@ def permute_final_dims(tensor: torch.Tensor, inds: list[int]) -> torch.Tensor:
 
     Returns:
         torch.Tensor: the permuted tensor
+
     """
     zero_index = -1 * len(inds)
     first_inds = list(range(len(tensor.shape[:zero_index])))

@@ -17,7 +17,11 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from foldforge.modules.engine.backends import BackendPlan, BackendUnsupportedError, op_of
+from foldforge.modules.engine.backends import (
+    BackendPlan,
+    BackendUnsupportedError,
+    op_of,
+)
 from foldforge.modules.engine.serving import observe_call
 
 if TYPE_CHECKING:
@@ -45,7 +49,12 @@ def refuse(module: nn.Module, reason: str) -> bool:
     key = (cls, backend, reason)
     if key not in _LOGGED:
         _LOGGED.add(key)
-        logger.warning("%s backend %s refuses a call: %s; running its pytorch backend for it", cls, backend, reason)
+        logger.warning(
+            "%s backend %s refuses a call: %s; running its pytorch backend for it",
+            cls,
+            backend,
+            reason,
+        )
     return True
 
 
@@ -79,7 +88,9 @@ def guard(module: nn.Module, unsupported: str = "fallback") -> nn.Module:
     return module
 
 
-def apply_plan(model: nn.Module, plan: BackendPlan, device: object | None = None) -> dict[str, dict[str, str | None]]:
+def apply_plan(
+    model: nn.Module, plan: BackendPlan, device: object | None = None
+) -> dict[str, dict[str, str | None]]:
     """Give every engine op module of ``model`` its backend and guard; returns ``{module name: {"backend", "requested", "reason"}}``.
 
     Does not descend into an op module (its parts are not ops of their own: a ``Transition``'s ``LayerNorm`` is a parameter holder). The
@@ -88,16 +99,25 @@ def apply_plan(model: nn.Module, plan: BackendPlan, device: object | None = None
 
     def visit(name: str, module: nn.Module) -> None:
         if type(module).__name__ in _COMPOSITES and hasattr(module, "set_backend"):
-            module.set_backend("pytorch")  # also puts every child on pytorch; the loop below gives each its own backend
+            module.set_backend(
+                "pytorch"
+            )  # also puts every child on pytorch; the loop below gives each its own backend
             module.foldforge_unsupported = plan.unsupported
         elif op_of(module) is not None:
             backend, reason = plan.for_class(type(module), device)
             if reason is not None and plan.unsupported == "error":
-                raise BackendUnsupportedError(f"{name or '<root>'} ({type(module).__name__}): {reason}")
+                raise BackendUnsupportedError(
+                    f"{name or '<root>'} ({type(module).__name__}): {reason}"
+                )
             module.set_backend(backend)
             guard(module, plan.unsupported)
             op = op_of(module)
-            report[name] = {"op": op, "backend": backend, "requested": plan.requested(op), "reason": reason}
+            report[name] = {
+                "op": op,
+                "backend": backend,
+                "requested": plan.requested(op),
+                "reason": reason,
+            }
             return
         for child_name, child in module.named_children():
             visit(f"{name}.{child_name}" if name else child_name, child)
@@ -105,7 +125,15 @@ def apply_plan(model: nn.Module, plan: BackendPlan, device: object | None = None
     visit("", model)
     refused = {n: r for n, r in report.items() if r["reason"] is not None}
     if refused:
-        lines = "; ".join(f"{n} ({r['requested']}: {r['reason']})" for n, r in sorted(refused.items())[:8])
-        logger.warning("backend %s: %d module(s) run the engine pytorch backend: %s%s", plan.backend, len(refused), lines,
-                       " ..." if len(refused) > 8 else "")
+        lines = "; ".join(
+            f"{n} ({r['requested']}: {r['reason']})"
+            for n, r in sorted(refused.items())[:8]
+        )
+        logger.warning(
+            "backend %s: %d module(s) run the engine pytorch backend: %s%s",
+            plan.backend,
+            len(refused),
+            lines,
+            " ..." if len(refused) > 8 else "",
+        )
     return report

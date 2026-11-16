@@ -87,7 +87,10 @@ def test_the_engine_residual_classes_still_declare_the_dead_flag_false_by_defaul
     from miniworld_engine.modules.attention import AttentionPairBias
     from miniworld_engine.modules.msa import MSAPairWeightedAveraging, OuterProductMean
     from miniworld_engine.modules.transition import Transition
-    from miniworld_engine.modules.triangle import TriangleAttention, TriangleMultiplication
+    from miniworld_engine.modules.triangle import (
+        TriangleAttention,
+        TriangleMultiplication,
+    )
 
     for cls in (
         Transition,
@@ -97,7 +100,9 @@ def test_the_engine_residual_classes_still_declare_the_dead_flag_false_by_defaul
         OuterProductMean,
         MSAPairWeightedAveraging,
     ):
-        assert hasattr(cls, "dead"), f"{cls.__name__} lost the `dead` flag: dead-module skipping would silently stop (speed only)"
+        assert hasattr(cls, "dead"), (
+            f"{cls.__name__} lost the `dead` flag: dead-module skipping would silently stop (speed only)"
+        )
         assert cls.dead is False, f"{cls.__name__}.dead must default to False"
 
 
@@ -111,7 +116,9 @@ def test_a_flagged_engine_transition_returns_its_residual_input_without_grad():
     assert mark_dead(module) == {"Transition": 1}
     x = torch.randn(3, 16, dtype=torch.bfloat16)
     with torch.no_grad():
-        assert torch.equal(module(x), x), "a dead Transition must return x unchanged (x + 0)"
+        assert torch.equal(module(x), x), (
+            "a dead Transition must return x unchanged (x + 0)"
+        )
     module.dead = False
     with torch.no_grad():
         assert torch.allclose(module(x).float(), x.float(), atol=1e-2)

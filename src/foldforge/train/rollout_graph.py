@@ -47,23 +47,26 @@ LOG = logging.getLogger("foldforge.train")
 WARMUP_ROLLOUTS = 2
 
 
-
 @contextlib.contextmanager
 def _no_autocast_cache():
     """Autocast without its weight-cast cache. The cache keeps the bf16 cast of every fp32 parameter that requires grad until the OUTERMOST autocast
     context exits (it ignores no_grad): a capture inside the micro step's autocast would be served the casts the eager warm-up made (no cast kernel
     recorded: a replay reads the weights of the capture, and, once the context exits and the cache frees them, freed memory: NaN / illegal address).
-    With the cache off the casts run (and are recorded) at every call."""
+    With the cache off the casts run (and are recorded) at every call.
+    """
     if not torch.is_autocast_enabled("cuda"):
         yield
         return
-    with torch.autocast("cuda", dtype=torch.get_autocast_dtype("cuda"), cache_enabled=False):
+    with torch.autocast(
+        "cuda", dtype=torch.get_autocast_dtype("cuda"), cache_enabled=False
+    ):
         yield
 
 
 class InlineScope:
     """The sampler scope that makes ``AlphaFold3._sample_diffusion`` run :func:`sampler_graph.sample_inline` (the loop as plain ops, no capture of
-    its own): the rollout graph captures around the whole call."""
+    its own): the rollout graph captures around the whole call.
+    """
 
     inline = True
     cache = None
@@ -74,18 +77,31 @@ _INLINE = InlineScope()
 
 def bump_versions(model: torch.nn.Module) -> None:
     """Bump ``_version`` of every parameter and buffer (no kernel). After an optimizer that writes without bumping (``Adam(fused=True)``)."""
-    torch.autograd.graph.increment_version(list(model.parameters()) + list(model.buffers()))
+    torch.autograd.graph.increment_version(
+        list(model.parameters()) + list(model.buffers())
+    )
 
 
-def rollout_body(model, batch, embeddings: dict[str, torch.Tensor], steps: int) -> torch.Tensor:
+def rollout_body(
+    model, batch, embeddings: dict[str, torch.Tensor], steps: int
+) -> torch.Tensor:
     """The rollout as one straight-line op sequence (no host read): ``[res, atoms, 3]``. Eager or under a capture, the same arithmetic.
 
     ``model.num_samples`` / ``diffusion_steps`` / ``foldforge_sampler_scope`` are set for the call; the head runs in eval mode (no dropout) as in
-    ``step.mini_rollout``."""
+    ``step.mini_rollout``.
+    """
     head = model.diffusion_head
-    saved = (model.num_samples, model.diffusion_steps, getattr(model, "foldforge_sampler_scope", None))
+    saved = (
+        model.num_samples,
+        model.diffusion_steps,
+        getattr(model, "foldforge_sampler_scope", None),
+    )
     head.eval()
-    model.num_samples, model.diffusion_steps, model.foldforge_sampler_scope = 1, steps, _INLINE
+    model.num_samples, model.diffusion_steps, model.foldforge_sampler_scope = (
+        1,
+        steps,
+        _INLINE,
+    )
     try:
         with torch.no_grad():
             return model._sample_diffusion(batch, embeddings)["atom_positions"][0]  # noqa: SLF001
@@ -100,7 +116,9 @@ def rollout_batch(batch_data):
     # `seq_length` (the real token count, a CPU int tensor) is read by no module, yet `_flatten` puts its VALUE in the key: it would make every
     # crop length its own graph
     tokens = dataclasses.replace(batch_data.token_features, seq_length=None)
-    return dataclasses.replace(batch_data, msa=None, templates=None, token_features=tokens)
+    return dataclasses.replace(
+        batch_data, msa=None, templates=None, token_features=tokens
+    )
 
 
 def graph_tree(batch_data, detached: dict[str, torch.Tensor]) -> dict[str, Any]:
@@ -110,7 +128,8 @@ def graph_tree(batch_data, detached: dict[str, torch.Tensor]) -> dict[str, Any]:
 
 def graph_key(model, structure: Any, steps: int) -> tuple:
     """The per-shape key: layout of every input tensor (``structure``: shapes / dtypes / strides), the step count, the model, and the precision
-    state a capture bakes in."""
+    state a capture bakes in.
+    """
     return (
         structure,
         steps,
@@ -125,9 +144,17 @@ class _Entry:
     """One captured rollout with the static buffers it reads (the cache's value; the interface ``SamplerGraphCache`` needs: ``retained``, ``release``)."""
 
     def __init__(self, graph, tree, leaves, out, pool_bytes: int, held: Any) -> None:
-        self.graph, self.tree, self.leaves, self.out, self.held = graph, tree, leaves, out, held
+        self.graph, self.tree, self.leaves, self.out, self.held = (
+            graph,
+            tree,
+            leaves,
+            out,
+            held,
+        )
         self.pool_bytes = pool_bytes
-        self.static_bytes = engine_capture.tensor_bytes(leaves) + out.numel() * out.element_size()
+        self.static_bytes = (
+            engine_capture.tensor_bytes(leaves) + out.numel() * out.element_size()
+        )
         self.held_bytes = engine_capture.tensor_bytes(held)
         #: bytes this entry keeps on the GPU: the static inputs, the output, the graph's pool and the engine cache entries of the capture
         self.retained = self.static_bytes + pool_bytes + self.held_bytes
@@ -135,7 +162,9 @@ class _Entry:
     def load(self, leaves: list[torch.Tensor]) -> None:
         """Write this micro step's tensors into the static buffers."""
         if len(leaves) != len(self.leaves):
-            raise RuntimeError(f"{len(leaves)} tensors for {len(self.leaves)} static buffers")
+            raise RuntimeError(
+                f"{len(leaves)} tensors for {len(self.leaves)} static buffers"
+            )
         for dst, src in zip(self.leaves, leaves, strict=True):
             keep = sampler_graph._unique_part(dst)  # noqa: SLF001
             if keep is None:
@@ -156,13 +185,24 @@ class RolloutGraph:
     this call cannot be served (CPU, structural tokens, a capture that failed): the caller then runs the eager rollout.
 
     Counters (``captures``, ``replays``, ``cache_hits`` / ``cache_misses`` / ``cache_evictions``, ``uncached``, ``fallbacks``, ``capture_seconds``)
-    are attributes; ``report()`` collects them."""
+    are attributes; ``report()`` collects them.
+    """
 
-    def __init__(self, *, max_graphs: int = 4, budget_fraction: float = 0.1, warmup: int = WARMUP_ROLLOUTS) -> None:
-        self.cache = sampler_graph.SamplerGraphCache(self, max_entries=max_graphs, budget_fraction=budget_fraction)
+    def __init__(
+        self,
+        *,
+        max_graphs: int = 4,
+        budget_fraction: float = 0.1,
+        warmup: int = WARMUP_ROLLOUTS,
+    ) -> None:
+        self.cache = sampler_graph.SamplerGraphCache(
+            self, max_entries=max_graphs, budget_fraction=budget_fraction
+        )
         self.warmup = warmup
         self.failed: set = set()
-        self.captures = self.replays = self.cache_hits = self.cache_misses = self.cache_evictions = self.uncached = self.fallbacks = 0
+        self.captures = self.replays = self.cache_hits = self.cache_misses = (
+            self.cache_evictions
+        ) = self.uncached = self.fallbacks = 0
         self.capture_seconds = 0.0
         self.disabled_reason: str | None = None
 
@@ -179,7 +219,9 @@ class RolloutGraph:
             "capture_seconds": round(self.capture_seconds, 3),
             "entries": len(self.cache.entries),
             "retained_gib": round(self.cache.retained_bytes / 2**30, 3),
-            "pool_gib": round(sum(e.pool_bytes for e in self.cache.entries.values()) / 2**30, 3),
+            "pool_gib": round(
+                sum(e.pool_bytes for e in self.cache.entries.values()) / 2**30, 3
+            ),
             "disabled": self.disabled_reason,
         }
 
@@ -197,7 +239,9 @@ class RolloutGraph:
         return None
 
     # -- the call ---------------------------------------------------------------------------------------------------------------------------------
-    def __call__(self, model, features, batch_data, detached: dict[str, torch.Tensor], steps: int) -> torch.Tensor | None:  # noqa: ARG002
+    def __call__(
+        self, model, features, batch_data, detached: dict[str, torch.Tensor], steps: int
+    ) -> torch.Tensor | None:
         if self.disabled_reason is not None:
             return None
         device = next(t for t in detached.values() if torch.is_tensor(t)).device
@@ -222,7 +266,11 @@ class RolloutGraph:
             except torch.OutOfMemoryError:
                 raise
             except Exception as error:  # noqa: BLE001 - a capture that cannot be made: this shape runs eagerly from now on
-                LOG.warning("rollout graph capture failed (%s: %s): this shape runs the eager rollout", type(error).__name__, str(error)[:300])
+                LOG.warning(
+                    "rollout graph capture failed (%s: %s): this shape runs the eager rollout",
+                    type(error).__name__,
+                    str(error)[:300],
+                )
                 self.failed.add(key)
                 self.fallbacks += 1
                 torch.cuda.synchronize()
@@ -255,27 +303,41 @@ class RolloutGraph:
                 rollout_body(model, batch, embeddings, steps)
         torch.cuda.current_stream().wait_stream(side)
         torch.cuda.synchronize()
-        torch.cuda.set_rng_state(rng_state, device)  # the warm-up's numbers are not the caller's
+        torch.cuda.set_rng_state(
+            rng_state, device
+        )  # the warm-up's numbers are not the caller's
         # entries the eager warm-up made must not be served to the capture: the capture has to record the packing kernels itself
         torch.autograd.graph.increment_version(list(head.parameters()))
         graph = torch.cuda.CUDAGraph()
         reserved = torch.cuda.memory_reserved()
-        with _no_autocast_cache(), torch.cuda.graph(graph, capture_error_mode="thread_local"):
+        with (
+            _no_autocast_cache(),
+            torch.cuda.graph(graph, capture_error_mode="thread_local"),
+        ):
             out = rollout_body(model, batch, embeddings, steps)
         torch.cuda.synchronize()
         pool_bytes = max(0, torch.cuda.memory_reserved() - reserved)
         head.release_fold_state()  # references to graph-pool tensors (the kept pair, the fold conditioning)
-        entry = _Entry(graph, static, leaves, out, pool_bytes, engine_capture.hold_new(marks))
+        entry = _Entry(
+            graph, static, leaves, out, pool_bytes, engine_capture.hold_new(marks)
+        )
         self.captures += 1
         self.capture_seconds += time.time() - t0
         return entry
 
 
-def mini_rollout(model, features, batch_data, detached: dict[str, torch.Tensor], steps: int, eager) -> torch.Tensor:
+def mini_rollout(
+    model, features, batch_data, detached: dict[str, torch.Tensor], steps: int, eager
+) -> torch.Tensor:
     """``cfg.rollout = "graph"``: the rollout of ``train/step.py`` through the model's :class:`RolloutGraph` (made on first use), or ``eager(...)`` when the
-    graph does not serve this call (CPU, structural tokens, a failed capture)."""
+    graph does not serve this call (CPU, structural tokens, a failed capture).
+    """
     graph = model.__dict__.get("_foldforge_rollout_graph")
     if graph is None:
         graph = model.__dict__["_foldforge_rollout_graph"] = RolloutGraph()
     result = graph(model, features, batch_data, detached, steps)
-    return eager(model, features, batch_data, detached, steps) if result is None else result
+    return (
+        eager(model, features, batch_data, detached, steps)
+        if result is None
+        else result
+    )

@@ -26,7 +26,9 @@ class PhaseTimer:
         self.memory = memory and self.enabled
         self._spans: list[tuple[str, torch.cuda.Event, torch.cuda.Event]] = []
         self._marks: dict[str, torch.cuda.Event] = {}
-        self._mem: dict[str, list[float]] = defaultdict(lambda: [0.0, 0.0, 0.0])  # peak allocated, peak reserved, start allocated
+        self._mem: dict[str, list[float]] = defaultdict(
+            lambda: [0.0, 0.0, 0.0]
+        )  # peak allocated, peak reserved, start allocated
 
     def _event(self) -> torch.cuda.Event:
         event = torch.cuda.Event(enable_timing=True)
@@ -84,9 +86,12 @@ class PhaseTimer:
         return dict(out)
 
 
-def arm_trunk_grad_marker(timer: PhaseTimer, tensors: list[torch.Tensor], name: str = "trunk_grad_ready") -> None:
+def arm_trunk_grad_marker(
+    timer: PhaseTimer, tensors: list[torch.Tensor], name: str = "trunk_grad_ready"
+) -> None:
     """Mark ``name`` (and close the memory segment ``diffusion_train_bwd``) when the gradient of every tensor in ``tensors`` (the trunk outputs the
-    heads read) has been computed: the backward before it is the heads' (diffusion, distogram), the rest is the trunk's."""
+    heads read) has been computed: the backward before it is the heads' (diffusion, distogram), the rest is the trunk's.
+    """
     if not timer.enabled:
         return
     pending = {"n": len(tensors)}

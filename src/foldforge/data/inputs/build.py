@@ -54,7 +54,8 @@ _STANDARD = {
 def _modifications(chain: Chain) -> list[dict[str, Any]]:
     """AF3's ``modifications`` of a polymer chain: every residue whose CCD is not a standard one keeps its own chemistry (its atoms come from
     the CCD), in the form of the AF3 input format -- ``ptmType`` / ``ptmPosition`` for a protein, ``modificationType`` / ``basePosition``
-    for RNA and DNA. The one-letter sequence holds the parent (or X) at that position."""
+    for RNA and DNA. The one-letter sequence holds the parent (or X) at that position.
+    """
     standard = _STANDARD[chain.kind]
     out = []
     for position, ccd in enumerate(chain.ccds, start=1):
@@ -73,20 +74,31 @@ def _with_af3_query(a3m: str, chain: Chain, modifications: list[dict[str, Any]])
 
     AF3 replaces a modified residue by its parent in the CCD (``MSE`` -> M, ``AIB`` -> A) or, with no parent (a cap, a GFP chromophore), by
     ``X``, and requires the MSA's first row to be feature-equivalent to that. The database's query carries the entity's canonical letter
-    there, so the row is rewritten by what AF3's own chain object reports -- the same object, not a second table."""
+    there, so the row is rewritten by what AF3's own chain object reports -- the same object, not a second table.
+    """
     from alphafold3.common import folding_input
 
     if chain.kind == "protein":
         derived = folding_input.ProteinChain(
-            id=chain.id, sequence=chain.sequence, ptms=[(m["ptmType"], m["ptmPosition"]) for m in modifications]
+            id=chain.id,
+            sequence=chain.sequence,
+            ptms=[(m["ptmType"], m["ptmPosition"]) for m in modifications],
         ).sequence
     else:
-        factory = folding_input.RnaChain if chain.kind == "rna" else folding_input.DnaChain
+        factory = (
+            folding_input.RnaChain if chain.kind == "rna" else folding_input.DnaChain
+        )
         derived = factory(
-            id=chain.id, sequence=chain.sequence, modifications=[(m["modificationType"], m["basePosition"]) for m in modifications]
+            id=chain.id,
+            sequence=chain.sequence,
+            modifications=[
+                (m["modificationType"], m["basePosition"]) for m in modifications
+            ],
         ).sequence
     lines = a3m.split("\n")
-    if len(lines) < 2 or len(lines[1]) != len(derived):    # not an aligned query row of this chain: leave the text to AF3's own check
+    if len(lines) < 2 or len(lines[1]) != len(
+        derived
+    ):  # not an aligned query row of this chain: leave the text to AF3's own check
         return a3m
     lines[1] = derived
     return "\n".join(lines)
@@ -153,7 +165,11 @@ class Input:
         else:
             text = chain.a3m.read_text() if chain.a3m else ""
         modifications = _modifications(chain)
-        return _with_af3_query(text, chain, modifications) if text and modifications else text
+        return (
+            _with_af3_query(text, chain, modifications)
+            if text and modifications
+            else text
+        )
 
     def af3(self, seed: int = 0) -> dict[str, Any]:
         """Compute af3."""
@@ -184,7 +200,8 @@ class Input:
         if bonds:
             ids = {c.index: c.id for c in self.chains}
             payload["bondedAtomPairs"] = [
-                [[ids[int(end[0])], int(end[1]), str(end[2])] for end in pair] for pair in bonds
+                [[ids[int(end[0])], int(end[1]), str(end[2])] for end in pair]
+                for pair in bonds
             ]
         return payload
 
@@ -303,7 +320,7 @@ def _load_chains(
         EntityType.RNA: "rna",
         EntityType.DNA: "dna",
         EntityType.NON_POLYMER: "ligand",
-        EntityType.BRANCHED: "ligand",     # a glycan: several CCD components joined by `bonded_atom_pairs`
+        EntityType.BRANCHED: "ligand",  # a glycan: several CCD components joined by `bonded_atom_pairs`
     }
     bonded = {int(end[0]) for pair in spec.bonded_atom_pairs for end in pair}
     chains = []
@@ -311,7 +328,11 @@ def _load_chains(
     for i in indices:
         letter = spec.chain_letters[str(i)]
         parsed = parse_fasta_file(spec.fasta[letter], i)
-        if parsed.entity_type == EntityType.BRANCHED and i not in bonded and not spec.allow_unbonded_branched:
+        if (
+            parsed.entity_type == EntityType.BRANCHED
+            and i not in bonded
+            and not spec.allow_unbonded_branched
+        ):
             msg = (
                 "Branched FASTA needs explicit atom-level bonds for released "
                 "checkpoint adapters (`bonded_atom_pairs` of the spec)"

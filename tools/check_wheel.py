@@ -36,7 +36,9 @@ def main() -> int:
             "miniworld.py",
         ):
             assert f"foldforge/models/checkpoints/{name}" in wheel.namelist()
-        assert "foldforge/models/checkpoints/legacy/haiku.py" in wheel.namelist()  # the offline converter's graph ships with the wheel
+        assert (
+            "foldforge/models/checkpoints/legacy/haiku.py" in wheel.namelist()
+        )  # the offline converter's graph ships with the wheel
     if args.installed:
         import foldforge as ff
 

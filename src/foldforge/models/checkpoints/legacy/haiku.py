@@ -1664,7 +1664,9 @@ def get_translation_dict(model: ParameterModule) -> ParamTree:
     }
 
 
-def import_jax_weights_(model: ParameterModule, model_path: pathlib.Path) -> dict[str, int]:
+def import_jax_weights_(
+    model: ParameterModule, model_path: pathlib.Path
+) -> dict[str, int]:
     """Compute import jax weights."""
     checkpoint = model_path / "af3.bin.zst" if model_path.is_dir() else model_path
     params = get_alphafold3_params(checkpoint)

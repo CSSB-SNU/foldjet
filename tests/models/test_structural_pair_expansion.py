@@ -12,7 +12,9 @@ from foldforge.modules.dense import structural_tokens as st
 
 C_PAIR, RESIDUES = 8, 7
 PARENT = torch.tensor([0, 0, 1, 1, 2, 3, 3, 4, 5, 5, 6, 6, 6])
-ROLE = torch.tensor([1, 2, 1, 2, 1, 1, 2, 4, 1, 2, 1, 2, 0])  # protein bb / sc, a DNA base, an atom
+ROLE = torch.tensor(
+    [1, 2, 1, 2, 1, 1, 2, 4, 1, 2, 1, 2, 0]
+)  # protein bb / sc, a DNA base, an atom
 
 
 def _whole_tensor_expand_pair(module, pair, parent, features):
@@ -46,8 +48,12 @@ def case():
     for parameter in module.parameters():
         torch.nn.init.normal_(parameter, std=0.3)
     asym = torch.zeros(RESIDUES, dtype=torch.int64)
-    prev_parent = (PARENT - 1).clamp(min=-1)  # per structural token: its parent's neighbours in the chain
-    next_parent = torch.where(PARENT + 1 < RESIDUES, PARENT + 1, torch.full_like(PARENT, -1))
+    prev_parent = (PARENT - 1).clamp(
+        min=-1
+    )  # per structural token: its parent's neighbours in the chain
+    next_parent = torch.where(
+        PARENT + 1 < RESIDUES, PARENT + 1, torch.full_like(PARENT, -1)
+    )
     features = module.pair_features(PARENT, ROLE, asym, prev_parent, next_parent)
     pair = torch.randn(RESIDUES, RESIDUES, C_PAIR)
     return module, pair, features
@@ -69,9 +75,13 @@ def test_under_autocast_the_pair_is_stored_in_the_autocast_dtype(case, monkeypat
     with torch.autocast("cpu", dtype=torch.bfloat16):
         want = _whole_tensor_expand_pair(module, pair, PARENT, features)
         got = module.expand_pair(pair, PARENT, features)
-    assert want.dtype is torch.float32  # what the old construction handed the first refiner block, which rounded it to bf16
+    assert (
+        want.dtype is torch.float32
+    )  # what the old construction handed the first refiner block, which rounded it to bf16
     assert got.dtype is torch.bfloat16
-    torch.testing.assert_close(got.float(), want.to(torch.bfloat16).float(), rtol=2e-2, atol=2e-2)
+    torch.testing.assert_close(
+        got.float(), want.to(torch.bfloat16).float(), rtol=2e-2, atol=2e-2
+    )
 
 
 def test_only_one_band_of_fp32_is_alive_at_a_time(case, monkeypatch):

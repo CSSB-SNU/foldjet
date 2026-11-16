@@ -57,5 +57,3 @@ def msa_row_update(
         value = attention_residual(value, pair)
         chunks.append(transition_residual(value))
     return torch.cat(chunks, dim=-3)
-
-

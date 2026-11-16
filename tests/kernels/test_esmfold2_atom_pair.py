@@ -20,10 +20,16 @@ from foldforge.modules.engine.modules import engine_has_atom_dit, model_keys
 from foldforge.modules.engine.transformers import AtomDiTStack, atom_dit_stack
 from foldforge.utils import atom_layout
 
-pytestmark = pytest.mark.skipif(not engine_has_atom_dit("esmfold2_pair"), reason="engine without AtomDiT('esmfold2_pair') (older than R6)")
+pytestmark = pytest.mark.skipif(
+    not engine_has_atom_dit("esmfold2_pair"),
+    reason="engine without AtomDiT('esmfold2_pair') (older than R6)",
+)
 
 C, HEADS, BLOCKS, KEYS, QUERIES = 128, 4, 3, 192, 32
-ATOMS, REAL = 200, 187  # 7 query windows, the last partly padding: the real atoms come first
+ATOMS, REAL = (
+    200,
+    187,
+)  # 7 query windows, the last partly padding: the real atoms come first
 
 
 def _randomize(module: nn.Module, std: float = 0.12) -> nn.Module:
@@ -43,11 +49,15 @@ def _layout(seed: int = 0):
     padded = windows * QUERIES
     real = torch.arange(padded) < REAL
     starts = slide_starts(torch.tensor([REAL]), windows, KEYS)[0]  # [W]
-    idx = starts[:, None] + torch.arange(KEYS)  # [W, 192] into the flat padded atom list
+    idx = starts[:, None] + torch.arange(
+        KEYS
+    )  # [W, 192] into the flat padded atom list
     in_range = idx < padded
     idx = idx.clamp(max=padded - 1)
     keys_mask = (in_range & real[idx]).to(torch.float32)
-    gather = atom_layout.GatherInfo(gather_idxs=idx, gather_mask=in_range, input_shape=(windows, QUERIES))
+    gather = atom_layout.GatherInfo(
+        gather_idxs=idx, gather_mask=in_range, input_shape=(windows, QUERIES)
+    )
     queries_mask = real.reshape(windows, QUERIES).to(torch.float32)
     act = torch.randn(windows, QUERIES, C, generator=generator)
     cond = torch.randn(windows, QUERIES, C, generator=generator)
@@ -60,16 +70,30 @@ def _layout(seed: int = 0):
     rope_q = aca.build_atom_rope(position, uid, head_dim, ESMFOLD2.atom_rope)
     rope_k = aca.build_atom_rope(keys_position, keys_uid, head_dim, ESMFOLD2.atom_rope)
     keys_cond = atom_layout.convert(gather, cond, layout_axes=(-3, -2))
-    pair_mask = aca.sliding_window_mask(queries_mask, keys_mask, gather, ESMFOLD2.atom_window_half)
-    return dict(act=act, cond=cond, keys_cond=keys_cond, pair=pair, gather=gather, queries_mask=queries_mask, keys_mask=keys_mask,
-                pair_mask=pair_mask, rope_q=rope_q, rope_k=rope_k)
+    pair_mask = aca.sliding_window_mask(
+        queries_mask, keys_mask, gather, ESMFOLD2.atom_window_half
+    )
+    return dict(
+        act=act,
+        cond=cond,
+        keys_cond=keys_cond,
+        pair=pair,
+        gather=gather,
+        queries_mask=queries_mask,
+        keys_mask=keys_mask,
+        pair_mask=pair_mask,
+        rope_q=rope_q,
+        rope_k=rope_k,
+    )
 
 
 def _dense_and_stack():
     torch.manual_seed(0)
     dense = _randomize(DiffusionCrossAttTransformer(spec=ESMFOLD2)).eval()
     stack = atom_dit_stack("esmfold2", n_blocks=BLOCKS, precision="fp32")
-    blocks = released.esmfold2_atom_blocks_from_released(dense.state_dict(), n_head=HEADS)
+    blocks = released.esmfold2_atom_blocks_from_released(
+        dense.state_dict(), n_head=HEADS
+    )
     for block, tensors in zip(stack.blocks, blocks, strict=True):
         block.load_state_dict(tensors, strict=True)
     return dense, stack.eval()
@@ -92,17 +116,39 @@ def test_the_converted_blocks_have_exactly_the_blocks_parameters():
     released.esmfold2_atom_blocks_from_released(tracked, n_head=HEADS)
     assert set(tracked.used) == set(dense.state_dict())
     shared = dense.state_dict()["pair_logits_projection.weight"]
-    assert torch.equal(stack.blocks[2].attention.to_bias.weight, shared[2 * HEADS : 3 * HEADS])
+    assert torch.equal(
+        stack.blocks[2].attention.to_bias.weight, shared[2 * HEADS : 3 * HEADS]
+    )
 
 
 def test_the_engine_stack_equals_the_dense_stack():
     dense, stack = _dense_and_stack()
     x = _layout()
     with torch.no_grad():
-        expected = dense(x["act"], x["queries_mask"], x["gather"], x["keys_mask"], x["cond"], x["keys_cond"], x["pair"],
-                         pair_mask=x["pair_mask"], rope_q=x["rope_q"], rope_k=x["rope_k"])
-        actual = stack(x["act"], x["queries_mask"], x["gather"], x["keys_mask"], x["cond"], x["keys_cond"], x["pair"],
-                       pair_mask=x["pair_mask"], rope_q=x["rope_q"], rope_k=x["rope_k"])
+        expected = dense(
+            x["act"],
+            x["queries_mask"],
+            x["gather"],
+            x["keys_mask"],
+            x["cond"],
+            x["keys_cond"],
+            x["pair"],
+            pair_mask=x["pair_mask"],
+            rope_q=x["rope_q"],
+            rope_k=x["rope_k"],
+        )
+        actual = stack(
+            x["act"],
+            x["queries_mask"],
+            x["gather"],
+            x["keys_mask"],
+            x["cond"],
+            x["keys_cond"],
+            x["pair"],
+            pair_mask=x["pair_mask"],
+            rope_q=x["rope_q"],
+            rope_k=x["rope_k"],
+        )
     real = x["queries_mask"].bool()
     scale = expected[real].abs().max()
     error = (actual[real] - expected[real]).abs().max()
@@ -113,7 +159,16 @@ def test_the_stack_demands_the_rope_tables():
     _, stack = _dense_and_stack()
     x = _layout()
     with pytest.raises(ValueError, match="rotates q and k"):
-        stack(x["act"], x["queries_mask"], x["gather"], x["keys_mask"], x["cond"], x["keys_cond"], x["pair"], pair_mask=x["pair_mask"])
+        stack(
+            x["act"],
+            x["queries_mask"],
+            x["gather"],
+            x["keys_mask"],
+            x["cond"],
+            x["keys_cond"],
+            x["pair"],
+            pair_mask=x["pair_mask"],
+        )
 
 
 def test_a_native_file_of_the_dense_layout_loads_into_the_engine_layout():
@@ -126,10 +181,18 @@ def test_a_native_file_of_the_dense_layout_loads_into_the_engine_layout():
             self.other = nn.Linear(4, 4)
 
     graph = Graph(stack)
-    file_state = {f"atom_transformer_encoder.{k}": v.clone() for k, v in dense.state_dict().items()}
-    file_state["other.weight"], file_state["other.bias"] = torch.ones(4, 4), torch.zeros(4)
+    file_state = {
+        f"atom_transformer_encoder.{k}": v.clone()
+        for k, v in dense.state_dict().items()
+    }
+    file_state["other.weight"], file_state["other.bias"] = (
+        torch.ones(4, 4),
+        torch.zeros(4),
+    )
     miniworld._adopt_dense_atom_stacks(graph, file_state)  # noqa: SLF001
-    assert not any(".cross_attention." in k or ".transition_block." in k for k in file_state)
+    assert not any(
+        ".cross_attention." in k or ".transition_block." in k for k in file_state
+    )
     graph.load_state_dict(file_state, strict=True)
     # a file already in the block layout is left alone
     again = dict(graph.state_dict())

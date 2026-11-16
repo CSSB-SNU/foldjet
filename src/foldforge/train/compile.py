@@ -47,7 +47,8 @@ def _call(module, *args, **kwargs):
 
 def enable_compile(model: nn.Module, region: str = "all") -> int:
     """Replace the ``forward`` of every module of ``REGIONS[region]`` by a call through ONE ``torch.compile(dynamic=False)`` function. Call it BEFORE
-    :func:`foldforge.train.prepare.enable_activation_checkpointing` (the checkpoint wrapper then recomputes the compiled forward). Returns the module count."""
+    :func:`foldforge.train.prepare.enable_activation_checkpointing` (the checkpoint wrapper then recomputes the compiled forward). Returns the module count.
+    """
     names = REGIONS[region]
     config = torch._dynamo.config  # noqa: SLF001
     for key in ("recompile_limit", "cache_size_limit"):
@@ -62,7 +63,9 @@ def enable_compile(model: nn.Module, region: str = "all") -> int:
         if type(module).__name__ not in names or hasattr(module, "_ff_eager_forward"):
             continue
         module._ff_eager_forward = module.forward
-        module.forward = types.MethodType(lambda self, *a, **k: compiled(self, *a, **k), module)
+        module.forward = types.MethodType(
+            lambda self, *a, **k: compiled(self, *a, **k), module
+        )
         count += 1
     return count
 
@@ -83,5 +86,7 @@ def report() -> dict[str, object]:
         "frames_ok": int(frames["ok"]),
         "frames_total": int(frames["total"]),
         "graph_breaks": {str(k): int(v) for k, v in counters["graph_break"].items()},
-        "recompiles": int(sum(counters["recompiles"].values())) if "recompiles" in counters else 0,
+        "recompiles": int(sum(counters["recompiles"].values()))
+        if "recompiles" in counters
+        else 0,
     }

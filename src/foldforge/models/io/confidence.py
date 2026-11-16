@@ -41,11 +41,14 @@ def from_atom_confidence(output: Any) -> Prediction:
     )
 
 
-def predicted_tm(tm_adjusted_pae: torch.Tensor, pair_mask: torch.Tensor) -> torch.Tensor:
+def predicted_tm(
+    tm_adjusted_pae: torch.Tensor, pair_mask: torch.Tensor
+) -> torch.Tensor:
     """AlphaFold 3's pTM / ipTM from a TM-adjusted PAE ``[S, N, N]`` (the expected ``1 / (1 + (e / d0)^2)`` of the PAE bins, ``d0`` from the
     number of tokens, global or interface) and the pairs that count ``[N, N]``: for every alignment token ``i`` the mean over the counted
     ``j``, then the best ``i``. ``pair_mask`` is every valid pair for pTM, the pairs of different chains for ipTM
-    (``alphafold3.model.confidences.predicted_tm_score``)."""
+    (``alphafold3.model.confidences.predicted_tm_score``).
+    """
     mask = pair_mask.to(tm_adjusted_pae.dtype)
     normed = mask / (1e-8 + mask.sum(-1, keepdim=True))
     return (tm_adjusted_pae * normed).sum(-1).max(-1).values
@@ -59,13 +62,22 @@ def from_af3(
     token_mask: torch.Tensor | None = None,
 ) -> Prediction:
     """AF3 dense atom scores to token pLDDT in [0,1] and flat coordinates; pTM and (with more than one chain) ipTM from the head's TM-adjusted
-    PAE when the chain index and the token mask of the fold are given."""
+    PAE when the chain index and the token mask of the fold are given.
+    """
     scores = output["predicted_lddt"].float() / 100.0
     mask = token_atom_mask.to(scores.device).float()
     plddt = (scores * mask).sum(-1) / mask.sum(-1).clamp_min(1)
     ptm = iptm = None
-    global_apae, interface_apae = output.get("tmscore_adjusted_pae_global"), output.get("tmscore_adjusted_pae_interface")
-    if global_apae is not None and interface_apae is not None and asym_id is not None and token_mask is not None:
+    global_apae, interface_apae = (
+        output.get("tmscore_adjusted_pae_global"),
+        output.get("tmscore_adjusted_pae_interface"),
+    )
+    if (
+        global_apae is not None
+        and interface_apae is not None
+        and asym_id is not None
+        and token_mask is not None
+    ):
         device = global_apae.device
         valid = token_mask.to(device).bool()
         asym = asym_id.to(device)

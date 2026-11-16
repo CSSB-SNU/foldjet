@@ -182,11 +182,33 @@ def _plan_action(spec: dict[str, Any], *, source_dir: Path | None) -> str:
 
 @weights.command("convert")
 @click.argument("models", nargs=-1)
-@click.option("--all", "all_models", is_flag=True, help="Convert every registered model whose released blob is present.")
-@click.option("--blob", type=click.Path(path_type=Path, dir_okay=False, exists=True), help="Released blob (one model only).")
-@click.option("--out", type=click.Path(path_type=Path, dir_okay=False), help="Output file (one model only).")
-@click.option("--mode", type=click.Choice(["fast", "exact"]), default="fast", show_default=True)
-def convert(models: tuple[str, ...], *, all_models: bool, blob: Path | None, out: Path | None, mode: str) -> None:
+@click.option(
+    "--all",
+    "all_models",
+    is_flag=True,
+    help="Convert every registered model whose released blob is present.",
+)
+@click.option(
+    "--blob",
+    type=click.Path(path_type=Path, dir_okay=False, exists=True),
+    help="Released blob (one model only).",
+)
+@click.option(
+    "--out",
+    type=click.Path(path_type=Path, dir_okay=False),
+    help="Output file (one model only).",
+)
+@click.option(
+    "--mode", type=click.Choice(["fast", "exact"]), default="fast", show_default=True
+)
+def convert(
+    models: tuple[str, ...],
+    *,
+    all_models: bool,
+    blob: Path | None,
+    out: Path | None,
+    mode: str,
+) -> None:
     """Convert released blobs (``<model>.bin.zst``) to the miniworld checkpoint format (``<model>.miniworld.pt``), once.
 
     The loader reads only the converted file and never converts at run time. See docs/guides/CHECKPOINT-FORMAT.md.
@@ -213,9 +235,13 @@ def convert(models: tuple[str, ...], *, all_models: bool, blob: Path | None, out
     for model in selected:
         try:
             if all_models:
-                resolve(model, DEFAULT_FILES[model])  # --all: skip the models whose blob is not installed
+                resolve(
+                    model, DEFAULT_FILES[model]
+                )  # --all: skip the models whose blob is not installed
         except FileNotFoundError:
-            click.echo(f"SKIP {model}: no released blob ({DEFAULT_FILES[model]}); foldforge weights download {model}")
+            click.echo(
+                f"SKIP {model}: no released blob ({DEFAULT_FILES[model]}); foldforge weights download {model}"
+            )
             continue
         try:
             report = convert_model(model, blob=blob, out=out, mode=mode)

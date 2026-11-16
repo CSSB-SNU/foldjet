@@ -52,7 +52,10 @@ NATIVE_FILES = {
 }
 
 #: Buffers the graph registers at load time (not in a freshly built model's ``state_dict``).
-LOOSE = ("diffusion_head.fourier_embeddings.weight", "diffusion_head.fourier_embeddings.bias")
+LOOSE = (
+    "diffusion_head.fourier_embeddings.weight",
+    "diffusion_head.fourier_embeddings.bias",
+)
 
 
 #: Released DiT-block tensors an engine block class may lack, droppable only when all zero (see ``transformers._DROPPABLE_ZERO``).
@@ -90,29 +93,47 @@ def load_into(model: nn.Module, path: Path, *, family: str) -> dict[str, Any]:
     state = dict(blob["state_dict"])
     fourier = model.get_submodule("diffusion_head.fourier_embeddings")
     for name in LOOSE:  # registered first (their shapes are the file's), then loaded like every other entry
-        fourier.register_buffer(name.rsplit(".", 1)[1], torch.zeros_like(state[name], dtype=torch.float32).reshape(-1))
+        fourier.register_buffer(
+            name.rsplit(".", 1)[1],
+            torch.zeros_like(state[name], dtype=torch.float32).reshape(-1),
+        )
         state[name] = state[name].to(torch.float32).reshape(-1)
     _adopt_dense_atom_stacks(model, state)
     model.load_state_dict(state, strict=True)
-    return {"format": FORMAT, "format_version": VERSION, "source": blob.get("source"), "mapped_records": len(state)}
+    return {
+        "format": FORMAT,
+        "format_version": VERSION,
+        "source": blob.get("source"),
+        "mapped_records": len(state),
+    }
 
 
 def _adopt_dense_atom_stacks(model: nn.Module, state: dict[str, torch.Tensor]) -> None:
     """A file written while ESMFold2's atom stacks were FoldForge's own (engine 2.5.1: ``cross_attention.i.*`` / ``transition_block.i.*``)
     loaded into a graph whose stacks are engine ``AtomDiT("esmfold2_pair")`` blocks (``blocks.i.*``): the same conversion as at
-    convert time, in place. A file already in the block layout is left as it is."""
+    convert time, in place. A file already in the block layout is left as it is.
+    """
     from foldforge.models.checkpoints.legacy import released
     from foldforge.modules.engine.transformers import AtomDiTStack
 
     for name, module in model.named_modules():
-        if not (isinstance(module, AtomDiTStack) and module.rotary) or f"{name}.blocks.0.attention.to_query.weight" in state:
+        if (
+            not (isinstance(module, AtomDiTStack) and module.rotary)
+            or f"{name}.blocks.0.attention.to_query.weight" in state
+        ):
             continue
-        dense = {k[len(name) + 1 :]: v for k, v in state.items() if k.startswith(f"{name}.")}
+        dense = {
+            k[len(name) + 1 :]: v for k, v in state.items() if k.startswith(f"{name}.")
+        }
         if not dense:
             continue
         for key in dense:
             del state[f"{name}.{key}"]
-        for i, tensors in enumerate(released.esmfold2_atom_blocks_from_released(dense, n_head=module.blocks[0].attention.n_head)):
+        for i, tensors in enumerate(
+            released.esmfold2_atom_blocks_from_released(
+                dense, n_head=module.blocks[0].attention.n_head
+            )
+        ):
             for key, value in tensors.items():
                 state[f"{name}.blocks.{i}.{key}"] = value
 
@@ -120,7 +141,8 @@ def _adopt_dense_atom_stacks(model: nn.Module, state: dict[str, torch.Tensor]) -
 # ---------------------------------------------------------------------------------------------------------------------- converting
 def _converters(engine_model: nn.Module) -> list[tuple[str, Any, nn.Module]]:
     """``(prefix, function(tracked_state, prefix) -> {relative engine key: tensor}, module)`` of every module of ``engine_model`` that
-    is an engine class (outermost only: parts of a converted module are converted with it)."""
+    is an engine class (outermost only: parts of a converted module are converted with it).
+    """
     from miniworld_engine.modules import PairformerBlock, Transition
 
     from foldforge.models.checkpoints.legacy import released
@@ -128,28 +150,44 @@ def _converters(engine_model: nn.Module) -> list[tuple[str, Any, nn.Module]]:
     from foldforge.modules.engine.transformers import AtomDiTStack, TokenDiTStack
 
     def blocks(convert: Any) -> Any:
-        def run(state: Mapping[str, torch.Tensor], prefix: str, module: nn.Module) -> dict[str, torch.Tensor]:
+        def run(
+            state: Mapping[str, torch.Tensor], prefix: str, module: nn.Module
+        ) -> dict[str, torch.Tensor]:
             first = module.blocks[0]
             if isinstance(module, TokenDiTStack):
                 listed = convert(state, n_head=first.attention.n_head, prefix=prefix)
-            elif module.rotary:  # ESMFold2's atom block: no K / V AdaLN choice, no gate biases
-                listed = released.esmfold2_atom_blocks_from_released(state, n_head=first.attention.n_head, prefix=prefix)
+            elif (
+                module.rotary
+            ):  # ESMFold2's atom block: no K / V AdaLN choice, no gate biases
+                listed = released.esmfold2_atom_blocks_from_released(
+                    state, n_head=first.attention.n_head, prefix=prefix
+                )
             else:
-                listed = convert(state, n_head=first.attention.n_head, kv_norm=first.kv_norm, prefix=prefix)
+                listed = convert(
+                    state,
+                    n_head=first.attention.n_head,
+                    kv_norm=first.kv_norm,
+                    prefix=prefix,
+                )
             if len(listed) != len(module.blocks):
                 message = f"{prefix}: the released state has {len(listed)} blocks, the graph {len(module.blocks)}"
                 raise ConversionError(message)
             result: dict[str, torch.Tensor] = {}
-            for i, (block, tensors) in enumerate(zip(module.blocks, listed, strict=True)):
+            for i, (block, tensors) in enumerate(
+                zip(module.blocks, listed, strict=True)
+            ):
                 own = block.state_dict().keys()
                 for k, v in tensors.items():
                     if k in own:
                         result[f"blocks.{i}.{k}"] = v
-                    elif k in DROPPABLE_ZERO and not bool(v.any()):  # RoseTTAFold3's bias-free query, released as an all-zero bias
+                    elif k in DROPPABLE_ZERO and not bool(
+                        v.any()
+                    ):  # RoseTTAFold3's bias-free query, released as an all-zero bias
                         continue
                     else:
-                        message = f"{prefix}.blocks.{i}: released tensor {k} has no parameter in {type(block).__name__}" + (
-                            " and is not all zero" if k in DROPPABLE_ZERO else ""
+                        message = (
+                            f"{prefix}.blocks.{i}: released tensor {k} has no parameter in {type(block).__name__}"
+                            + (" and is not all zero" if k in DROPPABLE_ZERO else "")
                         )
                         raise ConversionError(message)
             return result
@@ -164,11 +202,15 @@ def _converters(engine_model: nn.Module) -> list[tuple[str, Any, nn.Module]]:
         if not name or any(name.startswith(f"{p}.") for p in taken):
             continue
         if isinstance(module, PairformerBlock):
-            fn = lambda s, p, _m: released.pairformer_block_from_released(s, prefix=p)  # noqa: E731
+            fn = lambda s, p, _m: released.pairformer_block_from_released(s, prefix=p)
         elif isinstance(module, EvoformerBlock):
-            fn = lambda s, p, _m: released.evoformer_block_from_released(s, prefix=p)  # noqa: E731
-        elif isinstance(module, Transition) and re.fullmatch(r"diffusion_head\.(pair|single)_transition_\d", name):
-            fn = lambda s, p, _m: released.diffusion_transition_from_released(s, prefix=p)  # noqa: E731
+            fn = lambda s, p, _m: released.evoformer_block_from_released(s, prefix=p)
+        elif isinstance(module, Transition) and re.fullmatch(
+            r"diffusion_head\.(pair|single)_transition_\d", name
+        ):
+            fn = lambda s, p, _m: released.diffusion_transition_from_released(
+                s, prefix=p
+            )
         elif isinstance(module, TokenDiTStack):
             fn = token
         elif isinstance(module, AtomDiTStack):
@@ -180,12 +222,15 @@ def _converters(engine_model: nn.Module) -> list[tuple[str, Any, nn.Module]]:
     return found
 
 
-def convert_state(released_state: Mapping[str, torch.Tensor], engine_model: nn.Module) -> dict[str, torch.Tensor]:
+def convert_state(
+    released_state: Mapping[str, torch.Tensor], engine_model: nn.Module
+) -> dict[str, torch.Tensor]:
     """The engine graph's ``state_dict`` (fp32) from the ``state_dict`` of the DENSE released-layout graph of the same family.
 
     Raises :class:`ConversionError` unless: every released key under a converted module was read by its conversion or is a known discard
     (:func:`foldforge.models.checkpoints.legacy.released.is_discarded`), every other released key is a key of the engine graph, and the result has the
-    engine graph's keys (the Fourier buffers aside) with their shapes."""
+    engine graph's keys (the Fourier buffers aside) with their shapes.
+    """
     from foldforge.models.checkpoints.legacy import released
 
     tracked = released.Tracked(released_state)
@@ -197,7 +242,11 @@ def convert_state(released_state: Mapping[str, torch.Tensor], engine_model: nn.M
         prefixes.append(prefix)
 
     unread = sorted(
-        k for k in released_state if any(k.startswith(f"{p}.") for p in prefixes) and k not in tracked.used and not released.is_discarded(k)
+        k
+        for k in released_state
+        if any(k.startswith(f"{p}.") for p in prefixes)
+        and k not in tracked.used
+        and not released.is_discarded(k)
     )
     if unread:
         message = f"released keys neither read by a conversion nor a known discard: {unread[:8]}{' ...' if len(unread) > 8 else ''}"
@@ -213,7 +262,11 @@ def convert_state(released_state: Mapping[str, torch.Tensor], engine_model: nn.M
 
     missing = sorted(set(target) - set(out))
     extra = sorted(set(out) - set(target) - set(LOOSE))
-    wrong = sorted(k for k in set(out) & set(target) if tuple(out[k].shape) != tuple(target[k].shape))
+    wrong = sorted(
+        k
+        for k in set(out) & set(target)
+        if tuple(out[k].shape) != tuple(target[k].shape)
+    )
     if missing or extra or wrong:
         message = f"conversion does not match the engine graph: missing={missing[:6]}, extra={extra[:6]}, mis-shaped={wrong[:6]}"
         raise ConversionError(message)
@@ -221,10 +274,14 @@ def convert_state(released_state: Mapping[str, torch.Tensor], engine_model: nn.M
         if key not in out:
             message = f"the released graph has no {key}"
             raise ConversionError(message)
-    return {k: v.detach().to(torch.float32).contiguous().clone() for k, v in out.items()}
+    return {
+        k: v.detach().to(torch.float32).contiguous().clone() for k, v in out.items()
+    }
 
 
-def convert_haiku(blob: Path, family: str, out: Path, *, mode: str = "fast") -> dict[str, Any]:
+def convert_haiku(
+    blob: Path, family: str, out: Path, *, mode: str = "fast"
+) -> dict[str, Any]:
     """Convert a released Haiku blob (``af3.bin.zst`` layout) of ``family`` to a miniworld-format file at ``out``; returns a report."""
     from foldforge.models.architectures.af3 import AlphaFold3
     from foldforge.models.checkpoints.legacy import dense_model
@@ -241,12 +298,28 @@ def convert_haiku(blob: Path, family: str, out: Path, *, mode: str = "fast") -> 
     state = convert_state(dense.state_dict(), engine)
     out.parent.mkdir(parents=True, exist_ok=True)
     tmp = out.with_name(out.name + ".part")
-    torch.save({"format": FORMAT, "version": VERSION, "family": family, "source": blob.name, "state_dict": state}, tmp)
+    torch.save(
+        {
+            "format": FORMAT,
+            "version": VERSION,
+            "family": family,
+            "source": blob.name,
+            "state_dict": state,
+        },
+        tmp,
+    )
     tmp.replace(out)
-    return {"out": str(out), "records": len(state), "source_records": mapped["source_records"], "format_version": VERSION}
+    return {
+        "out": str(out),
+        "records": len(state),
+        "source_records": mapped["source_records"],
+        "format_version": VERSION,
+    }
 
 
-def convert_model(model: str, *, blob: Path | None = None, out: Path | None = None, mode: str = "fast") -> dict[str, Any]:
+def convert_model(
+    model: str, *, blob: Path | None = None, out: Path | None = None, mode: str = "fast"
+) -> dict[str, Any]:
     """Convert registered ``model``'s released blob (default: its checkpoint directory) to its miniworld-format file (default: next to the blob)."""
     from foldforge.models import entry
     from foldforge.models.checkpoints import DEFAULT_FILES, resolve
@@ -259,7 +332,8 @@ def convert_model(model: str, *, blob: Path | None = None, out: Path | None = No
 def resolve_native(model: str) -> Path:
     """The miniworld-format file of registered ``model`` in its checkpoint directory.
 
-    Never converts: a missing file raises with the exact command that makes it (the conversion is an offline, one-time step)."""
+    Never converts: a missing file raises with the exact command that makes it (the conversion is an offline, one-time step).
+    """
     from foldforge.models.checkpoints import DEFAULT_FILES, resolve
 
     if model not in NATIVE_FILES:
@@ -283,15 +357,30 @@ def resolve_native(model: str) -> Path:
 
 def main(argv: list[str] | None = None) -> int:
     """``convert <model> [--blob PATH] [--out PATH]``: the released blob of a registered model to its miniworld-format file."""
-    parser = argparse.ArgumentParser(prog="foldforge.models.checkpoints.miniworld", description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(
+        prog="foldforge.models.checkpoints.miniworld",
+        description=__doc__.splitlines()[0],
+    )
     sub = parser.add_subparsers(dest="command", required=True)
     convert = sub.add_parser("convert", help="Haiku blob -> miniworld format")
     convert.add_argument("model", choices=sorted(NATIVE_FILES))
-    convert.add_argument("--blob", type=Path, default=None, help="the released blob (default: the model's checkpoint directory)")
-    convert.add_argument("--out", type=Path, default=None, help="the file to write (default: next to the blob)")
+    convert.add_argument(
+        "--blob",
+        type=Path,
+        default=None,
+        help="the released blob (default: the model's checkpoint directory)",
+    )
+    convert.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="the file to write (default: next to the blob)",
+    )
     convert.add_argument("--mode", default="fast", choices=("fast", "exact"))
     arguments = parser.parse_args(argv)
-    report = convert_model(arguments.model, blob=arguments.blob, out=arguments.out, mode=arguments.mode)
+    report = convert_model(
+        arguments.model, blob=arguments.blob, out=arguments.out, mode=arguments.mode
+    )
     print(report)  # noqa: T201 - CLI output
     return 0
 

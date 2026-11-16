@@ -13,7 +13,12 @@ from dataclasses import dataclass
 import torch
 
 TOKEN_BUCKET_SIZE = 128
-ATOM_SHAPES = (1024, 2048, 4096, 8192)  # FoldForge atom ladder, below the two long-input rungs
+ATOM_SHAPES = (
+    1024,
+    2048,
+    4096,
+    8192,
+)  # FoldForge atom ladder, below the two long-input rungs
 # Finite sequence for AF3's featurizer API, covering every supported atom count.
 # This is an inference allocation list owned by FoldForge.
 TOKEN_SHAPES = tuple(range(TOKEN_BUCKET_SIZE, ATOM_SHAPES[-1] + 1, TOKEN_BUCKET_SIZE))

@@ -27,7 +27,9 @@ def main() -> int:
     args = parser.parse_args()
     from foldforge.models.checkpoints.legacy import dense_model
 
-    model = dense_model(SPECS[args.family])  # the released-layout graph the Haiku blob is read into (converter-only)
+    model = dense_model(
+        SPECS[args.family]
+    )  # the released-layout graph the Haiku blob is read into (converter-only)
     import_jax_weights_(model, args.blob)
     model = model.float().eval()
     data = {k: torch.from_numpy(v) for k, v in np.load(args.inputs).items()}

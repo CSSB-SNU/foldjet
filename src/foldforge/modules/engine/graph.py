@@ -42,10 +42,19 @@ class DenseBlocks(Protocol):
     def pairformer_block(self, spec: DenseSpec, **options: object) -> nn.Module:
         """One dense pairformer block (``options`` are :func:`make_pairformer_block`'s resolved arguments)."""
 
-    def evoformer_block(self, spec: DenseSpec, c_msa: int, c_pair: int, n_heads_pair: int) -> nn.Module:
+    def evoformer_block(
+        self, spec: DenseSpec, c_msa: int, c_pair: int, n_heads_pair: int
+    ) -> nn.Module:
         """One dense MSA-stack block."""
 
-    def token_transformer(self, spec: DenseSpec, c_act: int, c_single_cond: int, c_pair_cond: int, num_blocks: int) -> nn.Module:
+    def token_transformer(
+        self,
+        spec: DenseSpec,
+        c_act: int,
+        c_single_cond: int,
+        c_pair_cond: int,
+        num_blocks: int,
+    ) -> nn.Module:
         """The dense token transformer."""
 
     def conditioning_transition(self, width: int) -> nn.Module:
@@ -116,7 +125,9 @@ def make_pairformer_block(
             n_head_pair=heads,
             qkv_dim=qkv_dim,
             transition_n=factor,
-            single_transition_n=factor if single_transition_n is None else single_transition_n,
+            single_transition_n=factor
+            if single_transition_n is None
+            else single_transition_n,
             n_head_single=n_head_single,
             pair_attention=pair_attention,
             confidence=confidence,
@@ -124,7 +135,10 @@ def make_pairformer_block(
         )
     block = pairformer_block(
         d_pair=d_pair,
-        triangle_model=(keys.confidence if confidence and keys.confidence else keys.triangle) or "af3",
+        triangle_model=(
+            keys.confidence if confidence and keys.confidence else keys.triangle
+        )
+        or "af3",
         d_single=d_single,
         d_hidden_tri_multi=tri_hidden,  # the template stack of protenix1 widens only its multiplications (hidden 128 on pair 64)
         d_hidden_tri_attention=qkv_dim or d_pair // heads,
@@ -132,7 +146,9 @@ def make_pairformer_block(
         n_head_single=n_head_single,
         single_gate_bias=spec.single_attention_gate_bias,
         pair_transition_n=factor,
-        single_transition_n=factor if single_transition_n is None else single_transition_n,
+        single_transition_n=factor
+        if single_transition_n is None
+        else single_transition_n,
         use_triangle_attention=pair_attention,
         parallel=spec.parallel_pairformer_block,
         divide_by_length=spec.triangle_mul_divide_by_length,
@@ -158,17 +174,28 @@ def run_block(
     ``pair`` ``[L, L, d]`` (or ``[S, L, L, d]``: S samples / template slots through one call), ``pair_mask`` the ``[L, L]`` outer-product
     mask, ``single`` ``[L, d]`` (``[S, L, d]``), ``seq_mask`` ``[L]``, ``extra_pair_bias`` ``[L, L]`` (added to every head of the single
     attention). Returns ``pair`` (a block without the single track) or ``(pair, single)``, in the layout it was given."""
-    if not isinstance(block, PairformerBlock):  # the converter's released-layout block carries its own call (``run_dense``)
+    if not isinstance(
+        block, PairformerBlock
+    ):  # the converter's released-layout block carries its own call (``run_dense``)
         return block.run_dense(pair, pair_mask, single, seq_mask, extra_pair_bias)  # type: ignore[operator]
-    pair, single = engine_activation(pair), engine_activation(single)  # the engine's master blocks take bf16 activations, not fp32
+    pair, single = (
+        engine_activation(pair),
+        engine_activation(single),
+    )  # the engine's master blocks take bf16 activations, not fp32
     batched = pair.ndim == 4
     if not batched:
         pair = pair[None]
         single = None if single is None else single[None]
     count = pair.shape[0]
-    key_mask = (seq_mask > 0)[None] if seq_mask is not None else factories.residue_mask(pair_mask)
+    key_mask = (
+        (seq_mask > 0)[None]
+        if seq_mask is not None
+        else factories.residue_mask(pair_mask)
+    )
     if count > 1:
-        key_mask = key_mask.expand(count, -1).contiguous()  # the kernels read a dense mask, not a stride-0 view
+        key_mask = key_mask.expand(
+            count, -1
+        ).contiguous()  # the kernels read a dense mask, not a stride-0 view
     bias = None
     if extra_pair_bias is not None:
         heads = block.config.n_head_single
@@ -176,7 +203,11 @@ def run_block(
     if single is None:
         out = block(pair, key_mask)
         return out if batched else out[0]
-    pair, single = block(pair, key_mask, single, bias) if bias is not None else block(pair, key_mask, single)
+    pair, single = (
+        block(pair, key_mask, single, bias)
+        if bias is not None
+        else block(pair, key_mask, single)
+    )
     return (pair, single) if batched else (pair[0], single[0])
 
 
@@ -188,7 +219,9 @@ class EvoformerBlock(nn.Module):
 
     Same call as the dense block: ``(msa [M, L, d], pair [L, L, d], msa_mask [M, L], pair_mask [L, L]) -> (msa, pair)``."""
 
-    def __init__(self, spec: DenseSpec, c_msa: int, c_pair: int, n_heads_pair: int) -> None:
+    def __init__(
+        self, spec: DenseSpec, c_msa: int, c_pair: int, n_heads_pair: int
+    ) -> None:
         super().__init__()
         self.parallel = spec.parallel_msa_block  # Chai-1: every update of a stage reads the stage's input (chai1_* parallel stages)
         keys = factories.model_keys(spec.family)
@@ -196,13 +229,18 @@ class EvoformerBlock(nn.Module):
         self.outer_product_mean = factories.outer_product_mean(
             c_msa,
             c_pair,
-            spec.opm_channel * spec.opm_groups,  # the engine's d_hidden is the TOTAL width (Chai-1: 8 groups of 8)
+            spec.opm_channel
+            * spec.opm_groups,  # the engine's d_hidden is the TOTAL width (Chai-1: 8 groups of 8)
             groups=spec.opm_groups,
             projection_bias=spec.opm_projection_bias,
             normalize_before_proj=spec.opm_bias_after_norm,
-            count_offset=None if spec.opm_clamped_norm or spec.opm_groups > 1 else factories.OPM_COUNT_OFFSET,  # grouped (Chai-1): no division
+            count_offset=None
+            if spec.opm_clamped_norm or spec.opm_groups > 1
+            else factories.OPM_COUNT_OFFSET,  # grouped (Chai-1): no division
         )
-        self.msa_attention1 = factories.msa_pair_weighted_averaging(c_msa, c_pair, 8, spec.msa_value_dim)
+        self.msa_attention1 = factories.msa_pair_weighted_averaging(
+            c_msa, c_pair, 8, spec.msa_value_dim
+        )
         self.msa_transition = factories.transition(c_msa, 4)
         self.triangle_multiplication_outgoing = factories.triangle_multiplication(
             c_pair, outgoing=True, divide_by_length=spec.triangle_mul_divide_by_length
@@ -212,17 +250,27 @@ class EvoformerBlock(nn.Module):
         )
         self.with_pair_attention = spec.pair_attention
         if self.with_pair_attention:
-            self.pair_attention1 = factories.triangle_attention(c_pair, n_heads_pair, starting=True, model=keys.triangle)
-            self.pair_attention2 = factories.triangle_attention(c_pair, n_heads_pair, starting=False, model=keys.triangle)
+            self.pair_attention1 = factories.triangle_attention(
+                c_pair, n_heads_pair, starting=True, model=keys.triangle
+            )
+            self.pair_attention2 = factories.triangle_attention(
+                c_pair, n_heads_pair, starting=False, model=keys.triangle
+            )
         self.pair_transition = factories.transition(c_pair, 4)
 
     def forward(
-        self, msa: torch.Tensor, pair: torch.Tensor, msa_mask: torch.Tensor, pair_mask: torch.Tensor
+        self,
+        msa: torch.Tensor,
+        pair: torch.Tensor,
+        msa_mask: torch.Tensor,
+        pair_mask: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """One block (batch axis of 1 added for the engine and removed again)."""
         m, z = msa[None], pair[None]
         rows = (msa_mask > 0)[None]
-        columns = (msa_mask.max(dim=0).values > 0)[None]  # a column is a key when any row has it
+        columns = (msa_mask.max(dim=0).values > 0)[
+            None
+        ]  # a column is a key when any row has it
         tokens = factories.residue_mask(pair_mask)
         if self.parallel:
             return self._forward_parallel(m, z, rows, columns, tokens)
@@ -240,7 +288,12 @@ class EvoformerBlock(nn.Module):
         return m[0], z[0]
 
     def _forward_parallel(
-        self, m: torch.Tensor, z: torch.Tensor, rows: torch.Tensor, columns: torch.Tensor, tokens: torch.Tensor
+        self,
+        m: torch.Tensor,
+        z: torch.Tensor,
+        rows: torch.Tensor,
+        columns: torch.Tensor,
+        tokens: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Chai-1's block (``spec.parallel_msa_block``): the parts own their residuals, so a stage's update is the sum of the parts' deltas
         (``part(x) - x``) on the stage's input: MSA attention + MSA transition on the MSA entering the block (reading the pair after the
@@ -256,11 +309,16 @@ class EvoformerBlock(nn.Module):
             + (self.pair_transition(z) - z)
         )
         if self.with_pair_attention:
-            z = z + ((self.pair_attention1(z, tokens) - z) + (self.pair_attention2(z, tokens) - z))
+            z = z + (
+                (self.pair_attention1(z, tokens) - z)
+                + (self.pair_attention2(z, tokens) - z)
+            )
         return m[0], z[0]
 
 
-def make_evoformer_block(spec: DenseSpec, c_msa: int, c_pair: int, n_heads_pair: int) -> nn.Module:
+def make_evoformer_block(
+    spec: DenseSpec, c_msa: int, c_pair: int, n_heads_pair: int
+) -> nn.Module:
     """One MSA-stack block of ``spec``'s family (:class:`EvoformerBlock`)."""
     if _dense is not None:
         return _dense.evoformer_block(spec, c_msa, c_pair, n_heads_pair)
@@ -268,12 +326,20 @@ def make_evoformer_block(spec: DenseSpec, c_msa: int, c_pair: int, n_heads_pair:
 
 
 # ------------------------------------------------------------------------------------------------------------------ diffusion head
-def make_token_transformer(spec: DenseSpec, *, c_act: int, d_cond: int, d_pair: int, num_blocks: int) -> nn.Module:
+def make_token_transformer(
+    spec: DenseSpec, *, c_act: int, d_cond: int, d_pair: int, num_blocks: int
+) -> nn.Module:
     """The token diffusion transformer of ``spec``'s family: ``TokenDiT*`` blocks (Chai-1: its AdaLN epsilon)."""
     if _dense is not None:
         return _dense.token_transformer(spec, c_act, d_cond, d_pair, num_blocks)
     return token_dit_stack(
-        spec.family, n_blocks=num_blocks, d_single=c_act, d_cond=d_cond, d_pair=d_pair, n_head=16, adaln_eps=chai1_adaln_eps(spec)
+        spec.family,
+        n_blocks=num_blocks,
+        d_single=c_act,
+        d_cond=d_cond,
+        d_pair=d_pair,
+        n_head=16,
+        adaln_eps=chai1_adaln_eps(spec),
     )
 
 

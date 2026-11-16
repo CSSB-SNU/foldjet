@@ -65,7 +65,11 @@ class TokenDiTStack(nn.Module):
         # the engine's master blocks take bf16 activations: cast once here (a block would re-round fp32 at its entry on every call)
         act, single_cond = engine_activation(act), engine_activation(single_cond)
         cond = single_cond.expand(*act.shape[:-1], single_cond.shape[-1])
-        x, cond = (act[None, None], cond[None, None]) if unbatched else (act[:, None], cond[:, None])
+        x, cond = (
+            (act[None, None], cond[None, None])
+            if unbatched
+            else (act[:, None], cond[:, None])
+        )
         pair = self._engine_pair(pair_cond)
         for block in self.blocks:
             x = block(x, cond, pair, key_mask, **kw)
@@ -79,14 +83,22 @@ class TokenDiTStack(nn.Module):
         outside the graph (at the warm-up) and is read by the engine's hoisted pair bias, so it is rewritten from the new pair
         (``copy.copy_(pair_cond[None])`` rounds exactly like the cast) before the engine's tables are refreshed."""
         source, engine = self._pair_source, self._pair_engine
-        if source is None or engine is None or engine.data_ptr() == source[0].data_ptr():
+        if (
+            source is None
+            or engine is None
+            or engine.data_ptr() == source[0].data_ptr()
+        ):
             return None
         return source[0], engine
 
     def fold_state_tensors(self) -> list[Tensor]:
         """The tensors `release_fold` drops: the kept pair and its engine-dtype cast."""
         source, engine = self._pair_source, self._pair_engine
-        return [t for t in (source[0] if source is not None else None, engine) if t is not None]
+        return [
+            t
+            for t in (source[0] if source is not None else None, engine)
+            if t is not None
+        ]
 
     def release_fold(self) -> None:
         """Drop the kept pair (and its engine-dtype cast): the previous fold's conditioning, ~1 GiB per 1000 tokens squared, and the key the
@@ -99,7 +111,11 @@ class TokenDiTStack(nn.Module):
         cast per call would recompute it per block per step. One entry, kept with its source (identity + in-place version); not kept
         when the pair requires grad (a cast carries an autograd graph that must not outlive its step)."""
         source = self._pair_source
-        if source is not None and source[0] is pair_cond and source[1] == pair_cond._version:
+        if (
+            source is not None
+            and source[0] is pair_cond
+            and source[1] == pair_cond._version
+        ):
             return self._pair_engine
         pair = engine_activation(pair_cond)[None]
         if torch.is_grad_enabled() and pair_cond.requires_grad:
@@ -127,10 +143,10 @@ class AtomDiTStack(nn.Module):
         self,
         queries_act: Tensor,
         queries_mask: Tensor,
-        queries_to_keys: object,  # noqa: ARG002
-        keys_mask: Tensor,  # noqa: ARG002
+        queries_to_keys: object,
+        keys_mask: Tensor,
         queries_single_cond: Tensor,
-        keys_single_cond: Tensor,  # noqa: ARG002
+        keys_single_cond: Tensor,
         pair_cond: Tensor,
         pair_mask: Tensor | None = None,
         rope_q: object = None,
@@ -139,32 +155,55 @@ class AtomDiTStack(nn.Module):
     ) -> Tensor:
         """Every block in order."""
         if (rope_q is not None or rope_k is not None) and not self.rotary:
-            raise ValueError("a rotary atom transformer is not an engine AtomDiT block with a pair")
+            raise ValueError(
+                "a rotary atom transformer is not an engine AtomDiT block with a pair"
+            )
         windows, queries, channels = queries_act.shape[-3:]
         atoms = windows * queries
         lead = queries_act.shape[:-3]
-        pair, key_mask, uid = ((*engine_inputs, None, None, None) if engine_inputs else (None, None, None))[:3]
-        if pair_mask is not None and uid is None and not self.rotary:  # the rotary block builds its own rank window
-            raise ValueError("a pair mask (same-conformer attention) needs the conformer ids in engine_inputs")
-        if uid is not None and uid.ndim == 1:  # the encoder keeps the flat ids [N]; the engine takes [B, N]
+        pair, key_mask, uid = (
+            (*engine_inputs, None, None, None) if engine_inputs else (None, None, None)
+        )[:3]
+        if (
+            pair_mask is not None and uid is None and not self.rotary
+        ):  # the rotary block builds its own rank window
+            raise ValueError(
+                "a pair mask (same-conformer attention) needs the conformer ids in engine_inputs"
+            )
+        if (
+            uid is not None and uid.ndim == 1
+        ):  # the encoder keeps the flat ids [N]; the engine takes [B, N]
             uid = uid[None]
         if pair is None:
             pair = pair_cond.reshape(1, windows, queries, -1, pair_cond.shape[-1])
         if key_mask is None:
             key_mask = (queries_mask > 0).reshape(1, atoms)
-        x = engine_activation(queries_act.reshape(-1, 1, atoms, channels))  # the engine's master blocks take bf16 activations, not fp32
-        cond = engine_activation(queries_single_cond.reshape(1, 1, atoms, channels)).expand(x.shape[0], 1, atoms, channels)
+        x = engine_activation(
+            queries_act.reshape(-1, 1, atoms, channels)
+        )  # the engine's master blocks take bf16 activations, not fp32
+        cond = engine_activation(
+            queries_single_cond.reshape(1, 1, atoms, channels)
+        ).expand(x.shape[0], 1, atoms, channels)
         pair = engine_activation(pair)
         if self.rotary:
             if rope_q is None:
-                raise ValueError("the ESMFold2 atom block rotates q and k: the caller passes the rope tables")
+                raise ValueError(
+                    "the ESMFold2 atom block rotates q and k: the caller passes the rope tables"
+                )
             # the per-atom tables of the queries layout [windows, 32, r] (a key takes its own atom's row: the block gathers them itself)
-            rope = tuple(table.reshape(1, atoms, table.shape[-1]).to(torch.float32) for table in rope_q)
+            rope = tuple(
+                table.reshape(1, atoms, table.shape[-1]).to(torch.float32)
+                for table in rope_q
+            )
             for block in self.blocks:
                 x = block(x, cond, pair, key_mask, rope=rope)
             return x.reshape(*lead, windows, queries, channels)
         for block in self.blocks:
-            x = block(x, cond, pair, key_mask, uid) if uid is not None else block(x, cond, pair, key_mask)
+            x = (
+                block(x, cond, pair, key_mask, uid)
+                if uid is not None
+                else block(x, cond, pair, key_mask)
+            )
         return x.reshape(*lead, windows, queries, channels)
 
 
@@ -174,7 +213,10 @@ def engine_key_window(window: str) -> tuple[str, str | None]:
     if window in KEY_WINDOWS:
         return window, None
     if window == "circular":
-        return "pad", "circular key window is not an engine key window: pad + uid (outputs may differ)"
+        return (
+            "pad",
+            "circular key window is not an engine key window: pad + uid (outputs may differ)",
+        )
     raise ValueError(f"unknown atom key window {window!r}")
 
 
@@ -196,7 +238,10 @@ def token_dit_stack(
     if key is None:
         raise ValueError(f"family {family!r} has no engine token DiT")
     extra = {"adaln_eps": adaln_eps} if adaln_eps is not None else {}
-    blocks = [TokenDiT(key, d_single, d_cond, d_pair, n_head, n, **extra) for _ in range(n_blocks)]
+    blocks = [
+        TokenDiT(key, d_single, d_cond, d_pair, n_head, n, **extra)
+        for _ in range(n_blocks)
+    ]
     return finish(TokenDiTStack(blocks), precision)  # type: ignore[return-value]
 
 
@@ -217,14 +262,22 @@ def atom_dit_stack(
     (:func:`engine_key_window` for the spec's own word); ``None`` keeps the class's default. ``adaln_eps``: Chai-1's."""
     key = model_keys(family).atom_dit
     if key is None:
-        raise ValueError(f"family {family!r} has no engine atom DiT with a pair (see docs/ENGINE-UNSUPPORTED.md)")
+        raise ValueError(
+            f"family {family!r} has no engine atom DiT with a pair (see docs/ENGINE-UNSUPPORTED.md)"
+        )
     extra: dict[str, Any] = {"key_window": key_window} if key_window is not None else {}
     if adaln_eps is not None:
         extra["adaln_eps"] = adaln_eps
-    if key == "esmfold2_pair":  # one window (192 keys, the +/- 64 rank band) and its own AdaLN epsilon: nothing to choose
+    if (
+        key == "esmfold2_pair"
+    ):  # one window (192 keys, the +/- 64 rank band) and its own AdaLN epsilon: nothing to choose
         extra = {}
-    blocks = [AtomDiT(key, d_single, d_cond, d_pair, n_head, n, **extra) for _ in range(n_blocks)]
+    blocks = [
+        AtomDiT(key, d_single, d_cond, d_pair, n_head, n, **extra)
+        for _ in range(n_blocks)
+    ]
     stack = AtomDiTStack(blocks)
-    stack.key_dim_per_head = d_single // n_head  # the per-head width the caller builds the atom rotary tables for (the dense stack has the same attribute)
+    stack.key_dim_per_head = (
+        d_single // n_head
+    )  # the per-head width the caller builds the atom rotary tables for (the dense stack has the same attribute)
     return finish(stack, precision)  # type: ignore[return-value]
-

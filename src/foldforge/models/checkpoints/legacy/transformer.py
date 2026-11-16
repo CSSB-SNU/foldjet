@@ -287,5 +287,3 @@ class DiffusionTransformer(nn.Module):
                 )
 
         return act
-
-

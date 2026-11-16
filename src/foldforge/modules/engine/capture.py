@@ -30,7 +30,15 @@ def refresh_available() -> bool:
         from miniworld_engine import capture
     except ImportError:
         return False
-    return all(hasattr(capture, name) for name in ("refresh_static_inputs", "StaticTables", "signature", "StaleStaticInputs"))
+    return all(
+        hasattr(capture, name)
+        for name in (
+            "refresh_static_inputs",
+            "StaticTables",
+            "signature",
+            "StaleStaticInputs",
+        )
+    )
 
 
 def stale_error() -> type[BaseException]:
@@ -108,7 +116,10 @@ def cache_marks() -> dict[str, dict]:
         from miniworld_engine.capture import weight_caches
     except ImportError:
         return {}
-    return {name: {key: id(value) for key, value in list(store.items())} for name, store in weight_caches().items()}
+    return {
+        name: {key: id(value) for key, value in list(store.items())}
+        for name, store in weight_caches().items()
+    }
 
 
 def hold_new(marks: dict[str, dict]) -> list:
@@ -122,5 +133,11 @@ def hold_new(marks: dict[str, dict]) -> list:
     held = []
     for name, store in weight_caches().items():
         old = marks.get(name, {})
-        held.append([(key, value) for key, value in list(store.items()) if old.get(key) != id(value)])
+        held.append(
+            [
+                (key, value)
+                for key, value in list(store.items())
+                if old.get(key) != id(value)
+            ]
+        )
     return held

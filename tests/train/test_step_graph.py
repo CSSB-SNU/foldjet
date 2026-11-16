@@ -18,7 +18,9 @@ from foldforge.train.step import DeviceParts
 @pytest.fixture(autouse=True)
 def cpu_tensors_are_device(monkeypatch):
     """On the CPU every tensor is 'not CUDA': treat only ``*:input_shape`` as host metadata, as on a GPU."""
-    monkeypatch.setattr(step_graph, "_is_host", lambda key, tensor: key.endswith(":input_shape"))  # noqa: ARG005
+    monkeypatch.setattr(
+        step_graph, "_is_host", lambda key, tensor: key.endswith(":input_shape")
+    )
 
 
 def make_example(tokens: int = 4, real: int = 3, fill: float = 1.0) -> TrainBatch:
@@ -46,7 +48,12 @@ def test_signature_follows_shapes_dtypes_and_optional_fields():
     wide = make_example()
     wide.features["msa"] = wide.features["msa"].to(torch.int16)
     assert step_graph.example_signature(wide) != base
-    assert step_graph.example_signature(replace(make_example(), bond_pairs=torch.zeros(2, 4, dtype=torch.long))) != base
+    assert (
+        step_graph.example_signature(
+            replace(make_example(), bond_pairs=torch.zeros(2, 4, dtype=torch.long))
+        )
+        != base
+    )
     assert step_graph.example_signature(replace(make_example(), atom_mask=None)) != base
 
 
@@ -55,7 +62,10 @@ def test_static_example_is_a_private_copy_and_load_overwrites_it():
     static = step_graph.static_example(src)
     assert static.atom_positions.data_ptr() != src.atom_positions.data_ptr()
     assert static.features["msa"].data_ptr() != src.features["msa"].data_ptr()
-    assert static.features["token_atoms_to_pseudo_beta:input_shape"] is src.features["token_atoms_to_pseudo_beta:input_shape"]  # host metadata shared
+    assert (
+        static.features["token_atoms_to_pseudo_beta:input_shape"]
+        is src.features["token_atoms_to_pseudo_beta:input_shape"]
+    )  # host metadata shared
     new = make_example(fill=5.0)
     pointers = [t.data_ptr() for t in step_graph._device_leaves(static)]  # noqa: SLF001
     step_graph.load_example(static, new)
@@ -73,7 +83,10 @@ def test_load_example_rejects_a_different_layout():
 
 def make_parts() -> DeviceParts:
     parts = DeviceParts(2, (4.0, 1.0, 0.03))
-    parts.chunks = [(0.5, torch.tensor(1.0), torch.tensor(0.5), torch.tensor(3.0)), (0.5, torch.tensor(2.0), torch.tensor(0.25), torch.tensor(5.0))]
+    parts.chunks = [
+        (0.5, torch.tensor(1.0), torch.tensor(0.5), torch.tensor(3.0)),
+        (0.5, torch.tensor(2.0), torch.tensor(0.25), torch.tensor(5.0)),
+    ]
     parts.distogram = torch.tensor(0.7)
     parts.confidence = torch.tensor(6.0)
     parts.conf_parts = {"plddt": torch.tensor(1.0), "pde": torch.tensor(2.0)}
@@ -105,7 +118,9 @@ class FakeGraph:
 
     def replay(self):
         self.replays += 1
-        self.parts.distogram.fill_(self.static.atom_positions.sum())  # the 'graph' reads the static input
+        self.parts.distogram.fill_(
+            self.static.atom_positions.sum()
+        )  # the 'graph' reads the static input
 
 
 def fake_capturer(graph: StepGraph | None = None):
@@ -130,26 +145,52 @@ def test_refuses_cpu_only_and_unsupported_rollout_placements():
 
 
 def test_refuses_reasons_beyond_the_device():
-    on_cuda = SimpleNamespace(atom_positions=SimpleNamespace(device=SimpleNamespace(type="cuda")))
+    on_cuda = SimpleNamespace(
+        atom_positions=SimpleNamespace(device=SimpleNamespace(type="cuda"))
+    )
     model = object()
-    assert "only" in StepGraph.refuses(model, on_cuda, TrainConfig(step_graph=True, only="trunk"))
-    assert "side" in StepGraph.refuses(model, on_cuda, TrainConfig(step_graph=True, rollout="side"))
-    assert StepGraph.refuses(model, on_cuda, TrainConfig(step_graph=True, rollout="graph")) is None
-    assert StepGraph.refuses(model, on_cuda, TrainConfig(step_graph=True, rollout="after")) is None
-    assert StepGraph.refuses(SimpleNamespace(spec=SimpleNamespace(structural_tokens=True)), on_cuda, TrainConfig(step_graph=True))
+    assert "only" in StepGraph.refuses(
+        model, on_cuda, TrainConfig(step_graph=True, only="trunk")
+    )
+    assert "side" in StepGraph.refuses(
+        model, on_cuda, TrainConfig(step_graph=True, rollout="side")
+    )
+    assert (
+        StepGraph.refuses(model, on_cuda, TrainConfig(step_graph=True, rollout="graph"))
+        is None
+    )
+    assert (
+        StepGraph.refuses(model, on_cuda, TrainConfig(step_graph=True, rollout="after"))
+        is None
+    )
+    assert StepGraph.refuses(
+        SimpleNamespace(spec=SimpleNamespace(structural_tokens=True)),
+        on_cuda,
+        TrainConfig(step_graph=True),
+    )
 
 
 def test_cache_one_capture_per_key_and_replay_loads_the_new_example(monkeypatch):
-    monkeypatch.setattr(StepGraph, "refuses", staticmethod(lambda model, example, cfg: None))
+    monkeypatch.setattr(
+        StepGraph, "refuses", staticmethod(lambda model, example, cfg: None)
+    )
     capture, calls = fake_capturer()
     monkeypatch.setattr(StepGraph, "_capture", capture)
     cfg, model = TrainConfig(step_graph=True), object()
     sg = StepGraph(max_graphs=3)
     first = sg(model, make_example(fill=1.0), cfg, 2, 0.5)
-    assert calls == [(2, 0.5)] and first.distogram.item() == pytest.approx(4 * 24 * 3 * 1.0)
-    second = sg(model, make_example(fill=2.0, real=4), cfg, 2, 0.5)  # same key (other values / real token count): replay, no capture
-    assert calls == [(2, 0.5)] and second.distogram.item() == pytest.approx(4 * 24 * 3 * 2.0)
-    assert second.distogram is not sg.entries[next(iter(sg.entries))].parts.distogram  # a clone: the next replay cannot overwrite it
+    assert calls == [(2, 0.5)] and first.distogram.item() == pytest.approx(
+        4 * 24 * 3 * 1.0
+    )
+    second = sg(
+        model, make_example(fill=2.0, real=4), cfg, 2, 0.5
+    )  # same key (other values / real token count): replay, no capture
+    assert calls == [(2, 0.5)] and second.distogram.item() == pytest.approx(
+        4 * 24 * 3 * 2.0
+    )
+    assert (
+        second.distogram is not sg.entries[next(iter(sg.entries))].parts.distogram
+    )  # a clone: the next replay cannot overwrite it
     sg(model, make_example(), cfg, 3, 0.5)  # another recycle count: another graph
     sg(model, make_example(), cfg, 2, 0.25)  # another loss scale (baked into the graph)
     assert calls == [(2, 0.5), (3, 0.5), (2, 0.25)]
@@ -158,20 +199,28 @@ def test_cache_one_capture_per_key_and_replay_loads_the_new_example(monkeypatch)
 
 
 def test_cache_limit_runs_new_keys_eager(monkeypatch):
-    monkeypatch.setattr(StepGraph, "refuses", staticmethod(lambda model, example, cfg: None))
+    monkeypatch.setattr(
+        StepGraph, "refuses", staticmethod(lambda model, example, cfg: None)
+    )
     capture, calls = fake_capturer()
     monkeypatch.setattr(StepGraph, "_capture", capture)
     cfg, model = TrainConfig(step_graph=True), object()
     sg = StepGraph(max_graphs=2)
     assert sg(model, make_example(tokens=4), cfg, 1) is not None
     assert sg(model, make_example(tokens=5), cfg, 1) is not None
-    assert sg(model, make_example(tokens=6), cfg, 1) is None  # a third shape: the caller runs it eagerly
-    assert sg(model, make_example(tokens=4), cfg, 1) is not None  # the captured ones keep replaying
+    assert (
+        sg(model, make_example(tokens=6), cfg, 1) is None
+    )  # a third shape: the caller runs it eagerly
+    assert (
+        sg(model, make_example(tokens=4), cfg, 1) is not None
+    )  # the captured ones keep replaying
     assert sg.fallbacks == 1 and len(calls) == 2
 
 
 def test_failed_capture_marks_the_key_and_falls_back(monkeypatch):
-    monkeypatch.setattr(StepGraph, "refuses", staticmethod(lambda model, example, cfg: None))
+    monkeypatch.setattr(
+        StepGraph, "refuses", staticmethod(lambda model, example, cfg: None)
+    )
     monkeypatch.setattr(torch.cuda, "synchronize", lambda *a, **k: None)
     attempts = []
 
@@ -184,13 +233,19 @@ def test_failed_capture_marks_the_key_and_falls_back(monkeypatch):
     sg = StepGraph()
     assert sg(model, make_example(), cfg, 2) is None
     assert sg(model, make_example(), cfg, 2) is None  # not retried
-    assert attempts == [2] and sg.fallbacks == 2 and "RuntimeError" in next(iter(sg.report()["failed"].values()))
+    assert (
+        attempts == [2]
+        and sg.fallbacks == 2
+        and "RuntimeError" in next(iter(sg.report()["failed"].values()))
+    )
     # another key is still tried
     assert sg(model, make_example(), cfg, 3) is None and attempts == [2, 3]
 
 
 def test_out_of_memory_is_not_swallowed(monkeypatch):
-    monkeypatch.setattr(StepGraph, "refuses", staticmethod(lambda model, example, cfg: None))
+    monkeypatch.setattr(
+        StepGraph, "refuses", staticmethod(lambda model, example, cfg: None)
+    )
 
     def oom(self, *args):  # noqa: ARG001
         raise torch.OutOfMemoryError("oom")
@@ -206,7 +261,9 @@ def test_mode_flag_scopes_and_restores():
     with step_graph._mode(model, "capture"):  # noqa: SLF001
         assert step_graph.inline_rollout(model)
         with step_graph.bypass(model):
-            assert step_graph.mode(model) == "bypass" and not step_graph.inline_rollout(model)
+            assert step_graph.mode(model) == "bypass" and not step_graph.inline_rollout(
+                model
+            )
         assert step_graph.inline_rollout(model)
     assert step_graph.mode(model) is None
 

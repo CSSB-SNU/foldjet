@@ -9,7 +9,8 @@ folds (each fold keeps its own pair, conditioning and atom pair: the engine's gr
 sampler's own: ``AlphaFold3._sample_diffusion`` is called with ``num_samples = A * NT`` and only the head's forward / conditioning table are swapped for the grouped ones.
 
 ``GroupedUnsupported`` is raised (before anything is sampled) when the diffusion transformers are not stacks of engine blocks (ESMFold2's atom stack) or when this model has no such head; the caller
-then samples the folds one after another."""
+then samples the folds one after another.
+"""
 
 from __future__ import annotations
 
@@ -295,11 +296,14 @@ class GroupedSampler:
     # ---- the per-fold state a sampler graph reads (``models.sampler_graph``: one graph per shape, reused over folds) ------------------------------------
     def fold_tree(self) -> dict[str, Any]:
         """Everything ``_forward`` reads from ``self.state`` (the NT folds' conditioning, the stacked pair / atom pair / key masks), without the folds' epochs
-        (a counter that differs per fold and is read by nothing in a step)."""
+        (a counter that differs per fold and is read by nothing in a step).
+        """
         state = self.state
         return {
             **{k: v for k, v in state.items() if k != "cond"},
-            "cond": [{k: v for k, v in c.items() if k != "epoch"} for c in state["cond"]],
+            "cond": [
+                {k: v for k, v in c.items() if k != "epoch"} for c in state["cond"]
+            ],
         }
 
     @contextlib.contextmanager

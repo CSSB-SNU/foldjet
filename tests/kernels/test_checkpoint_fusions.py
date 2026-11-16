@@ -26,7 +26,9 @@ def test_gated_projection_gradient():
     torch.testing.assert_close(a, b)
     grad = torch.randn_like(a)
     for x, y in zip(
-        torch.autograd.grad(a, (g, v), grad, retain_graph=True), torch.autograd.grad(b, (g, v), grad), strict=True
+        torch.autograd.grad(a, (g, v), grad, retain_graph=True),
+        torch.autograd.grad(b, (g, v), grad),
+        strict=True,
     ):
         torch.testing.assert_close(x, y)
 
@@ -42,10 +44,16 @@ def test_adaptive_rms_norm_equation(dtype):
     eps = torch.finfo(torch.float32).eps
     xw, context = x.float(), F.silu(c.float())
     expected = (
-        (1 + F.linear(context, norm.to_scale.weight.float())) * F.rms_norm(xw, (64,), eps=eps) + F.linear(context, norm.to_bias.weight.float())
+        (1 + F.linear(context, norm.to_scale.weight.float()))
+        * F.rms_norm(xw, (64,), eps=eps)
+        + F.linear(context, norm.to_bias.weight.float())
     ).to(dtype)
     with torch.no_grad():
         actual = norm(x, c)
     assert actual.dtype == dtype
-    torch.testing.assert_close(actual.float(), expected.float(), atol=2e-2 if dtype == torch.bfloat16 else 1e-5, rtol=2e-2)
-
+    torch.testing.assert_close(
+        actual.float(),
+        expected.float(),
+        atol=2e-2 if dtype == torch.bfloat16 else 1e-5,
+        rtol=2e-2,
+    )

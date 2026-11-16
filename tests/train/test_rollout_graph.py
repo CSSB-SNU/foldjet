@@ -30,17 +30,34 @@ class Batch:
 
 
 def fake_entry(retained: int = 0, leaves=None) -> _Entry:
-    entry = _Entry(SimpleNamespace(replay=lambda: None), None, leaves if leaves is not None else [torch.zeros(2)], torch.zeros(1, 3), 0, [])
+    entry = _Entry(
+        SimpleNamespace(replay=lambda: None),
+        None,
+        leaves if leaves is not None else [torch.zeros(2)],
+        torch.zeros(1, 3),
+        0,
+        [],
+    )
     entry.retained = retained
     return entry
 
 
 def test_tree_drops_msa_and_templates_and_keeps_the_trunk_outputs() -> None:
-    batch = Batch(msa=torch.zeros(4, 4), templates=torch.zeros(2), mask=torch.ones(3), token_features=Tokens(seq_length=torch.tensor([268]), mask=torch.ones(3)))
-    tree = graph_tree(batch, {"pair": torch.zeros(3, 3, 2), "single": torch.zeros(3, 4)})
+    batch = Batch(
+        msa=torch.zeros(4, 4),
+        templates=torch.zeros(2),
+        mask=torch.ones(3),
+        token_features=Tokens(seq_length=torch.tensor([268]), mask=torch.ones(3)),
+    )
+    tree = graph_tree(
+        batch, {"pair": torch.zeros(3, 3, 2), "single": torch.zeros(3, 4)}
+    )
     assert tree["batch"].msa is None and tree["batch"].templates is None
     assert tree["batch"].mask is batch.mask
-    assert tree["batch"].token_features.seq_length is None and batch.token_features.seq_length is not None  # the crop length is not part of the key
+    assert (
+        tree["batch"].token_features.seq_length is None
+        and batch.token_features.seq_length is not None
+    )  # the crop length is not part of the key
     assert set(tree["emb"]) == {"pair", "single"}
 
 
@@ -53,7 +70,9 @@ def test_key_is_the_layout_steps_and_model_not_the_values() -> None:
     assert graph_key(model, a, 20) != graph_key(object(), a, 20)
 
 
-def test_cache_evicts_least_recently_used_over_the_graph_count_and_byte_budget() -> None:
+def test_cache_evicts_least_recently_used_over_the_graph_count_and_byte_budget() -> (
+    None
+):
     graph = RolloutGraph(max_graphs=2)
     cache = graph.cache
     cache.insert("a", fake_entry(), 10**9)
@@ -70,32 +89,54 @@ def test_cache_evicts_least_recently_used_over_the_graph_count_and_byte_budget()
     cache.insert("e", fake_entry(retained=30), 50)
     assert list(cache.entries) == ["e"]
     report = graph.report()
-    assert report["entries"] == 1 and report["evictions"] >= 2 and report["disabled"] is None
+    assert (
+        report["entries"] == 1
+        and report["evictions"] >= 2
+        and report["disabled"] is None
+    )
 
 
 def test_entry_load_writes_the_static_buffers_and_checks_the_layout() -> None:
     static = [torch.zeros(2, 2), torch.zeros(3)]
     entry = fake_entry(leaves=static)
     entry.load([torch.ones(2, 2), torch.full((3,), 2.0)])
-    assert torch.equal(static[0], torch.ones(2, 2)) and torch.equal(static[1], torch.full((3,), 2.0))
+    assert torch.equal(static[0], torch.ones(2, 2)) and torch.equal(
+        static[1], torch.full((3,), 2.0)
+    )
     with pytest.raises(RuntimeError):
         entry.load([torch.ones(2, 2)])
-    expanded = torch.zeros(1, 4).expand(5, 4)  # a stride-0 leaf: written through its unique part
+    expanded = torch.zeros(1, 4).expand(
+        5, 4
+    )  # a stride-0 leaf: written through its unique part
     fake_entry(leaves=[expanded]).load([torch.ones(1, 4).expand(5, 4)])
     assert torch.equal(expanded, torch.ones(5, 4))
 
 
 def test_cpu_inputs_fall_back_to_the_eager_rollout() -> None:
     graph = RolloutGraph()
-    batch = Batch(msa=None, templates=None, mask=torch.ones(3), token_features=Tokens(seq_length=None, mask=torch.ones(3)))
+    batch = Batch(
+        msa=None,
+        templates=None,
+        mask=torch.ones(3),
+        token_features=Tokens(seq_length=None, mask=torch.ones(3)),
+    )
     model = SimpleNamespace(spec=SimpleNamespace(structural_tokens=False))
     assert graph(model, {}, batch, {"pair": torch.zeros(3, 3, 2)}, 20) is None
     assert graph.fallbacks == 1
     calls = []
     model.__dict__.pop("_foldforge_rollout_graph", None)
-    out = rollout_graph.mini_rollout(model, {}, batch, {"pair": torch.zeros(3, 3, 2)}, 20, lambda *a: calls.append(a) or "eager")
+    out = rollout_graph.mini_rollout(
+        model,
+        {},
+        batch,
+        {"pair": torch.zeros(3, 3, 2)},
+        20,
+        lambda *a: calls.append(a) or "eager",
+    )
     assert out == "eager" and len(calls) == 1
-    assert model.__dict__["_foldforge_rollout_graph"].fallbacks == 1  # the graph is made once per model
+    assert (
+        model.__dict__["_foldforge_rollout_graph"].fallbacks == 1
+    )  # the graph is made once per model
 
 
 def test_structural_tokens_are_not_served() -> None:
@@ -105,11 +146,17 @@ def test_structural_tokens_are_not_served() -> None:
     assert RolloutGraph.serves(model, torch.device("cpu")) == "not a CUDA device"
 
 
-def test_step_hook_routes_to_the_graph_only_when_asked(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_step_hook_routes_to_the_graph_only_when_asked(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     seen = []
-    monkeypatch.setattr(rollout_graph, "mini_rollout", lambda *a: seen.append(a) or "graph-result")
+    monkeypatch.setattr(
+        rollout_graph, "mini_rollout", lambda *a: seen.append(a) or "graph-result"
+    )
     assert step.mini_rollout("m", {}, "b", {}, 20, graph=True) == "graph-result"
-    assert len(seen) == 1 and seen[0][-1] is step.mini_rollout  # the eager rollout is the fallback handed over
+    assert (
+        len(seen) == 1 and seen[0][-1] is step.mini_rollout
+    )  # the eager rollout is the fallback handed over
 
 
 def test_rollout_config_accepts_graph_and_defaults_to_after() -> None:
@@ -124,14 +171,32 @@ def test_inline_sampler_equals_the_eager_sampler_for_the_same_noise() -> None:
     weight = torch.tensor([[0.9, 0.1, 0.0], [0.0, 1.1, 0.2], [0.1, 0.0, 0.8]])
 
     def denoise(coords, sigma):
-        return coords @ weight / (1 + sigma.reshape(-1, *(1,) * (coords.ndim - 1)) ** 0.5)
+        return (
+            coords @ weight / (1 + sigma.reshape(-1, *(1,) * (coords.ndim - 1)) ** 0.5)
+        )
 
     shape = (1, 5, 3)
     torch.manual_seed(0)
-    eager = sampler.sample(denoise, shape, sigmas, device="cpu", chunk_size=None, initialize_all=True, coordinate_dims=1)
+    eager = sampler.sample(
+        denoise,
+        shape,
+        sigmas,
+        device="cpu",
+        chunk_size=None,
+        initialize_all=True,
+        coordinate_dims=1,
+    )
     torch.manual_seed(0)
     inline = sampler_graph.sample_inline(
-        sampler, denoise, shape, sigmas, device=torch.device("cpu"), generator=None, augment=None, align=None, coordinate_dims=1
+        sampler,
+        denoise,
+        shape,
+        sigmas,
+        device=torch.device("cpu"),
+        generator=None,
+        augment=None,
+        align=None,
+        coordinate_dims=1,
     )
     torch.testing.assert_close(inline, eager, rtol=1e-5, atol=1e-5)
 
@@ -147,5 +212,3 @@ def test_bump_versions_touches_every_parameter_and_buffer() -> None:
 def test_autocast_cache_guard_is_a_noop_without_cuda_autocast() -> None:
     with rollout_graph._no_autocast_cache():
         assert not torch.is_autocast_enabled("cuda")
-
-

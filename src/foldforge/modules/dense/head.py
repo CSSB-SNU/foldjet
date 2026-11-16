@@ -509,7 +509,10 @@ class ConfidenceHead(nn.Module):
         return out
 
     def _fold_inputs(
-        self, embeddings: dict[str, torch.Tensor], seq_mask: torch.Tensor, dtype: torch.dtype
+        self,
+        embeddings: dict[str, torch.Tensor],
+        seq_mask: torch.Tensor,
+        dtype: torch.dtype,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """The sample-independent inputs of one fold in the head's dtype: ``(pair_mask, pair, single, target_feat)``, global norms and single
         clamp applied."""
@@ -592,7 +595,11 @@ class ConfidenceHead(nn.Module):
         # (``fold``, see :meth:`fold_state`) passes it in as an input, which a graph reads like any other input.
         cache = (
             self._fold_cache
-            if self.reembed_pair and fold is None and not (torch.cuda.is_available() and torch.cuda.is_current_stream_capturing())
+            if self.reembed_pair
+            and fold is None
+            and not (
+                torch.cuda.is_available() and torch.cuda.is_current_stream_capturing()
+            )
             else None
         )
         if fold is not None:
@@ -603,7 +610,9 @@ class ConfidenceHead(nn.Module):
             pair_mask = cache["pair_mask"]
             terms = cache["terms"]
         else:
-            pair_mask, pair_act, single_act, target_feat = self._fold_inputs(embeddings, seq_mask, dtype)
+            pair_mask, pair_act, single_act, target_feat = self._fold_inputs(
+                embeddings, seq_mask, dtype
+            )
             terms = None
 
         if self.reembed_pair:
@@ -633,7 +642,9 @@ class ConfidenceHead(nn.Module):
 
         # pairformer stack
         for layer in self.confidence_pairformer:
-            pair_act, single_act = engine_graph.run_block(layer, pair_act, pair_mask, single_act, seq_mask)
+            pair_act, single_act = engine_graph.run_block(
+                layer, pair_act, pair_mask, single_act, seq_mask
+            )
 
         if self.row_pool_attn is not None:
             # The single is pooled FROM THE PAIR, and after the stack, not
@@ -745,7 +756,9 @@ class ConfidenceHead(nn.Module):
 
         for layer in self.confidence_pairformer:
             if getattr(layer, "supports_sample_batch", False):
-                pair_act, single_act = engine_graph.run_block(layer, pair_act, pair_mask, single_act, seq_mask)
+                pair_act, single_act = engine_graph.run_block(
+                    layer, pair_act, pair_mask, single_act, seq_mask
+                )
             else:
                 pairs, singles = zip(
                     *(

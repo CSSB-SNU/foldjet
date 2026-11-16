@@ -48,7 +48,9 @@ def test_compiled_forward_matches_eager_and_does_not_recompile_across_instances(
     expected = reference(x)
     torch._dynamo.reset()  # noqa: SLF001
     first = model(x)
-    with train_compile.strict():  # both instances share ONE compiled graph: the second call compiles nothing
+    with (
+        train_compile.strict()
+    ):  # both instances share ONE compiled graph: the second call compiles nothing
         again = model(x)
     torch.testing.assert_close(first, expected)
     torch.testing.assert_close(again, expected)
@@ -67,4 +69,6 @@ def test_strict_refuses_a_new_shape():
 def test_compile_is_part_of_the_step_graph_key():
     cfg = TrainConfig()
     assert cfg.compile == ""
-    assert replace(cfg, compile="all") != cfg  # the step graph is keyed on the config: eager and compiled captures never mix
+    assert (
+        replace(cfg, compile="all") != cfg
+    )  # the step graph is keyed on the config: eager and compiled captures never mix
