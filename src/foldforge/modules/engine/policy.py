@@ -15,7 +15,7 @@ what the engine leaves to its caller:
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from foldforge.modules.engine.backends import (
     BackendPlan,
@@ -42,7 +42,7 @@ def forget_logged_refusals() -> None:
 def refuse(module: nn.Module, reason: str) -> bool:
     """A call the module's backend refuses: True when the caller must run the pytorch backend, after ONE log line per (class, backend,
     reason); raises under ``engine.unsupported: error`` (the module's ``foldforge_unsupported``)."""
-    cls, backend = type(module).__name__, module.backend
+    cls, backend = type(module).__name__, cast("str", module.backend)
     if getattr(module, "foldforge_unsupported", "fallback") == "error":
         message = f"{cls} backend {backend!r} refuses a call (engine.unsupported: error): {reason}"
         raise BackendUnsupportedError(message)
@@ -61,27 +61,27 @@ def refuse(module: nn.Module, reason: str) -> bool:
 def guard(module: nn.Module, unsupported: str = "fallback") -> nn.Module:
     """Wrap ``module.forward`` so that a call the selected backend refuses follows ``unsupported`` (idempotent; the policy is read per
     call from ``module.foldforge_unsupported``)."""
-    module.foldforge_unsupported = unsupported
+    module.foldforge_unsupported = unsupported  # pyright: ignore[reportArgumentType]  # plain attribute
     if module.__dict__.get(_GUARDED):
         return module
     original = module.forward
 
     def forward(*args: Any, **kwargs: Any) -> Any:
-        backend = module.backend
+        backend = cast("str", module.backend)
         if backend == "pytorch":
             observe_call(module, backend, None)
             return original(*args, **kwargs)
-        reason = module.unsupported(*args, **kwargs)
+        reason = module.unsupported(*args, **kwargs)  # pyright: ignore[reportCallIssue]  # engine op method
         if reason is None:
             observe_call(module, backend, None)
             return getattr(module, f"_forward_{backend}")(*args, **kwargs)
         refuse(module, reason)
         observe_call(module, backend, reason)
-        module.backend = "pytorch"
+        module.backend = "pytorch"  # pyright: ignore[reportArgumentType]  # plain attribute
         try:
-            return module._forward_pytorch(*args, **kwargs)
+            return module._forward_pytorch(*args, **kwargs)  # pyright: ignore[reportCallIssue]  # engine op method
         finally:
-            module.backend = backend
+            module.backend = backend  # pyright: ignore[reportArgumentType]  # plain attribute
 
     module.forward = forward
     object.__setattr__(module, _GUARDED, True)
@@ -99,19 +99,18 @@ def apply_plan(
 
     def visit(name: str, module: nn.Module) -> None:
         if type(module).__name__ in _COMPOSITES and hasattr(module, "set_backend"):
-            module.set_backend(
-                "pytorch"
-            )  # also puts every child on pytorch; the loop below gives each its own backend
-            module.foldforge_unsupported = plan.unsupported
+            # also puts every child on pytorch; the loop below gives each its own backend
+            module.set_backend("pytorch")  # pyright: ignore[reportCallIssue]  # engine op method
+            module.foldforge_unsupported = plan.unsupported  # pyright: ignore[reportArgumentType]  # plain attribute
         elif op_of(module) is not None:
             backend, reason = plan.for_class(type(module), device)
             if reason is not None and plan.unsupported == "error":
                 raise BackendUnsupportedError(
                     f"{name or '<root>'} ({type(module).__name__}): {reason}"
                 )
-            module.set_backend(backend)
+            module.set_backend(backend)  # pyright: ignore[reportCallIssue]  # engine op method
             guard(module, plan.unsupported)
-            op = op_of(module)
+            op = cast("str", op_of(module))  # an op module (checked above)
             report[name] = {
                 "op": op,
                 "backend": backend,

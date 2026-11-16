@@ -35,7 +35,7 @@ Internally we compute values and Jacobians for basic geometric primitives
 """
 
 import math
-from typing import Any
+from typing import Any, cast
 
 import torch
 
@@ -121,7 +121,7 @@ class Potential:
     ) -> torch.Tensor:
         """Compute energy only (no gradients)."""
         p = self._resolve_params(params)
-        return self._eval(coords, feats, p, False)
+        return cast("torch.Tensor", self._eval(coords, feats, p, False))
 
     def energy_and_grad(
         self,
@@ -131,7 +131,9 @@ class Potential:
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Compute energy and coordinate gradients."""
         p = self._resolve_params(params)
-        return self._eval(coords, feats, p, True)
+        return cast(
+            "tuple[torch.Tensor, torch.Tensor]", self._eval(coords, feats, p, True)
+        )
 
     def project(
         self,
@@ -274,7 +276,7 @@ def _abs_dihedral_value_and_grad(
     if not need_grad:
         return torch.abs(phi), None
     sign = torch.where(phi < 0, -1.0, 1.0)
-    grad = grad * sign[..., None, :, None]
+    grad = cast("torch.Tensor", grad) * sign[..., None, :, None]
     return torch.abs(phi), grad
 
 
@@ -593,7 +595,9 @@ class InterchainBondPotential(Potential):
         e, dE = _flat_bottom_linear(value, k, None, upper)
         if not need_grad:
             return _sum_energy(e)
-        grad_atom = _aggregate_atom_gradients(coords, idx, grad_value, dE)
+        grad_atom = _aggregate_atom_gradients(
+            coords, idx, cast("torch.Tensor", grad_value), dE
+        )
         return _sum_energy(e), grad_atom
 
 
@@ -721,8 +725,10 @@ class PairwiseDistancePotential(Potential):
 
             self._cache_key = cache_key
 
-        state_code = self._cached_state_code
-        vdw_limit = self._cached_vdw_limit_f32.to(dtype=lb_base.dtype)
+        state_code = cast("torch.Tensor", self._cached_state_code)
+        vdw_limit = cast("torch.Tensor", self._cached_vdw_limit_f32).to(
+            dtype=lb_base.dtype
+        )
 
         b_buf = float(params["bond_buffer"])
         a_buf = float(params["angle_buffer"])
@@ -766,7 +772,9 @@ class PairwiseDistancePotential(Potential):
         e, dE = _flat_bottom_parabolic(value, k, lower, upper)
         if not need_grad:
             return _sum_energy(e)
-        grad_atom = _aggregate_atom_gradients(coords, idx, grad_value, dE)
+        grad_atom = _aggregate_atom_gradients(
+            coords, idx, cast("torch.Tensor", grad_value), dE
+        )
         return _sum_energy(e), grad_atom
 
     def _project_masked(self, coords, idx, lower, upper, idx_mask):
@@ -782,7 +790,9 @@ class PairwiseDistancePotential(Potential):
         if mask.sum() == 0:
             return torch.zeros_like(coords)
         v = value - torch.where(mask_lb, lower, upper)
-        return _solve_constraint_projection(coords, idx, v, grad_value, mask)
+        return _solve_constraint_projection(
+            coords, idx, v, cast("torch.Tensor", grad_value), mask
+        )
 
     def _project(self, coords, feats, params):
         """Project on bond-distance and angle-distance pairs back into their [lower, upper] interval."""
@@ -849,7 +859,9 @@ class StereoBondPotential(Potential):
         e_sum = _sum_energy(e)
         if not need_grad:
             return e_sum
-        grad_atom = _aggregate_atom_gradients(coords, idx, grad_value, dE)
+        grad_atom = _aggregate_atom_gradients(
+            coords, idx, cast("torch.Tensor", grad_value), dE
+        )
         return e_sum, grad_atom
 
 
@@ -899,7 +911,9 @@ class ChiralAtomPotential(Potential):
         e_sum = _sum_energy(e)
         if not need_grad:
             return e_sum
-        grad_atom = _aggregate_atom_gradients(coords, idx, grad_value, dE)
+        grad_atom = _aggregate_atom_gradients(
+            coords, idx, cast("torch.Tensor", grad_value), dE
+        )
         return e_sum, grad_atom
 
     def _project(self, coords, feats, params):
@@ -931,7 +945,7 @@ class ChiralAtomPotential(Potential):
             dtype = coords.dtype
             batch_shape = coords.shape[:-2]
             n_atom = coords.shape[-2]
-            mask_atom = torch.zeros(n_atom, dtype=bool, device=device)
+            mask_atom = torch.zeros(n_atom, dtype=torch.bool, device=device)
             mask_atom[idx] = True
             atom_chain_id_full = feats["asym_id"][..., feats["atom_to_token_idx"]]
             atom_chain_id = atom_chain_id_full[mask_atom]
@@ -1024,7 +1038,9 @@ class PlanarImproperPotential(Potential):
 
         if not need_grad:
             return e_sum
-        grad_atom = _aggregate_atom_gradients(coords, idx, grad, k)
+        grad_atom = _aggregate_atom_gradients(
+            coords, idx, cast("torch.Tensor", grad), k
+        )
         return e_sum, grad_atom
 
 
@@ -1065,7 +1081,9 @@ class LinearBondPotential(Potential):
         e_sum = _sum_energy(e)
         if not need_grad:
             return e_sum
-        grad_atom = _aggregate_atom_gradients(coords, idx, grad_value, dE)
+        grad_atom = _aggregate_atom_gradients(
+            coords, idx, cast("torch.Tensor", grad_value), dE
+        )
         return e_sum, grad_atom
 
 
@@ -1135,7 +1153,9 @@ class ExperimentalTorsionPotential(Potential):
             + force_constants[..., 5] * signs[..., 5] * dcos6
         )
 
-        grad_atom = _aggregate_atom_gradients(coords, idx, grad_phi, dE_dphi)
+        grad_atom = _aggregate_atom_gradients(
+            coords, idx, cast("torch.Tensor", grad_phi), dE_dphi
+        )
         return e_sum, grad_atom
 
 
@@ -1209,13 +1229,13 @@ class VinaStericPotential(Potential):
         if n_atoms == 0:
             return _cache_and_return(
                 torch.empty((2, 0), device=device, dtype=torch.long),
-                torch.empty((0,), device=device, dtype=torch.float32),
+                torch.empty((0,), device=device, dtype=torch.float32),  # pyright: ignore[reportCallIssue]  # pre-existing: 2 args to a 1-arg helper (TypeError if reached); kept as is
             )
         # If all atoms map to the same chain id, there is no inter-chain pair.
         if torch.all(c_map == c_map[..., :1]):
             return _cache_and_return(
                 torch.empty((2, 0), device=device, dtype=torch.long),
-                torch.empty((0,), device=device, dtype=torch.float32),
+                torch.empty((0,), device=device, dtype=torch.float32),  # pyright: ignore[reportCallIssue]  # pre-existing: 2 args to a 1-arg helper (TypeError if reached); kept as is
             )
 
         n_chains = int(c_map.max().item()) + 1

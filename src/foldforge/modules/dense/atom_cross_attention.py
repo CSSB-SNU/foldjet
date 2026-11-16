@@ -11,6 +11,7 @@
 
 
 import dataclasses
+from typing import cast
 
 import torch
 import torch.nn as nn
@@ -157,7 +158,7 @@ def hoist_conditioning(
     decoder_stack = decoder.atom_transformer_decoder
     if torch.is_grad_enabled() or state.queries_single_cond is None:
         return state
-    norm = decoder.post_atom_cond_layer_norm
+    norm = cast("nn.Module | None", decoder.post_atom_cond_layer_norm)
     if not isinstance(encoder_stack, DiffusionCrossAttTransformer) or not isinstance(
         decoder_stack, DiffusionCrossAttTransformer
     ):
@@ -256,6 +257,8 @@ class AtomCrossAttEncoder(nn.Module):
     #: number of edges strictly below the distance, and an invalid pair takes the
     #: class after the last, so the one-hot is two wider than this list.
     ATOM_PAIR_BINS = (0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 12.0, 16.0)
+    #: Registered in ``__init__`` as a non-persistent buffer.
+    atom_pair_edges: torch.Tensor
 
     def __init__(  # noqa: PLR0915 - one checkpoint parameter layout
         self,
@@ -435,7 +438,7 @@ class AtomCrossAttEncoder(nn.Module):
             return 0.0
         flat = token_atoms_act.flatten(-3, -2)
         grads = dihedral_error_gradient(
-            flat, ref.chiral_centres.long(), ref.chiral_dihedrals
+            flat, ref.chiral_centres.long(), cast("torch.Tensor", ref.chiral_dihedrals)
         ).nan_to_num()
         grads = grads.reshape(token_atoms_act.shape).to(token_atoms_act.dtype)
         return self.atom_chiral_to_features(
@@ -582,8 +585,11 @@ class AtomCrossAttEncoder(nn.Module):
         query_base = queries_single_cond.clone()
         # If provided, broadcast single conditioning from trunk to all queries
         if trunk_single_cond is not None:
-            trunk_single_cond = self.embed_trunk_single_cond(
-                self.lnorm_trunk_single_cond(trunk_single_cond)
+            trunk_single_cond = cast(
+                "torch.Tensor",
+                self.embed_trunk_single_cond(
+                    self.lnorm_trunk_single_cond(trunk_single_cond)
+                ),
             )
             queries_single_cond += atom_layout.convert(
                 batch.atom_cross_att.tokens_to_queries,
@@ -626,8 +632,9 @@ class AtomCrossAttEncoder(nn.Module):
         pair_act = row_act[:, :, None, :] + col_act[:, None, :, :]
 
         if trunk_pair_cond is not None:
-            trunk_pair_cond = self.embed_trunk_pair_cond(
-                self.lnorm_trunk_pair_cond(trunk_pair_cond)
+            trunk_pair_cond = cast(
+                "torch.Tensor",
+                self.embed_trunk_pair_cond(self.lnorm_trunk_pair_cond(trunk_pair_cond)),
             )
 
             # Create the GatherInfo into a flattened trunk_pair_cond from the

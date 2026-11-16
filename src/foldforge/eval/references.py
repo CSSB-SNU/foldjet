@@ -27,7 +27,7 @@ import json
 import shlex
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
@@ -97,7 +97,7 @@ def read_cif(path: Path, plddt: float | None = None) -> Structure:
         model = ix.get("pdbx_PDB_model_num")
         if model is not None and len(row) > model and row[model] != "1":
             continue
-        chain = row[ix.get("label_asym_id", ix.get("auth_asym_id"))]
+        chain = row[cast("int", ix.get("label_asym_id", ix.get("auth_asym_id")))]
         atom = row[ix["label_atom_id"]].strip('"')
         element = row[ix["type_symbol"]].upper() if "type_symbol" in ix else atom[0]
         xyz = [float(row[ix[k]]) for k in ("Cartn_x", "Cartn_y", "Cartn_z")]

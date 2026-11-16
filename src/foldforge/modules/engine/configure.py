@@ -9,7 +9,7 @@ exactly (no rounding, no re-cast of norms: engine norms keep their own fp32 pin)
 from __future__ import annotations
 
 import contextlib
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast, overload
 
 import torch
 
@@ -60,8 +60,8 @@ def configure_model(
         for module in model.modules():
             if isinstance(module, MasterWeights):
                 module.set_master_weights()
-    model.foldforge_precision = precision
-    model.foldforge_activation_dtype = dtype
+    model.foldforge_precision = precision  # pyright: ignore[reportArgumentType]  # plain attribute
+    model.foldforge_activation_dtype = dtype  # pyright: ignore[reportArgumentType]  # plain attribute
     model.eval().requires_grad_(requires_grad=False)
     for name, param in model.named_parameters():
         if param.dtype != torch.float32:
@@ -75,9 +75,17 @@ def activation_autocast(model: nn.Module) -> contextlib.AbstractContextManager[N
     if getattr(model, "foldforge_precision", None) != "master":
         return contextlib.nullcontext()
     device = next(model.parameters()).device.type
-    return torch.autocast(device, dtype=model.foldforge_activation_dtype)
+    return torch.autocast(  # pyright: ignore[reportReturnType]  # torch.autocast is a context manager
+        device, dtype=cast("torch.dtype", model.foldforge_activation_dtype)
+    )
 
 
+@overload
+def engine_activation(tensor: torch.Tensor) -> torch.Tensor: ...
+@overload
+def engine_activation(tensor: None) -> None: ...
+@overload
+def engine_activation(tensor: torch.Tensor | None) -> torch.Tensor | None: ...
 def engine_activation(tensor: torch.Tensor | None) -> torch.Tensor | None:
     """``tensor`` in the dtype the engine's ``master`` modules are called with: inside an enabled autocast a floating fp32 activation becomes
     the autocast dtype (the engine's ``MasterWeights``: fp32 masters, bf16 activations); anything else is returned as it is (``fp32``
@@ -102,7 +110,7 @@ def diffusion_autocast(model: nn.Module) -> contextlib.AbstractContextManager[No
         model, "reference_precision", False
     ):
         device = next(model.parameters()).device.type
-        return torch.autocast(device, enabled=False)
+        return torch.autocast(device, enabled=False)  # pyright: ignore[reportReturnType]  # a context manager
     return activation_autocast(model)
 
 
@@ -116,7 +124,7 @@ def set_tf32_policy(
     head = getattr(model, "diffusion_head", None)
     diffusion = set() if head is None else {id(m) for m in head.modules()}
     for module in model.modules():
-        module.foldforge_tf32 = tf32 or (diffusion_tf32 and id(module) in diffusion)
+        module.foldforge_tf32 = tf32 or (diffusion_tf32 and id(module) in diffusion)  # pyright: ignore[reportArgumentType]  # plain attribute
 
 
 @contextlib.contextmanager

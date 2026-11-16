@@ -17,7 +17,7 @@ choices FoldForge makes (the keys below, the precision, the options a family's e
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, overload
 
 import torch
 from miniworld_engine.modules import (
@@ -112,9 +112,9 @@ def set_norm_eps(module: nn.Module, eps: float) -> None:
 
 
 # -------------------------------------------------------------------------------------------------------------------- precision
-def finish(
-    module: nn.Module, precision: Precision = "master", *, norm_eps: float | None = None
-) -> nn.Module:
+def finish[M: nn.Module](
+    module: M, precision: Precision = "master", *, norm_eps: float | None = None
+) -> M:
     """Give a freshly built engine module FoldForge's parameter dtype: ``master`` pins fp32 masters (``set_master_weights``; a module
     without the mixin is plain fp32, its norms already fp32-pinned), ``fp32`` is plain fp32. ``norm_eps`` sets the eps of the LayerNorms
     that still have the default (a family whose released norms differ)."""
@@ -235,10 +235,16 @@ def layer_norm(
     elementwise_affine: bool = True,
 ) -> LayerNorm:
     """The engine ``LayerNorm`` (fp32 affine under any cast)."""
-    return LayerNorm(d, eps=eps, bias=bias, elementwise_affine=elementwise_affine)
+    return LayerNorm(d, eps=eps, bias=bias, elementwise_affine=elementwise_affine)  # pyright: ignore[reportArgumentType]  # torch takes any int sequence
 
 
 # -------------------------------------------------------------------------------------------------------------------- masks
+@overload
+def token_mask(pair_mask: torch.Tensor) -> torch.Tensor: ...
+@overload
+def token_mask(pair_mask: None) -> None: ...
+@overload
+def token_mask(pair_mask: torch.Tensor | None) -> torch.Tensor | None: ...
 def token_mask(pair_mask: torch.Tensor | None) -> torch.Tensor | None:
     """Token masks from outer-product pair masks with any leading batch axes."""
     if pair_mask is None:
@@ -246,6 +252,12 @@ def token_mask(pair_mask: torch.Tensor | None) -> torch.Tensor | None:
     return (pair_mask.diagonal(dim1=-2, dim2=-1) > 0).contiguous()
 
 
+@overload
+def residue_mask(pair_mask: torch.Tensor) -> torch.Tensor: ...
+@overload
+def residue_mask(pair_mask: None) -> None: ...
+@overload
+def residue_mask(pair_mask: torch.Tensor | None) -> torch.Tensor | None: ...
 def residue_mask(pair_mask: torch.Tensor | None) -> torch.Tensor | None:
     """Key mask ``[1, L]`` (bool) from an outer-product pair mask ``[L, L]``: every pair mask of the graph is the outer product of the
     token mask, so its diagonal is the token mask (no host sync)."""

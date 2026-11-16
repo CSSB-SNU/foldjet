@@ -99,12 +99,10 @@ def serves(op: str) -> tuple[str, ...]:
     """The backends some class of ``op`` has, in the policy's names (``miniworld`` when any class has ``cuda`` or ``triton``)."""
     have = {b for cls in op_classes(op) for b in cls.backends}
     named = [b for b in ENGINE_BACKENDS if b in have]
-    return tuple(
-        [
-            *(["miniworld"] if have & {"cuda", "triton"} else []),
-            *named,
-            *(["cuequivariance"] if "cueq" in have else []),
-        ]
+    return (
+        *(["miniworld"] if have & {"cuda", "triton"} else []),
+        *named,
+        *(["cuequivariance"] if "cueq" in have else []),
     )
 
 
@@ -138,7 +136,7 @@ def capability(device: object | None) -> tuple[int, int] | None:
     return torch.cuda.get_device_capability(index)
 
 
-def choose_backend(
+def choose_backend(  # noqa: PLR0911 - one return per refusal reason
     requested: str, cls: type, device: object | None = None
 ) -> tuple[str, str | None]:
     """``(backend, reason)`` of one engine class: the backend it runs under ``requested`` and, when that is not what was asked for, why.

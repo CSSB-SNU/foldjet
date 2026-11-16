@@ -18,7 +18,7 @@ dense token transformer (``DiffusionTransformer``) that the offline converter re
 
 import functools
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 import einops
 import torch
@@ -104,7 +104,7 @@ def conditioned_residual(
 
 
 def reference_adaln(
-    module: nn.Module,
+    module: Any,  # duck-typed: the layer's own attributes are read
     x: torch.Tensor,
     cond: torch.Tensor | None,
     projected: tuple[Tensor, Tensor] | None = None,
@@ -130,7 +130,7 @@ def reference_adaln(
 
 
 def reference_conditioned_transition(
-    module: nn.Module,
+    module: Any,  # duck-typed: the layer's own attributes are read
     x: torch.Tensor,
     cond: torch.Tensor | None,
     hoisted: tuple | None = None,
@@ -337,7 +337,11 @@ class AdaLNZero(nn.Module):
             # weight can undo either -- a sigmoid does not fold into a linear
             # map.
             if hoisted_gate is None:
-                context = F.silu(single_cond) if self.raw_gate else single_cond
+                context = (
+                    F.silu(cast("torch.Tensor", single_cond))
+                    if self.raw_gate
+                    else single_cond
+                )
                 cond = self.adaptive_zero_cond(context)
             else:
                 cond = hoisted_gate
@@ -709,8 +713,8 @@ class DiffusionCrossAttTransformer(nn.Module):
         and skips those GEMMs, which are a third of this stack's kernels at one sample."""
         return [
             (
-                attention.project_cond(queries_single_cond, keys_single_cond),
-                transition.project_cond(queries_single_cond),
+                attention.project_cond(queries_single_cond, keys_single_cond),  # pyright: ignore[reportCallIssue]  # ModuleList items are typed nn.Module
+                transition.project_cond(queries_single_cond),  # pyright: ignore[reportCallIssue]  # ModuleList items are typed nn.Module
             )
             for attention, transition in zip(
                 self.cross_attention, self.transition_block, strict=True
@@ -744,7 +748,10 @@ class DiffusionCrossAttTransformer(nn.Module):
             pair_logits = [
                 projection(norm(pair_cond)).permute(0, 3, 1, 2)
                 for norm, projection in zip(
-                    self.pair_input_layer_norm, self.pair_logits_projection, strict=True
+                    # ModuleLists when per_block_pair
+                    self.pair_input_layer_norm,  # pyright: ignore[reportArgumentType]
+                    self.pair_logits_projection,  # pyright: ignore[reportArgumentType]
+                    strict=True,
                 )
             ]
         else:

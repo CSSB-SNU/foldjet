@@ -31,8 +31,13 @@ from __future__ import annotations
 
 import math
 import os
+from typing import TYPE_CHECKING
 
 import torch
+
+if TYPE_CHECKING:  # the kernels below are only defined when the runtime import works
+    import triton
+    import triton.language as tl
 
 try:  # pragma: no cover - the module imports on a CPU-only box without triton
     import triton
@@ -171,9 +176,8 @@ def index_grad(
     s = math.prod(in_shape[dim + 1 :])
     flat = idx.reshape(-1)
     n_idx = flat.numel()
-    flat = torch.where(
-        flat < 0, flat + n_in, flat
-    )  # ATen wraps negative indices before it sorts
+    # ATen wraps negative indices before it sorts
+    flat = torch.where(flat < 0, flat + n_in, flat)
     keys, order = torch.sort(flat, stable=True)
     offs = torch.searchsorted(
         keys, torch.arange(n_in + 1, device=idx.device, dtype=keys.dtype)
@@ -193,7 +197,8 @@ def index_grad(
         BIG=max(2 * _SUB, min(1024, 2048 // block_f)),
         SUB=_SUB,
         BLOCK_F=block_f,
-        num_warps=1,  # many small programs (one per target): measured fastest on the real Protenix v1 layouts (H100)
+        # num_warps is a launch option of the triton JIT launcher (not in its stub signature)
+        num_warps=1,  # pyright: ignore[reportCallIssue]  # many small programs (one per target): measured fastest on the real Protenix v1 layouts (H100)
     )
     return out.view(in_shape)
 
@@ -211,6 +216,6 @@ class IndexGather(torch.autograd.Function):
         return arr[(slice(None),) * dim + (idx,)]
 
     @staticmethod
-    def backward(ctx, grad: torch.Tensor):
+    def backward(ctx, grad: torch.Tensor):  # pyright: ignore[reportIncompatibleMethodOverride]  # one output -> one grad, as autograd calls it
         (idx,) = ctx.saved_tensors
         return index_grad(grad, idx, ctx.in_shape, ctx.dim), None, None

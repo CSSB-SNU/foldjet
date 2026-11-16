@@ -12,6 +12,7 @@
 
 import contextlib
 from collections.abc import Iterator
+from typing import cast
 
 import einops
 import torch
@@ -281,7 +282,7 @@ class ConfidenceHead(nn.Module):
     plddt_bin_centers: torch.Tensor
     step: torch.Tensor
 
-    def __init__(
+    def __init__(  # noqa: PLR0915 - one checkpoint parameter layout
         self,
         c_single: int = 384,
         c_pair: int = 128,
@@ -603,11 +604,11 @@ class ConfidenceHead(nn.Module):
             else None
         )
         if fold is not None:
-            pair_mask = fold["pair_mask"]
+            pair_mask = cast("torch.Tensor", fold["pair_mask"])
             terms = fold["terms"]
         elif cache is not None and "terms" in cache:
             # The second and later samples of a fold: the sample-independent re-embedding is already built.
-            pair_mask = cache["pair_mask"]
+            pair_mask = cast("torch.Tensor", cache["pair_mask"])
             terms = cache["terms"]
         else:
             pair_mask, pair_act, single_act, target_feat = self._fold_inputs(
@@ -623,8 +624,12 @@ class ConfidenceHead(nn.Module):
                 token_atoms_to_pseudo_beta, dense_atom_positions, layout_axes=(-3, -2)
             )
             if terms is None:
+                # bound: terms is None only on the _fold_inputs path
                 terms = self.reembedding.fold_terms(
-                    pair_act, single_act, target_feat, batch
+                    pair_act,  # pyright: ignore[reportPossiblyUnboundVariable]
+                    single_act,  # pyright: ignore[reportPossiblyUnboundVariable]
+                    target_feat,  # pyright: ignore[reportPossiblyUnboundVariable]
+                    batch,
                 )
                 if cache is not None:
                     # Kept for the fold's other samples (the pair is only read; the single is copied per sample).
@@ -636,14 +641,22 @@ class ConfidenceHead(nn.Module):
             )
             single_act = terms[1]
         else:
-            pair_act += self._embed_features(
-                dense_atom_positions, token_atoms_to_pseudo_beta, pair_mask, target_feat
+            # bound: a fold state (fold / cache) exists only with reembed_pair
+            pair_act += self._embed_features(  # pyright: ignore[reportPossiblyUnboundVariable]
+                dense_atom_positions,
+                token_atoms_to_pseudo_beta,
+                pair_mask,
+                target_feat,  # pyright: ignore[reportPossiblyUnboundVariable]
             )
 
         # pairformer stack
         for layer in self.confidence_pairformer:
             pair_act, single_act = engine_graph.run_block(
-                layer, pair_act, pair_mask, single_act, seq_mask
+                layer,
+                pair_act,
+                pair_mask,
+                single_act,  # pyright: ignore[reportPossiblyUnboundVariable]  # bound: see above
+                seq_mask,
             )
 
         if self.row_pool_attn is not None:
@@ -662,7 +675,12 @@ class ConfidenceHead(nn.Module):
             )
 
         return self._output_heads(
-            pair_act, single_act, seq_mask, pair_mask, asym_id, batch
+            pair_act,
+            single_act,  # pyright: ignore[reportPossiblyUnboundVariable]  # bound: see above
+            seq_mask,
+            pair_mask,
+            asym_id,
+            batch,
         )
 
     #: Bytes of ``[S, L, L, c_pair]`` pair stream one chunk of samples may hold. Measured on

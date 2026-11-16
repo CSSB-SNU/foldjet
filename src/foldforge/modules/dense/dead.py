@@ -38,7 +38,7 @@ def mark_dead(model: nn.Module, threshold: float = THRESHOLD) -> dict[str, int]:
     counts: dict[str, int] = {}
     for module in model.modules():
         if _skippable(module):
-            module.dead = is_dead(module, threshold)
+            module.dead = is_dead(module, threshold)  # pyright: ignore[reportArgumentType]  # plain attribute of the skippable modules
             if module.dead:
                 counts[type(module).__name__] = counts.get(type(module).__name__, 0) + 1
     return counts
@@ -50,5 +50,5 @@ def clear_dead(model: nn.Module) -> int:
     for module in model.modules():
         if _skippable(module):
             cleared += int(bool(module.dead))
-            module.dead = False
+            module.dead = False  # pyright: ignore[reportArgumentType]  # plain attribute of the skippable modules
     return cleared

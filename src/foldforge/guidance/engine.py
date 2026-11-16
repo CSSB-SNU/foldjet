@@ -362,7 +362,7 @@ class GuidanceEngine:
             def _prepare_guidance_shift(x_work=x_work):
                 if self.cfg.rho != 0.0:
                     with torch.enable_grad():
-                        x_var = x_work.detach().requires_grad_(requires_grad=True)
+                        x_var = x_work.detach().requires_grad_(requires_grad=True)  # pyright: ignore[reportCallIssue]  # the stub names the flag `mode`
                         x0_pred = denoise_net(x_var, t_hat)
                         avg_logp = self._logp_x0(
                             x0_pred, eps, input_feature_dict, t=t, step_i=step_i
@@ -426,4 +426,4 @@ class GuidanceEngine:
                 return (x_next_local, next_x_work)
 
             x_next, x_work = _complete_guidance_outer()
-        return x_next
+        return x_next  # pyright: ignore[reportPossiblyUnboundVariable]  # outer_steps >= 1 by config

@@ -12,7 +12,7 @@ Shapes (engine layout): ``single`` / ``cond`` ``[A, B, L, d]`` (A = diffusion sa
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import torch
 from miniworld_engine.modules import AtomDiT, TokenDiT
@@ -116,7 +116,7 @@ class TokenDiTStack(nn.Module):
             and source[0] is pair_cond
             and source[1] == pair_cond._version
         ):
-            return self._pair_engine
+            return cast("Tensor", self._pair_engine)  # kept together with _pair_source
         pair = engine_activation(pair_cond)[None]
         if torch.is_grad_enabled() and pair_cond.requires_grad:
             return pair
@@ -164,23 +164,20 @@ class AtomDiTStack(nn.Module):
         pair, key_mask, uid = (
             (*engine_inputs, None, None, None) if engine_inputs else (None, None, None)
         )[:3]
-        if (
-            pair_mask is not None and uid is None and not self.rotary
-        ):  # the rotary block builds its own rank window
+        # the rotary block builds its own rank window
+        if pair_mask is not None and uid is None and not self.rotary:
             raise ValueError(
                 "a pair mask (same-conformer attention) needs the conformer ids in engine_inputs"
             )
-        if (
-            uid is not None and uid.ndim == 1
-        ):  # the encoder keeps the flat ids [N]; the engine takes [B, N]
+        # the encoder keeps the flat ids [N]; the engine takes [B, N]
+        if uid is not None and uid.ndim == 1:
             uid = uid[None]
         if pair is None:
             pair = pair_cond.reshape(1, windows, queries, -1, pair_cond.shape[-1])
         if key_mask is None:
             key_mask = (queries_mask > 0).reshape(1, atoms)
-        x = engine_activation(
-            queries_act.reshape(-1, 1, atoms, channels)
-        )  # the engine's master blocks take bf16 activations, not fp32
+        # the engine's master blocks take bf16 activations, not fp32
+        x = engine_activation(queries_act.reshape(-1, 1, atoms, channels))
         cond = engine_activation(
             queries_single_cond.reshape(1, 1, atoms, channels)
         ).expand(x.shape[0], 1, atoms, channels)
@@ -193,7 +190,7 @@ class AtomDiTStack(nn.Module):
             # the per-atom tables of the queries layout [windows, 32, r] (a key takes its own atom's row: the block gathers them itself)
             rope = tuple(
                 table.reshape(1, atoms, table.shape[-1]).to(torch.float32)
-                for table in rope_q
+                for table in cast("tuple[Tensor, ...]", rope_q)
             )
             for block in self.blocks:
                 x = block(x, cond, pair, key_mask, rope=rope)
@@ -268,16 +265,14 @@ def atom_dit_stack(
     extra: dict[str, Any] = {"key_window": key_window} if key_window is not None else {}
     if adaln_eps is not None:
         extra["adaln_eps"] = adaln_eps
-    if (
-        key == "esmfold2_pair"
-    ):  # one window (192 keys, the +/- 64 rank band) and its own AdaLN epsilon: nothing to choose
+    # one window (192 keys, the +/- 64 rank band) and its own AdaLN epsilon: nothing to choose
+    if key == "esmfold2_pair":
         extra = {}
-    blocks = [
+    blocks: list[nn.Module] = [
         AtomDiT(key, d_single, d_cond, d_pair, n_head, n, **extra)
         for _ in range(n_blocks)
     ]
     stack = AtomDiTStack(blocks)
-    stack.key_dim_per_head = (
-        d_single // n_head
-    )  # the per-head width the caller builds the atom rotary tables for (the dense stack has the same attribute)
+    # the per-head width the caller builds the atom rotary tables for (the dense stack has the same attribute)
+    stack.key_dim_per_head = d_single // n_head  # pyright: ignore[reportArgumentType]  # plain attribute
     return finish(stack, precision)  # type: ignore[return-value]

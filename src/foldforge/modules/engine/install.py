@@ -27,7 +27,7 @@ def skip_engine_init():
     from miniworld_engine.modules import primitives
 
     original = primitives.InitType.apply
-    primitives.InitType.apply = lambda _self, _data: None
+    primitives.InitType.apply = lambda _self, _data: None  # pyright: ignore[reportAttributeAccessIssue]  # patched for the duration
     try:
         yield
     finally:
@@ -54,11 +54,11 @@ def install_engine(
     if not modules or "engine_modules" in set(skip):
         plan = BackendPlan.make("pytorch", None, plan.unsupported)
     choices = apply_plan(model, plan, _torch.device(device))
-    model.foldforge_sampler_ops = (
-        True  # atom-encoder pooling (PoolAtoms, differentiable since engine 2.5.3)
-    )
-    model.foldforge_sampler_glue = True  # sampler rigid-motion glue (inference only)
+    # atom-encoder pooling (PoolAtoms, differentiable since engine 2.5.3)
+    model.foldforge_sampler_ops = True  # pyright: ignore[reportArgumentType]  # plain attribute
+    # sampler rigid-motion glue (inference only)
+    model.foldforge_sampler_glue = True  # pyright: ignore[reportArgumentType]  # plain attribute
     report: dict[str, Any] = getattr(model, "foldforge_load_report", {})
     report["engine_backends"] = {"plan": plan.report(), "modules": choices}
-    model.foldforge_load_report = report
+    model.foldforge_load_report = report  # pyright: ignore[reportArgumentType]  # plain attribute
     return model

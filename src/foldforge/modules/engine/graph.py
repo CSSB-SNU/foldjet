@@ -19,7 +19,7 @@ nothing here imports it, and with no factory installed (every runtime path) the 
 from __future__ import annotations
 
 import contextlib
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Protocol, cast, overload
 
 import torch
 from miniworld_engine.modules import PairformerBlock
@@ -39,12 +39,12 @@ if TYPE_CHECKING:
 class DenseBlocks(Protocol):
     """The released-layout blocks of the offline converter's graph (implemented in ``foldforge.models.checkpoints.legacy``)."""
 
-    def pairformer_block(self, spec: DenseSpec, **options: object) -> nn.Module:
+    def pairformer_block(self, spec: DenseSpec, **options: object) -> nn.Module:  # pyright: ignore[reportReturnType]  # protocol member
         """One dense pairformer block (``options`` are :func:`make_pairformer_block`'s resolved arguments)."""
 
     def evoformer_block(
         self, spec: DenseSpec, c_msa: int, c_pair: int, n_heads_pair: int
-    ) -> nn.Module:
+    ) -> nn.Module:  # pyright: ignore[reportReturnType]  # protocol member
         """One dense MSA-stack block."""
 
     def token_transformer(
@@ -54,10 +54,10 @@ class DenseBlocks(Protocol):
         c_single_cond: int,
         c_pair_cond: int,
         num_blocks: int,
-    ) -> nn.Module:
+    ) -> nn.Module:  # pyright: ignore[reportReturnType]  # protocol member
         """The dense token transformer."""
 
-    def conditioning_transition(self, width: int) -> nn.Module:
+    def conditioning_transition(self, width: int) -> nn.Module:  # pyright: ignore[reportReturnType]  # protocol member
         """The dense conditioning transition."""
 
 
@@ -155,12 +155,39 @@ def make_pairformer_block(
         norm_eps=None,
     )
     if batched == "sample":
-        block.supports_sample_batch = True
+        block.supports_sample_batch = True  # pyright: ignore[reportArgumentType]  # plain attribute
     elif batched == "template":
-        block.supports_template_batch = True
+        block.supports_template_batch = True  # pyright: ignore[reportArgumentType]  # plain attribute
     return block
 
 
+@overload
+def run_block(
+    block: nn.Module,
+    pair: torch.Tensor,
+    pair_mask: torch.Tensor,
+    single: None = None,
+    seq_mask: torch.Tensor | None = None,
+    extra_pair_bias: torch.Tensor | None = None,
+) -> torch.Tensor: ...
+@overload
+def run_block(
+    block: nn.Module,
+    pair: torch.Tensor,
+    pair_mask: torch.Tensor,
+    single: torch.Tensor,
+    seq_mask: torch.Tensor | None = None,
+    extra_pair_bias: torch.Tensor | None = None,
+) -> tuple[torch.Tensor, torch.Tensor]: ...
+@overload
+def run_block(
+    block: nn.Module,
+    pair: torch.Tensor,
+    pair_mask: torch.Tensor,
+    single: torch.Tensor | None = None,
+    seq_mask: torch.Tensor | None = None,
+    extra_pair_bias: torch.Tensor | None = None,
+) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]: ...
 def run_block(
     block: nn.Module,
     pair: torch.Tensor,
@@ -174,14 +201,11 @@ def run_block(
     ``pair`` ``[L, L, d]`` (or ``[S, L, L, d]``: S samples / template slots through one call), ``pair_mask`` the ``[L, L]`` outer-product
     mask, ``single`` ``[L, d]`` (``[S, L, d]``), ``seq_mask`` ``[L]``, ``extra_pair_bias`` ``[L, L]`` (added to every head of the single
     attention). Returns ``pair`` (a block without the single track) or ``(pair, single)``, in the layout it was given."""
-    if not isinstance(
-        block, PairformerBlock
-    ):  # the converter's released-layout block carries its own call (``run_dense``)
+    # the converter's released-layout block carries its own call (``run_dense``)
+    if not isinstance(block, PairformerBlock):
         return block.run_dense(pair, pair_mask, single, seq_mask, extra_pair_bias)  # type: ignore[operator]
-    pair, single = (
-        engine_activation(pair),
-        engine_activation(single),
-    )  # the engine's master blocks take bf16 activations, not fp32
+    # the engine's master blocks take bf16 activations, not fp32
+    pair, single = (engine_activation(pair), engine_activation(single))
     batched = pair.ndim == 4
     if not batched:
         pair = pair[None]
@@ -193,9 +217,8 @@ def run_block(
         else factories.residue_mask(pair_mask)
     )
     if count > 1:
-        key_mask = key_mask.expand(
-            count, -1
-        ).contiguous()  # the kernels read a dense mask, not a stride-0 view
+        # the kernels read a dense mask, not a stride-0 view
+        key_mask = key_mask.expand(count, -1).contiguous()
     bias = None
     if extra_pair_bias is not None:
         heads = block.config.n_head_single
@@ -208,6 +231,7 @@ def run_block(
         if bias is not None
         else block(pair, key_mask, single)
     )
+    single = cast("torch.Tensor", single)  # the block returns its single track
     return (pair, single) if batched else (pair[0], single[0])
 
 
@@ -251,10 +275,10 @@ class EvoformerBlock(nn.Module):
         self.with_pair_attention = spec.pair_attention
         if self.with_pair_attention:
             self.pair_attention1 = factories.triangle_attention(
-                c_pair, n_heads_pair, starting=True, model=keys.triangle
+                c_pair, n_heads_pair, starting=True, model=cast("str", keys.triangle)
             )
             self.pair_attention2 = factories.triangle_attention(
-                c_pair, n_heads_pair, starting=False, model=keys.triangle
+                c_pair, n_heads_pair, starting=False, model=cast("str", keys.triangle)
             )
         self.pair_transition = factories.transition(c_pair, 4)
 

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 import torch
 import torch.nn as nn
@@ -214,7 +214,7 @@ class DiffusionHead(nn.Module):
         """Bytes of the fold-scoped state this head keeps between sampler calls (the fold conditioning and the token transformer's kept pair)."""
         seen: set[int] = set()
         total = 0
-        leaves = list(torch.utils._pytree.tree_leaves(self._fold))
+        leaves = list(torch.utils._pytree.tree_leaves(self._fold))  # pyright: ignore[reportAttributeAccessIssue]  # loaded by torch at import
         kept = getattr(self.transformer, "fold_state_tensors", None)
         if kept is not None:
             leaves.extend(kept())
@@ -248,7 +248,10 @@ class DiffusionHead(nn.Module):
         coordinates, so they are the same at every sampler step of a fold.
         """
         if self._pair_band_rows(embeddings["pair"]) is not None:
-            return self._fold_conditioning_banded(batch, embeddings, use_conditioning)
+            return cast(
+                "tuple[torch.Tensor, torch.Tensor]",
+                self._fold_conditioning_banded(batch, embeddings, use_conditioning),
+            )
         # Official AF3 hands FP32 trunk embeddings to its FP32 denoiser.
         # Keep this boundary explicit when the trunk itself uses BF16.
         if self.single_cond_initial_projection.weight.dtype == torch.float32:
@@ -326,7 +329,7 @@ class DiffusionHead(nn.Module):
         """`_fold_conditioning` with the pair part in row bands (same arithmetic per token pair, bit-identical; see ``PAIR_BAND_BYTES``)."""
         f32 = self.single_cond_initial_projection.weight.dtype == torch.float32
         pair = embeddings["pair"]
-        rows = self._pair_band_rows(pair)
+        rows = cast("int", self._pair_band_rows(pair))  # only called when banded
         # The fp32 trunk-embedding boundary, for the token-sized tensors only (the pair ones are cast band by band).
         small = {
             name: embeddings[name]
