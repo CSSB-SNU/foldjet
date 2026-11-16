@@ -22,42 +22,50 @@ if TYPE_CHECKING:
     from foldforge.models.io.request import Request
 
 
-# --- CPU featurisation that can run ahead of the GPU -------------------------------------------------------------------------------------------
-# `featurise_input` (+ the layout / bond-order captures) is pure CPU and takes 40-50 % of a trunk call on a mid-size target. A staged caller that
-# already knows the next trunk_seed calls `prefetch_features` while the GPU works on the current one; `_prepare` then takes the finished result
-# instead of featurising itself. The result is used only if the payload it was built from is byte-identical to the one `_prepare` builds.
-# `capture_layouts` / `bond_orders.capture` patch AF3 classmethods process-wide, so every featurisation (prefetched or not) holds one lock.
+# --- CPU featurisation that can run ahead of the GPU ---------------------------------
+# `featurise_input` (+ the layout / bond-order captures) is pure CPU and takes 40-50 %
+# of a trunk call on a mid-size target. A staged caller that already knows the next
+# trunk_seed calls `prefetch_features` while the GPU works on the current one;
+# `_prepare` then takes the finished result instead of featurising itself. The result
+# is used only if the payload it was built from is byte-identical to the one
+# `_prepare` builds. `capture_layouts` / `bond_orders.capture` patch AF3 classmethods
+# process-wide, so every featurisation (prefetched or not) holds one lock.
 _FEATURISE_LOCK = threading.Lock()
 _PREFETCH: dict[tuple, Any] = {}
 _PREFETCH_LOCK = threading.Lock()
-#: set by a staged caller; called once per `_prepare`, right after its featurisation (taken from a prefetch or done here) and before the GPU work
+#: set by a staged caller; called once per `_prepare`, right after its featurisation
+#: (taken from a prefetch or done here) and before the GPU work
 ON_FEATURISED: Any = None
+# seconds the GPU thread was blocked on a prefetch / featurised on its own
 PREFETCH_TIMES: dict[str, float] = {
     "wait": 0.0,
     "featurise_here": 0.0,
-}  # seconds the GPU thread was blocked on a prefetch / featurised on its own
+}
+# how the prefetches were used (a caller can print it)
 PREFETCH_STATS: dict[str, int] = {
     "hit": 0,
     "stale": 0,
     "failed": 0,
     "none": 0,
-}  # how the prefetches were used (a caller can print it)
+}
 
 
-def _payload_key(payload: dict[str, Any], bucketing: bool) -> str:
-    return hashlib.sha1(
+def _payload_key(payload: dict[str, Any], bucketing: bool) -> str:  # noqa: FBT001 - private helper, called positionally
+    return hashlib.sha1(  # noqa: S324 - a cache key, not a security hash
         json.dumps(payload, sort_keys=True).encode() + bytes([bool(bucketing)])
     ).hexdigest()
 
 
-# Features handed over by a DataLoader worker are matched by the CONTENT of the input they were made from, not by re-deriving the AF3 payload
-# (`Input.af3()` rewrites every MSA as a3m text and costs 0.1-3 s per call on the GPU thread). The payload is a pure function of the loaded
-# input (spec + resources), the trunk_seed and the bucketing flag, so a signature of those identifies it.
+# Features handed over by a DataLoader worker are matched by the CONTENT of the input
+# they were made from, not by re-deriving the AF3 payload (`Input.af3()` rewrites every
+# MSA as a3m text and costs 0.1-3 s per call on the GPU thread). The payload is a pure
+# function of the loaded input (spec + resources), the trunk_seed and the bucketing
+# flag, so a signature of those identifies it.
 _PROVIDED: dict[str, tuple] = {}
 
 
-def _spec_signature(target: Any, trunk_seed: int, bucketing: bool) -> str:
-    digest = hashlib.sha1()
+def _spec_signature(target: Any, trunk_seed: int, bucketing: bool) -> str:  # noqa: FBT001 - signature is public API of the worker hand-over
+    digest = hashlib.sha1()  # noqa: S324 - a cache key, not a security hash
     digest.update(
         json.dumps(
             target.spec.model_dump(mode="json"), sort_keys=True, default=str
@@ -88,11 +96,14 @@ def _featurise(
     fold_input: Any,
     ccd: Any,
     database: Any,
-    bucketing: bool,
-    structural: bool,
-    verbose: bool,
+    bucketing: bool,  # noqa: FBT001 - private helper, called positionally
+    structural: bool,  # noqa: FBT001 - private helper, called positionally
+    verbose: bool,  # noqa: FBT001 - private helper, called positionally
 ) -> tuple[list, list, list]:
-    """AF3 featurisation of one input with the structural-layout and bond-order captures: (examples, captures, orders)."""
+    """AF3 featurisation of one input with the structural-layout / bond-order captures.
+
+    Returns (examples, captures, orders).
+    """
     import contextlib
 
     from alphafold3.constants import chemical_component_sets
@@ -102,7 +113,8 @@ def _featurise(
     from foldforge.models.bucketing import TOKEN_SHAPES
 
     _install_reference_date_fallback()
-    # a prefetch thread runs outside `prepare`'s own scope, so it opens the glycan sets itself; a database object without them (a test double) adds none
+    # a prefetch thread runs outside `prepare`'s own scope, so it opens the glycan sets
+    # itself; a database object without them (a test double) adds none
     sets = getattr(database, "chemical_component_sets", None)
     with (
         _FEATURISE_LOCK,
@@ -126,9 +138,17 @@ def _featurise(
 
 
 def _prefetch_job(
-    target: Any, model: str, trunk_seed: int, ccd_db: str, bucketing: bool
+    target: Any,
+    model: str,
+    trunk_seed: int,
+    ccd_db: str,
+    bucketing: bool,  # noqa: FBT001 - submitted positionally to the executor
 ) -> tuple[str, tuple, Any]:
-    """One prefetch, in whichever thread or forked process the executor runs it: payload -> fold input -> featurisation. Module-level so it pickles."""
+    """One prefetch: payload -> fold input -> featurisation.
+
+    Runs in whichever thread or forked process the executor runs it. Module-level so
+    it pickles.
+    """
     from alphafold3.common import folding_input
 
     from foldforge.data.ccd import CCDDatabase
@@ -149,7 +169,7 @@ def _prefetch_job(
             database,
             bucketing,
             SPECS[family or "alphafold3"].structural_tokens,
-            False,
+            False,  # noqa: FBT003 - verbose, positional like the other call
         ),
         (payload if os.environ.get("FF_PREFETCH_DEBUG") else None),
     )
@@ -165,14 +185,16 @@ def prefetch_features(
     msa_depth: int,
     bucketing: bool = True,
 ) -> None:
-    """Start featurising ``inputs`` for ``trunk_seed`` on ``executor`` (``submit(fn, *args)``: a thread pool or a forked process pool; a process
-    pool keeps the work off the GIL the GPU-driving thread needs); the next matching `_prepare` collects it.
+    """Start featurising ``inputs`` for ``trunk_seed`` on ``executor``.
+
+    ``executor`` has ``submit(fn, *args)``: a thread pool or a forked process pool (a
+    process pool keeps the work off the GIL the GPU-driving thread needs); the next
+    matching `_prepare` collects it.
     """
     from foldforge.data.inputs.build import limit_msa
 
-    target = limit_msa(
-        inputs.target, int(msa_depth)
-    )  # the same cap `prepare_prediction` puts on the input `_prepare` featurises
+    # the same cap `prepare_prediction` puts on the input `_prepare` featurises
+    target = limit_msa(inputs.target, int(msa_depth))
     slot = (target.spec.name, int(trunk_seed), bool(bucketing))
     with _PREFETCH_LOCK:
         _PREFETCH[slot] = executor.submit(
@@ -237,13 +259,10 @@ def _log_checkpoint(report: Any, *, verbose: bool) -> None:
         print("Loaded", report, flush=True)  # noqa: T201 - CLI progress
 
 
-def _prepare(args: Request, database: CCDDatabase, runtime: Runtime) -> Iterator[Case]:  # noqa: PLR0915 - case tensors stay alive through the decode closure
-    import contextlib
-
+def _prepare(args: Request, database: CCDDatabase, runtime: Runtime) -> Iterator[Case]:  # noqa: PLR0915, C901, PLR0912 - case tensors stay alive through the decode closure
     import numpy as np
     import torch
     from alphafold3.common import folding_input
-    from alphafold3.data import featurisation
     from alphafold3.model import feat_batch
     from alphafold3.model.atom_layout import atom_layout
 
@@ -265,16 +284,17 @@ def _prepare(args: Request, database: CCDDatabase, runtime: Runtime) -> Iterator
                 ),
                 None,
             )
-    if (
-        provided is not None
-    ):  # a worker featurised exactly this input: no payload, no JSON round trip (specs carry no user CCD)
+    payload: dict[str, Any]
+    # a worker featurised exactly this input: no payload, no JSON round trip (specs
+    # carry no user CCD)
+    if provided is not None:
         import types
 
-        payload = {"name": args.resolved_input.spec.name}
+        payload = {"name": args.resolved_input.spec.name}  # pyright: ignore[reportOptionalMemberAccess]  # provided implies resolved_input
         fold_input = types.SimpleNamespace(
             rng_seeds=[args.trunk_seed],
             user_ccd=None,
-            name=args.resolved_input.spec.name,
+            name=args.resolved_input.spec.name,  # pyright: ignore[reportOptionalMemberAccess]  # provided implies resolved_input
         )
     else:
         payload = (
@@ -290,9 +310,9 @@ def _prepare(args: Request, database: CCDDatabase, runtime: Runtime) -> Iterator
             json.dumps(payload), json_path=args.input
         )
     ccd = database.af3_ccd(user_ccd=fold_input.user_ccd)
-    from foldforge.data.features import bond_orders, structural_tokens
+    from foldforge.data.features import structural_tokens
     from foldforge.models import entry
-    from foldforge.models.bucketing import TOKEN_SHAPES, bucket_af3
+    from foldforge.models.bucketing import bucket_af3
     from foldforge.modules.dense.spec import SPECS
 
     # A family that folds on structural tokens needs the AtomLayouts the
@@ -323,6 +343,8 @@ def _prepare(args: Request, database: CCDDatabase, runtime: Runtime) -> Iterator
     featurised = provided
     if provided is not None:
         PREFETCH_STATS["hit"] += 1
+    # read only where `ahead` is not None, which binds both below
+    ahead_result = ahead_payload = None
     if ahead is not None:
         try:
             _w = time.perf_counter()
@@ -367,14 +389,24 @@ def _prepare(args: Request, database: CCDDatabase, runtime: Runtime) -> Iterator
                     if x.get(k) != y.get(k):
                         la, lb = x[k].splitlines(), y[k].splitlines()
                         j = next(
-                            (n for n, (p, q) in enumerate(zip(la, lb)) if p != q), None
+                            (
+                                n
+                                for n, (p, q) in enumerate(zip(la, lb, strict=False))
+                                if p != q
+                            ),
+                            None,
                         )
-                        print(
-                            f"PREFETCH_STALE_DETAIL seq{s_i} {k}: lines {len(la)} vs {len(lb)}, first diff at line {j}: main={la[j][:60] if j is not None else None!r} prefetch={lb[j][:60] if j is not None else None!r}",
+                        main = la[j][:60] if j is not None else None
+                        prefetch = lb[j][:60] if j is not None else None
+                        print(  # noqa: T201 - FF_PREFETCH_DEBUG diagnostics
+                            f"PREFETCH_STALE_DETAIL seq{s_i} {k}: lines {len(la)} vs "
+                            f"{len(lb)}, first diff at line {j}: main={main!r} "
+                            f"prefetch={prefetch!r}",
                             flush=True,
                         )
-            print(
-                f"PREFETCH_STALE {payload.get('name')} seed={args.trunk_seed}: differs in {diff}",
+            print(  # noqa: T201 - FF_PREFETCH_DEBUG diagnostics
+                f"PREFETCH_STALE {payload.get('name')} seed={args.trunk_seed}: "
+                f"differs in {diff}",
                 flush=True,
             )
     if featurised is None:
@@ -390,12 +422,12 @@ def _prepare(args: Request, database: CCDDatabase, runtime: Runtime) -> Iterator
         PREFETCH_TIMES["featurise_here"] += time.perf_counter() - _f
     examples, captures, orders = featurised
     _tq = time.perf_counter()
-    if (
-        ON_FEATURISED is not None
-    ):  # the caller's cue to start the next trunk_seed's featurisation: the CPU is free again, the GPU is about to be busy
-        ON_FEATURISED(
-            args.msa_depth
-        )  # the depth the caller must cap the next input at, as `prepare_prediction` capped this one
+    # the caller's cue to start the next trunk_seed's featurisation: the CPU is free
+    # again, the GPU is about to be busy
+    if ON_FEATURISED is not None:
+        # the depth the caller must cap the next input at, as `prepare_prediction`
+        # capped this one
+        ON_FEATURISED(args.msa_depth)
     dtype = torch.float32 if args.precision == "fp32" else torch.bfloat16
     model = runtime.load_model()
 
@@ -414,7 +446,9 @@ def _prepare(args: Request, database: CCDDatabase, runtime: Runtime) -> Iterator
             example, bucket_shape = bucket_af3(example)
             evoformer: Any = model.evoformer
             evoformer.foldforge_msa_bucketing = True
-            evoformer.foldforge_msa_presampled = True  # the MSA row draw happens before the (graphed) evoformer call, see Evoformer.sample_msa
+            # the MSA row draw happens before the (graphed) evoformer call, see
+            # Evoformer.sample_msa
+            evoformer.foldforge_msa_presampled = True
         if model.spec.structural_tokens:
             # The structural tokens join the bucketed residues; the engine's token DiT
             # serves only a
@@ -576,9 +610,12 @@ def _prepare(args: Request, database: CCDDatabase, runtime: Runtime) -> Iterator
 def install_msa_feature_cache(max_entries: int = 24) -> None:
     """Memoise AF3's ``extract_msa_features`` by the content of its MSA.
 
-    It is a pure function of (the MSA sequences, the polymer type) and the dominant CPU cost of featurising a target with deep MSAs (a few seconds for
-    20k-row chains). One featurisation calls it several times with the same MSA, and every trunk_seed of a target calls it again with the same MSA.
-    Returned arrays are copies, so nothing downstream can alter a cached entry. Call before forking featuriser processes so they inherit it.
+    It is a pure function of (the MSA sequences, the polymer type) and the dominant CPU
+    cost of featurising a target with deep MSAs (a few seconds for 20k-row chains). One
+    featurisation calls it several times with the same MSA, and every trunk_seed of a
+    target calls it again with the same MSA. Returned arrays are copies, so nothing
+    downstream can alter a cached entry. Call before forking featuriser processes so
+    they inherit it.
     """
     import collections
 
@@ -608,12 +645,15 @@ def install_msa_feature_cache(max_entries: int = 24) -> None:
                     cache.popitem(last=False)
         return hit[0].copy(), hit[1].copy()
 
-    cached._ff_cached = True  # type: ignore[attr-defined]
+    cached._ff_cached = True  # type: ignore[attr-defined]  # noqa: SLF001 - our own marker attribute on the patch
     msa_features.extract_msa_features = cached
 
 
 def provide_features(slot: tuple, key: str, result: tuple) -> None:
-    """Hand `_prepare` an already featurised input (e.g. from a DataLoader worker); it is used only if its payload key matches."""
+    """Hand `_prepare` an already featurised input (e.g. from a DataLoader worker).
+
+    It is used only if its payload key matches.
+    """
     from concurrent.futures import Future
 
     done: Future = Future()
@@ -623,24 +663,31 @@ def provide_features(slot: tuple, key: str, result: tuple) -> None:
 
 
 def provide_features_by_signature(signature: str, result: tuple) -> None:
-    """Hand `_prepare` features built from the input with this `_spec_signature` (a DataLoader worker's); `_prepare` recomputes the signature of its own
-    input and takes them only on a match, without building the AF3 payload at all.
+    """Hand `_prepare` features built from the input with this `_spec_signature`.
+
+    The features are a DataLoader worker's; `_prepare` recomputes the signature of its
+    own input and takes them only on a match, without building the AF3 payload at all.
     """
     with _PREFETCH_LOCK:
         _PROVIDED[signature] = result
 
 
 def _install_reference_date_fallback() -> None:
-    """A CCD component whose ideal coordinates are '?' takes its reference from the experimental model coordinates if its entry is older than
-    ``ref_max_modified_date`` (AF3's data-leakage guard); that date is the featuriser's ``max_template_date``, which is None for "no cutoff", and
-    ``date < None`` raises. None means no restriction, i.e. every entry counts as old enough. (``max_template_date`` itself must stay None: it also
-    filters templates by their release date, and explicitly supplied templates carry a far-future placeholder.)
+    """Let AF3's reference-date guard read a None cutoff as "no restriction".
+
+    A CCD component whose ideal coordinates are '?' takes its reference from the
+    experimental model coordinates if its entry is older than ``ref_max_modified_date``
+    (AF3's data-leakage guard); that date is the featuriser's ``max_template_date``,
+    which is None for "no cutoff", and ``date < None`` raises. None means no
+    restriction, i.e. every entry counts as old enough. (``max_template_date`` itself
+    must stay None: it also filters templates by their release date, and explicitly
+    supplied templates carry a far-future placeholder.)
     """
     import datetime
 
     from alphafold3.model import features
 
-    original = features._get_reference_positions_from_ccd_cif
+    original = features._get_reference_positions_from_ccd_cif  # noqa: SLF001 - patched AF3 internal
     if getattr(original, "_ff_patched", False):
         return
 
@@ -649,5 +696,5 @@ def _install_reference_date_fallback() -> None:
             kwargs["ref_max_modified_date"] = datetime.date.max
         return original(*args, **kwargs)
 
-    patched._ff_patched = True  # type: ignore[attr-defined]
-    features._get_reference_positions_from_ccd_cif = patched
+    patched._ff_patched = True  # type: ignore[attr-defined]  # noqa: SLF001 - our own marker attribute on the patch
+    features._get_reference_positions_from_ccd_cif = patched  # noqa: SLF001 - patched AF3 internal

@@ -1,34 +1,49 @@
-"""trunk_seed x diffusion_seed batching: NT retained trunks, ONE sampler run over NT * A samples.
+"""trunk_seed x diffusion_seed batching: NT retained trunks, ONE sampler run.
 
-Lifted from the end-to-end harness ``miniworld-engine-scratch/tsb/ff_e2e55b.py`` (measured there on Protenix v1 L512: 5 x 5 end to end 7.35 -> 6.82 s on the
-engine branch, 6.44 -> 5.90 s on engine 2.4.0) and generalised: no fixed L, the trunk count comes from the call, nothing is asserted about shapes.
+The one sampler run covers NT * A samples. Lifted from the end-to-end harness
+``miniworld-engine-scratch/tsb/ff_e2e55b.py`` (measured there on Protenix v1 L512:
+5 x 5 end to end 7.35 -> 6.82 s on the engine branch, 6.44 -> 5.90 s on engine 2.4.0)
+and generalised: no fixed L, the trunk count comes from the call, nothing is asserted
+about shapes.
 
-What changes against the per-trunk_seed sampler: the denoiser sees ``[A, NT, ...]`` instead of ``[A, ...]``, the token DiT / the atom transformers run ONCE over the NT
-folds (each fold keeps its own pair, conditioning and atom pair: the engine's grouped-bias attention reads sample s's pair from fold s % nbg) and the rest of the step
-(coordinate scaling, the encoder / decoder glue, the reconstruction) is per fold. The Euler schedule, the augmentation and the realignment are the production
-sampler's own: ``AlphaFold3._sample_diffusion`` is called with ``num_samples = A * NT`` and only the head's forward / conditioning table are swapped for the grouped ones.
+What changes against the per-trunk_seed sampler: the denoiser sees ``[A, NT, ...]``
+instead of ``[A, ...]``, the token DiT / the atom transformers run ONCE over the NT
+folds (each fold keeps its own pair, conditioning and atom pair: the engine's
+grouped-bias attention reads sample s's pair from fold s % nbg) and the rest of the
+step (coordinate scaling, the encoder / decoder glue, the reconstruction) is per fold.
+The Euler schedule, the augmentation and the realignment are the production sampler's
+own: ``AlphaFold3._sample_diffusion`` is called with ``num_samples = A * NT`` and only
+the head's forward / conditioning table are swapped for the grouped ones.
 
-``GroupedUnsupported`` is raised (before anything is sampled) when the diffusion transformers are not stacks of engine blocks (ESMFold2's atom stack) or when this model has no such head; the caller
-then samples the folds one after another.
+``GroupedUnsupported`` is raised (before anything is sampled) when the diffusion
+transformers are not stacks of engine blocks (ESMFold2's atom stack) or when this model
+has no such head; the caller then samples the folds one after another.
 """
 
 from __future__ import annotations
 
 import contextlib
-from collections.abc import Iterator
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import torch
 
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
-class GroupedUnsupported(RuntimeError):
-    """The grouped denoiser cannot serve this model / shape; sample the folds separately."""
+
+class GroupedUnsupported(RuntimeError):  # noqa: N818 - public name callers catch
+    """The grouped denoiser cannot serve this model / shape.
+
+    Sample the folds separately.
+    """
 
 
 class GroupedSampler:
+    """Sample NT retained trunks in ONE sampler run (see the module docstring)."""
+
     def __init__(self, net: Any, *, atoms_grouped: bool = True) -> None:
-        import foldforge.modules.dense.atom_cross_attention as aca
-        import foldforge.modules.dense.diffusion_head as dh
+        import foldforge.modules.dense.atom_cross_attention as aca  # noqa: PLC0415 - dense modules load with the model
+        import foldforge.modules.dense.diffusion_head as dh  # noqa: PLC0415 - dense modules load with the model
 
         self.net, self.aca, self.dh, self.atoms_grouped = net, aca, dh, atoms_grouped
         head = getattr(net, "diffusion_head", None)
@@ -37,14 +52,16 @@ class GroupedSampler:
             or not hasattr(head, "_conditioned")
             or not hasattr(head, "atom_cross_att_encoder")
         ):
-            raise GroupedUnsupported("this model has no dense diffusion head")
+            msg = "this model has no dense diffusion head"
+            raise GroupedUnsupported(msg)
         self.head = head
         self.enc_mod, self.dec_mod = (
             head.atom_cross_att_encoder,
             head.atom_cross_att_decoder,
         )
-        # FoldForge's graph holds the engine blocks directly: each transformer is a stack with a ``blocks`` ModuleList of engine DiT blocks (ESMFold2's atom stack is
-        # FoldForge's own dense transformer: no ``blocks`` -> not groupable).
+        # FoldForge's graph holds the engine blocks directly: each transformer is a
+        # stack with a ``blocks`` ModuleList of engine DiT blocks (ESMFold2's atom
+        # stack is FoldForge's own dense transformer: no ``blocks`` -> not groupable).
         stacks = (
             head.transformer,
             self.enc_mod.atom_transformer_encoder,
@@ -55,19 +72,22 @@ class GroupedSampler:
             and len(s.blocks)
             for s in stacks
         ):
-            raise GroupedUnsupported(
+            msg = (
                 "a diffusion transformer of this model is not a stack of engine blocks"
             )
+            raise GroupedUnsupported(msg)
         self.built_tok, self.built_enc, self.built_dec = (
             list(s.blocks) for s in stacks
         )
         self.state: dict[str, Any] = {}
         self.nt = 0
 
-    # ---- per-fold conditioning, made once per fold ---------------------------------------------------------------------------------------------------
+    # ---- per-fold conditioning, made once per fold -----------------------------------
     def _conditioned(self, tr: Any) -> dict[str, Any]:
-        sb, pc, lite, epoch, km, atom = self.head._conditioned(
-            tr.diffusion.batch, tr.diffusion.embeddings, True
+        sb, pc, lite, epoch, km, atom = self.head._conditioned(  # noqa: SLF001 - the grouped sampler drives the head's own steps
+            tr.diffusion.batch,
+            tr.diffusion.embeddings,
+            True,  # noqa: FBT003 - the head's positional flag, called as the head calls it
         )
         return {
             "batch": tr.diffusion.batch,
@@ -85,9 +105,9 @@ class GroupedSampler:
         per_pass = max(1, dh.MAX_TABLE_ROWS // max(1, base.numel() // base.shape[-1]))
         rows = []
         for lv in levels.split(per_pass):
-            term = head._noise_term(lv)
+            term = head._noise_term(lv)  # noqa: SLF001 - the grouped sampler drives the head's own steps
             term = term.reshape(term.shape[0], *(1,) * (base.ndim - 1), term.shape[-1])
-            rows.append(head._finish_single_conditioning(base[None] + term))
+            rows.append(head._finish_single_conditioning(base[None] + term))  # noqa: SLF001 - the grouped sampler drives the head's own steps
         return rows[0] if len(rows) == 1 else torch.cat(rows)
 
     def _prep(self, cs: list[dict[str, Any]]) -> dict[str, Any]:
@@ -120,7 +140,8 @@ class GroupedSampler:
         )
         return st
 
-    # ---- the encoder / decoder step split around their transformer (copies of AtomCrossAttEncoder.step / AtomCrossAttDecoder.forward) -------------------
+    # ---- the encoder / decoder step split around their transformer -------------------
+    # (copies of AtomCrossAttEncoder.step / AtomCrossAttDecoder.forward)
     def _enc_pre(self, b: int, token_atoms_act: torch.Tensor) -> torch.Tensor:
         c = self.state["cond"][b]
         st = c["atom"]
@@ -131,7 +152,7 @@ class GroupedSampler:
         )
         queries_act = self.enc_mod.atom_positions_to_features(queries_act)
         if self.enc_mod.spec.atom_chiral_features:
-            queries_act = queries_act + self.enc_mod._chiral_features(
+            queries_act = queries_act + self.enc_mod._chiral_features(  # noqa: SLF001 - copy of the encoder's own step
                 c["batch"], token_atoms_act
             )
         queries_act *= st.queries_mask[..., None]
@@ -146,13 +167,14 @@ class GroupedSampler:
         queries_act *= st.queries_mask[..., None]
         skip = queries_act.clone()
         queries_act = self.enc_mod.project_atom_features_for_aggr(queries_act)
-        token_act = aca._pool_engine(
+        token_act = aca._pool_engine(  # noqa: SLF001 - copy of the encoder's own step
             queries_act,
             batch_b.atom_cross_att.queries_to_token_atoms,
             batch_b.predicted_structure_info.atom_mask,
         )
         if token_act is None:
-            raise GroupedUnsupported("the engine pooling did not serve")
+            msg = "the engine pooling did not serve"
+            raise GroupedUnsupported(msg)
         return aca.AtomCrossAttEncoderOutput(
             token_act=token_act,
             skip_connection=skip,
@@ -189,7 +211,7 @@ class GroupedSampler:
         return q
 
     def _dec_post(self, b: int, queries_act: torch.Tensor, enc: Any) -> torch.Tensor:
-        aca, dh = self.aca, self.dh
+        aca = self.aca
         batch_b = self.state["cond"][b]["batch"]
         queries_act *= enc.queries_mask[..., None]
         upd = self.dec_mod.atom_features_to_position_update(
@@ -202,7 +224,7 @@ class GroupedSampler:
     def _atom_stack(
         self, built: list, xs: list[torch.Tensor], cond_all: torch.Tensor
     ) -> list[torch.Tensor]:
-        """The atom transformer blocks ONCE over [A, NT, atoms, C]."""
+        """Run the atom transformer blocks ONCE over [A, NT, atoms, C]."""
         a_, subsets, queries, ch = xs[0].shape
         atoms = subsets * queries
         x = torch.stack([t.reshape(a_, atoms, ch) for t in xs], 1)  # [A, NT, atoms, C]
@@ -227,7 +249,7 @@ class GroupedSampler:
         noise_level: torch.Tensor,
         batch: Any = None,
         embeddings: Any = None,
-        use_conditioning: bool = True,
+        use_conditioning: bool = True,  # noqa: ARG002, FBT001, FBT002 - mirrors the head's forward it replaces
         single_cond: torch.Tensor | None = None,
     ) -> torch.Tensor:
         dh, head, nt = self.dh, self.head, self.nt
@@ -252,9 +274,9 @@ class GroupedSampler:
                 enc = self._enc_post(b, qs[b])
                 encs.append(enc)
                 acts.append(enc.token_act)
-        if (
-            single_cond is None
-        ):  # no sampler graph (graphs off): no precomputed table, so make this step's row here
+        # no sampler graph (graphs off): no precomputed table, so make this step's row
+        # here
+        if single_cond is None:
             single_cond = self._table(batch, embeddings, noise_level.reshape(-1)[:1])[0]
         for b in range(nt):
             tsc = single_cond[b]
@@ -288,15 +310,23 @@ class GroupedSampler:
             )
         return torch.stack(outs, 1).reshape(positions_noisy.shape)
 
-    def _table(self, batch: Any, embeddings: Any, levels: torch.Tensor) -> torch.Tensor:
-        return torch.stack(
-            [self._table_of(c, levels) for c in self.state["cond"]], 1
-        )  # [steps, NT, L, 384]
+    def _table(
+        self,
+        batch: Any,  # noqa: ARG002 - mirrors the head's conditioning_table it replaces
+        embeddings: Any,  # noqa: ARG002 - mirrors the head's conditioning_table it replaces
+        levels: torch.Tensor,
+    ) -> torch.Tensor:
+        # the result is [steps, NT, L, 384]
+        return torch.stack([self._table_of(c, levels) for c in self.state["cond"]], 1)
 
-    # ---- the per-fold state a sampler graph reads (``models.sampler_graph``: one graph per shape, reused over folds) ------------------------------------
+    # ---- the per-fold state a sampler graph reads ------------------------------------
+    # (``models.sampler_graph``: one graph per shape, reused over folds)
     def fold_tree(self) -> dict[str, Any]:
-        """Everything ``_forward`` reads from ``self.state`` (the NT folds' conditioning, the stacked pair / atom pair / key masks), without the folds' epochs
-        (a counter that differs per fold and is read by nothing in a step).
+        """Everything ``_forward`` reads from ``self.state``, without the folds' epochs.
+
+        That is the NT folds' conditioning, the stacked pair / atom pair / key masks;
+        the epochs (a counter that differs per fold and is read by nothing in a step)
+        are left out.
         """
         state = self.state
         return {
@@ -308,7 +338,10 @@ class GroupedSampler:
 
     @contextlib.contextmanager
     def bind_fold(self, tree: dict[str, Any]) -> Iterator[None]:
-        """Run with ``tree`` (a ``fold_tree``, e.g. static clones) as the state the denoiser reads."""
+        """Run with ``tree`` as the state the denoiser reads.
+
+        ``tree`` is a ``fold_tree``, e.g. static clones.
+        """
         saved = dict(self.state)
         self.state.clear()
         self.state.update(tree)
@@ -318,9 +351,12 @@ class GroupedSampler:
             self.state.clear()
             self.state.update(saved)
 
-    # ---- the call ----------------------------------------------------------------------------------------------------------------------------------
+    # ---- the call --------------------------------------------------------------------
     def sample(self, trunks: list[Any], samples: int) -> torch.Tensor:
-        """Positions ``[samples * NT, ...]`` (fold-major inside: row ``a * NT + b`` is sample ``a`` of fold ``b``)."""
+        """Positions ``[samples * NT, ...]``.
+
+        Fold-major inside: row ``a * NT + b`` is sample ``a`` of fold ``b``.
+        """
         net, head = self.net, self.head
         self.nt = len(trunks)
         cs = [self._conditioned(t) for t in trunks]
@@ -329,15 +365,16 @@ class GroupedSampler:
         head.forward, head.conditioning_table = self._forward, self._table
         saved = net.num_samples
         net.num_samples = samples * self.nt
-        net.foldforge_fold_extra = self  # the sampler graph keeps this state in static buffers (fold_tree / bind_fold)
+        # the sampler graph keeps this state in static buffers (fold_tree / bind_fold)
+        net.foldforge_fold_extra = self
         try:
-            out = net._sample_diffusion(
+            out = net._sample_diffusion(  # noqa: SLF001 - the production sampler, run with the grouped head
                 trunks[0].diffusion.batch, trunks[0].diffusion.embeddings
             )
         finally:
             net.num_samples = saved
             net.foldforge_fold_extra = None
             del head.forward, head.conditioning_table
-            head._fold = None
+            head._fold = None  # noqa: SLF001 - drops the head's per-fold cache as the head does
             self.state.clear()
         return out["atom_positions"]

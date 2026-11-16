@@ -8,11 +8,15 @@ alignment needs no SVD (``utils.rigid_align``), the random numbers come from
 generators registered with the graph, and the denoiser runs inside the same capture.
 Nothing in a step reads the device on the host, so one replay is one step.
 
-The graph is captured once per SHAPE, not once per fold (``SamplerGraphCache``, engine request R26). The first fold of a shape is captured on a
-static clone of its per-fold tensors (the batch, the fold's conditioning, the atom state); every later fold of that shape is written into those
-buffers with ``copy_``, the engine rebuilds the hoisted tables made from them in place (``StaticTables.refresh``), and the same graph replays.
-Without a cache (training, an engine without the refresh API, a shape larger than the cache budget) the graph is built for ONE fold: it reads
-the fold's conditioning tensors directly (they stand for the life of the sampler call), so a sampler call builds its own and drops it.
+The graph is captured once per SHAPE, not once per fold (``SamplerGraphCache``, engine
+request R26). The first fold of a shape is captured on a static clone of its per-fold
+tensors (the batch, the fold's conditioning, the atom state); every later fold of that
+shape is written into those buffers with ``copy_``, the engine rebuilds the hoisted
+tables made from them in place (``StaticTables.refresh``), and the same graph replays.
+Without a cache (training, an engine without the refresh API, a shape larger than the
+cache budget) the graph is built for ONE fold: it reads the fold's conditioning tensors
+directly (they stand for the life of the sampler call), so a sampler call builds its
+own and drops it.
 """
 
 from __future__ import annotations
@@ -22,7 +26,7 @@ import functools
 import itertools
 import weakref
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import torch
 
@@ -69,10 +73,10 @@ class _Glue:
         self._served: dict[tuple, bool] = {}
 
     def serves(self, flat: torch.Tensor) -> bool:
-        """Whether both modules accept coordinates like ``flat`` (checked once per layout).
+        """Whether both modules accept coordinates like ``flat``.
 
-        Placeholder tensors (``torch.empty``) stand for the random draws, so the check
-        consumes no random numbers.
+        Checked once per layout. Placeholder tensors (``torch.empty``) stand for the
+        random draws, so the check consumes no random numbers.
         """
         key = (tuple(flat.shape), flat.dtype, flat.device)
         if key not in self._served:
@@ -111,7 +115,7 @@ def _rigid_glue(
     config = sampler.config
     if rigid_mask is None or config.batched_sigma or coordinate_dims != 2:  # noqa: PLR2004 - dense token and atom axes
         return None
-    from foldforge.modules.engine.sampler_ops import (
+    from foldforge.modules.engine.sampler_ops import (  # noqa: PLC0415 - engine glue loads only when a sampler call needs it
         augment_align,
     )
 
@@ -172,7 +176,9 @@ def build_step(
         sigma_next: torch.Tensor,
         row: torch.Tensor | None,
     ) -> torch.Tensor:
-        mask = glue.mask
+        # called only when `glue` is not None (see `step`)
+        fused = cast("_Glue", glue)
+        mask = fused.mask
         batch = coords.shape[0]
         flat = coords.reshape(batch, -1, 3)
         frame = torch.randn((batch, 2, 3), device=coords.device, dtype=coords.dtype)
@@ -180,7 +186,7 @@ def build_step(
         noise = torch.randn(
             flat.shape, device=coords.device, dtype=coords.dtype, generator=generator
         )
-        noisy, scalars = glue.augment(
+        noisy, scalars = fused.augment(
             flat, mask, frame, shift, noise, sigma, sigma_next
         )
         noisy = noisy.view(coords.shape)
@@ -189,7 +195,7 @@ def build_step(
             if row is None
             else denoise(noisy, scalars[0], row)
         )
-        flat_out = glue.align(
+        flat_out = fused.align(
             noisy.view(batch, -1, 3),
             denoised.reshape(batch, -1, 3).to(torch.float32),
             mask,
@@ -239,7 +245,8 @@ def build_step(
         dt = _expand(sigma_next - sigma_hat, noisy)
         return noisy + config.step_scale * dt * direction
 
-    step.glue = glue  # the fused glue modules (or None): the per-shape cache reads the mask it made
+    # the fused glue modules (or None): the per-shape cache reads the mask it made
+    step.glue = glue  # pyright: ignore[reportFunctionMemberAccess]  # attribute on the step function, read with getattr
     return step
 
 
@@ -262,7 +269,8 @@ class _CapturedStep:
         # the step's result is carried into ``coords`` inside the graph
         self.pair = torch.stack([sigma, sigma_next]).detach().clone()
         self.sigma, self.sigma_next = self.pair[0], self.pair[1]
-        #: the engine's handle of the hoisted tables this capture reads (``None`` on an engine without the refresh API)
+        #: the engine's handle of the hoisted tables this capture reads (``None`` on an
+        #: engine without the refresh API)
         self.tables = None
         #: reserved bytes the capture itself took (its private pool)
         self.pool_bytes = 0
@@ -282,7 +290,7 @@ class _CapturedStep:
             torch.cuda.synchronize()
             torch.cuda.set_rng_state(default_state, device)
             if generator is not None:
-                generator.set_state(generator_state)
+                generator.set_state(generator_state)  # pyright: ignore[reportArgumentType]  # read above whenever generator is not None
             self.graph = torch.cuda.CUDAGraph()
             if generator is not None:
                 self.graph.register_generator_state(generator)
@@ -301,14 +309,14 @@ class _CapturedStep:
         at ``pair`` = (sigma, sigma_next).
         """
         if row is not None:
-            self.row.copy_(row)
+            self.row.copy_(row)  # pyright: ignore[reportOptionalMemberAccess]  # a step captured with a row is replayed with one
         self.pair.copy_(pair)
         self.graph.replay()
         _bump(self.scopes, "replays")
 
     @property
     def static_bytes(self) -> int:
-        """Bytes of the buffers this step owns (iterate, sigma pair, conditioning row)."""
+        """Bytes of this step's own buffers (iterate, sigma pair, conditioning row)."""
         return sum(
             t.numel() * t.element_size()
             for t in (self.coords, self.pair, self.row)
@@ -317,24 +325,32 @@ class _CapturedStep:
 
 
 def _bump(counters: object, name: str, amount: int = 1) -> None:
-    """Add to a counter of the sampler scope (a scope without it, e.g. a test's, is left alone)."""
+    """Add to a counter of the sampler scope.
+
+    A scope without it (e.g. a test's) is left alone.
+    """
     if hasattr(counters, name):
         setattr(counters, name, getattr(counters, name) + amount)
 
 
-# ---- one graph per shape, reused over folds (FoldForge side of engine request R26) ------------------------------------------------------------------
+# ---- one graph per shape, reused over folds ------------------------------------------
+# (FoldForge side of engine request R26)
 
 
 @dataclasses.dataclass
 class Fold:
-    """What a sampler call hands over so that its graph can serve later folds of the same shape.
+    """What a sampler call hands over so its graph can serve later folds of a shape.
 
-    ``tree()``: every per-fold object the step reads, as a tree of tensors (dict / list / tuple / dataclass of them, plus plain values);
-    evaluated after ``conditioning`` made the fold's tables. ``pieces(tree)``: ``(denoise, augment, align, rigid_mask)`` reading ``tree`` (the
-    static clone of the first fold of a shape). ``bind(tree)``: a context in which the model's own per-fold state is ``tree`` (the capture
-    runs inside it). ``casts()``: ``(source, copy)`` pairs of tensors made OUTSIDE the graph from a leaf of the tree (a dtype cast of the pair
-    the token DiT stack keeps): ``copy`` is rewritten from ``source`` before each fold. ``model``: the root of the engine modules (the engine's
-    refresh is limited to the tables its modules made).
+    ``tree()``: every per-fold object the step reads, as a tree of tensors (dict /
+    list / tuple / dataclass of them, plus plain values); evaluated after
+    ``conditioning`` made the fold's tables. ``pieces(tree)``: ``(denoise, augment,
+    align, rigid_mask)`` reading ``tree`` (the static clone of the first fold of a
+    shape). ``bind(tree)``: a context in which the model's own per-fold state is
+    ``tree`` (the capture runs inside it). ``casts()``: ``(source, copy)`` pairs of
+    tensors made OUTSIDE the graph from a leaf of the tree (a dtype cast of the pair
+    the token DiT stack keeps): ``copy`` is rewritten from ``source`` before each fold.
+    ``model``: the root of the engine modules (the engine's refresh is limited to the
+    tables its modules made).
     """
 
     model: torch.nn.Module
@@ -347,7 +363,10 @@ class Fold:
 
 
 def _unique_part(t: torch.Tensor) -> tuple[slice, ...] | None:
-    """The index of the part of an expanded tensor that owns its storage (size 1 along every stride-0 dim), or None for an ordinary tensor."""
+    """Return the index of the part of an expanded tensor that owns its storage.
+
+    That part has size 1 along every stride-0 dim; None for an ordinary tensor.
+    """
     if not any(
         stride == 0 and size > 1
         for size, stride in zip(t.shape, t.stride(), strict=True)
@@ -360,8 +379,11 @@ def _unique_part(t: torch.Tensor) -> tuple[slice, ...] | None:
 
 
 def _static_clone(t: torch.Tensor) -> torch.Tensor:
-    """A tensor of fixed identity holding t's values, with t's expanded (stride 0) dims kept expanded: the engine reads a shared mask / conditioning
-    by its stride 0 (one fold's mask served to the NT folds of a grouped call) and takes a slower general path for a dense copy.
+    """Clone t into a tensor of fixed identity, its expanded (stride 0) dims kept.
+
+    The engine reads a shared mask / conditioning by its stride 0 (one fold's mask
+    served to the NT folds of a grouped call) and takes a slower general path for a
+    dense copy.
     """
     t = t.detach()
     keep = _unique_part(t)
@@ -369,7 +391,10 @@ def _static_clone(t: torch.Tensor) -> torch.Tensor:
 
 
 class _Entry:
-    """One captured sampler step with the static buffers it reads (the per-shape cache's value)."""
+    """One captured sampler step with the static buffers it reads.
+
+    The per-shape cache's value.
+    """
 
     def __init__(
         self,
@@ -379,14 +404,16 @@ class _Entry:
         casts: list[tuple[torch.Tensor, torch.Tensor]],
         mask_copies: list[tuple[torch.Tensor, torch.Tensor]],
     ) -> None:
-        self.captured = captured
+        # declared without None: `release` clears them on an entry never read again
+        self.captured: _CapturedStep = captured
         self.tree = tree  # keeps the static tensors the graph reads alive
         self.keepalive: Any = None
-        #: entries of the engine's caches at the capture (see ``engine.capture.hold_caches``)
+        #: entries of the engine's caches at the capture (see
+        #: ``engine.capture.hold_caches``)
         self.engine_held: Any = None
-        self.leaves = leaves
-        self.casts = casts
-        self.mask_copies = mask_copies
+        self.leaves: list[torch.Tensor] = leaves
+        self.casts: list[tuple[torch.Tensor, torch.Tensor]] = casts
+        self.mask_copies: list[tuple[torch.Tensor, torch.Tensor]] = mask_copies
         self.tables = captured.tables
         seen: set[int] = set()
         static = 0
@@ -395,41 +422,58 @@ class _Entry:
             if pointer not in seen:
                 seen.add(pointer)
                 static += leaf.untyped_storage().nbytes()
-        #: bytes this entry keeps on the GPU: the static fold, the iterate buffers and the graph's pool
+        #: bytes this entry keeps on the GPU: the static fold, the iterate buffers and
+        #: the graph's pool
         self.retained = static + captured.static_bytes + captured.pool_bytes
 
-    def load(self, leaves: list[torch.Tensor], model: torch.nn.Module) -> int:
-        """Write another fold of the same shape into the static buffers and refresh the engine's tables made from them; returns the tables refreshed."""
+    def load(
+        self,
+        leaves: list[torch.Tensor],
+        model: torch.nn.Module,  # noqa: ARG002 - part of the call signature
+    ) -> int:
+        """Write another fold of the same shape into the static buffers.
+
+        Also refreshes the engine's tables made from them; returns the tables
+        refreshed.
+        """
         if len(leaves) != len(self.leaves):
-            raise _LayoutMismatch(
-                f"{len(leaves)} tensors for {len(self.leaves)} static buffers"
-            )
+            msg = f"{len(leaves)} tensors for {len(self.leaves)} static buffers"
+            raise _LayoutMismatch(msg)
         for dst, src in zip(self.leaves, leaves, strict=True):
             keep = _unique_part(dst)
             if keep is None:
                 dst.copy_(src)
-            else:  # an expanded (stride 0) leaf: its storage is the unique part, written through the size-1 view
+            else:
+                # an expanded (stride 0) leaf: its storage is the unique part,
+                # written through the size-1 view
                 dst[keep].copy_(src[keep])
         for source, copy in self.casts:
             copy.copy_(source.unsqueeze(0))
         for dst, src in self.mask_copies:
             dst.copy_(src.reshape(-1))
-        # the handle selects this graph's tables (a ``root=`` filter selects by the module that made them, which is not always under the model)
+        # the handle selects this graph's tables (a ``root=`` filter selects by the
+        # module that made them, which is not always under the model)
         return 0 if self.tables is None else int(self.tables.refresh())
 
     def release(self) -> None:
-        """Drop the engine's refresh records and the buffers (the graph and its pool go with the last reference)."""
+        """Drop the engine's refresh records and the buffers.
+
+        The graph and its pool go with the last reference.
+        """
         if self.tables is not None:
             self.tables.release()
             self.tables = None
-        self.captured = None
-        self.tree = self.leaves = self.casts = self.mask_copies = self.keepalive = (
-            self.engine_held
-        ) = None
+        # a released entry is never read again
+        self.captured = None  # pyright: ignore[reportAttributeAccessIssue]  # cleared on release
+        self.tree = self.leaves = self.casts = self.mask_copies = None  # pyright: ignore[reportAttributeAccessIssue]  # cleared on release
+        self.keepalive = self.engine_held = None
 
 
-class _LayoutMismatch(RuntimeError):
-    """A fold does not fit the static buffers of the graph chosen for it (never raised for a key that matched: the caller recaptures)."""
+class _LayoutMismatch(RuntimeError):  # noqa: N818 - private name kept as it is
+    """A fold does not fit the static buffers of the graph chosen for it.
+
+    Never raised for a key that matched: the caller recaptures.
+    """
 
 
 def _release_entries(entries: dict) -> None:
@@ -438,19 +482,25 @@ def _release_entries(entries: dict) -> None:
     entries.clear()
 
 
-#: Every live cache, so that a process-wide event (the engine's weight caches are cleared) can drop all of them.
+#: Every live cache, so that a process-wide event (the engine's weight caches are
+#: cleared) can drop all of them.
 _LIVE_CACHES: weakref.WeakSet = weakref.WeakSet()
 
 
 def release_all_caches() -> None:
-    """Drop every cached sampler graph of this process (called before the engine's weight caches are cleared: a graph reads those entries)."""
+    """Drop every cached sampler graph of this process.
+
+    Called before the engine's weight caches are cleared: a graph reads those entries.
+    """
     for cache in list(_LIVE_CACHES):
         cache.clear()
 
 
 def weights_token(model: torch.nn.Module) -> tuple[int, int]:
-    """``(hash, count)`` of the identity (address) and in-place version of every parameter and buffer: changes when a weight is replaced or
-    updated in place. Host metadata only.
+    """``(hash, count)`` of the identity and version of every parameter and buffer.
+
+    The identity is the address, the version the in-place one: the token changes when
+    a weight is replaced or updated in place. Host metadata only.
     """
     items = []
     for tensor in itertools.chain(model.parameters(), model.buffers()):
@@ -465,14 +515,19 @@ def weights_token(model: torch.nn.Module) -> tuple[int, int]:
 class SamplerGraphCache:
     """Captured sampler steps keyed by shape, least recently used first.
 
-    A graph captured on one fold serves every later fold of the same shape: the fold's tensors are written into the graph's static buffers and
-    the engine rebuilds the hoisted tables made from them (``StaticTables.refresh``), instead of capturing again (two eager warm-up steps and
-    the capture, 44-92 ms). Memory: at most ``max_entries`` graphs and ``budget_fraction`` of the device's memory in all (each graph keeps a
-    private pool and its static fold); a capture that finds less than 1.5x the previous capture's reserved memory free first drops the least
-    recently used graphs; an entry larger than the whole budget is used for its fold and dropped. The weights are part of the contract: when
-    any parameter or buffer changed (address or in-place version) every graph is dropped.
+    A graph captured on one fold serves every later fold of the same shape: the fold's
+    tensors are written into the graph's static buffers and the engine rebuilds the
+    hoisted tables made from them (``StaticTables.refresh``), instead of capturing
+    again (two eager warm-up steps and the capture, 44-92 ms). Memory: at most
+    ``max_entries`` graphs and ``budget_fraction`` of the device's memory in all (each
+    graph keeps a private pool and its static fold); a capture that finds less than
+    1.5x the previous capture's reserved memory free first drops the least recently
+    used graphs; an entry larger than the whole budget is used for its fold and
+    dropped. The weights are part of the contract: when any parameter or buffer
+    changed (address or in-place version) every graph is dropped.
 
-    ``counters`` is the object whose attributes count (``cache_hits``, ``cache_misses``, ``cache_evictions``, ...; missing ones are skipped).
+    ``counters`` is the object whose attributes count (``cache_hits``,
+    ``cache_misses``, ``cache_evictions``, ...; missing ones are skipped).
     """
 
     def __init__(
@@ -486,8 +541,9 @@ class SamplerGraphCache:
         self.counters = counters
         self.max_entries = max_entries
         self.budget_fraction = budget_fraction
-        #: a fold whose tensors are larger than this is not cached: its static copy would sit next to the fold (the memory a big fold needs), and the
-        #: capture it saves is a few percent of such a forward
+        #: a fold whose tensors are larger than this is not cached: its static copy
+        #: would sit next to the fold (the memory a big fold needs), and the capture it
+        #: saves is a few percent of such a forward
         self.max_fold_bytes = max_fold_bytes
         self.entries: OrderedDict[Any, _Entry] = OrderedDict()
         self.weights: tuple[int, int] | None = None
@@ -496,16 +552,21 @@ class SamplerGraphCache:
         _LIVE_CACHES.add(self)
         weakref.finalize(self, _release_entries, self.entries)
 
-    # -- bookkeeping (no device access) ------------------------------------------------------------------------------------------------------------
+    # -- bookkeeping (no device access) ---------------------------------------------
     def bump(self, name: str, amount: int = 1) -> None:
+        """Add to a counter of ``counters``."""
         _bump(self.counters, name, amount)
 
     @property
     def retained_bytes(self) -> int:
+        """Bytes all entries keep on the GPU."""
         return sum(entry.retained for entry in self.entries.values())
 
     def lookup(self, key: Any) -> _Entry | None:
-        """The entry of ``key`` (now the most recently used), counting the hit or the miss."""
+        """Return the entry of ``key`` (now the most recently used).
+
+        Counts the hit or the miss.
+        """
         entry = self.entries.get(key)
         if entry is None:
             self.bump("cache_misses")
@@ -515,6 +576,7 @@ class SamplerGraphCache:
         return entry
 
     def drop(self, key: Any) -> None:
+        """Remove and release the entry of ``key``, if any."""
         entry = self.entries.pop(key, None)
         if entry is not None:
             entry.release()
@@ -529,9 +591,11 @@ class SamplerGraphCache:
         return True
 
     def insert(self, key: Any, entry: _Entry, budget_bytes: int) -> bool:
-        """Keep ``entry`` unless it alone exceeds the budget; then drop the least recently used ones until the entries fit the count and the bytes.
+        """Keep ``entry`` unless it alone exceeds the budget.
 
-        Returns whether the entry was kept (the caller releases it after its fold when not).
+        Then drop the least recently used ones until the entries fit the count and the
+        bytes. Returns whether the entry was kept (the caller releases it after its
+        fold when not).
         """
         if entry.retained > budget_bytes:
             self.bump("uncached")
@@ -544,6 +608,7 @@ class SamplerGraphCache:
         return True
 
     def clear(self) -> None:
+        """Release every entry and forget the weights token."""
         for entry in list(self.entries.values()):
             entry.release()
         self.entries.clear()
@@ -551,23 +616,27 @@ class SamplerGraphCache:
         self.last_capture_bytes = 0
 
     def check_weights(self, model: torch.nn.Module) -> None:
-        """Drop every graph when the model's weights are not the ones they were captured with."""
+        """Drop every graph when the model's weights are not the ones captured with."""
         token = weights_token(model)
         if token != self.weights:
             if self.entries:
                 self.clear()
             self.weights = token
 
-    # -- device (memory) ---------------------------------------------------------------------------------------------------------------------------
+    # -- device (memory) ------------------------------------------------------------
     @property
     def budget_bytes(self) -> int:
+        """``budget_fraction`` of the current device's total memory, in bytes."""
         return int(
             self.budget_fraction
             * torch.cuda.get_device_properties(torch.cuda.current_device()).total_memory
         )
 
     def make_room(self) -> None:
-        """Before a capture: with less than 1.5x the previous capture's reserved memory free, drop the least recently used graphs."""
+        """Before a capture: drop the least recently used graphs when memory is short.
+
+        Short means less than 1.5x the previous capture's reserved memory free.
+        """
         if not self.entries or not self.last_capture_bytes:
             return
         need = int(1.5 * self.last_capture_bytes)
@@ -579,7 +648,10 @@ class SamplerGraphCache:
             torch.cuda.empty_cache()
 
     def build(self, make: Callable[[], _Entry]) -> _Entry:
-        """Capture a new entry: room first; an out-of-memory capture drops every cached graph and tries once more."""
+        """Capture a new entry: room first.
+
+        An out-of-memory capture drops every cached graph and tries once more.
+        """
         self.make_room()
         reserved = torch.cuda.memory_reserved()
         try:
@@ -617,10 +689,13 @@ def _fold_key(
     coords: torch.Tensor,
     row: torch.Tensor | None,
     generator: torch.Generator | None,
-    glue_on: bool,
+    glue_on: bool,  # noqa: FBT001 - private helper, called positionally
 ) -> tuple:
-    """The per-shape key: the structure and layout of the fold's tensors, the engine's own signature of them, the iterate and conditioning row,
-    the sampler's configuration, and the precision state a capture bakes in.
+    """Build the per-shape key.
+
+    The key holds the structure and layout of the fold's tensors, the engine's own
+    signature of them, the iterate and conditioning row, the sampler's configuration,
+    and the precision state a capture bakes in.
     """
     return (
         structure,
@@ -635,7 +710,11 @@ def _fold_key(
 
 
 def _cache_of(scopes: object, fold: Fold | None) -> SamplerGraphCache | None:
-    """The scope's cache when this call may use it: a fold was handed over, inference, an engine with the refresh API."""
+    """Return the scope's cache when this call may use it.
+
+    It may when a fold was handed over, in inference, on an engine with the refresh
+    API.
+    """
     cache = getattr(scopes, "cache", None)
     if fold is None or cache is None or torch.is_grad_enabled():
         if cache is not None and fold is not None:
@@ -645,7 +724,7 @@ def _cache_of(scopes: object, fold: Fold | None) -> SamplerGraphCache | None:
 
 
 def _capture_entry(
-    cache: SamplerGraphCache,
+    cache: SamplerGraphCache,  # noqa: ARG001 - part of the call signature
     fold: Fold,
     sampler: EulerSampler,
     tree: Any,
@@ -658,7 +737,10 @@ def _capture_entry(
     scopes: Callable[[], contextlib.AbstractContextManager],
     use_glue: bool,
 ) -> _Entry:
-    """Capture the step on a STATIC clone of the fold (the caller's tensors stay the caller's; later folds are written into the clone)."""
+    """Capture the step on a STATIC clone of the fold.
+
+    The caller's tensors stay the caller's; later folds are written into the clone.
+    """
     marks = engine_capture.cache_marks()
     static = _map(tree, _static_clone)
     _, leaves = _flatten(static)
@@ -683,14 +765,16 @@ def _capture_entry(
         and rigid_mask is not None
         and glue.mask.data_ptr() != rigid_mask.data_ptr()
     ):
-        mask_copies.append(
-            (glue.mask, rigid_mask)
-        )  # the float flat mask the glue made from the atom mask: a copy outside the graph
-    # only copies of a leaf of this fold's tree (a stale entry of some other call is not ours to rewrite)
+        # the float flat mask the glue made from the atom mask: a copy outside the
+        # graph
+        mask_copies.append((glue.mask, rigid_mask))
+    # only copies of a leaf of this fold's tree (a stale entry of some other call is
+    # not ours to rewrite)
     casts = [cast for cast in fold.casts() if any(cast[0] is leaf for leaf in leaves)]
     entry = _Entry(captured, static, leaves, casts, mask_copies)
-    # the engine glue modules (they own device buffers the graph reads); NOT the closures over the fold (they hold the caller's embeddings: the
-    # previous fold's tensors must not stay alive in the cache)
+    # the engine glue modules (they own device buffers the graph reads); NOT the
+    # closures over the fold (they hold the caller's embeddings: the previous fold's
+    # tensors must not stay alive in the cache)
     entry.keepalive = glue
 
     entry.engine_held = engine_capture.hold_new(marks)
@@ -712,7 +796,10 @@ def _sample_cached(
     scopes: Callable[[], contextlib.AbstractContextManager],
     use_glue: bool,
 ) -> torch.Tensor | None:
-    """Run the steps through the per-shape cache; ``None`` when this fold cannot use it (the caller then runs the per-fold capture)."""
+    """Run the steps through the per-shape cache.
+
+    ``None`` when this fold cannot use it (the caller then runs the per-fold capture).
+    """
     tree = fold.tree()
     try:
         structure, leaves = _flatten(tree)
@@ -728,9 +815,10 @@ def _sample_cached(
     entry = cache.lookup(key)
     if entry is not None:
         try:
-            refreshed = entry.load(leaves, fold.model)
+            entry.load(leaves, fold.model)
         except (engine_capture.stale_error(), _LayoutMismatch):
-            # a weight or an input layout changed under the graph: capture this fold again (once)
+            # a weight or an input layout changed under the graph: capture this
+            # fold again, once
             cache.drop(key)
             cache.bump("stale_recaptures")
             entry = None
@@ -754,9 +842,8 @@ def _sample_cached(
                 use_glue=use_glue,
             )
         )
-        if (
-            entry.tables is None
-        ):  # no engine handle: nothing could refresh it for another fold
+        # no engine handle: nothing could refresh it for another fold
+        if entry.tables is None:
             kept = False
             cache.bump("uncached")
         else:
@@ -798,13 +885,15 @@ def sample(
     ...]``); the step then reads its row as ``denoise(coords, sigma_hat, row)``
     instead of making it per step.
 
-    ``fold`` (a :class:`Fold`) and ``scopes.cache`` (a :class:`SamplerGraphCache`) make the graph a per-shape one: captured on the first fold of
-    a shape, served to every later fold by writing the fold into the graph's static buffers. Without them the graph is built for this fold and
-    dropped (``denoise`` / ``augment`` / ``align`` / ``rigid_mask`` then read the fold's own tensors).
+    ``fold`` (a :class:`Fold`) and ``scopes.cache`` (a :class:`SamplerGraphCache`)
+    make the graph a per-shape one: captured on the first fold of a shape, served to
+    every later fold by writing the fold into the graph's static buffers. Without them
+    the graph is built for this fold and dropped (``denoise`` / ``augment`` /
+    ``align`` / ``rigid_mask`` then read the fold's own tensors).
     """
-    if getattr(
-        scopes, "inline", False
-    ):  # the training rollout graph (train/rollout_graph.py): the loop runs in the caller's capture
+    # the training rollout graph (train/rollout_graph.py): the loop runs in the
+    # caller's capture
+    if getattr(scopes, "inline", False):
         return sample_inline(
             sampler,
             denoise,
@@ -830,7 +919,7 @@ def sample(
         use_glue = rigid_mask is not None
         result = _sample_cached(
             cache,
-            fold,
+            fold,  # pyright: ignore[reportArgumentType]  # _cache_of returns a cache only with a fold
             sampler,
             coords,
             table,
@@ -866,7 +955,7 @@ def sample(
                 scopes=scopes,
             )
         captured(pairs[index], row)
-    return captured.coords.clone()
+    return captured.coords.clone()  # pyright: ignore[reportOptionalMemberAccess]  # a schedule has at least one step
 
 
 def sample_inline(
@@ -883,10 +972,14 @@ def sample_inline(
     dtype: torch.dtype = torch.float32,
     conditioning: Callable[[torch.Tensor], torch.Tensor] | None = None,
 ) -> torch.Tensor:
-    """The whole trajectory as one straight-line sequence of ops: no host read (the churn branch is a ``where`` on the device scalars of
-    :func:`build_step`), no capture of its own and no cache. A caller that captures (the training mini-rollout, ``train/rollout_graph.py``) or
-    runs it eagerly gets the same arithmetic. ``conditioning`` is evaluated here, so a capture around this call records it too: every replay
-    makes the conditioning table from the weights of that moment.
+    """Run the whole trajectory as one straight-line sequence of ops.
+
+    No host read (the churn branch is a ``where`` on the device scalars of
+    :func:`build_step`), no capture of its own and no cache. A caller that captures
+    (the training mini-rollout, ``train/rollout_graph.py``) or runs it eagerly gets
+    the same arithmetic. ``conditioning`` is evaluated here, so a capture around this
+    call records it too: every replay makes the conditioning table from the weights of
+    that moment.
     """
     coords = sigmas[0] * torch.randn(
         shape, device=device, dtype=dtype, generator=generator

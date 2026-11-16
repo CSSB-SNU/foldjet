@@ -46,8 +46,8 @@ def reject_removed_environment() -> None:
         raise RuntimeError(message)
 
 
-#: Parts of the engine install that ``engine.skip`` can leave out: ``engine_modules`` puts every engine module on its ``pytorch``
-#: backend (what a CPU load does anyway).
+#: Parts of the engine install that ``engine.skip`` can leave out: ``engine_modules``
+#: puts every engine module on its ``pytorch`` backend (what a CPU load does anyway).
 ENGINE_SKIP_KEYS = ("engine_modules",)
 
 
@@ -63,8 +63,10 @@ class EngineConfig(BaseModel):
     #: An op the backend has no kernel for: ``fallback`` runs the PyTorch reference and
     #: logs one line, ``error`` raises.
     unsupported: Literal["fallback", "error"] = "fallback"
-    #: Residual engine modules whose every parameter is ~1e-37 (Protenix v1's confidence head, 35 / 30 trunk blocks) return their input at
-    #: inference instead of running (``modules.dense.dead``); ``False`` runs them all (a bit-exact A/B, and what training needs).
+    #: Residual engine modules whose every parameter is ~1e-37 (Protenix v1's
+    #: confidence head, 35 / 30 trunk blocks) return their input at inference instead
+    #: of running (``modules.dense.dead``); ``False`` runs them all (a bit-exact A/B,
+    #: and what training needs).
     skip_dead_modules: bool = True
 
     @field_validator("ops")
@@ -130,13 +132,16 @@ class ExecutionConfig(BaseModel):
     # scope=trunk only: the sampler step (re-pose, re-noise, denoise, align, update) as
     # one graph.
     sampler_graph: bool = True
-    # The sampler graph is captured once per shape and served to every later fold of that shape (engine request R26; needs an engine with
-    # ``StaticTables.refresh``, else every fold is captured on its own). Off: one capture per fold.
+    # The sampler graph is captured once per shape and served to every later fold of
+    # that shape (engine request R26; needs an engine with ``StaticTables.refresh``,
+    # else every fold is captured on its own). Off: one capture per fold.
     sampler_graph_cache: bool = True
-    # Largest share of the device's memory the cached sampler graphs (private pools + static folds) may hold together; a graph larger than
-    # that is used for its fold and dropped.
+    # Largest share of the device's memory the cached sampler graphs (private pools +
+    # static folds) may hold together; a graph larger than that is used for its fold
+    # and dropped.
     sampler_graph_cache_fraction: float = Field(default=0.3, gt=0.0, le=1.0)
-    # A fold whose tensors (batch, conditioning, atom state) are larger than this is not cached: the graph's static copy would sit next to the fold.
+    # A fold whose tensors (batch, conditioning, atom state) are larger than this is
+    # not cached: the graph's static copy would sit next to the fold.
     sampler_graph_cache_max_fold_bytes: int = Field(default=2 << 30, ge=0)
     # scope=trunk only: which trunk-side callables get a graph of their own.
     trunk_sites: tuple[
@@ -152,9 +157,11 @@ class ExecutionConfig(BaseModel):
     # one per call at large token counts; ConfidenceHead.sample_chunk). 1 is the
     # sequential path.
     confidence_sample_chunk: int | None = Field(default=None, ge=1)
-    # Read the memory pool of each captured graph (torch.cuda.memory_snapshot) to size its retained bytes. Off: that number is only read by
-    # `release_large_graphs`, which nothing calls, and in a process that captured a few hundred graphs the snapshot call crashed with heap
-    # corruption (segfault in whichever Python code ran next).
+    # Read the memory pool of each captured graph (torch.cuda.memory_snapshot) to size
+    # its retained bytes. Off: that number is only read by `release_large_graphs`,
+    # which nothing calls, and in a process that captured a few hundred graphs the
+    # snapshot call crashed with heap corruption (segfault in whichever Python code
+    # ran next).
     graph_pool_snapshot: bool = False
 
     @model_validator(mode="after")

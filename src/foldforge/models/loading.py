@@ -142,8 +142,9 @@ def load_checkpoint(  # noqa: C901, PLR0912, PLR0915 - one explicit checkpoint l
     ``engine_skip`` and ``dense_spec_override`` are the config's debugging aids;
     both default to nothing. ``backend`` supplies every op, while ``engine_ops``
     pins individual ops elsewhere. ``unsupported`` determines whether a missing
-    backend kernel runs the PyTorch reference (``fallback``) or raises (``error``). ``skip_dead_modules`` flags the numerically dead
-    residual modules of the checkpoint so inference skips them (``modules.dense.dead``).
+    backend kernel runs the PyTorch reference (``fallback``) or raises (``error``).
+    ``skip_dead_modules`` flags the numerically dead residual modules of the
+    checkpoint so inference skips them (``modules.dense.dead``).
     """
     from foldforge.models.config.runtime import reject_removed_environment
 
@@ -199,11 +200,13 @@ def load_checkpoint(  # noqa: C901, PLR0912, PLR0915 - one explicit checkpoint l
 
     if not miniworld.is_native(checkpoint):
         message = (
-            f"{name} loads the miniworld checkpoint format; {checkpoint.name} is not one (a released blob?). "
+            f"{name} loads the miniworld checkpoint format; {checkpoint.name} is not "
+            "one (a released blob?). "
             f"Convert it once: foldforge weights convert {name}"
         )
         raise ValueError(message)
-    # a load fills every engine parameter straight away: skip the engine modules' own initialisation
+    # a load fills every engine parameter straight away: skip the engine modules' own
+    # initialisation
     with skip_engine_init():
         model = architecture(
             num_recycles=recycles,
@@ -243,15 +246,19 @@ def load_checkpoint(  # noqa: C901, PLR0912, PLR0915 - one explicit checkpoint l
     model = install_engine(
         model,
         device,
-        modules=torch.device(device).type
-        == "cuda",  # every engine backend (cueq, cuda, triton too) needs its modules applied; a plan.uses("miniworld", "anthropic") test here ran cueq / cuda / triton on pytorch silently
+        # every engine backend (cueq, cuda, triton too) needs its modules applied; a
+        # plan.uses("miniworld", "anthropic") test here ran cueq / cuda / triton on
+        # pytorch silently
+        modules=torch.device(device).type == "cuda",
         skip=engine_skip,
         plan=plan,
     )
-    # af3_default: the diffusion head runs with the autocast disabled (fp32 activations; `diffusion_autocast`); the TF32 flag below only matters
-    # when execution.tf32 allows TF32 tensor cores (models.execution.Execution).
+    # af3_default: the diffusion head runs with the autocast disabled (fp32
+    # activations; `diffusion_autocast`); the TF32 flag below only matters when
+    # execution.tf32 allows TF32 tensor cores (models.execution.Execution).
     set_tf32_policy(model, tf32=False, diffusion_tf32=precision_policy == "af3_default")
-    # Residual modules whose every parameter is ~1e-37 return their input at inference (the kits skip them too); `engine.skip_dead_modules: false` runs them all.
+    # Residual modules whose every parameter is ~1e-37 return their input at inference
+    # (the kits skip them too); `engine.skip_dead_modules: false` runs them all.
     from foldforge.modules.dense.dead import clear_dead, mark_dead
 
     dead_modules: dict[str, int] = {}
@@ -278,7 +285,10 @@ def load_checkpoint(  # noqa: C901, PLR0912, PLR0915 - one explicit checkpoint l
                 {str(p.dtype) for p in getattr(model, "evoformer", model).parameters()}
             ),
             diffusion_parameter_dtype=sorted(
-                {str(p.dtype) for p in model.diffusion_head.parameters()}
+                {
+                    str(p.dtype)
+                    for p in cast("torch.nn.Module", model.diffusion_head).parameters()
+                }
             ),
         )
     setattr(model, "foldforge_load_report", report)  # noqa: B010 - runtime metadata

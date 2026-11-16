@@ -44,10 +44,13 @@ def from_atom_confidence(output: Any) -> Prediction:
 def predicted_tm(
     tm_adjusted_pae: torch.Tensor, pair_mask: torch.Tensor
 ) -> torch.Tensor:
-    """AlphaFold 3's pTM / ipTM from a TM-adjusted PAE ``[S, N, N]`` (the expected ``1 / (1 + (e / d0)^2)`` of the PAE bins, ``d0`` from the
-    number of tokens, global or interface) and the pairs that count ``[N, N]``: for every alignment token ``i`` the mean over the counted
-    ``j``, then the best ``i``. ``pair_mask`` is every valid pair for pTM, the pairs of different chains for ipTM
-    (``alphafold3.model.confidences.predicted_tm_score``).
+    """AlphaFold 3's pTM / ipTM from a TM-adjusted PAE ``[S, N, N]``.
+
+    The input is the expected ``1 / (1 + (e / d0)^2)`` of the PAE bins (``d0`` from
+    the number of tokens, global or interface), and ``pair_mask`` the pairs that count
+    ``[N, N]``: for every alignment token ``i`` the mean over the counted ``j``, then
+    the best ``i``. ``pair_mask`` is every valid pair for pTM, the pairs of different
+    chains for ipTM (``alphafold3.model.confidences.predicted_tm_score``).
     """
     mask = pair_mask.to(tm_adjusted_pae.dtype)
     normed = mask / (1e-8 + mask.sum(-1, keepdim=True))
@@ -61,8 +64,10 @@ def from_af3(
     asym_id: torch.Tensor | None = None,
     token_mask: torch.Tensor | None = None,
 ) -> Prediction:
-    """AF3 dense atom scores to token pLDDT in [0,1] and flat coordinates; pTM and (with more than one chain) ipTM from the head's TM-adjusted
-    PAE when the chain index and the token mask of the fold are given.
+    """AF3 dense atom scores to token pLDDT in [0,1] and flat coordinates.
+
+    pTM and (with more than one chain) ipTM come from the head's TM-adjusted PAE when
+    the chain index and the token mask of the fold are given.
     """
     scores = output["predicted_lddt"].float() / 100.0
     mask = token_atom_mask.to(scores.device).float()

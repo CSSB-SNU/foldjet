@@ -208,7 +208,8 @@ def finish_case(
         "trunk_passes": request.recycles,
         "recycles": request.recycles,
         "autocast": False,
-        # the default keeps the call every caller / test double already knows; only the grouped path relaxes the compiled-graph requirement
+        # the default keeps the call every caller / test double already knows; only the
+        # grouped path relaxes the compiled-graph requirement
         **(
             execution.report()
             if require_compile
@@ -368,11 +369,15 @@ def sample_diffusion_group(
     execution: Execution,
     atoms_grouped: bool = True,
 ) -> list[PredictionResult]:
-    """NT retained trunks sampled TOGETHER (trunk_seed x diffusion_seed batching, ``models.grouped``); one result per trunk, built like `sample_diffusion`'s.
+    """Sample NT retained trunks TOGETHER (trunk_seed x diffusion_seed batching).
 
-    The folds share ``request`` (samples, steps, diffusion seed); each result carries its own trunk_seed. The noise of the NT * A samples comes from ONE stream seeded with
-    ``request.diffusion_seed``, so a fold's samples are not the ones a separate `sample_diffusion` of that fold would draw: same distribution, other draws.
-    Raises ``GroupedUnsupported`` before sampling anything when the model cannot be grouped.
+    See ``models.grouped``; one result per trunk, built like `sample_diffusion`'s.
+    The folds share ``request`` (samples, steps, diffusion seed); each result carries
+    its own trunk_seed. The noise of the NT * A samples comes from ONE stream seeded
+    with ``request.diffusion_seed``, so a fold's samples are not the ones a separate
+    `sample_diffusion` of that fold would draw: same distribution, other draws.
+    Raises ``GroupedUnsupported`` before sampling anything when the model cannot be
+    grouped.
     """
     from dataclasses import replace
 
@@ -381,7 +386,7 @@ def sample_diffusion_group(
     sampler = getattr(model, "foldforge_grouped_sampler", None)
     if sampler is None or sampler.atoms_grouped != atoms_grouped:
         sampler = GroupedSampler(model, atoms_grouped=atoms_grouped)
-        model.foldforge_grouped_sampler = sampler
+        model.foldforge_grouped_sampler = sampler  # pyright: ignore[reportArgumentType]  # Module.__setattr__ stub types only Tensor/Module values
     database = CCDDatabase(request.ccd_db)
     start = time.monotonic()
     with (
@@ -392,7 +397,8 @@ def sample_diffusion_group(
         records[0].rng.restore()
         bind_sampling_seed(model, request.diffusion_seed)
         execution.begin_request()
-        # the model's entry points run under its activation autocast (master precision); this staged entry bypasses them, so it opens the same scope
+        # the model's entry points run under its activation autocast (master
+        # precision); this staged entry bypasses them, so it opens the same scope
         from foldforge.modules.engine.configure import activation_autocast
 
         with torch.no_grad(), activation_autocast(model):
@@ -410,7 +416,9 @@ def sample_diffusion_group(
                         "mask": torch.tile(mask[None], (a, 1)),
                     }
                 )
-                outputs.append(model._predict_heads(tr.batch, tr.embeddings, samples))
+                outputs.append(
+                    model._predict_heads(tr.batch, tr.embeddings, samples)  # noqa: SLF001 - staged entry reuses the model's head step
+                )
             torch.cuda.synchronize()
         elapsed = time.monotonic() - start
         return [
@@ -430,7 +438,9 @@ def sample_diffusion_group(
                     "trunk_passes": request.recycles,
                     "grouped_trunks": nt,
                 },
-                require_compile=False,  # the grouped denoiser replaces the compiled per-fold step, so "a compiled graph executed" cannot be required
+                # the grouped denoiser replaces the compiled per-fold step, so "a
+                # compiled graph executed" cannot be required
+                require_compile=False,
             )
             for rec, output in zip(records, outputs, strict=True)
         ]

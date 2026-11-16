@@ -39,7 +39,7 @@ class ExecutionPolicy(Protocol):
     graph_pool_snapshot: bool
 
 
-def _map(value, tensor_fn):
+def _map(value: Any, tensor_fn: Callable[[torch.Tensor], torch.Tensor]) -> Any:
     if isinstance(value, torch.Tensor):
         return tensor_fn(value)
     if dataclasses.is_dataclass(value) and not isinstance(value, type):
@@ -101,16 +101,16 @@ def _flatten(value):
                 tuple(
                     (
                         f.name,
-                        None if f.name == "input_shape" else visit(getattr(v, f.name)),
+                        None if f.name == "input_shape" else visit(getattr(v, f.name)),  # noqa: F821 - see `del visit`
                     )
                     for f in dataclasses.fields(v)
                     if f.init
                 ),
             )
         if isinstance(v, dict):
-            return (type(v), tuple((k, visit(x)) for k, x in v.items()))
+            return (type(v), tuple((k, visit(x)) for k, x in v.items()))  # noqa: F821 - see `del visit`
         if isinstance(v, (tuple, list)):
-            return (type(v), tuple(visit(x) for x in v))
+            return (type(v), tuple(visit(x) for x in v))  # noqa: F821 - see `del visit`
         if v is None or isinstance(
             v, (str, int, float, bool, torch.dtype, torch.device)
         ):
@@ -120,6 +120,7 @@ def _flatten(value):
     result = visit(value)
     # The recursive closure references its own cell: a reference cycle that keeps `tensors` (every graph input, e.g. the cold forward's pair tensors:
     # 3 GiB at boltz2 n = 16) alive until a full collection, whose timing then shifts the peak memory between engine versions.
+    # (ruff then reports the recursive `visit(...)` calls as F821: the scoped noqa above says why.)
     del visit
     return result, tensors
 
@@ -159,7 +160,9 @@ class _StaticScopes(contextlib.AbstractContextManager):
         return handle
 
     def __exit__(self, *exc):
-        stack, self._stack = self._stack, None
+        # set by __enter__, which always runs first
+        stack = cast("contextlib.ExitStack", self._stack)
+        self._stack = None
         return stack.__exit__(*exc)
 
 
@@ -212,7 +215,7 @@ class _Graph:
         # features)
         # needs no copy. Identity, not address: a freed tensor's address is reused at
         # once.
-        self._copied = [None] * len(self.inputs)
+        self._copied: list[tuple[torch.Tensor, Any] | None] = [None] * len(self.inputs)
 
     def __call__(self, args, kwargs):
         _, values = _flatten((args, kwargs))
@@ -457,7 +460,7 @@ def _autocast_entries(model: torch.nn.Module) -> None:
                 return _inner(*args, **kwargs)
 
         setattr(model, name, entry)
-    model.foldforge_autocast_entries = True
+    model.foldforge_autocast_entries = True  # pyright: ignore[reportArgumentType]  # Module.__setattr__ stub types only Tensor/Module values
 
 
 class Execution:
@@ -485,9 +488,8 @@ class Execution:
             diffusion_tf32=bool(getattr(model, "reference_precision", False)),
         )
         _autocast_entries(model)
-        model.foldforge_release_fold_state = (
-            self.release_fold_state
-        )  # called by `AlphaFold3.run_trunk` before a new fold's trunk
+        # called by `AlphaFold3.run_trunk` before a new fold's trunk
+        model.foldforge_release_fold_state = self.release_fold_state  # pyright: ignore[reportArgumentType]  # Module.__setattr__ stub types only Tensor/Module values
         self.autocast_scopes = getattr(model, "reference_autocast_scopes", [])
         head = getattr(model, "confidence_head", None)
         if head is not None and hasattr(head, "sample_chunk_override"):
@@ -541,7 +543,7 @@ class Execution:
         if config.cuda_graph and config.scope == "trunk" and config.sampler_graph:
             # The whole sampler step goes in one graph (see `models.sampler_graph`).
             self.sampler_scope = SamplerScope(self.wrappers[0], config)
-        model.foldforge_sampler_scope = self.sampler_scope
+        model.foldforge_sampler_scope = self.sampler_scope  # pyright: ignore[reportArgumentType]  # Module.__setattr__ stub types only Tensor/Module values
 
     def release_fold_state(self) -> None:
         """Release the PREVIOUS fold's diffusion state before the next fold's trunk runs, so the trunk does not run next to it.
