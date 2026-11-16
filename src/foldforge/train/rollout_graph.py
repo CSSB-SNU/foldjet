@@ -54,7 +54,7 @@ from typing import TYPE_CHECKING, Any, cast
 import torch
 
 from foldforge.models import sampler_graph
-from foldforge.models.execution import _flatten, _map
+from foldforge.models.execution import _flatten, _map, own_cublas_workspace
 from foldforge.modules.engine import capture as engine_capture
 
 if TYPE_CHECKING:
@@ -394,6 +394,7 @@ class RolloutGraph:
         reserved = torch.cuda.memory_reserved()
         with (
             _no_autocast_cache(),
+            own_cublas_workspace(),
             torch.cuda.graph(graph, capture_error_mode="thread_local"),
         ):
             out = rollout_body(model, batch, embeddings, steps)

@@ -63,6 +63,7 @@ from typing import TYPE_CHECKING, Any
 
 import torch
 
+from foldforge.models.execution import own_cublas_workspace
 from foldforge.modules.engine import capture as engine_capture
 from foldforge.train import compile as train_compile
 from foldforge.train import rollout_graph
@@ -494,6 +495,7 @@ class StepGraph:
         if cfg.compile and not self.entries:
             with (
                 _mode(model, "capture"),
+                own_cublas_workspace(),
                 torch.cuda.graph(
                     torch.cuda.CUDAGraph(), capture_error_mode="thread_local"
                 ),
@@ -518,6 +520,7 @@ class StepGraph:
         try:
             with (
                 _mode(model, "capture"),
+                own_cublas_workspace(),
                 torch.cuda.graph(
                     graph, pool=self.pool, capture_error_mode="thread_local"
                 ),

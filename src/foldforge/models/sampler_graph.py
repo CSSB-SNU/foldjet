@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import torch
 
-from foldforge.models.execution import _flatten, _map
+from foldforge.models.execution import _flatten, _map, own_cublas_workspace
 from foldforge.modules.engine import capture as engine_capture
 
 if TYPE_CHECKING:
@@ -295,7 +295,9 @@ class _CapturedStep:
             if generator is not None:
                 self.graph.register_generator_state(generator)
             reserved = torch.cuda.memory_reserved()
-            with torch.cuda.graph(self.graph):
+            # a cuBLAS workspace of its own: a cached graph outlives the graphs captured
+            # before it (see ``own_cublas_workspace``)
+            with own_cublas_workspace(), torch.cuda.graph(self.graph):
                 self.out = step(self.coords, self.sigma, self.sigma_next, self.row)
                 self.coords.copy_(self.out)
             torch.cuda.synchronize()

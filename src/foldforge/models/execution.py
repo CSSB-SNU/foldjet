@@ -30,6 +30,33 @@ if TYPE_CHECKING:
 RELEASE_MIN_BYTES = 2 << 30
 
 
+def _clear_cublas_workspaces() -> None:
+    # torch's own capture code (inductor cudagraph trees) calls it
+    clear = getattr(torch._C, "_cuda_clearCublasWorkspaces", None)
+    if clear is not None:
+        clear()
+
+
+@contextlib.contextmanager
+def own_cublas_workspace():
+    """Around a CUDA-graph capture: the graph gets a cuBLAS / cuBLASLt workspace of its own, in its own memory pool.
+
+    torch keeps one cuBLAS workspace per (handle, stream) for the life of the process and hands it to every later call on that stream, captured
+    or not. The first capture on the (shared) capture stream allocates it from THAT graph's private pool, and every later capture bakes the same
+    address in. Once that first graph is dropped (an LRU eviction, ``release_fold``, a caller freeing its graphs) and its pool goes back to the
+    driver (``torch.cuda.empty_cache``, which every capture runs), the others still read and write the freed block: a per-shape sampler graph
+    replayed after the trunk graphs of an earlier size were dropped gave non-finite coordinates (the block reused by another tensor) or a
+    segmentation fault inside ``cuGraphLaunch`` (the block unmapped). Clearing the workspaces before the capture makes the capture allocate its
+    own (from its pool, freed with it); clearing them after it keeps the next capture, or an eager call, from inheriting it. The pattern of
+    torch's own CUDA-graph trees (``torch._inductor.cudagraph_trees.clear_cublas_manager``). Every capture site of FoldForge uses it: a graph
+    captured without it could again share a workspace that the clearing here returns to a pool."""
+    _clear_cublas_workspaces()
+    try:
+        yield
+    finally:
+        _clear_cublas_workspaces()
+
+
 class ExecutionPolicy(Protocol):
     """Configuration supplied by the terminal application."""
 
@@ -191,7 +218,7 @@ class _Graph:
             torch.cuda.current_stream().wait_stream(stream)
             torch.cuda.synchronize()
             self.graph = torch.cuda.CUDAGraph()
-            with torch.cuda.graph(self.graph):
+            with own_cublas_workspace(), torch.cuda.graph(self.graph):
                 self.output = fn(*self.args, **self.kwargs)
             torch.cuda.synchronize()
         # Freed capture temporaries remain reserved in this private pool. Live

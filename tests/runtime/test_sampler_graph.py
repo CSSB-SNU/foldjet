@@ -230,3 +230,53 @@ def test_encoder_pooling_equals_gather_relu_mask_mean():
     assert got is not None
     assert got.dtype == torch.bfloat16
     torch.testing.assert_close(got, expected, rtol=2**-7, atol=2**-7)
+
+
+def test_a_graph_does_not_write_into_the_cublas_workspace_of_a_dropped_graph():
+    """Every FoldForge capture gets its own cuBLAS workspace (``own_cublas_workspace``).
+
+    torch keeps one workspace per (handle, stream); the first capture on the capture
+    stream allocates it from its own pool and later captures bake the same address in.
+    Dropping that first graph (an evicted trunk graph) and emptying the cache then left
+    the per-shape sampler graph writing into memory other tensors were given (FoldBench:
+    non-finite coordinates, or a segmentation fault in ``cuGraphLaunch``)."""
+    import gc
+
+    from foldforge.models.execution import own_cublas_workspace
+
+    torch.manual_seed(0)
+    # a long reduction: the GEMM splits it and reduces through the workspace
+    a = torch.randn(64, 1 << 16, device="cuda")
+    b = torch.randn(1 << 16, 64, device="cuda")
+    bias = torch.randn(64, device="cuda", dtype=torch.bfloat16)
+
+    def body() -> tuple[torch.Tensor, torch.Tensor]:
+        return a @ b, torch.addmm(bias, a.bfloat16(), b.bfloat16())
+
+    expected = body()
+
+    def capture() -> tuple[torch.cuda.CUDAGraph, tuple[torch.Tensor, torch.Tensor]]:
+        graph = torch.cuda.CUDAGraph()
+        side = torch.cuda.Stream()
+        side.wait_stream(torch.cuda.current_stream())
+        with torch.cuda.stream(side):
+            body()
+        torch.cuda.current_stream().wait_stream(side)
+        torch.cuda.synchronize()
+        with own_cublas_workspace(), torch.cuda.graph(graph):
+            out = body()
+        return graph, out
+
+    first, first_out = capture()
+    second, second_out = capture()
+    del first, first_out
+    gc.collect()
+    torch.cuda.empty_cache()
+    # whatever the dropped graph held is handed out again
+    fillers = [torch.full((1 << 20,), 7.0, device="cuda") for _ in range(256)]
+    for _ in range(3):
+        second.replay()
+    torch.cuda.synchronize()
+    assert all(bool((f == 7.0).all()) for f in fillers)
+    torch.testing.assert_close(second_out[0], expected[0], rtol=1e-3, atol=1e-2)
+    torch.testing.assert_close(second_out[1], expected[1], rtol=2e-2, atol=1.0)
