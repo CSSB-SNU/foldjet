@@ -1,19 +1,28 @@
-"""Diffusion training loss on the dense atom layout ``[res, atoms_per_token]`` (AF3 SI Eq. 2-5, EDM weighting).
+"""Diffusion training loss on the dense atom layout ``[res, atoms_per_token]``.
 
-The weighted rigid alignment (Horn's quaternion, GPU tensor ops only, no SVD / host sync), the GPU-side rotation and the GPU-side noise
-draw are copied from MiniWorld's ``training/phase2_graph_safe.py`` (``weighted_align_gs``, ``rot_trans_gs``, ``sample_noise_gs``,
-``cal_loss_gs``, ``bond_loss_gs``) so the same step can later be captured into a CUDA graph (phase 3). The head of this graph returns the
-preconditioned prediction ``x_pred = c_skip * x_noisy + c_out * update`` directly (``reconstruct_coordinates``), so the loss is taken on it.
+AF3 SI Eq. 2-5, EDM weighting.
+
+The weighted rigid alignment (Horn's quaternion, GPU tensor ops only, no SVD / host
+sync), the GPU-side rotation and the GPU-side noise draw are copied from MiniWorld's
+``training/phase2_graph_safe.py`` (``weighted_align_gs``, ``rot_trans_gs``,
+``sample_noise_gs``, ``cal_loss_gs``, ``bond_loss_gs``) so the same step can later be
+captured into a CUDA graph (phase 3). The head of this graph returns the
+preconditioned prediction ``x_pred = c_skip * x_noisy + c_out * update`` directly
+(``reconstruct_coordinates``), so the loss is taken on it.
 """
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import torch
 
-from foldforge.train.config import EDMNoise
+if TYPE_CHECKING:
+    from foldforge.train.config import EDMNoise
 
 
 def quat_to_rotmat(q: torch.Tensor) -> torch.Tensor:
+    """Rotation matrices ``[..., 3, 3]`` of the unit quaternions ``q`` ``[..., 4]``."""
     w, x, y, z = q.unbind(-1)
     return torch.stack(
         [
@@ -31,12 +40,18 @@ def quat_to_rotmat(q: torch.Tensor) -> torch.Tensor:
     ).reshape(*q.shape[:-1], 3, 3)
 
 
-def horn_rot(H: torch.Tensor, squarings: int = 24) -> torch.Tensor:
-    """R_col maximising tr(R_col H) (H_ab = sum_i w x_a y_b, so R_col x ~ y): top eigenvector of Horn's 4x4 matrix by repeated squaring."""
-    Sxx, Sxy, Sxz = H[:, 0, 0], H[:, 0, 1], H[:, 0, 2]
-    Syx, Syy, Syz = H[:, 1, 0], H[:, 1, 1], H[:, 1, 2]
-    Szx, Szy, Szz = H[:, 2, 0], H[:, 2, 1], H[:, 2, 2]
-    N = torch.stack(
+def horn_rot(
+    H: torch.Tensor,  # noqa: N803 - math notation (public keyword)
+    squarings: int = 24,
+) -> torch.Tensor:
+    """R_col maximising tr(R_col H) (H_ab = sum_i w x_a y_b, so R_col x ~ y).
+
+    The top eigenvector of Horn's 4x4 matrix by repeated squaring.
+    """
+    Sxx, Sxy, Sxz = H[:, 0, 0], H[:, 0, 1], H[:, 0, 2]  # noqa: N806 - math notation
+    Syx, Syy, Syz = H[:, 1, 0], H[:, 1, 1], H[:, 1, 2]  # noqa: N806 - math notation
+    Szx, Szy, Szz = H[:, 2, 0], H[:, 2, 1], H[:, 2, 2]  # noqa: N806 - math notation
+    N = torch.stack(  # noqa: N806 - math notation
         [
             torch.stack([Sxx + Syy + Szz, Syz - Szy, Szx - Sxz, Sxy - Syx], -1),
             torch.stack([Syz - Szy, Sxx - Syy - Szz, Sxy + Syx, Szx + Sxz], -1),
@@ -46,14 +61,12 @@ def horn_rot(H: torch.Tensor, squarings: int = 24) -> torch.Tensor:
         -2,
     )
     nrm = N.flatten(-2).norm(dim=-1)[:, None, None].clamp_min(1e-12)
-    M = (
-        N + nrm * torch.eye(4, device=H.device, dtype=H.dtype)
-    ) / nrm  # eigenvalues in [0, 2]
+    # the eigenvalues then lie in [0, 2]
+    M = (N + nrm * torch.eye(4, device=H.device, dtype=H.dtype)) / nrm  # noqa: N806 - math notation
     for _ in range(squarings):
-        M = (M.unsqueeze(-1) * M.unsqueeze(-3)).sum(
-            -2
-        )  # M @ M in exact fp32 (no tensor cores)
-        M = M / M.flatten(-2).norm(dim=-1)[:, None, None].clamp_min(1e-30)
+        # M @ M in exact fp32 (no tensor cores)
+        M = (M.unsqueeze(-1) * M.unsqueeze(-3)).sum(-2)  # noqa: N806 - math notation
+        M = M / M.flatten(-2).norm(dim=-1)[:, None, None].clamp_min(1e-30)  # noqa: N806 - math notation
     u0 = torch.arange(1, 5, device=H.device, dtype=H.dtype)
     q = (M * u0).sum(-1)
     q = q / q.norm(dim=-1, keepdim=True).clamp_min(1e-30)
@@ -64,7 +77,10 @@ def horn_rot(H: torch.Tensor, squarings: int = 24) -> torch.Tensor:
 def weighted_align(
     x: torch.Tensor, y: torch.Tensor, weight: torch.Tensor
 ) -> torch.Tensor:
-    """``x`` rigidly aligned onto ``y`` with per-atom ``weight`` (``[..., L, 3]``, ``[..., L]``); no gradient."""
+    """Return ``x`` rigidly aligned onto ``y`` with per-atom ``weight``.
+
+    ``x`` / ``y`` ``[..., L, 3]``, ``weight`` ``[..., L]``; no gradient.
+    """
     shape, length = x.shape, x.shape[-2]
     x, y, w = (
         x.reshape(-1, length, 3),
@@ -76,14 +92,17 @@ def weighted_align(
     xc = ((x * w).sum(dim=-2) / w_sum).unsqueeze(-2)
     yc = ((y * w).sum(dim=-2) / w_sum).unsqueeze(-2)
     x_cen, y_cen = x - xc, y - yc
-    H = ((x_cen * w).unsqueeze(-1) * y_cen.unsqueeze(-2)).sum(dim=-3)
-    R = horn_rot(H).transpose(-1, -2)  # row-vector convention
+    H = ((x_cen * w).unsqueeze(-1) * y_cen.unsqueeze(-2)).sum(dim=-3)  # noqa: N806 - math notation
+    # row-vector convention
+    R = horn_rot(H).transpose(-1, -2)  # noqa: N806 - math notation
     aligned = (x_cen.unsqueeze(-1) * R.unsqueeze(-3)).sum(dim=-2) + yc
     return aligned.reshape(shape)
 
 
 def sample_sigma(noise: EDMNoise, n: int, device: torch.device) -> torch.Tensor:
-    """EDM noise levels ``sigma_data * exp(P_mean + P_std * N(0,1))`` clamped to ``[sigma_min, sigma_max] * sigma_data`` ... as MiniWorld's
+    """EDM noise levels ``sigma_data * exp(P_mean + P_std * N(0,1))``.
+
+    Clamped to ``[sigma_min, sigma_max] * sigma_data`` ... as MiniWorld's
     ``sample_noise_gs`` (uniform -> ndtri on the GPU).
     """
     u = torch.rand(n, device=device)
@@ -100,7 +119,10 @@ def sample_sigma(noise: EDMNoise, n: int, device: torch.device) -> torch.Tensor:
 def random_rotation_translation(
     x: torch.Tensor, translation_noise: float
 ) -> torch.Tensor:
-    """Per-sample uniform rotation (normalised Gaussian quaternion) and Gaussian translation of ``x`` ``[S, ..., 3]``."""
+    """Apply a per-sample random rigid motion to ``x`` ``[S, ..., 3]``.
+
+    A uniform rotation (normalised Gaussian quaternion) and a Gaussian translation.
+    """
     shape = x.shape
     flat = x.reshape(shape[0], -1, 3)
     q = torch.randn(shape[0], 4, device=x.device, dtype=x.dtype)
@@ -119,7 +141,11 @@ def atom_weights(
     alpha_rna: float,
     alpha_ligand: float,
 ) -> torch.Tensor:
-    """AF3 Eq. 4 per-atom weight ``1 + a_dna * is_dna + a_rna * is_rna + a_ligand * is_ligand`` on ``[res, atoms]`` (token flags broadcast to atoms)."""
+    """AF3 Eq. 4 per-atom weight on ``[res, atoms]``.
+
+    ``1 + a_dna * is_dna + a_rna * is_rna + a_ligand * is_ligand`` (token flags
+    broadcast to atoms).
+    """
     token = (
         1.0
         + alpha_dna * is_dna.float()
@@ -139,10 +165,12 @@ def diffusion_mse(
     atom_weight: torch.Tensor,
     sigma_data: float,
 ) -> torch.Tensor:
-    """EDM-weighted, atom-weighted MSE between the prediction and the ground truth aligned onto it (AF3 Eq. 2-4).
+    """EDM-weighted, atom-weighted MSE (AF3 Eq. 2-4).
 
-    ``x_pred`` / ``x0`` ``[S, res, atoms, 3]`` (``x0`` augmented like the noisy input), ``sigma`` ``[S]``, ``atom_mask`` / ``atom_weight``
-    ``[res, atoms]``. The alignment uses the same atom weights as the MSE and carries no gradient.
+    Between the prediction and the ground truth aligned onto it. ``x_pred`` / ``x0``
+    ``[S, res, atoms, 3]`` (``x0`` augmented like the noisy input), ``sigma`` ``[S]``,
+    ``atom_mask`` / ``atom_weight`` ``[res, atoms]``. The alignment uses the same atom
+    weights as the MSE and carries no gradient.
     """
     s = x_pred.shape[0]
     pred = x_pred.reshape(s, -1, 3).float()
@@ -152,13 +180,13 @@ def diffusion_mse(
     pred_safe = torch.where(mask[..., None], pred, 0.0)
     truth_safe = torch.where(mask[..., None], truth, 0.0)
     align_weight = (
-        torch.where(mask.any(dim=-1, keepdim=True), mask, True).float() * weight_atom
+        torch.where(mask.any(dim=-1, keepdim=True), mask, True).float()  # noqa: FBT003 - torch.where fill value
+        * weight_atom
     )
     truth_aligned = weighted_align(truth_safe, pred_safe.detach(), align_weight)
     sq = torch.where(mask[..., None], (pred_safe - truth_aligned).pow(2), 0.0)
-    lam = (
-        (sigma**2 + sigma_data**2) / (sigma * sigma_data) ** 2
-    ).float()  # EDM loss weight
+    # EDM loss weight
+    lam = ((sigma**2 + sigma_data**2) / (sigma * sigma_data) ** 2).float()
     numerator = (sq * weight_atom[..., None]).sum(dim=(-2, -1)) * lam
     denominator = mask.sum(dim=-1).clamp_min(1).float() * 3
     return (numerator / denominator).mean()
@@ -171,8 +199,11 @@ def bond_loss(
     bond_pairs: torch.Tensor | None,
     sigma_data: float,
 ) -> torch.Tensor:
-    """AF3 Eq. 5: MSE of bonded-atom-pair distances, per sample weighted by the EDM weight. ``bond_pairs`` ``[P, 4]`` int
-    ``(token_i, atom_i, token_j, atom_j)`` on the dense layout, ``-1`` rows are padding; ``None`` (no bonds) gives 0.
+    """AF3 Eq. 5: MSE of bonded-atom-pair distances.
+
+    Per sample weighted by the EDM weight. ``bond_pairs`` ``[P, 4]`` int
+    ``(token_i, atom_i, token_j, atom_j)`` on the dense layout, ``-1`` rows are
+    padding; ``None`` (no bonds) gives 0.
     """
     if bond_pairs is None or bond_pairs.numel() == 0:
         return x_pred.sum() * 0.0
@@ -184,8 +215,9 @@ def bond_loss(
         return torch.where(valid[:, None], delta, 1.0).norm(dim=-1)
 
     count = valid.sum().clamp_min(1).float()
+    # one value per sample, [S]
     per_sample = ((distance(x_pred.float()) - distance(x0.float())).pow(2) * valid).sum(
         dim=-1
-    ) / count  # [S]
+    ) / count
     lam = ((sigma**2 + sigma_data**2) / (sigma * sigma_data) ** 2).float()
     return (lam * per_sample).mean()

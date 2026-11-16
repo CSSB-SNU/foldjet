@@ -1,9 +1,14 @@
-"""Per-phase GPU timing and memory of a training step (off unless enabled: no event is created, no sync is made).
+"""Per-phase GPU timing and memory of a training step.
 
-``PhaseTimer.phase(name)`` times a block on the CURRENT stream (the mini-rollout of the side-stream mode records on its own stream) and, with
-``memory=True``, records the peak allocated / reserved memory of the block (``reset_peak_memory_stats`` at its start); ``mark`` / ``between`` time
-the gap between two recorded points (the backward is split at the moment the gradient reaches the trunk output) and ``mem_point`` records the peak
-since the previous point. ``result()`` synchronises once and returns ``{name: ms}`` plus ``{name + ":peak_gib"}`` / ``":start_gib"`` entries.
+Off unless enabled: no event is created, no sync is made.
+
+``PhaseTimer.phase(name)`` times a block on the CURRENT stream (the mini-rollout of
+the side-stream mode records on its own stream) and, with ``memory=True``, records the
+peak allocated / reserved memory of the block (``reset_peak_memory_stats`` at its
+start); ``mark`` / ``between`` time the gap between two recorded points (the backward
+is split at the moment the gradient reaches the trunk output) and ``mem_point``
+records the peak since the previous point. ``result()`` synchronises once and returns
+``{name: ms}`` plus ``{name + ":peak_gib"}`` / ``":start_gib"`` entries.
 """
 
 from __future__ import annotations
@@ -21,14 +26,19 @@ GIB = 2**30
 
 
 class PhaseTimer:
-    def __init__(self, enabled: bool = False, memory: bool = True) -> None:
+    """CUDA-event timer and memory recorder of the phases of a training step."""
+
+    def __init__(
+        self,
+        enabled: bool = False,  # noqa: FBT001, FBT002 - positional flag is public API
+        memory: bool = True,  # noqa: FBT001, FBT002 - positional flag is public API
+    ) -> None:
         self.enabled = enabled and torch.cuda.is_available()
         self.memory = memory and self.enabled
         self._spans: list[tuple[str, torch.cuda.Event, torch.cuda.Event]] = []
         self._marks: dict[str, torch.cuda.Event] = {}
-        self._mem: dict[str, list[float]] = defaultdict(
-            lambda: [0.0, 0.0, 0.0]
-        )  # peak allocated, peak reserved, start allocated
+        # peak allocated, peak reserved, start allocated
+        self._mem: dict[str, list[float]] = defaultdict(lambda: [0.0, 0.0, 0.0])
 
     def _event(self) -> torch.cuda.Event:
         event = torch.cuda.Event(enable_timing=True)
@@ -36,11 +46,15 @@ class PhaseTimer:
         return event
 
     def mem_reset(self) -> None:
+        """Reset the CUDA peak memory counters (when memory recording is on)."""
         if self.memory:
             torch.cuda.reset_peak_memory_stats()
 
     def mem_point(self, name: str, start: float | None = None) -> None:
-        """Record the peak allocated memory since the last reset under ``name`` (max over repeats) and reset the peak counters."""
+        """Record the peak allocated memory since the last reset under ``name``.
+
+        Keeps the max over repeats and resets the peak counters.
+        """
         if not self.memory:
             return
         row = self._mem[name]
@@ -52,6 +66,7 @@ class PhaseTimer:
 
     @contextmanager
     def phase(self, name: str) -> Iterator[None]:
+        """Time (and record the memory of) the block under ``name``."""
         if not self.enabled:
             yield
             return
@@ -65,14 +80,17 @@ class PhaseTimer:
             self.mem_point(name, start_mem)
 
     def mark(self, name: str) -> None:
+        """Record a named point on the current stream."""
         if self.enabled:
             self._marks[name] = self._event()
 
     def between(self, name: str, first: str, last: str) -> None:
+        """Time the gap between the marks ``first`` and ``last`` under ``name``."""
         if self.enabled and first in self._marks and last in self._marks:
             self._spans.append((name, self._marks[first], self._marks[last]))
 
     def result(self) -> dict[str, float]:
+        """Synchronise once and return the times (ms) and memory entries (GiB)."""
         if not self.enabled:
             return {}
         torch.cuda.synchronize()
@@ -89,14 +107,17 @@ class PhaseTimer:
 def arm_trunk_grad_marker(
     timer: PhaseTimer, tensors: list[torch.Tensor], name: str = "trunk_grad_ready"
 ) -> None:
-    """Mark ``name`` (and close the memory segment ``diffusion_train_bwd``) when the gradient of every tensor in ``tensors`` (the trunk outputs the
-    heads read) has been computed: the backward before it is the heads' (diffusion, distogram), the rest is the trunk's.
+    """Mark ``name`` when the gradient of every tensor in ``tensors`` is computed.
+
+    Also closes the memory segment ``diffusion_train_bwd``. ``tensors`` are the trunk
+    outputs the heads read: the backward before the mark is the heads' (diffusion,
+    distogram), the rest is the trunk's.
     """
     if not timer.enabled:
         return
     pending = {"n": len(tensors)}
 
-    def hook(grad: torch.Tensor) -> None:
+    def hook(grad: torch.Tensor) -> None:  # noqa: ARG001 - tensor hook signature
         pending["n"] -= 1
         if pending["n"] == 0:
             timer.mark(name)
@@ -109,7 +130,7 @@ def arm_trunk_grad_marker(
             pending["n"] -= 1
 
 
-def tensor_bytes(tree) -> int:
+def tensor_bytes(tree: object) -> int:
     """Bytes of every tensor in a (nested) dict / list / tuple."""
     if torch.is_tensor(tree):
         return tree.numel() * tree.element_size()

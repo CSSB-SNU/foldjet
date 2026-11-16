@@ -327,8 +327,9 @@ def confidence_targets(  # noqa: PLR0915 - one linear target build
             protenix=protenix_targets,
         )
         if protenix_targets:
-            valid = present_valid.clone()
-        target = torch.where(present_valid, index, res * atoms)
+            # present_index / present_valid come both or neither (see the docstring)
+            valid = present_valid.clone()  # pyright: ignore[reportOptionalMemberAccess]
+        target = torch.where(present_valid, index, res * atoms)  # pyright: ignore[reportCallIssue, reportArgumentType]
         lddt_dense = torch.zeros(res * atoms + 1, device=x_pred.device)
         valid_dense = torch.zeros(
             res * atoms + 1, dtype=torch.bool, device=x_pred.device

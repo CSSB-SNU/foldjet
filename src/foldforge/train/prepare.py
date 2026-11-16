@@ -38,11 +38,13 @@ def enable_training(model: nn.Module, cfg: TrainConfig) -> dict[str, object]:
     # No per-shape inference sampler graph in training (static_weights / refresh
     # would go stale); rollout="graph" sets its own inline scope
     # (train/rollout_graph.py).
-    model.foldforge_sampler_scope = None
+    # Dynamic attributes on nn.Module below: the torch stubs type __setattr__ values
+    # as Tensor | Module.
+    model.foldforge_sampler_scope = None  # pyright: ignore[reportArgumentType]
     # The head returns its logits only when asked.
-    model.confidence_head.save_logits = cfg.confidence
+    model.confidence_head.save_logits = cfg.confidence  # pyright: ignore[reportAttributeAccessIssue, reportArgumentType]
     # The head returns its logits only when asked.
-    model.distogram_head.save_distogram = True
+    model.distogram_head.save_distogram = True  # pyright: ignore[reportAttributeAccessIssue, reportArgumentType]
     return {
         "dead_cleared": cleared,
         "frozen": frozen,
@@ -73,7 +75,7 @@ def disable_inference_only_ops(model: nn.Module) -> int:
     """
     count = 0
     for module in model.modules():
-        module.foldforge_sampler_glue = False
+        module.foldforge_sampler_glue = False  # pyright: ignore[reportArgumentType]  # dynamic module flag
         count += 1
     return count
 
@@ -176,6 +178,6 @@ def enable_activation_checkpointing(model: nn.Module, policy: str = "all") -> in
             return _forward(*args, **kwargs)
 
         module.forward = wrapped
-        module._ff_checkpointed = True  # noqa: SLF001 - marker on the wrapped block
+        module._ff_checkpointed = True  # noqa: SLF001 - marker on the wrapped block  # pyright: ignore[reportArgumentType]
         count += 1
     return count

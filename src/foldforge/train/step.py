@@ -29,7 +29,7 @@ import logging
 import os
 from contextlib import contextmanager, nullcontext
 from dataclasses import replace
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import torch
 
@@ -86,7 +86,7 @@ def foreach_accumulation(params: list[torch.nn.Parameter]) -> Iterator[None]:
                 dst.append(old)
                 src.append(new)
         if dst:
-            torch._foreach_add_(dst, src)
+            torch._foreach_add_(dst, src)  # pyright: ignore[reportPrivateImportUsage]  # public torch op
 
 
 def trainable(model: torch.nn.Module) -> list[torch.nn.Parameter]:
@@ -308,7 +308,8 @@ def confidence_step(
     w = cfg.loss
     return confidence_loss(
         outputs,
-        targets,
+        # a None target belongs to a zero-weight term, which confidence_loss never reads
+        targets,  # pyright: ignore[reportArgumentType]
         plddt_loss=w.plddt_loss,
         pde_loss=w.pde_loss,
         pae_loss=w.pae_loss,
@@ -417,10 +418,13 @@ def micro_step_device(  # noqa: C901, PLR0912, PLR0915 - one ordered step, kept 
         # Trunk forward + backward alone: a dummy loss on its outputs stands for the
         # heads' gradient.
         if only == "trunk":
-            dummy = sum(
-                v.float().pow(2).mean()
-                for v in embeddings.values()
-                if torch.is_tensor(v) and v.requires_grad
+            dummy = cast(
+                "torch.Tensor",
+                sum(
+                    v.float().pow(2).mean()
+                    for v in embeddings.values()
+                    if torch.is_tensor(v) and v.requires_grad
+                ),
             )
             with timer.phase("trunk_bwd"), foreach_accumulation(params):
                 (dummy * 1e-6 * scale).backward()
@@ -470,7 +474,8 @@ def micro_step_device(  # noqa: C901, PLR0912, PLR0915 - one ordered step, kept 
                     model, features, batch_data, detached, cfg.rollout_steps
                 )
         elif mode == "side":
-            side_stream.wait_stream(torch.cuda.current_stream(device))
+            # mode "side" implies a side stream (it falls back to "after" without one)
+            side_stream.wait_stream(torch.cuda.current_stream(device))  # pyright: ignore[reportOptionalMemberAccess]
             with torch.cuda.stream(side_stream), timer.phase("mini_rollout"):
                 box["x_mini"] = mini_rollout(
                     model, features, batch_data, detached, cfg.rollout_steps
@@ -579,7 +584,7 @@ def micro_step_device(  # noqa: C901, PLR0912, PLR0915 - one ordered step, kept 
     if cfg.confidence and not only:
         with activation_autocast(model):
             if mode == "side":
-                torch.cuda.current_stream(device).wait_stream(side_stream)
+                torch.cuda.current_stream(device).wait_stream(side_stream)  # pyright: ignore[reportArgumentType]  # mode "side" implies a stream
                 box["x_mini"].record_stream(torch.cuda.current_stream(device))
             elif mode == "after":
                 with timer.phase("mini_rollout"):

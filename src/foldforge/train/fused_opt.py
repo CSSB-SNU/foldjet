@@ -52,9 +52,9 @@ def foreach_clip_grad_norm(params: list[torch.Tensor], max_norm: float) -> torch
         return torch.zeros(())
     # fp32 masters on one device (the model's); _foreach_norm accumulates in fp32
     # whatever the gradient dtype
-    total = torch.linalg.vector_norm(torch.stack(torch._foreach_norm(grads)))  # noqa: SLF001 - torch multi-tensor op
+    total = torch.linalg.vector_norm(torch.stack(torch._foreach_norm(grads)))  # pyright: ignore[reportPrivateImportUsage]  # noqa: SLF001 - torch multi-tensor op, not re-exported in the stubs
     scale = (max_norm / (total + 1e-6)).clamp(max=1.0)
-    torch._foreach_mul_(grads, scale)
+    torch._foreach_mul_(grads, scale)  # pyright: ignore[reportPrivateImportUsage]  # torch multi-tensor op, not re-exported in the stubs
     return total
 
 
@@ -76,7 +76,7 @@ class FusedEMA(optim.EMA):
         model: nn.Module | None = None,  # noqa: ARG002 - signature of optim.EMA.update
     ) -> None:
         """Lerp every shadow towards its cached parameter in one launch."""
-        torch._foreach_lerp_(
+        torch._foreach_lerp_(  # pyright: ignore[reportPrivateImportUsage]  # torch multi-tensor op, not re-exported in the stubs
             self._shadow_list, [p.detach() for p in self._param_list], 1.0 - self.decay
         )
 
@@ -223,6 +223,10 @@ def build_fused(
 # lr by ``fill_``. The clipped gradient is NOT written back (p.grad keeps the raw
 # value).
 # --------------------------------------------------------------------------------------
+_BLOCK = 4096
+# torch's lerp switches formula at weight 0.5; the Triton kernel implements one branch
+_LERP_BRANCH = 0.5
+
 try:  # pragma: no cover - the module imports on a CPU-only box without triton
     import triton
     import triton.language as tl
@@ -230,13 +234,9 @@ try:  # pragma: no cover - the module imports on a CPU-only box without triton
     HAVE_TRITON = True
 except ImportError:  # pragma: no cover
     HAVE_TRITON = False
-
-_BLOCK = 4096
-# torch's lerp switches formula at weight 0.5; the Triton kernel implements one branch
-_LERP_BRANCH = 0.5
-
-if HAVE_TRITON:
-
+else:
+    # the kernels (defined only when triton imported; in the ``else`` branch the type
+    # checker sees ``triton`` / ``tl`` bound)
     @triton.jit
     def _sumsq_kernel(  # noqa: ANN202 - Triton kernel signature
         gptr,  # noqa: ANN001 - Triton kernel argument
@@ -441,9 +441,14 @@ class TritonStep:
         )  # new grad tensors after zero_grad(set_to_none): one small H2D copy per step
         b1, b2, eps, ema_w = self.hp
         _sumsq_kernel[(self.nchunks,)](
-            gptr, self.numel, self.chunk_t, self.chunk_off, self.part, BLOCK=_BLOCK
+            gptr,
+            self.numel,
+            self.chunk_t,
+            self.chunk_off,
+            self.part,
+            BLOCK=_BLOCK,  # pyright: ignore[reportArgumentType]  # tl.constexpr is a Triton marker: a Python int is what it takes
         )
-        _norm_kernel[(1,)](self.part, self.nchunks, self.scal, max_norm, BLOCK=1024)
+        _norm_kernel[(1,)](self.part, self.nchunks, self.scal, max_norm, BLOCK=1024)  # pyright: ignore[reportArgumentType]  # tl.constexpr is a Triton marker: a Python int is what it takes
         # the counters of the parameters that got a gradient (torch Adam skips the
         # others)
         self.steps += self.mask_f
@@ -467,9 +472,9 @@ class TritonStep:
             b2,
             eps,
             ema_w,
-            BLOCK=_BLOCK,
-            HAS_EMA=self.shadow is not None,
+            BLOCK=_BLOCK,  # pyright: ignore[reportArgumentType]  # tl.constexpr is a Triton marker: a Python int is what it takes
+            HAS_EMA=self.shadow is not None,  # pyright: ignore[reportArgumentType]  # tl.constexpr is a Triton marker: a Python bool is what it takes
         )
         if self.rest is not None and self.rest[0]:
-            torch._foreach_lerp_(self.rest[0], self.rest[1], ema_w)
+            torch._foreach_lerp_(self.rest[0], self.rest[1], ema_w)  # pyright: ignore[reportPrivateImportUsage]  # torch multi-tensor op, not re-exported in the stubs
         return self.scal[0]

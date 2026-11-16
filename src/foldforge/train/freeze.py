@@ -25,7 +25,7 @@ from __future__ import annotations
 import re
 import statistics
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import torch
 
@@ -203,7 +203,7 @@ def frozen_parameters(
     For ``model`` (its ``spec.family``) under the loss ``weights`` (``None`` = the
     MiniWorld recipe's defaults). Zero-filled rules read the weights of the model.
     """
-    spec = model.spec
+    spec = cast("DenseSpec", model.spec)
     rules = [
         (rule, regex)
         for rule in RULES

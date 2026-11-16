@@ -1,8 +1,10 @@
 """Native (miniworld-format) checkpoint save / resume.
 
-The model file is the format of :mod:`foldforge.models.checkpoints.miniworld` (``{"format": "miniworld", "version": 1, "family", "source",
-"state_dict"}``, an fp32 state_dict with the graph's own keys), loadable by ``ff.load_model(checkpoint=...)``. The training state (optimizer,
-EMA, step) is a separate ``<name>.train.pt`` next to it. Converting back to the released ``protenix1.bin.zst`` layout is NOT supported.
+The model file is the format of :mod:`foldforge.models.checkpoints.miniworld`
+(``{"format": "miniworld", "version": 1, "family", "source", "state_dict"}``, an fp32
+state_dict with the graph's own keys), loadable by ``ff.load_model(checkpoint=...)``.
+The training state (optimizer, EMA, step) is a separate ``<name>.train.pt`` next to
+it. Converting back to the released ``protenix1.bin.zst`` layout is NOT supported.
 """
 
 from __future__ import annotations
@@ -31,7 +33,11 @@ def save(
     step: int = 0,
     ema_weights: bool = False,
 ) -> Path:
-    """Write ``path`` (``*.miniworld.pt``) and ``path.with_suffix('.train.pt')``-style training state. ``ema_weights`` saves the EMA as the model."""
+    """Write ``path`` (``*.miniworld.pt``) and the training state beside it.
+
+    The training state is a ``path.with_suffix('.train.pt')``-style file.
+    ``ema_weights`` saves the EMA as the model.
+    """
     path = Path(path)
     if not path.name.endswith(miniworld.SUFFIX):
         message = f"{path} must end with {miniworld.SUFFIX}"
@@ -40,7 +46,8 @@ def save(
         ema.swap_in(model)
     try:
         state = {
-            # copy=True: on a CPU fp32 model `.to` returns the parameter itself, and `ema.swap_out` below would then rewrite the saved tensor
+            # copy=True: on a CPU fp32 model `.to` returns the parameter itself, and
+            # `ema.swap_out` below would then rewrite the saved tensor
             k: v.detach().to("cpu", torch.float32, copy=True)
             if v.is_floating_point()
             else v.detach().cpu().clone()
@@ -72,7 +79,10 @@ def save(
 def resume(
     model: nn.Module, path: Path, *, optimizer: Any = None, ema: EMA | None = None
 ) -> int:
-    """Load a file written by :func:`save` (model + the ``.train.pt`` beside it); returns the step."""
+    """Load a file written by :func:`save` (model + the ``.train.pt`` beside it).
+
+    Returns the step.
+    """
     blob = miniworld.read(Path(path))
     model.load_state_dict(blob["state_dict"], strict=True)
     train_path = Path(str(path).removesuffix(miniworld.SUFFIX) + ".train.pt")

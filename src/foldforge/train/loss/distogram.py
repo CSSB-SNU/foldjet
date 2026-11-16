@@ -1,15 +1,23 @@
-"""Distogram loss: cross entropy between the head's logits and the binned ground-truth pseudo-beta distances.
+"""Distogram loss.
 
-The bins are the head's own (``DistogramHead.breaks``: ``num_bins - 1`` edges from ``first_break`` to ``last_break``); the ground-truth
-pseudo-beta atom of each token is gathered with the batch's ``token_atoms_to_pseudo_beta`` (CB, CA for glycine, ... as the confidence head).
+Cross entropy between the head's logits and the binned ground-truth pseudo-beta
+distances. The bins are the head's own (``DistogramHead.breaks``: ``num_bins - 1``
+edges from ``first_break`` to ``last_break``); the ground-truth pseudo-beta atom of
+each token is gathered with the batch's ``token_atoms_to_pseudo_beta`` (CB, CA for
+glycine, ... as the confidence head).
 """
 
 from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import torch
 import torch.nn.functional as F
 
 from foldforge.utils import atom_layout
+
+if TYPE_CHECKING:
+    from foldforge.utils.atom_layout import GatherInfo
 
 
 def distogram_loss(
@@ -17,10 +25,14 @@ def distogram_loss(
     breaks: torch.Tensor,
     x0: torch.Tensor,
     atom_mask: torch.Tensor,
-    token_atoms_to_pseudo_beta,
+    token_atoms_to_pseudo_beta: GatherInfo,
     token_mask: torch.Tensor,
 ) -> torch.Tensor:
-    """``logits`` ``[res, res, bins]``, ``x0`` ``[res, atoms, 3]``, ``atom_mask`` ``[res, atoms]``, ``token_mask`` ``[res]``."""
+    """Distogram cross entropy averaged over the valid token pairs.
+
+    ``logits`` ``[res, res, bins]``, ``x0`` ``[res, atoms, 3]``, ``atom_mask``
+    ``[res, atoms]``, ``token_mask`` ``[res]``.
+    """
     with torch.no_grad():
         beta = atom_layout.convert(
             token_atoms_to_pseudo_beta, x0.float(), layout_axes=(-3, -2)
@@ -29,7 +41,7 @@ def distogram_loss(
             atom_layout.convert(
                 token_atoms_to_pseudo_beta, atom_mask.float(), layout_axes=(-2, -1)
             )
-            > 0.5
+            > 0.5  # noqa: PLR2004 - mask threshold
         )
         distance = torch.cdist(beta, beta)
         target = torch.bucketize(distance, breaks.to(distance.dtype))
