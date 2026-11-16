@@ -1,0 +1,21 @@
+# Overlay applied on top of the MiniWorld data config (default configs/miniworld/data/H100_default.yaml).
+# 1. PDB only: the three non-pdb source weights are set to 0 (NOT removed: MiniWorld's configured_source_weights() gives every
+#    declared distillation source a default weight 1.0, and removing the distillation_sources would change the catalog
+#    fingerprint and trigger a rebuild of the shared 8.7 GB catalog cache).
+# 2. The v1.2/v2.0 recipe data policy of phase2a_diffusion_medium_v120.yaml (inherited by the v200_b200_joint chain):
+#    crop.ab_ag_interface_only / prefer_nonprotein_focus, PDB MSA depth policy af3 with an 8192-row pool.
+# sampler: (pair-type weights), antibody_seq_id_path, crop sizes, tokenizer are NOT touched here.
+train_db:
+  source_weights:
+    pdb: 1.0
+    disordered_pdb: 0.0
+    protein_monomer: 0.0
+    short_protein_monomer: 0.0
+crop:
+  ab_ag_interface_only: true
+  prefer_nonprotein_focus: true
+msa:
+  sample_depth_by_source:
+    pdb: af3
+  max_msa_depth_by_source:
+    pdb: 8192
