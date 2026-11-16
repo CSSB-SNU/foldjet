@@ -869,7 +869,7 @@ def build_atom_cross_att_encoder_params(
     prefix: str = "evoformer_conditioning_atom_transformer_encoder",
 ) -> ParamTree:
     """Compute atom cross att encoder params."""
-    d = {
+    d: ParamTree = {
         "embed_ref_pos": build_linear_params(l=encoder.embed_ref_pos),
         "embed_ref_mask": build_linear_params(l=encoder.embed_ref_mask),
         "embed_ref_element": build_linear_params(l=encoder.embed_ref_element),

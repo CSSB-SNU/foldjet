@@ -1,7 +1,9 @@
-"""The dense released-layout token transformer (``DiffusionTransformer``) and its self attention (converter graph only).
+"""The dense released-layout token transformer and its self attention.
 
-Runtime graphs hold ``TokenDiT*`` engine blocks (:mod:`foldforge.modules.engine.transformers`); this is the released AF3 layout the
-Haiku blob is read into before :mod:`foldforge.models.checkpoints.legacy.released` converts it.
+The token transformer is ``DiffusionTransformer`` (converter graph only). Runtime graphs
+hold ``TokenDiT*`` engine blocks (:mod:`foldforge.modules.engine.transformers`); this is
+the released AF3 layout the Haiku blob is read into before
+:mod:`foldforge.models.checkpoints.legacy.released` converts it.
 """
 
 import einops
@@ -19,6 +21,9 @@ from foldforge.modules.dense.diffusion_transformer import (
 )
 from foldforge.modules.dense.spec import ALPHAFOLD3, DenseSpec
 
+#: ``x.ndim`` of an unbatched ``(num_tokens, ch)`` input.
+_UNBATCHED_NDIM = 2
+
 
 class SelfAttention(nn.Module):
     """Represent self attention."""
@@ -28,12 +33,12 @@ class SelfAttention(nn.Module):
         c_x: int = 768,
         c_single_cond: int = 384,
         num_head: int = 16,
-        use_single_cond: bool = False,
-        kq_norm: bool = False,
-        identity_scale: bool = False,
+        use_single_cond: bool = False,  # noqa: FBT001, FBT002 - positional flag is public API
+        kq_norm: bool = False,  # noqa: FBT001, FBT002 - positional flag is public API
+        identity_scale: bool = False,  # noqa: FBT001, FBT002 - positional flag is public API
         norm_eps: float = 1e-5,
-        gating_query: bool = True,
-        project_output: bool = True,
+        gating_query: bool = True,  # noqa: FBT001, FBT002 - positional flag is public API
+        project_output: bool = True,  # noqa: FBT001, FBT002 - positional flag is public API
         gate_bias: float = 0.0,
     ) -> None:
 
@@ -85,7 +90,7 @@ class SelfAttention(nn.Module):
         pair_logits: torch.Tensor | None = None,
         single_cond: torch.Tensor | None = None,
     ) -> torch.Tensor:
-        """Args:
+        """Self attention of ``x`` with the optional pair logits as bias.
 
         x (torch.Tensor): (num_tokens, ch)
         mask (torch.Tensor): (num_tokens,)
@@ -109,14 +114,14 @@ class SelfAttention(nn.Module):
 
         q, k, v = (
             einops.rearrange(t, "... n (h c) -> ... h n c", h=self.num_head)
-            if x.ndim > 2
+            if x.ndim > _UNBATCHED_NDIM
             else einops.rearrange(t, "n (h c) -> h n c", h=self.num_head).unsqueeze(0)
             for t in [q, k, v]
         )
 
         weighted_avg = dot_product_attention(q, k, v, mask=mask, bias=pair_logits)
 
-        if x.ndim == 2:
+        if x.ndim == _UNBATCHED_NDIM:
             weighted_avg = weighted_avg.squeeze(0)
         weighted_avg = einops.rearrange(weighted_avg, "... h q c -> ... q (h c)")
 
@@ -222,14 +227,14 @@ class DiffusionTransformer(nn.Module):
         single_cond: torch.Tensor,
         pair_cond: torch.Tensor,
         extra_pair_bias: torch.Tensor | None = None,
-        key_mask: torch.Tensor | None = None,
+        key_mask: torch.Tensor | None = None,  # noqa: ARG002 - accepted for the engine stack's call signature
     ) -> torch.Tensor:
         """Compute the module output.
 
-        ``key_mask`` is ``[1, N_token]`` bool: ``mask > 0`` made by the caller. The engine keys its
-        hoisted pair bias on that tensor's address, so a caller that runs the sampler's steps
-        passes one tensor for all of them; made here, it would be a new tensor at every call
-        (and inside a compiled region, at every replay).
+        ``key_mask`` is ``[1, N_token]`` bool: ``mask > 0`` made by the caller. The
+        engine keys its hoisted pair bias on that tensor's address, so a caller that
+        runs the sampler's steps passes one tensor for all of them; made here, it would
+        be a new tensor at every call (and inside a compiled region, at every replay).
 
         ``extra_pair_bias`` is (N_token, N_token), added to every head's pair
         logits in every block. Only the structural-token family supplies one:
@@ -239,7 +244,7 @@ class DiffusionTransformer(nn.Module):
         if self.per_block_pair:
             for idx in range(self.num_blocks):
                 pair_logits = self.pair_logits_projection[idx](
-                    self.pair_input_layer_norm[idx](pair_cond)
+                    self.pair_input_layer_norm[idx](pair_cond)  # pyright: ignore[reportIndexIssue]  # a ModuleList when per_block_pair
                 ).permute(2, 0, 1)
                 if extra_pair_bias is not None:
                     pair_logits = pair_logits + extra_pair_bias[None].to(

@@ -1,12 +1,16 @@
 """The released-layout dense graph, kept only for the offline checkpoint converter.
 
-A released Haiku blob (``af3.bin.zst`` ...) is read into the DENSE released-layout graph in this package (:mod:`.haiku` maps the blob's
-records onto its parameters), and :func:`foldforge.models.checkpoints.miniworld.convert_haiku` converts that graph's ``state_dict`` into the
-engine-class graph's layout (the miniworld checkpoint format). Nothing at inference imports this package: ``load_model`` / ``predict`` /
-training build engine-class graphs and read miniworld-format files only.
+A released Haiku blob (``af3.bin.zst`` ...) is read into the DENSE released-layout graph
+in this package (:mod:`.haiku` maps the blob's records onto its parameters), and
+:func:`foldforge.models.checkpoints.miniworld.convert_haiku` converts that graph's
+``state_dict`` into the engine-class graph's layout (the miniworld checkpoint format).
+Nothing at inference imports this package: ``load_model`` / ``predict`` / training build
+engine-class graphs and read miniworld-format files only.
 
-* :func:`dense_model` builds the dense graph of a family (the runtime ``AlphaFold3`` class with this package's blocks installed).
-* The blocks themselves (``attention``, ``pairformer``, ``primitives``, ``triangle_multiplication``, ``transformer``) are the released AF3 modules;
+* :func:`dense_model` builds the dense graph of a family (the runtime ``AlphaFold3``
+  class with this package's blocks installed).
+* The blocks themselves (``attention``, ``pairformer``, ``primitives``,
+  ``triangle_multiplication``, ``transformer``) are the released AF3 modules;
   ``routing`` and ``reference`` bind their parameter layout to the reference equations.
 """
 
@@ -24,7 +28,9 @@ class _DenseBlocks:
     """:class:`foldforge.modules.engine.graph.DenseBlocks` of the released layout."""
 
     def pairformer_block(self, spec: DenseSpec, **o: Any) -> nn.Module:
-        from foldforge.models.checkpoints.legacy.pairformer import PairformerBlock
+        from foldforge.models.checkpoints.legacy.pairformer import (  # noqa: PLC0415 - deferred until called (import time)
+            PairformerBlock,
+        )
 
         return PairformerBlock(
             n_heads=o["n_head_single"],
@@ -44,7 +50,9 @@ class _DenseBlocks:
     def evoformer_block(
         self, spec: DenseSpec, c_msa: int, c_pair: int, n_heads_pair: int
     ) -> nn.Module:
-        from foldforge.models.checkpoints.legacy.pairformer import EvoformerBlock
+        from foldforge.models.checkpoints.legacy.pairformer import (  # noqa: PLC0415 - deferred until called (import time)
+            EvoformerBlock,
+        )
 
         return EvoformerBlock(
             c_msa=c_msa, c_pair=c_pair, n_heads_pair=n_heads_pair, spec=spec
@@ -58,7 +66,9 @@ class _DenseBlocks:
         c_pair_cond: int,
         num_blocks: int,
     ) -> nn.Module:
-        from foldforge.models.checkpoints.legacy.transformer import DiffusionTransformer
+        from foldforge.models.checkpoints.legacy.transformer import (  # noqa: PLC0415 - deferred until called (import time)
+            DiffusionTransformer,
+        )
 
         return DiffusionTransformer(
             c_act=c_act,
@@ -69,15 +79,24 @@ class _DenseBlocks:
         )
 
     def conditioning_transition(self, width: int) -> nn.Module:
-        from foldforge.modules.dense.diffusion_transformer import DiffusionTransition
+        from foldforge.modules.dense.diffusion_transformer import (  # noqa: PLC0415 - deferred until called (import time)
+            DiffusionTransition,
+        )
 
         return DiffusionTransition(width, c_single_cond=None)
 
 
 def dense_model(spec: DenseSpec, **kwargs: Any) -> nn.Module:
-    """The dense released-layout ``AlphaFold3`` graph of ``spec`` (parameters named as the Haiku blob's records)."""
-    from foldforge.models.architectures.af3 import AlphaFold3
-    from foldforge.modules.engine import graph as engine_graph
+    """Build the dense released-layout ``AlphaFold3`` graph of ``spec``.
+
+    The parameters are named as the Haiku blob's records.
+    """
+    from foldforge.models.architectures.af3 import (  # noqa: PLC0415 - deferred until called (import time)
+        AlphaFold3,
+    )
+    from foldforge.modules.engine import (  # noqa: PLC0415 - deferred until called (import time)
+        graph as engine_graph,
+    )
 
     with engine_graph.use_dense_blocks(_DenseBlocks()):
         return AlphaFold3(spec=spec, **kwargs)

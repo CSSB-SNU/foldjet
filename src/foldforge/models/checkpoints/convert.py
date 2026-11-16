@@ -87,7 +87,7 @@ def _unfold_chai1_chain_features(chai1: types.ModuleType) -> None:
         scope["weights"] = np.concatenate([scope["weights"], extra.T], axis=0)
         scope["bias"] = scope["bias"] - wp @ folded
 
-    chai1.map_pair_init = map_pair_init
+    chai1.map_pair_init = map_pair_init  # pyright: ignore[reportAttributeAccessIssue]  # patches the loaded converter module
 
 
 def _convert_protenix(
@@ -144,7 +144,7 @@ def _prepare_esmfold2(converter: types.ModuleType) -> None:
             ),
             "num_bins": spec.distogram_bins,
         }
-        differences = {
+        differences: dict[str, tuple[object, object]] = {
             name: (actual[name], value)
             for name, value in expected.items()
             if actual[name] != value
@@ -187,8 +187,8 @@ def _prepare_esmfold2(converter: types.ModuleType) -> None:
             raise ValueError(message)
         return data
 
-    converter.check_variant_table = check_variant_table
-    converter.check_release_config = check_release_config
+    converter.check_variant_table = check_variant_table  # pyright: ignore[reportAttributeAccessIssue]  # patches the loaded converter module
+    converter.check_release_config = check_release_config  # pyright: ignore[reportAttributeAccessIssue]  # patches the loaded converter module
 
 
 def _conversion_profile() -> None:

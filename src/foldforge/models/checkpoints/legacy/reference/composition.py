@@ -1,4 +1,7 @@
-"""Dense-graph block ordering: the MSA-stack update orders of the released layout (converter graph only)."""
+"""Dense-graph block ordering: the MSA-stack update orders of the released layout.
+
+Converter graph only.
+"""
 
 from collections.abc import Callable
 from typing import Literal
@@ -48,7 +51,8 @@ def msa_row_update(
     """Update MSA rows, preserving independent leading batch dimensions."""
     size = msa.shape[-3]
     if chunk_size is not None and chunk_size < 1:
-        raise ValueError("MSA chunk size must be positive")
+        message = "MSA chunk size must be positive"
+        raise ValueError(message)
     if size == 0:
         return msa
     chunks = []

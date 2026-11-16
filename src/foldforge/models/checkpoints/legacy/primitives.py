@@ -45,10 +45,10 @@ class OuterProductMean(nn.Module):
         c_msa: int = 64,
         num_output_channel: int = 128,
         num_outer_channel: int = 32,
-        projection_bias: bool = False,
+        projection_bias: bool = False,  # noqa: FBT001, FBT002 - positional flag is public API
         groups: int = 1,
-        bias_after_norm: bool = False,
-        clamped_norm: bool = False,
+        bias_after_norm: bool = False,  # noqa: FBT001, FBT002 - positional flag is public API
+        clamped_norm: bool = False,  # noqa: FBT001, FBT002 - positional flag is public API
     ) -> None:
         super().__init__()
 
@@ -93,7 +93,7 @@ class OuterProductMean(nn.Module):
         if self.groups > 1:
             return self._grouped(left_act, right_act)
 
-        from foldforge.models.checkpoints.legacy.reference.attention import (
+        from foldforge.models.checkpoints.legacy.reference.attention import (  # noqa: PLC0415 - deferred until the ungrouped path runs (import time)
             af3_outer_product_mean,
         )
 

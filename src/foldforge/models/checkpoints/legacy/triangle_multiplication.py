@@ -24,9 +24,9 @@ class TriangleMultiplication(nn.Module):
     def __init__(
         self,
         c_pair: int = 128,
-        _outgoing: bool = True,
+        _outgoing: bool = True,  # noqa: FBT001, FBT002 - positional flag is public API
         hidden_dim: int | None = None,
-        divide_by_length: bool = False,
+        divide_by_length: bool = False,  # noqa: FBT001, FBT002 - positional flag is public API
     ) -> None:
         super().__init__()
 

@@ -32,8 +32,9 @@ def triangle_update(
     """Return a raw delta while preserving masked-product rounding order.
 
     ``project_a`` / ``gate_a`` hold both branches, interleaved per hidden channel.
-    ``contraction_scale``: a 0-d tensor the contraction is multiplied by before the centre
-    norm (RoseTTAFold3 divides it by the real length); a tensor, so no host read.
+    ``contraction_scale``: a 0-d tensor the contraction is multiplied by before the
+    centre norm (RoseTTAFold3 divides it by the real length); a tensor, so no host
+    read.
     """
     value = normalize(x)
     projection = project_a(value).movedim(-1, -3)

@@ -1,4 +1,7 @@
-"""Dense-graph transition equation with released projection and chunking layouts (converter graph only)."""
+"""Dense-graph transition equation with released projection and chunking layouts.
+
+Converter graph only.
+"""
 
 from collections.abc import Callable
 

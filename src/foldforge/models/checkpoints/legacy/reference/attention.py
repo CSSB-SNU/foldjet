@@ -5,6 +5,11 @@ from __future__ import annotations
 import torch
 from torch.nn import functional as F
 
+#: ``q.dim()`` of an unbatched [H, L, D] input.
+_UNBATCHED_NDIM = 3
+#: ``mask.ndim`` of a per-batch [B, L_k] key mask.
+_BATCHED_MASK_NDIM = 2
+
 
 def attention(
     q: torch.Tensor,
@@ -33,9 +38,8 @@ def attention(
         if mask is not None:
             # Preserve replacement semantics; additive mask+bias differs on
             # fully-masked rows, so use the explicit equation for this case.
-            raise ValueError(
-                "Use explicit attention when a replacement mask is present"
-            )
+            message = "Use explicit attention when a replacement mask is present"
+            raise ValueError(message)
         return F.scaled_dot_product_attention(
             q, k, v.to(q.dtype), attn_mask=bias, scale=scale
         ).to(dtype)
@@ -79,15 +83,16 @@ def dot_product_attention(
 ) -> torch.Tensor:
     """Scaled dot-product attention on [..., H, L, D]; a 3-D input gets a batch axis.
 
-    ``mask`` is [L_k], [B, L_k] or already broadcastable; ``bias`` is added to the logits.
+    ``mask`` is [L_k], [B, L_k] or already broadcastable; ``bias`` is added to the
+    logits.
     """
-    unbatched = q.dim() == 3
+    unbatched = q.dim() == _UNBATCHED_NDIM
     if unbatched:
         q, k, v = q.unsqueeze(0), k.unsqueeze(0), v.unsqueeze(0)
     if mask is not None:
         if mask.ndim == 1:
             mask = mask[None, None, None, :]
-        elif mask.ndim == 2:
+        elif mask.ndim == _BATCHED_MASK_NDIM:
             mask = mask[:, None, None, :]
     out = attention(
         q, k, v, bias=bias, mask=mask, scale=q.shape[-1] ** -0.5, logits_float32=False

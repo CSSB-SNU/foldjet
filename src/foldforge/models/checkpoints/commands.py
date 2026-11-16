@@ -209,9 +209,11 @@ def convert(
     out: Path | None,
     mode: str,
 ) -> None:
-    """Convert released blobs (``<model>.bin.zst``) to the miniworld checkpoint format (``<model>.miniworld.pt``), once.
+    """Convert released blobs to the miniworld checkpoint format, once.
 
-    The loader reads only the converted file and never converts at run time. See docs/guides/CHECKPOINT-FORMAT.md.
+    ``<model>.bin.zst`` becomes ``<model>.miniworld.pt``. The loader reads only the
+    converted file and never converts at run time. See
+    docs/guides/CHECKPOINT-FORMAT.md.
 
     Examples: foldforge weights convert af3
 
@@ -228,19 +230,22 @@ def convert(
         raise click.UsageError(message)
     unknown = set(models) - set(NATIVE_FILES)
     if unknown:
-        message = f"Unknown models: {', '.join(sorted(unknown))}; choose from {', '.join(sorted(NATIVE_FILES))}."
+        message = (
+            f"Unknown models: {', '.join(sorted(unknown))}; choose from "
+            f"{', '.join(sorted(NATIVE_FILES))}."
+        )
         raise click.UsageError(message)
     selected = list(NATIVE_FILES) if all_models else list(dict.fromkeys(models))
     failures = 0
     for model in selected:
         try:
             if all_models:
-                resolve(
-                    model, DEFAULT_FILES[model]
-                )  # --all: skip the models whose blob is not installed
+                # --all: skip the models whose blob is not installed
+                resolve(model, DEFAULT_FILES[model])
         except FileNotFoundError:
             click.echo(
-                f"SKIP {model}: no released blob ({DEFAULT_FILES[model]}); foldforge weights download {model}"
+                f"SKIP {model}: no released blob ({DEFAULT_FILES[model]}); "
+                f"foldforge weights download {model}"
             )
             continue
         try:

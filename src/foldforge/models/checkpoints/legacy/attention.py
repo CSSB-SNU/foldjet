@@ -64,10 +64,10 @@ class GridSelfAttention(nn.Module):
         self,
         c_pair: int = 128,
         num_head: int = 4,
-        transpose: bool = False,
+        transpose: bool = False,  # noqa: FBT001, FBT002 - positional flag is public API
         spec: DenseSpec = ALPHAFOLD3,
         qkv_dim: int | None = None,
-        dual_output: bool = False,
+        dual_output: bool = False,  # noqa: FBT001, FBT002 - positional flag is public API
     ) -> None:
         super().__init__()
         #: A second output projection per direction, combined as
@@ -105,7 +105,9 @@ class GridSelfAttention(nn.Module):
                 hidden, self.c_pair, bias=spec.triangle_attention_bias
             )
 
-    def _attention(self, pair: torch.Tensor, mask: torch.Tensor, bias: torch.Tensor):
+    def _attention(
+        self, pair: torch.Tensor, mask: torch.Tensor, bias: torch.Tensor
+    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         q = self.q_projection(pair)
         k = self.k_projection(pair)
         v = self.v_projection(pair)
@@ -129,8 +131,9 @@ class GridSelfAttention(nn.Module):
         return kept, other
 
     def forward(self, pair: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-        """Args:
+        """Grid self attention over the pair rows (columns when ``transpose``).
 
+        Args:
             pair (torch.Tensor): [N_token, N_token, c_pair]
             mask (torch.Tensor): [N_token, N_token]
 
@@ -161,7 +164,10 @@ class GridSelfAttention(nn.Module):
         return out
 
     def residual(self, pair: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-        """``pair + forward(pair, mask)``; ``mask`` is the outer-product pair mask, as everywhere in the dense graph."""
+        """``pair + forward(pair, mask)``.
+
+        ``mask`` is the outer-product pair mask, as everywhere in the dense graph.
+        """
         return pair + self(pair, mask)
 
 
@@ -193,7 +199,9 @@ class MSAAttention(nn.Module):
         self.gating_query = nn.Linear(self.c_msa, hidden, bias=False)
         self.output_projection = nn.Linear(hidden, self.c_msa, bias=False)
 
-    def forward(self, msa, msa_mask, pair):
+    def forward(
+        self, msa: torch.Tensor, msa_mask: torch.Tensor, pair: torch.Tensor
+    ) -> torch.Tensor:
         """Compute the module output."""
         msa = self.act_norm(msa)
         pair = self.pair_norm(pair)

@@ -1,21 +1,28 @@
-"""Released-checkpoint layout -> engine module layout: pure tensor re-shuffles, no module is built here.
+"""Released-checkpoint layout -> engine module layout: pure tensor re-shuffles.
 
-The engine (miniworld-engine 2.5.0) has no ``from_released``; FoldForge owns the conversion of the AlphaFold 3 family's
-released parameter layout (the names FoldForge's dense modules and the Haiku blob carry) to the state dict of the engine class
-that serves the op. Every function maps a state dict (optionally below ``prefix``) to the engine class's own keys and moves no
-value except by view / ``contiguous`` / ``chunk``: it is CPU-safe and dtype-agnostic. The offline converter
-(``models/checkpoints/miniworld.py``) applies these rules once, to the dense released-layout state dict a Haiku blob loads into, and writes
-the miniworld checkpoint format (engine keys); nothing at load time translates. The rules are listed here once:
+No module is built here. The engine (miniworld-engine 2.5.0) has no ``from_released``;
+FoldForge owns the conversion of the AlphaFold 3 family's released parameter layout (the
+names FoldForge's dense modules and the Haiku blob carry) to the state dict of the
+engine class that serves the op. Every function maps a state dict (optionally below
+``prefix``) to the engine class's own keys and moves no value except by view /
+``contiguous`` / ``chunk``: it is CPU-safe and dtype-agnostic. The offline converter
+(``models/checkpoints/miniworld.py``) applies these rules once, to the dense
+released-layout state dict a Haiku blob loads into, and writes the miniworld checkpoint
+format (engine keys); nothing at load time translates. The rules are listed here once:
 
-    split      transition ``transition1`` [2 n c, c] -> ``expand_a`` / ``expand_b`` (``chunk(2)``); TriMul ``projection`` / ``gate``
-               [2 h, c] -> ``to_left`` / ``to_right`` (+ gates) by the row interleave (row 2k = branch a of channel k, 2k + 1 =
-               branch b; an incoming module takes branch b as ``left``); OPM ``output_w`` [K, K, out] ([G, K, K, out]) ->
-               ``to_out.weight`` [out, G K K]; the DiT stacks' shared ``pair_logits_projection`` -> one slice of ``n_head`` rows
-               per block
-    broadcast  the AF3 token DiT's ONE shared ``pair_input_layer_norm`` -> every block's ``attention.ln_pair`` (and the atom
-               stack's shared norm the same way)
-    discard    ``DISCARDED`` below: a pair-LayerNorm offset (softmax-invariant), the K / V AdaLN of an atom block whose engine
-               class shares one AdaLN, a bias the engine class does not have (RoseTTAFold3's query bias)
+    split      transition ``transition1`` [2 n c, c] -> ``expand_a`` / ``expand_b``
+               (``chunk(2)``); TriMul ``projection`` / ``gate`` [2 h, c] ->
+               ``to_left`` / ``to_right`` (+ gates) by the row interleave (row 2k =
+               branch a of channel k, 2k + 1 = branch b; an incoming module takes
+               branch b as ``left``); OPM ``output_w`` [K, K, out] ([G, K, K, out])
+               -> ``to_out.weight`` [out, G K K]; the DiT stacks' shared
+               ``pair_logits_projection`` -> one slice of ``n_head`` rows per block
+    broadcast  the AF3 token DiT's ONE shared ``pair_input_layer_norm`` -> every
+               block's ``attention.ln_pair`` (and the atom stack's shared norm the
+               same way)
+    discard    ``DISCARDED`` below: a pair-LayerNorm offset (softmax-invariant), the
+               K / V AdaLN of an atom block whose engine class shares one AdaLN, a
+               bias the engine class does not have (RoseTTAFold3's query bias)
 
 Released names per module are listed on each function.
 """
@@ -23,7 +30,7 @@ Released names per module are listed on each function.
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeAlias, cast
 
 import torch
 
@@ -37,20 +44,29 @@ if TYPE_CHECKING:
     from foldforge.modules.engine.transformers import AtomDiTStack, TokenDiTStack
 
 Tensor = torch.Tensor
-State = "Mapping[str, Tensor]"
+State: TypeAlias = "Mapping[str, Tensor]"  # noqa: UP040 - a string alias: Mapping is a typing-only import
 
-#: Released keys (regular expressions, relative to the module) that no engine class has a parameter for.
+#: Released keys (regular expressions, relative to the module) that no engine class has
+#: a parameter for.
 DISCARDED = (
-    r"(^|\.)pair_norm\.bias$",  # MSA pair-weighted averaging: the offset adds one constant per head, softmax cancels it
-    r"(^|\.)pair_input_layer_norm(\.\d+)?\.bias$",  # DiT pair LayerNorm offset (same argument)
-    r"(^|\.)single_pair_logits_norm\.bias$",  # the pairformer single attention's pair LayerNorm offset
-    r"(^|\.)k_adaptive_layernorm\..*$",  # atom blocks with one shared AdaLN (Boltz-2 / RoseTTAFold3 / Chai-1)
+    # MSA pair-weighted averaging: the offset adds one constant per head, softmax
+    # cancels it
+    r"(^|\.)pair_norm\.bias$",
+    # DiT pair LayerNorm offset (same argument)
+    r"(^|\.)pair_input_layer_norm(\.\d+)?\.bias$",
+    # the pairformer single attention's pair LayerNorm offset
+    r"(^|\.)single_pair_logits_norm\.bias$",
+    # atom blocks with one shared AdaLN (Boltz-2 / RoseTTAFold3 / Chai-1)
+    r"(^|\.)k_adaptive_layernorm\..*$",
 )
 
 
 class Tracked(dict):
-    """A released state dict that remembers which of its keys a conversion READ (``used``, full names), so a converter can demand that every
-    key it did not read is a known discard (:func:`is_discarded`). Sub-views made by :func:`_sub` report into the same set.
+    """A released state dict that remembers which of its keys a conversion READ.
+
+    ``used`` holds full names, so a converter can demand that every key it did not read
+    is a known discard (:func:`is_discarded`). Sub-views made by :func:`_sub` report
+    into the same set.
     """
 
     def __init__(
@@ -69,7 +85,10 @@ class Tracked(dict):
 
 
 def _sub(state: State, prefix: str) -> dict[str, Tensor]:
-    """The entries of ``state`` below ``prefix`` (a dotted path, with or without the trailing dot), prefix removed."""
+    """Return the entries of ``state`` below ``prefix``, prefix removed.
+
+    ``prefix`` is a dotted path, with or without the trailing dot.
+    """
     if prefix and not prefix.endswith("."):
         prefix += "."
     items = {k[len(prefix) :]: v for k, v in state.items() if k.startswith(prefix)}
@@ -88,9 +107,8 @@ def _sub(state: State, prefix: str) -> dict[str, Tensor]:
 def _need(state: State, *keys: str) -> None:
     missing = [k for k in keys if k not in state]
     if missing:
-        raise KeyError(
-            f"released state_dict lacks {missing} (has {sorted(state)[:12]}...)"
-        )
+        msg = f"released state_dict lacks {missing} (has {sorted(state)[:12]}...)"
+        raise KeyError(msg)
 
 
 def _put(out: dict[str, Tensor], name: str, state: State, key: str) -> None:
@@ -113,15 +131,18 @@ def is_discarded(key: str) -> bool:
     return any(re.search(pattern, key) for pattern in DISCARDED)
 
 
-# ---------------------------------------------------------------------------------------------------------------- pair-track ops
+# ----------------------------------------------------------------------- pair-track ops
 def triangle_multiplication_from_released(
     state: State, *, outgoing: bool, prefix: str = ""
 ) -> dict[str, Tensor]:
-    """Engine ``TriangleMultiplication`` weights from the released interleaved ``projection`` / ``gate``.
+    """Engine ``TriangleMultiplication`` weights from the released interleaved layout.
 
-    Released: ``left_norm_input.{weight,bias} projection.weight gate.weight center_norm.{weight,bias} output_projection.weight
-    gating_linear.weight``. The released contraction is ``einsum("cik,cjk->cij", a, b)`` (outgoing) / ``einsum("ckj,cki->cij", a, b)``
-    (incoming); the engine's incoming contracts ``left[k, i] * right[k, j]``, so an incoming module takes branch b as ``left``.
+    Released: ``left_norm_input.{weight,bias} projection.weight gate.weight
+    center_norm.{weight,bias} output_projection.weight gating_linear.weight``
+    (``projection`` / ``gate`` interleaved). The released contraction is
+    ``einsum("cik,cjk->cij", a, b)`` (outgoing) / ``einsum("ckj,cki->cij", a, b)``
+    (incoming); the engine's incoming contracts ``left[k, i] * right[k, j]``, so an
+    incoming module takes branch b as ``left``.
     """
     s = _sub(state, prefix)
     _need(
@@ -134,9 +155,11 @@ def triangle_multiplication_from_released(
     projection, gate = s["projection.weight"], s["gate.weight"]
     hidden = projection.shape[0] // 2
     if projection.shape[0] != 2 * hidden or gate.shape != projection.shape:
-        raise ValueError(
-            f"projection {tuple(projection.shape)} / gate {tuple(gate.shape)} must both be [2 * hidden, c_pair]"
+        msg = (
+            f"projection {tuple(projection.shape)} / gate {tuple(gate.shape)} must "
+            "both be [2 * hidden, c_pair]"
         )
+        raise ValueError(msg)
     p = projection.reshape(hidden, 2, -1).transpose(0, 1)
     g = gate.reshape(hidden, 2, -1).transpose(0, 1)
     left, right = (0, 1) if outgoing else (1, 0)
@@ -153,8 +176,11 @@ def triangle_multiplication_from_released(
 def triangle_attention_from_released(
     state: State, *, prefix: str = ""
 ) -> dict[str, Tensor]:
-    """Engine ``TriangleAttention*`` weights (a rename). Released: ``act_norm pair_bias_projection q/k/v_projection gating_query
-    output_projection [output_projection_transposed]``; the gate / output biases are carried when present (RoseTTAFold3, Chai-1).
+    """Engine ``TriangleAttention*`` weights (a rename).
+
+    Released: ``act_norm pair_bias_projection q/k/v_projection gating_query
+    output_projection [output_projection_transposed]``; the gate / output biases are
+    carried when present (RoseTTAFold3, Chai-1).
     """
     s = _sub(state, prefix)
     _need(
@@ -183,7 +209,11 @@ def triangle_attention_from_released(
 
 
 def transition_from_released(state: State, *, prefix: str = "") -> dict[str, Tensor]:
-    """Engine ``Transition`` weights. Released: ``input_layer_norm.{weight,bias} transition1.weight [2 n c, c] transition2.weight``."""
+    """Engine ``Transition`` weights.
+
+    Released: ``input_layer_norm.{weight,bias} transition1.weight [2 n c, c]
+    transition2.weight``.
+    """
     s = _sub(state, prefix)
     _need(s, "transition1.weight", "transition2.weight")
     a, b = s["transition1.weight"].chunk(2, dim=0)
@@ -197,8 +227,11 @@ def transition_from_released(state: State, *, prefix: str = "") -> dict[str, Ten
 def outer_product_mean_from_released(
     state: State, *, prefix: str = ""
 ) -> dict[str, Tensor]:
-    """Engine ``OuterProductMean`` weights. Released: ``layer_norm_input.{weight,bias} left/right_projection.{weight[,bias]} output_w
-    output_b [product_norm.{weight,bias}]``; ``output_w`` ``[K, K, out]`` (``[G, K, K, out]``) becomes ``to_out.weight`` ``[out, G K K]``.
+    """Engine ``OuterProductMean`` weights.
+
+    Released: ``layer_norm_input.{weight,bias} left/right_projection.{weight[,bias]}
+    output_w output_b [product_norm.{weight,bias}]``; ``output_w`` ``[K, K, out]``
+    (``[G, K, K, out]``) becomes ``to_out.weight`` ``[out, G K K]``.
     """
     s = _sub(state, prefix)
     _need(
@@ -220,8 +253,11 @@ def outer_product_mean_from_released(
 def msa_pair_weighted_averaging_from_released(
     state: State, *, prefix: str = ""
 ) -> dict[str, Tensor]:
-    """Engine ``MSAPairWeightedAveraging`` weights. Released: ``act_norm pair_norm.weight pair_logits v_projection gating_query
-    output_projection`` (the pair LayerNorm offset is discarded: a per-head constant, softmax-invariant).
+    """Engine ``MSAPairWeightedAveraging`` weights.
+
+    Released: ``act_norm pair_norm.weight pair_logits v_projection gating_query
+    output_projection`` (the pair LayerNorm offset is discarded: a per-head constant,
+    softmax-invariant).
     """
     s = _sub(state, prefix)
     _need(
@@ -245,9 +281,11 @@ def msa_pair_weighted_averaging_from_released(
 def attention_pair_bias_from_released(
     attention: State, norm: State, projection: State
 ) -> dict[str, Tensor]:
-    """Engine ``AttentionPairBias`` weights from the pairformer's single attention (``single_attention_``, AF3 form) and its pair-logit
-    ``single_pair_logits_norm`` / ``single_pair_logits_projection`` (each state already stripped of its prefix; the norm's offset is
-    discarded).
+    """Engine ``AttentionPairBias`` weights from the pairformer's single attention.
+
+    The single attention is ``single_attention_`` (AF3 form); its pair-logit parts are
+    ``single_pair_logits_norm`` / ``single_pair_logits_projection`` (each state already
+    stripped of its prefix; the norm's offset is discarded).
     """
     a = attention
     _need(
@@ -280,9 +318,13 @@ def attention_pair_bias_from_released(
 def pairformer_block_from_released(
     state: State, *, prefix: str = ""
 ) -> dict[str, Tensor]:
-    """Engine ``PairformerBlock`` weights from a released block (pair track; the single track when its keys are there). Names:
-    ``triangle_multiplication_outgoing/incoming -> tri_multi_outgoing/incoming``, ``pair_attention1/2 -> tri_atten_starting/ending``,
-    ``pair_transition -> transition_pair``, ``single_attention_ + single_pair_logits_* -> single_attention``,
+    """Engine ``PairformerBlock`` weights from a released block.
+
+    The pair track; the single track when its keys are there. Names:
+    ``triangle_multiplication_outgoing/incoming -> tri_multi_outgoing/incoming``,
+    ``pair_attention1/2 -> tri_atten_starting/ending``,
+    ``pair_transition -> transition_pair``,
+    ``single_attention_ + single_pair_logits_* -> single_attention``,
     ``single_transition -> single_transition``.
     """
     s = _sub(state, prefix)
@@ -326,11 +368,13 @@ def pairformer_block_from_released(
     return out
 
 
-# ---------------------------------------------------------------------------------------------------------------- diffusion blocks
+# --------------------------------------------------------------------- diffusion blocks
 def _adaln(s: State, key: str, name: str, out: dict[str, Tensor]) -> bool:
-    """Engine ``AdaptiveLayerNorm`` / ``IdentityAdaptiveLayerNorm`` tensors of the released ``AdaptiveLayerNorm`` at ``key``
-    (``single_cond_layer_norm.weight``, ``single_cond_scale.{weight[,bias]}``, ``single_cond_bias.weight``); returns whether it is the
-    identity-centred form (no ``single_cond_layer_norm``: Chai-1's).
+    """Engine ``(Identity)AdaptiveLayerNorm`` tensors of the released AdaLN at ``key``.
+
+    The released ``AdaptiveLayerNorm`` carries ``single_cond_layer_norm.weight``,
+    ``single_cond_scale.{weight[,bias]}``, ``single_cond_bias.weight``; returns whether
+    it is the identity-centred form (no ``single_cond_layer_norm``: Chai-1's).
     """
     identity = f"{key}.single_cond_layer_norm.weight" not in s
     _need(s, f"{key}.single_cond_scale.weight", f"{key}.single_cond_bias.weight")
@@ -346,8 +390,11 @@ def _adaln(s: State, key: str, name: str, out: dict[str, Tensor]) -> bool:
 def _conditioned_transition(
     s: State, key: str, prefix: str, out: dict[str, Tensor]
 ) -> None:
-    """Released ``DiffusionTransition`` / ``GatedDiffusionTransition`` at ``key`` -> the engine ``(UpGated)ConditionedTransition``
-    (``ada_ln_in``, ``expand_a/b`` (``chunk(2)`` of ``transition1``), ``up`` (``a_to_b``), ``squeeze``, ``to_scale``).
+    """Released diffusion transition -> engine ``(UpGated)ConditionedTransition``.
+
+    The released ``DiffusionTransition`` / ``GatedDiffusionTransition`` at ``key`` maps
+    to ``ada_ln_in``, ``expand_a/b`` (``chunk(2)`` of ``transition1``), ``up``
+    (``a_to_b``), ``squeeze``, ``to_scale``.
     """
     _need(
         s,
@@ -373,8 +420,11 @@ def _conditioned_transition(
 
 
 def _attention(s: State, key: str, prefix: str, out: dict[str, Tensor]) -> None:
-    """Released ``SelfAttention`` / cross attention at ``key`` -> the engine ``AugmentedAttentionPairBias`` (without the pair bias and
-    the AdaLN, which the callers own). ``query_layer_norm`` / ``key_layer_norm`` are RoseTTAFold3's flat q / k LayerNorms.
+    """Released attention -> engine ``AugmentedAttentionPairBias``.
+
+    The released ``SelfAttention`` / cross attention at ``key``, without the pair bias
+    and the AdaLN, which the callers own. ``query_layer_norm`` / ``key_layer_norm`` are
+    RoseTTAFold3's flat q / k LayerNorms.
     """
     for name, src in (
         ("to_query", "q_projection"),
@@ -410,7 +460,7 @@ def _attention(s: State, key: str, prefix: str, out: dict[str, Tensor]) -> None:
 
 
 def count_blocks(state: State, stem: str) -> int:
-    """Number of released blocks ``{stem}.{i}.*`` in a state dict."""
+    """Count the released blocks ``{stem}.{i}.*`` in a state dict."""
     indices = {
         int(m.group(1))
         for k in state
@@ -422,13 +472,16 @@ def count_blocks(state: State, stem: str) -> int:
 def token_dit_blocks_from_released(
     state: State, *, n_head: int, super_block_size: int = 4, prefix: str = ""
 ) -> list[dict[str, Tensor]]:
-    """One engine ``TokenDiT*`` block state dict per block of a released token ``DiffusionTransformer``.
+    """One engine ``TokenDiT*`` block state dict per block of a released token DiT.
 
-    Released: ``self_attention.i.*``, ``transition_block.i.*``, ``pair_input_layer_norm`` (AF3: ONE shared norm; per-block families:
-    ``pair_input_layer_norm.i``) and ``pair_logits_projection`` (AF3: ``pair_logits_projection.j`` of ``4 * n_head`` rows per super
-    block of ``super_block_size`` blocks; per-block families: ``pair_logits_projection.i`` of ``n_head`` rows). The shared norm is
-    broadcast to every block, the shared projection sliced per block, the norm offset discarded. A key the block class has no
-    parameter for (``to_gate`` of Chai-1) is simply absent from the released state.
+    The released token ``DiffusionTransformer`` has ``self_attention.i.*``,
+    ``transition_block.i.*``, ``pair_input_layer_norm`` (AF3: ONE shared norm;
+    per-block families: ``pair_input_layer_norm.i``) and ``pair_logits_projection``
+    (AF3: ``pair_logits_projection.j`` of ``4 * n_head`` rows per super block of
+    ``super_block_size`` blocks; per-block families: ``pair_logits_projection.i`` of
+    ``n_head`` rows). The shared norm is broadcast to every block, the shared
+    projection sliced per block, the norm offset discarded. A key the block class has
+    no parameter for (``to_gate`` of Chai-1) is simply absent from the released state.
     """
     s = _sub(state, prefix)
     per_block = "pair_input_layer_norm.0.weight" in s
@@ -456,8 +509,12 @@ def token_dit_blocks_from_released(
 
 
 def _check_shared_kv_adaln(s: State, key: str, index: int) -> None:
-    """Block classes with ONE AdaLN for queries and keys / values (``kv_norm == "shared"``: Boltz-2, RoseTTAFold3, Chai-1): the released
-    ``k_adaptive_layernorm`` may be discarded ONLY if it equals ``q_adaptive_layernorm`` exactly; any difference is a conversion error.
+    """Check that the K / V AdaLN of a block with ONE shared AdaLN may be discarded.
+
+    Block classes with ONE AdaLN for queries and keys / values (``kv_norm ==
+    "shared"``: Boltz-2, RoseTTAFold3, Chai-1): the released ``k_adaptive_layernorm``
+    may be discarded ONLY if it equals ``q_adaptive_layernorm`` exactly; any difference
+    is a conversion error.
     """
     for name in (
         "single_cond_layer_norm.weight",
@@ -470,27 +527,35 @@ def _check_shared_kv_adaln(s: State, key: str, index: int) -> None:
             f"{key}.k_adaptive_layernorm.{name}",
         )
         if (q in s) != (k in s):
-            raise ValueError(
-                f"block {index}: {q if q in s else k} has no counterpart; the K / V AdaLN cannot be discarded"
+            msg = (
+                f"block {index}: {q if q in s else k} has no counterpart; the K / V "
+                "AdaLN cannot be discarded"
             )
+            raise ValueError(msg)
         if q in s and not torch.equal(s[q], s[k]):
             diff = (s[q].double() - s[k].double()).abs().max().item()
-            raise ValueError(
-                f"block {index}: {k} differs from {q} (max |d| {diff:.3e}); the engine class shares one AdaLN"
+            msg = (
+                f"block {index}: {k} differs from {q} (max |d| {diff:.3e}); the engine "
+                "class shares one AdaLN"
             )
+            raise ValueError(msg)
 
 
 def atom_dit_blocks_from_released(
     state: State, *, n_head: int, kv_norm: str, prefix: str = ""
 ) -> list[dict[str, Tensor]]:
-    """One engine ``AtomDiT*`` block state dict per block of a released ``DiffusionCrossAttTransformer``.
+    """One engine ``AtomDiT*`` block state dict per block of a released atom DiT.
 
-    Released: ``cross_attention.i.{q,k}_adaptive_layernorm`` (the query AdaLN -> ``attention.ada_ln_in``, the key / value AdaLN ->
-    ``attention.ada_ln_kv`` unless the class shares one AdaLN, ``kv_norm == "shared"``, when it is discarded), ``transition_block.i``,
-    ``pair_input_layer_norm`` / ``pair_logits_projection`` (one shared Linear of ``n_blocks * n_head`` rows, or per block).
+    The released ``DiffusionCrossAttTransformer`` has
+    ``cross_attention.i.{q,k}_adaptive_layernorm`` (the query AdaLN ->
+    ``attention.ada_ln_in``, the key / value AdaLN -> ``attention.ada_ln_kv`` unless the
+    class shares one AdaLN, ``kv_norm == "shared"``, when it is discarded),
+    ``transition_block.i``, ``pair_input_layer_norm`` / ``pair_logits_projection`` (one
+    shared Linear of ``n_blocks * n_head`` rows, or per block).
     """
     if kv_norm not in ("parallel", "chained", "shared"):
-        raise ValueError(f"kv_norm {kv_norm!r}")
+        msg = f"kv_norm {kv_norm!r}"
+        raise ValueError(msg)
     s = _sub(state, prefix)
     per_block = "pair_input_layer_norm.0.weight" in s
     n_blocks = count_blocks(s, "cross_attention")
@@ -523,12 +588,16 @@ def atom_dit_blocks_from_released(
 def esmfold2_atom_blocks_from_released(
     state: State, *, n_head: int = 4, prefix: str = ""
 ) -> list[dict[str, Tensor]]:
-    """One engine ``AtomDiT("esmfold2_pair")`` block state dict per block of ESMFold2's ``DiffusionCrossAttTransformer``.
+    """One engine ``AtomDiT("esmfold2_pair")`` block state dict per ESMFold2 atom block.
 
-    ESMFold2's AdaLNs are RMS-conditioned (``single_cond_scale`` / ``single_cond_bias`` only, no layer-norm weight and no scale bias) and its
-    two output gates are raw ``W silu(c)`` (no bias), which :func:`atom_dit_blocks_from_released` does not take. The pair LayerNorm is ONE
-    shared weight (replicated per block), the pair projection ONE ``Linear(d_pair, n_blocks * n_head)`` (rows ``n_head b .. n_head b + n_head - 1``
-    to block ``b``), ``transition1`` ``[2 n c, c]`` is ``chunk(2)`` into ``expand_a`` / ``expand_b``.
+    The blocks are those of ESMFold2's ``DiffusionCrossAttTransformer``. ESMFold2's
+    AdaLNs are RMS-conditioned (``single_cond_scale`` / ``single_cond_bias`` only, no
+    layer-norm weight and no scale bias) and its two output gates are raw
+    ``W silu(c)`` (no bias), which :func:`atom_dit_blocks_from_released` does not take.
+    The pair LayerNorm is ONE shared weight (replicated per block), the pair projection
+    ONE ``Linear(d_pair, n_blocks * n_head)`` (rows
+    ``n_head b .. n_head b + n_head - 1`` to block ``b``), ``transition1``
+    ``[2 n c, c]`` is ``chunk(2)`` into ``expand_a`` / ``expand_b``.
     """
     s = _sub(state, prefix)
     n_blocks = count_blocks(s, "cross_attention")
@@ -590,12 +659,15 @@ def esmfold2_atom_blocks_from_released(
     return blocks
 
 
-# ---------------------------------------------------------------------------------------------------------------- loading
+# ------------------------------------------------------------------------------ loading
 def fit_to_module(
     module: nn.Module, converted: Mapping[str, Tensor]
 ) -> tuple[dict[str, Tensor], list[str]]:
-    """``(kept, dropped)``: ``converted`` restricted to the keys ``module`` has; ``dropped`` names the rest, so a caller can demand that
-    every dropped key is a known discard (RoseTTAFold3's absent query bias, Chai-1's absent output projection) before a strict load.
+    """``(kept, dropped)``: ``converted`` restricted to the keys ``module`` has.
+
+    ``dropped`` names the rest, so a caller can demand that every dropped key is a known
+    discard (RoseTTAFold3's absent query bias, Chai-1's absent output projection)
+    before a strict load.
     """
     own = module.state_dict().keys()
     kept = {k: v for k, v in converted.items() if k in own}
@@ -610,14 +682,17 @@ def load(
     norm_eps: float | None = None,
     allow_dropped: tuple[str, ...] = (),
 ) -> nn.Module:
-    """Strict load of converted tensors into ``module`` keeping the module's parameter dtypes (fp32 masters stay fp32: the released values
-    are copied in, never rounded to bf16). ``allow_dropped``: keys of ``converted`` the module may lack (checked against
+    """Strict load of converted tensors into ``module`` keeping its parameter dtypes.
+
+    fp32 masters stay fp32: the released values are copied in, never rounded to bf16.
+    ``allow_dropped``: keys of ``converted`` the module may lack (checked against
     :func:`fit_to_module`).
     """
     kept, dropped = fit_to_module(module, converted)
     unexpected = [k for k in dropped if k not in allow_dropped]
     if unexpected:
-        raise KeyError(f"{type(module).__name__} has no parameter for {unexpected}")
+        msg = f"{type(module).__name__} has no parameter for {unexpected}"
+        raise KeyError(msg)
     module.load_state_dict(kept, strict=True)
     if norm_eps is not None:
         set_norm_eps(module, norm_eps)
@@ -627,9 +702,12 @@ def load(
 def diffusion_transition_from_released(
     state: State, *, prefix: str = ""
 ) -> dict[str, Tensor]:
-    """Engine ``Transition`` weights from a released UNCONDITIONED ``DiffusionTransition`` (the diffusion head's pair / single
-    conditioning transitions): ``adaptive_layernorm.layer_norm.{weight,bias}``, ``transition1.weight`` ``[2 n c, c]`` (``chunk(2)`` ->
-    ``expand_a`` / ``expand_b``), ``adaptive_zero_init.transition2.weight`` -> ``squeeze``.
+    """Engine ``Transition`` weights from a released UNCONDITIONED diffusion transition.
+
+    The released ``DiffusionTransition``s are the diffusion head's pair / single
+    conditioning transitions: ``adaptive_layernorm.layer_norm.{weight,bias}``,
+    ``transition1.weight`` ``[2 n c, c]`` (``chunk(2)`` -> ``expand_a`` / ``expand_b``),
+    ``adaptive_zero_init.transition2.weight`` -> ``squeeze``.
     """
     s = _sub(state, prefix)
     _need(s, "transition1.weight", "adaptive_zero_init.transition2.weight")
@@ -644,9 +722,12 @@ def diffusion_transition_from_released(
 def evoformer_block_from_released(
     state: State, *, prefix: str = ""
 ) -> dict[str, Tensor]:
-    """Engine parts of an MSA-stack block (``graph.EvoformerBlock``, same attribute names as the released block) from the released
-    ``EvoformerBlock``: ``outer_product_mean``, ``msa_attention1`` (pair-weighted averaging), ``msa_transition``,
-    ``triangle_multiplication_outgoing`` / ``incoming``, ``pair_attention1`` / ``2`` (when present), ``pair_transition``.
+    """Engine parts of an MSA-stack block from the released ``EvoformerBlock``.
+
+    The engine block is ``graph.EvoformerBlock`` (same attribute names as the released
+    block): ``outer_product_mean``, ``msa_attention1`` (pair-weighted averaging),
+    ``msa_transition``, ``triangle_multiplication_outgoing`` / ``incoming``,
+    ``pair_attention1`` / ``2`` (when present), ``pair_transition``.
     """
     s = _sub(state, prefix)
     out: dict[str, Tensor] = {}
@@ -682,27 +763,32 @@ def evoformer_block_from_released(
     return out
 
 
-# ---------------------------------------------------------------------------------------------------------- stack loading (tests)
-#: A key the released state may carry that a block class has no parameter for, and the check that makes dropping it exact.
-_DROPPABLE_ZERO = (
-    "attention.to_query.bias",
-)  # RoseTTAFold3's bias-free query (released as a zero bias)
+# ---------------------------------------------------------------- stack loading (tests)
+#: A key the released state may carry that a block class has no parameter for, and the
+#: check that makes dropping it exact: RoseTTAFold3's bias-free query (released as a
+#: zero bias).
+_DROPPABLE_ZERO = ("attention.to_query.bias",)
 
 
 def _load_blocks(
-    stack: nn.Module, converted: list[dict[str, Tensor]], norm_eps: float | None
+    stack: TokenDiTStack | AtomDiTStack,
+    converted: list[dict[str, Tensor]],
+    norm_eps: float | None,
 ) -> nn.Module:
     if len(converted) != len(stack.blocks):
-        raise ValueError(
+        msg = (
             f"released state has {len(converted)} blocks, the stack {len(stack.blocks)}"
         )
+        raise ValueError(msg)
     for index, (block, tensors) in enumerate(zip(stack.blocks, converted, strict=True)):
         own = block.state_dict().keys()
         for key in _DROPPABLE_ZERO:
             if key in tensors and key not in own and bool(tensors[key].any()):
-                raise ValueError(
-                    f"block {index}: {key} is not zero, the engine class has no such parameter"
+                msg = (
+                    f"block {index}: {key} is not zero, the engine class has no such "
+                    "parameter"
                 )
+                raise ValueError(msg)
         load(block, tensors, norm_eps=norm_eps, allow_dropped=_DROPPABLE_ZERO)
     return stack
 
@@ -716,7 +802,10 @@ def load_token_stack(
     prefix: str = "",
     norm_eps: float | None = None,
 ) -> TokenDiTStack:
-    """Strict load of a released token ``DiffusionTransformer`` (see :func:`~released.token_dit_blocks_from_released`)."""
+    """Strict load of a released token ``DiffusionTransformer``.
+
+    See :func:`~released.token_dit_blocks_from_released`.
+    """
     _load_blocks(
         stack,
         token_dit_blocks_from_released(
@@ -735,8 +824,11 @@ def load_atom_stack(
     prefix: str = "",
     norm_eps: float | None = None,
 ) -> AtomDiTStack:
-    """Strict load of a released ``DiffusionCrossAttTransformer`` (the K / V AdaLN follows the block class's ``kv_norm``)."""
-    kv_norm = stack.blocks[0].kv_norm
+    """Strict load of a released ``DiffusionCrossAttTransformer``.
+
+    The K / V AdaLN follows the block class's ``kv_norm``.
+    """
+    kv_norm = cast("str", stack.blocks[0].kv_norm)
     _load_blocks(
         stack,
         atom_dit_blocks_from_released(

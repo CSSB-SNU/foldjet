@@ -45,18 +45,18 @@ class PairformerBlock(nn.Module):
         n_heads: int = 16,
         c_pair: int = 128,
         c_single: int = 384,
-        c_hidden_mul: int = 128,
+        c_hidden_mul: int = 128,  # noqa: ARG002 - public constructor argument, kept for the call API
         n_heads_pair: int = 4,
         num_intermediate_factor: int = 4,
         single_intermediate_factor: int | None = None,
-        with_single: bool = True,
-        with_pair_attention: bool = True,
+        with_single: bool = True,  # noqa: FBT001, FBT002 - positional flag is public API
+        with_pair_attention: bool = True,  # noqa: FBT001, FBT002 - positional flag is public API
         spec: DenseSpec = ALPHAFOLD3,
         pair_qkv_dim: int | None = None,
-        dual_output: bool = False,
+        dual_output: bool = False,  # noqa: FBT001, FBT002 - positional flag is public API
         tri_hidden_dim: int | None = None,
     ) -> None:
-        """Args:
+        """Build the block's pair track and, when ``with_single``, its single track.
 
         n_heads (int, optional): number of head [for SelfAttention]. Defaults to
             16.
@@ -141,8 +141,11 @@ class PairformerBlock(nn.Module):
         single: torch.Tensor | None,
         seq_mask: torch.Tensor | None,
         extra_pair_bias: torch.Tensor | None,
-    ):
-        """The call of :func:`foldforge.modules.engine.graph.run_block` on this block (the dense calling convention)."""
+    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
+        """Run this block for :func:`foldforge.modules.engine.graph.run_block`.
+
+        The dense calling convention.
+        """
         if single is None:
             return self(pair, pair_mask=pair_mask)
         return self(pair, pair_mask, single, seq_mask, extra_pair_bias=extra_pair_bias)
@@ -293,7 +296,7 @@ class EvoformerBlock(nn.Module):
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Compute the module output."""
 
-        def update_msa(value, updated_pair):
+        def update_msa(value: torch.Tensor, updated_pair: torch.Tensor) -> torch.Tensor:
             """Update msa."""
             if self.parallel:
                 # The transition reads the MSA entering the block, as the
@@ -314,7 +317,7 @@ class EvoformerBlock(nn.Module):
                 ),
             )
 
-        def update_pair(value):
+        def update_pair(value: torch.Tensor) -> torch.Tensor:
             """Update pair."""
             if self.parallel:
                 value = value + (
