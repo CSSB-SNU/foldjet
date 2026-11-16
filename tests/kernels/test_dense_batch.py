@@ -53,7 +53,7 @@ def test_sampler_calls_one_batched_denoiser_per_step():
     batch = SimpleNamespace(
         predicted_structure_info=SimpleNamespace(atom_mask=torch.ones(3, 4))
     )
-    out = model._sample_diffusion(batch, {})  # noqa: SLF001 - test sampling boundary
+    out = model._sample_diffusion(batch, {})
     assert shapes == [(5, 3, 4, 3)] * 3
     assert out["atom_positions"].shape == (5, 3, 4, 3)
 

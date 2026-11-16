@@ -1,6 +1,10 @@
-"""``foldforge.train.fused_opt`` against the per-tensor path of ``train/optim.py`` (CPU, tiny model): clip, Adam, EMA, lr schedule, frozen / None-grad parameters, groups."""
+"""``foldforge.train.fused_opt`` against the per-tensor path of ``train/optim.py``.
+
+CPU, tiny model: clip, Adam, EMA, lr schedule, frozen / None-grad parameters, groups.
+"""
 
 import copy
+from typing import Any
 
 import pytest
 import torch
@@ -19,32 +23,32 @@ class Tiny(nn.Module):
         self.confidence_head = nn.Linear(4, 2)
         self.unused = nn.Linear(2, 2)  # trains but never gets a gradient (grad None)
         for p in self.frozen.parameters():
-            p.requires_grad_(False)
+            p.requires_grad_(requires_grad=False)
 
 
-def _cfg(**kw):
-    base = dict(
-        max_lr=1e-2,
-        min_lr=1e-3,
-        warmup_steps=3,
-        decay_steps=2,
-        decay_factor=0.5,
-        trunk_lr_scale=0.1,
-        ema_decay=0.9,
-        grad_clip_max_norm=1.0,
-    )
+def _cfg(**kw: Any) -> TrainConfig:
+    base = {
+        "max_lr": 1e-2,
+        "min_lr": 1e-3,
+        "warmup_steps": 3,
+        "decay_steps": 2,
+        "decay_factor": 0.5,
+        "trunk_lr_scale": 0.1,
+        "ema_decay": 0.9,
+        "grad_clip_max_norm": 1.0,
+    }
     base.update(kw)
     return TrainConfig(**base)
 
 
-def _grads(model, step, scale):
+def _grads(model, step, scale) -> None:
     gen = torch.Generator().manual_seed(step)
     for n, p in model.named_parameters():
         if p.requires_grad and not n.startswith("unused"):
             p.grad = torch.randn(p.shape, generator=gen) * scale
 
 
-def _rel(a, b):
+def _rel(a, b) -> float:
     return ((a - b).abs() / (b.abs() + 1e-12)).max().item()
 
 
@@ -58,7 +62,8 @@ def test_fused_step_equals_the_reference_over_several_steps(scale):
     f = fused_opt.build_fused(fus, cfg)
     assert {g["name"] for g in f.optimizer.param_groups} == {"heads", "trunk"}
     params_ref = [p for g in opt_ref.param_groups for p in g["params"]]
-    assert len(f.params) == len(params_ref) and all(
+    assert len(f.params) == len(params_ref)
+    assert all(
         not n.startswith("frozen")
         for n, p in fus.named_parameters()
         if any(p is q for q in f.params)
@@ -77,18 +82,18 @@ def test_fused_step_equals_the_reference_over_several_steps(scale):
         ema_ref.update(ref)
         norm_fus = f.step()
         assert abs(norm_ref.item() - norm_fus.item()) <= 1e-6 * norm_ref.item()
-        for (n, a), (_, b) in zip(ref.named_parameters(), fus.named_parameters()):
+        for (n, a), (_, b) in zip(
+            ref.named_parameters(), fus.named_parameters(), strict=False
+        ):
             assert _rel(b, a) <= 1e-6, n
             assert _rel(f.ema.shadow[n], ema_ref.shadow[n]) <= 1e-6, n
-        for pa, pb in zip(params_ref, f.params):
+        for pa, pb in zip(params_ref, f.params, strict=False):
             sa, sb = opt_ref.state[pa], f.optimizer.state[pb]
             assert bool(sa) == bool(sb)  # grad None: no state in either
             if not sa:
                 continue
-            assert (
-                _rel(sb["exp_avg"], sa["exp_avg"]) <= 1e-6
-                and _rel(sb["exp_avg_sq"], sa["exp_avg_sq"]) <= 1e-6
-            )
+            assert _rel(sb["exp_avg"], sa["exp_avg"]) <= 1e-6
+            assert _rel(sb["exp_avg_sq"], sa["exp_avg_sq"]) <= 1e-6
             assert float(sb["step"]) == float(sa["step"])
         opt_ref.zero_grad(set_to_none=True)
         f.zero_grad()
@@ -104,12 +109,12 @@ def test_clip_scale_matches_and_clips_to_max_norm():
     ref = copy.deepcopy([p.grad for p in params])
     total_ref = optim.clip_grad_norm(params, 1.0)
     clipped_ref = [p.grad.clone() for p in params]
-    for p, g in zip(params, ref):
+    for p, g in zip(params, ref, strict=False):
         p.grad = g.clone()
     total = fused_opt.foreach_clip_grad_norm(params, 1.0)
     assert total_ref.item() > 1.0
     assert abs(total.item() - total_ref.item()) <= 1e-6 * total_ref.item()
-    for p, c in zip(params, clipped_ref):
+    for p, c in zip(params, clipped_ref, strict=False):
         assert _rel(p.grad, c) <= 1e-6
     assert torch.linalg.vector_norm(
         torch.stack([p.grad.norm() for p in params])
@@ -141,5 +146,5 @@ def test_fused_set_lr_matches_the_schedule():
 def test_ema_off_and_bad_impl():
     f = fused_opt.build_fused(Tiny(), _cfg(use_ema=False))
     assert f.ema is None
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="impl must be"):
         fused_opt.build_fused(Tiny(), _cfg(), impl="nope")

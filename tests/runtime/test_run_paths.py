@@ -86,7 +86,7 @@ def test_request_and_writer_share_resolved_destination(runs, tmp_path):
     assert (request.out / "target.prediction.pt").is_file()
 
 
-def test_writer_rejects_external_directory_before_writing(runs, tmp_path):  # noqa: ARG001 - shared callback or fixture signature
+def test_writer_rejects_external_directory_before_writing(runs, tmp_path):
     outside = tmp_path / "outside"
     with pytest.raises(ValueError, match="inside"):
         write_output(
@@ -98,7 +98,7 @@ def test_writer_rejects_external_directory_before_writing(runs, tmp_path):  # no
 
 
 def test_spec_cli_rejects_external_directory_before_preparation(
-    runs,  # noqa: ARG001 - fixture installs the temporary run root
+    runs,
     tmp_path,
     monkeypatch,
 ):

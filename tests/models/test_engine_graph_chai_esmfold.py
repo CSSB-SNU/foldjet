@@ -1,14 +1,21 @@
-"""Chai-1 and ESMFold2 (``esmfold2``, ``esmfold2-fast``) run on engine classes: parity with the dense released-layout graph.
+"""Chai-1 and ESMFold2 (``esmfold2``, ``esmfold2-fast``) run on engine classes.
 
-As ``test_engine_graph.py`` for the af3 family: the dense graph (``spec_for(family, mode)``) and the engine graph are built on
-CPU in fp32 with the same random weights, the weights pass through the converter, and every piece the engine graph holds as an engine class is
-compared with the dense piece it replaces. What is specific here:
+Parity with the dense released-layout graph.
 
-* Chai-1: the parallel pairformer / MSA blocks, the grouped outer product mean, the dual-output confidence triangle attention, the identity
-  AdaLN token / atom DiT (``adaln_eps``: fast 1e-5, exact 0.1), the conformer-id atom attention, and what the engine's removal of the
-  ``circular`` key window means for the exact mode (``test_circular_*``),
-* ESMFold2: the pair-only trunk (no triangle attention), the SSM / coda / language-model pair encoder blocks (pair-only blocks), the token
-  DiT, and the atom stack that stays FoldForge-own (the engine's ESMFold2 atom block is pair-free).
+As ``test_engine_graph.py`` for the af3 family: the dense graph
+(``spec_for(family, mode)``) and the engine graph are built on CPU in fp32 with the
+same random weights, the weights pass through the converter, and every piece the engine
+graph holds as an engine class is compared with the dense piece it replaces. What is
+specific here:
+
+* Chai-1: the parallel pairformer / MSA blocks, the grouped outer product mean, the
+  dual-output confidence triangle attention, the identity AdaLN token / atom DiT
+  (``adaln_eps``: fast 1e-5, exact 0.1), the conformer-id atom attention, and what the
+  engine's removal of the ``circular`` key window means for the exact mode
+  (``test_circular_*``),
+* ESMFold2: the pair-only trunk (no triangle attention), the SSM / coda /
+  language-model pair encoder blocks (pair-only blocks), the token DiT, and the atom
+  stack that stays FoldForge-own (the engine's ESMFold2 atom block is pair-free).
 """
 
 from __future__ import annotations
@@ -66,17 +73,16 @@ def randomise(model: torch.nn.Module, seed: int) -> None:
 def pair_of_models(request):
     """(dense model, engine model with the dense weights converted into it)."""
     family, mode = request.param
-    modules.OPM_COUNT_OFFSET = (
-        1e-3  # AF3's exact divisor (the dense graph's), where the family divides at all
-    )
+    # AF3's exact divisor (the dense graph's), where the family divides at all
+    modules.OPM_COUNT_OFFSET = 1e-3
     try:
         dense = dense_model(
             small(family, mode), num_recycles=1, num_samples=1, diffusion_steps=1
         )
         randomise(dense, 1)
-        if (
-            family == "chai1"
-        ):  # the engine class holds ONE AdaLN for the atoms' queries and keys / values: the release ties them (the converter demands it)
+        # the engine class holds ONE AdaLN for the atoms' queries and keys / values: the
+        # release ties them (the converter demands it)
+        if family == "chai1":
             parameters = dict(dense.named_parameters())
             with torch.no_grad():
                 for name, p in parameters.items():
@@ -117,7 +123,7 @@ def test_ported_families_include_chai_and_esmfold2():
 
 
 def test_the_graph_holds_engine_classes_with_engine_keys(pair_of_models):
-    dense, engine = pair_of_models
+    _, engine = pair_of_models
     keys = set(engine.state_dict())
     assert all(p.dtype == torch.float32 for p in engine.parameters())
     assert isinstance(engine.diffusion_head.transformer, TokenDiTStack)
@@ -153,15 +159,17 @@ def test_the_graph_holds_engine_classes_with_engine_keys(pair_of_models):
             "ada_ln_kv" in k for k in keys if "atom_transformer" in k
         )  # one shared atom AdaLN
     else:
-        # engine 2.5.3+: the ESMFold2 atom block with the atom pair + rotary (AtomDiT("esmfold2_pair"), FoldForge R6) is the engine's
-        assert isinstance(decoder, AtomDiTStack) and decoder.rotary
+        # engine 2.5.3+: the ESMFold2 atom block with the atom pair + rotary
+        # (AtomDiT("esmfold2_pair"), FoldForge R6) is the engine's
+        assert isinstance(decoder, AtomDiTStack)
+        assert decoder.rotary
         assert type(decoder.blocks[0]).__name__ == "AtomDiTESMFold2Pair"
         assert not any(
             "single_attention" in k for k in keys if "trunk_pairformer" in k
         )  # pair-only trunk
 
 
-def _pair_inputs(length, d_pair, d_single, seed=0):
+def _pair_inputs(length, d_pair, d_single, seed=0) -> dict[str, torch.Tensor]:
     generator = torch.Generator().manual_seed(seed)
     tokens = torch.ones(length)
     tokens[-3:] = 0
@@ -173,12 +181,15 @@ def _pair_inputs(length, d_pair, d_single, seed=0):
     }
 
 
-def _valid(x, mask):
+def _valid(x, mask) -> torch.Tensor:
     return x[mask > 0]
 
 
 def test_trunk_block_matches_dense(pair_of_models):
-    """Chai-1: the parallel two-track block (single gate bias, ungated-output triangle attention). ESMFold2: the pair-only block."""
+    """Chai-1: the parallel two-track block. ESMFold2: the pair-only block.
+
+    The Chai-1 block has a single gate bias and ungated-output triangle attention.
+    """
     dense, engine = pair_of_models
     d_pair = engine.evoformer.pair_channel
     x = _pair_inputs(24, d_pair, engine.evoformer.seq_channel)
@@ -216,7 +227,8 @@ def test_chai_trunk_block_is_the_parallel_one(pair_of_models):
     if not _is_chai(engine):
         pytest.skip("Chai-1 only")
     block = engine.evoformer.trunk_pairformer[0]
-    assert block.config.parallel and block.config.model == "chai1"
+    assert block.config.parallel
+    assert block.config.model == "chai1"
     assert block.config.single_gate_bias == 1.0
     assert (
         engine.confidence_head.confidence_pairformer[0].config.model
@@ -225,16 +237,17 @@ def test_chai_trunk_block_is_the_parallel_one(pair_of_models):
 
 
 def test_pair_only_blocks_match_dense_and_take_a_batch_axis(pair_of_models):
-    """ESMFold2's coda / language-model encoder blocks (pair 256, no triangle attention) and Chai-1's template blocks (pair 64): one call
-    for several slots."""
+    """Pair-only blocks: one call for several slots.
+
+    ESMFold2's coda / language-model encoder blocks (pair 256, no triangle attention)
+    and Chai-1's template blocks (pair 64).
+    """
     dense, engine = pair_of_models
     if engine.evoformer.template_embedding is not None:
-        want_block = dense.evoformer.template_embedding.single_template_embedding.template_embedding_iteration[
-            0
-        ]
-        got_block = engine.evoformer.template_embedding.single_template_embedding.template_embedding_iteration[
-            0
-        ]
+        dense_templates = dense.evoformer.template_embedding.single_template_embedding
+        want_block = dense_templates.template_embedding_iteration[0]
+        engine_templates = engine.evoformer.template_embedding.single_template_embedding
+        got_block = engine_templates.template_embedding_iteration[0]
         width = 64
         assert got_block.supports_template_batch
     else:
@@ -255,7 +268,10 @@ def test_pair_only_blocks_match_dense_and_take_a_batch_axis(pair_of_models):
 
 
 def test_confidence_block_takes_samples_in_one_call(pair_of_models):
-    """Chai-1: the dual-output triangle attention (``W_o u + (W_t u)^T``). ESMFold2: pair attention off, the single track on."""
+    """Chai-1: the dual-output triangle attention (``W_o u + (W_t u)^T``).
+
+    ESMFold2: pair attention off, the single track on.
+    """
     dense, engine = pair_of_models
     width, single_width = engine.confidence_head.c_pair, engine.confidence_head.c_single
     x = _pair_inputs(16, width, single_width)
@@ -280,7 +296,10 @@ def test_confidence_block_takes_samples_in_one_call(pair_of_models):
 
 
 def test_msa_block_matches_dense(pair_of_models):
-    """Chai-1: the parallel MSA block with the grouped outer product mean. ESMFold2: the sequential block without pair attention."""
+    """Chai-1: the parallel MSA block with the grouped outer product mean.
+
+    ESMFold2: the sequential block without pair attention.
+    """
     dense, engine = pair_of_models
     if engine.evoformer.msa_stack is None:
         pytest.skip("no MSA stack")
@@ -323,13 +342,17 @@ def test_diffusion_transformer_and_conditioning_transitions_match_dense(pair_of_
         x = torch.randn(length, length, head.pair_channel, generator=generator)
         want_t = x + dense.diffusion_head.pair_transition_0(x)
         got_t = head.pair_transition_0(x)
-    # sixteen-wide residual streams of random weights reach |a| ~ 1e2..1e3: fp32 order-of-operations noise is relative to the largest value
+    # sixteen-wide residual streams of random weights reach |a| ~ 1e2..1e3: fp32
+    # order-of-operations noise is relative to the largest value
     assert (got[:, :-3] - want[:, :-3]).abs().max() <= 5e-5 * want.abs().max() + 2e-4
     torch.testing.assert_close(got_t, want_t, **TOLERANCE)
 
 
 def test_chai_adaln_epsilon_follows_the_mode(pair_of_models):
-    """FoldForge's fast mode is 1e-5, the exact mode (the release's traced ``layer_norm(x, None, None, 0.1)``) is 0.1; both DiT stacks."""
+    """FoldForge's fast mode is 1e-5, the exact mode is 0.1; both DiT stacks.
+
+    The exact mode is the release's traced ``layer_norm(x, None, None, 0.1)``.
+    """
     _, engine = pair_of_models
     if not _is_chai(engine):
         pytest.skip("Chai-1 only")
@@ -346,9 +369,12 @@ def test_chai_adaln_epsilon_follows_the_mode(pair_of_models):
             assert block.transition.ada_ln_in.ln_in.eps == want
 
 
-# ------------------------------------------------------------------------------------------------------------------ atom transformer
-def _atom_case(atoms: int, window: str, *, seed: int = 7):
-    """The inputs of one windowed atom transformer call on ``atoms`` real atoms: 24-atom conformers, the key window per FoldForge's word."""
+# -------------------------------------------------------------------- atom transformer
+def _atom_case(atoms: int, window: str, *, seed: int = 7) -> dict:
+    """The inputs of one windowed atom transformer call on ``atoms`` real atoms.
+
+    24-atom conformers, the key window per FoldForge's word.
+    """
     from miniworld_engine.modules.functional import slide_starts
 
     generator = torch.Generator().manual_seed(seed)
@@ -393,7 +419,7 @@ def _atom_case(atoms: int, window: str, *, seed: int = 7):
     }
 
 
-def _run_atom_stacks(dense, engine, case):
+def _run_atom_stacks(dense, engine, case) -> tuple[torch.Tensor, torch.Tensor]:
     want_stack = dense.evoformer_conditioning.atom_transformer_encoder
     got_stack = engine.evoformer_conditioning.atom_transformer_encoder
     with torch.no_grad():
@@ -423,8 +449,11 @@ def _run_atom_stacks(dense, engine, case):
 
 @pytest.mark.parametrize("atoms", [130, 200])
 def test_chai_atom_transformer_matches_dense(pair_of_models, atoms):
-    """Chai-1's windowed atom transformer with the same-conformer mask (engine: the conformer ids ``uid``, shared AdaLN, parallel schedule).
-    Fast mode slides the window inside the real atoms, as the dense graph does."""
+    """Chai-1's windowed atom transformer with the same-conformer mask.
+
+    Engine: the conformer ids ``uid``, shared AdaLN, parallel schedule. Fast mode slides
+    the window inside the real atoms, as the dense graph does.
+    """
     dense, engine = pair_of_models
     if not _is_chai(engine) or engine.spec.atom_key_window != "slide":
         pytest.skip("Chai-1 fast mode")
@@ -435,34 +464,39 @@ def test_chai_atom_transformer_matches_dense(pair_of_models, atoms):
 def test_circular_key_window_is_the_padded_window_when_conformers_do_not_wrap(
     pair_of_models,
 ):
-    """The engine removed Chai-1's ``circular`` key window (the exact mode wrapped the window modulo the real atom count): the exact mode
-    now runs ``pad`` + the conformer ids. The two windows hold the same keys wherever a wrapped key would be masked anyway; the
-    same-conformer mask masks it unless the conformer spans the wrap-around, which these 24-atom conformers do not. So here the exact
-    mode equals the old output; where one conformer spans the ends (a conformer of more atoms than the window half) it does not
-    (docs/ENGINE-UNSUPPORTED.md)."""
+    """The exact mode's ``pad`` window equals the removed ``circular`` one here.
+
+    The engine removed Chai-1's ``circular`` key window (the exact mode wrapped the
+    window modulo the real atom count): the exact mode now runs ``pad`` + the conformer
+    ids. The two windows hold the same keys wherever a wrapped key would be masked
+    anyway; the same-conformer mask masks it unless the conformer spans the
+    wrap-around, which these 24-atom conformers do not. So here the exact mode equals
+    the old output; where one conformer spans the ends (a conformer of more atoms than
+    the window half) it does not (docs/ENGINE-UNSUPPORTED.md).
+    """
     dense, engine = pair_of_models
     if not _is_chai(engine) or engine.spec.atom_key_window != "circular":
         pytest.skip("Chai-1 exact mode")
-    assert (
-        engine_key_window("circular")[0] == "pad" and engine_key_window("circular")[1]
-    )
-    assert all(
-        block.key_window == "pad"
-        for block in engine.diffusion_head.atom_cross_att_decoder.atom_transformer_decoder.blocks
-    )
+    assert engine_key_window("circular")[0] == "pad"
+    assert engine_key_window("circular")[1]
+    decoder = engine.diffusion_head.atom_cross_att_decoder.atom_transformer_decoder
+    assert all(block.key_window == "pad" for block in decoder.blocks)
     got, want = _run_atom_stacks(dense, engine, _atom_case(200, "circular"))
     torch.testing.assert_close(got, want, **TOLERANCE)
 
 
 def test_circular_key_window_differs_when_one_conformer_spans_the_ends(pair_of_models):
-    """The documented difference of the exact mode: a conformer that spans the ends keeps its wrapped keys in the old ``circular`` window."""
+    """The documented difference of the exact mode.
+
+    A conformer that spans the ends keeps its wrapped keys in the old ``circular``
+    window.
+    """
     dense, engine = pair_of_models
     if not _is_chai(engine) or engine.spec.atom_key_window != "circular":
         pytest.skip("Chai-1 exact mode")
     case = _atom_case(200, "circular")
-    uid = torch.zeros(
-        case["uid"].shape[-1], dtype=torch.int64
-    )  # ONE conformer for every atom: every wrapped key is a same-conformer key
+    # ONE conformer for every atom: every wrapped key is a same-conformer key
+    uid = torch.zeros(case["uid"].shape[-1], dtype=torch.int64)
     uid_q = uid.reshape(case["act"].shape[0], 32)
     uid_k = atom_layout.convert(case["gather"], uid_q, layout_axes=(-2, -1))
     case["pair_mask"] = (
@@ -475,7 +509,7 @@ def test_circular_key_window_differs_when_one_conformer_spans_the_ends(pair_of_m
     assert (got - want).abs().max() > 1e-3
 
 
-# ------------------------------------------------------------------------------------------------------------------ the converter
+# ----------------------------------------------------------------------- the converter
 def test_the_converter_demands_every_released_key_is_read_or_a_known_discard(
     pair_of_models,
 ):
@@ -502,7 +536,8 @@ def test_known_discards_are_the_softmax_invariant_offsets_and_the_shared_adaln(
         in discarded
     )
     if _is_chai(engine):
-        # Chai-1's atom blocks hold one AdaLN for queries and keys / values: the released K AdaLN is the discard
+        # Chai-1's atom blocks hold one AdaLN for queries and keys / values: the
+        # released K AdaLN is the discard
         assert any(
             "k_adaptive_layernorm" in k and "atom_transformer" in k for k in discarded
         )

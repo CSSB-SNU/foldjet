@@ -1,5 +1,4 @@
 """Stage boundaries preserve residue heads, structural diffusion and recurrent state."""
-# ruff: noqa: SLF001 - these tests exercise the internal stage contracts
 
 from __future__ import annotations
 

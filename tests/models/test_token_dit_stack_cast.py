@@ -1,5 +1,9 @@
-"""``TokenDiTStack``: the engine's master blocks take bf16 activations, so the stack casts ONCE (not every block, every step), and the pair
-it hands the blocks is the same tensor object for every call of one fold (the engine hoists the pair bias per pair object)."""
+"""``TokenDiTStack``: one cast per stack, one pair object per fold.
+
+The engine's master blocks take bf16 activations, so the stack casts ONCE (not every
+block, every step), and the pair it hands the blocks is the same tensor object for
+every call of one fold (the engine hoists the pair bias per pair object).
+"""
 
 from __future__ import annotations
 
@@ -14,17 +18,17 @@ class _Recorder(nn.Module):
         super().__init__()
         self.calls = calls
 
-    def forward(self, x, cond, pair, key_mask, **kw):  # noqa: ARG002
+    def forward(self, x, cond, pair, key_mask, **kw: object) -> torch.Tensor:
         self.calls.append((x, cond, pair))
         return x + 1
 
 
-def _stack(blocks: int = 3):
+def _stack(blocks: int = 3) -> tuple[TokenDiTStack, list]:
     calls: list = []
     return TokenDiTStack([_Recorder(calls) for _ in range(blocks)]), calls
 
 
-def _inputs(dtype=torch.float32):
+def _inputs(dtype=torch.float32) -> tuple[torch.Tensor, ...]:
     return (
         torch.randn(2, 5, 4).to(dtype),
         torch.ones(5),
@@ -33,7 +37,7 @@ def _inputs(dtype=torch.float32):
     )
 
 
-def test_fp32_inputs_are_cast_once_under_autocast_and_the_output_keeps_the_input_dtype():
+def test_fp32_inputs_are_cast_once_under_autocast_and_the_output_keeps_the_input_dtype():  # noqa: E501 - test name is a pass-token node id
     stack, calls = _stack()
     act, mask, single, pair = _inputs()
     with torch.autocast("cpu", dtype=torch.bfloat16):
@@ -88,9 +92,9 @@ def test_bf16_inputs_and_fp32_precision_pass_through_unchanged():
 def test_a_pair_that_requires_grad_is_not_kept_across_calls():
     stack, calls = _stack(1)
     act, mask, single, pair = _inputs()
-    pair.requires_grad_(True)
+    pair.requires_grad_(requires_grad=True)
     with torch.autocast("cpu", dtype=torch.bfloat16):
         stack(act, mask, single, pair)
         stack(act, mask, single, pair)
     assert calls[0][2] is not calls[1][2]
-    assert stack._pair_source is None  # noqa: SLF001
+    assert stack._pair_source is None

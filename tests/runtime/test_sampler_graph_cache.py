@@ -1,10 +1,15 @@
-"""The per-shape sampler graph cache (R26): key, eviction, stale fallback, no-API fallback. CPU only: the device side is replaced by fakes."""
+"""The per-shape sampler graph cache (R26).
+
+Key, eviction, stale fallback, no-API fallback. CPU only: the device side is replaced
+by fakes.
+"""
 
 from __future__ import annotations
 
 import sys
 import types
 from types import SimpleNamespace
+from typing import Any, NoReturn
 
 import pytest
 import torch
@@ -14,7 +19,7 @@ from foldforge.models.sampler_graph import SamplerGraphCache, _Entry, _LayoutMis
 from foldforge.modules.engine import capture as engine_capture
 
 
-class Stale(RuntimeError):
+class Stale(RuntimeError):  # noqa: N818 - named after the engine's StaleStaticInputs
     """Stands for the engine's ``StaleStaticInputs``."""
 
 
@@ -26,7 +31,8 @@ class FakeTables:
 
     def refresh(self, model=None) -> int:
         if self.fail:
-            raise Stale("a weight changed")
+            msg = "a weight changed"
+            raise Stale(msg)
         self.refreshed.append(model)
         return 3
 
@@ -61,7 +67,7 @@ def entry_of(*, retained=0, leaves=None, tables=None, casts=(), masks=()) -> _En
     return entry
 
 
-# ---- bookkeeping ---------------------------------------------------------------------------------------------------------------------------------
+# ---- bookkeeping ----
 
 
 def test_lookup_counts_hits_and_misses_and_orders_by_use() -> None:
@@ -109,7 +115,7 @@ def test_byte_budget_evicts_old_entries_and_an_oversized_entry_is_not_kept() -> 
 def test_clear_releases_everything() -> None:
     cache = SamplerGraphCache(None, max_entries=4)
     tables = [FakeTables(), FakeTables()]
-    for key, t in zip("ab", tables):
+    for key, t in zip("ab", tables, strict=False):
         cache.insert(key, entry_of(tables=t), 10**9)
     cache.clear()
     assert not cache.entries
@@ -119,7 +125,9 @@ def test_clear_releases_everything() -> None:
 def test_released_entry_holds_nothing() -> None:
     entry = entry_of()
     entry.release()
-    assert entry.captured is None and entry.leaves is None and entry.tables is None
+    assert entry.captured is None
+    assert entry.leaves is None
+    assert entry.tables is None
 
 
 def test_changed_weights_drop_every_graph() -> None:
@@ -134,9 +142,8 @@ def test_changed_weights_drop_every_graph() -> None:
     cache.check_weights(model)
     assert not cache.entries
     cache.insert("a", entry_of(), 10**9)
-    model.weight = torch.nn.Parameter(
-        model.weight.detach().clone()
-    )  # replaced: new address
+    # replaced: new address
+    model.weight = torch.nn.Parameter(model.weight.detach().clone())
     cache.check_weights(model)
     assert not cache.entries
 
@@ -149,7 +156,7 @@ def test_release_all_caches_reaches_every_live_cache() -> None:
     assert all(not cache.entries for cache in caches)
 
 
-# ---- an entry serves another fold -----------------------------------------------------------------------------------------------------------------
+# ---- an entry serves another fold ----
 
 
 def test_entry_load_writes_in_place_refreshes_and_rewrites_the_casts() -> None:
@@ -165,15 +172,14 @@ def test_entry_load_writes_in_place_refreshes_and_rewrites_the_casts() -> None:
     model = object()
     new = [torch.full((2, 2), 3.0), torch.tensor([1.0, 0.0, 1.0])]
     assert entry.load(new, model) == 3
-    assert [
-        t.data_ptr() for t in static
-    ] == pointers  # same storage: the graph and the engine's records keep reading it
-    assert torch.equal(static[0], new[0]) and torch.equal(static[1], new[1])
+    # same storage: the graph and the engine's records keep reading it
+    assert [t.data_ptr() for t in static] == pointers
+    assert torch.equal(static[0], new[0])
+    assert torch.equal(static[1], new[1])
     assert torch.equal(cast[0].float(), new[0])  # the cast copy follows its source
     assert torch.equal(flat_mask, new[1])
-    assert entry.tables.refreshed == [
-        None
-    ]  # the handle selects this graph's tables: no root filter
+    # the handle selects this graph's tables: no root filter
+    assert entry.tables.refreshed == [None]
 
 
 def test_entry_load_rejects_a_fold_of_another_layout() -> None:
@@ -182,7 +188,7 @@ def test_entry_load_rejects_a_fold_of_another_layout() -> None:
         entry.load([torch.zeros(2), torch.zeros(2)], None)
 
 
-# ---- the sampler call through the cache (device side faked) ---------------------------------------------------------------------------------------
+# ---- the sampler call through the cache (device side faked) ----
 
 
 class CpuCache(SamplerGraphCache):
@@ -196,7 +202,10 @@ class CpuCache(SamplerGraphCache):
 
 @pytest.fixture
 def cached_call(monkeypatch):
-    """``run(fold_data, ...)``: ``sample`` with a fake fold, engine signature and capture."""
+    """``run(fold_data, ...)``.
+
+    ``sample`` with a fake fold, engine signature and capture.
+    """
     monkeypatch.setattr(
         engine_capture,
         "signature",
@@ -213,7 +222,9 @@ def cached_call(monkeypatch):
     )
     captures: list[_Entry] = []
 
-    def fake_capture(cache, fold, sampler, tree, coords, sigmas, row, **_):
+    def fake_capture(
+        cache, fold, sampler, tree, coords, sigmas, row, **_: Any
+    ) -> _Entry:
         leaves = [t.clone() for t in tree]
         entry = entry_of(leaves=leaves)
         captures.append(entry)
@@ -232,7 +243,7 @@ def cached_call(monkeypatch):
     model = torch.nn.Linear(1, 1)
     sampler = SimpleNamespace(config=SimpleNamespace(gamma_0=0.8))
 
-    def run(tree, *, steps=3, generator=None):
+    def run(tree, *, steps=3, generator=None) -> Any:
         fold = SimpleNamespace(model=model, tree=lambda: tree, casts=list)
         coords = torch.zeros(2, 3)
         table = torch.arange(float(steps)).reshape(steps, 1)
@@ -271,16 +282,14 @@ def test_first_fold_captures_and_later_folds_of_the_shape_hit(cached_call) -> No
     ) == (1, 2, 2)
     static = cached_call.captures[0].leaves
     assert torch.equal(static[0], a[0])  # the last fold written into the static buffers
-    assert (
-        len(cached_call.captures[0].captured.calls) == 9
-    )  # 3 steps per fold, one graph
+    # 3 steps per fold, one graph
+    assert len(cached_call.captures[0].captured.calls) == 9
 
 
 def test_another_shape_is_another_graph_and_steps_do_not_matter(cached_call) -> None:
     cached_call.run([torch.ones(2, 2)], steps=3)
-    cached_call.run(
-        [torch.ones(2, 2)], steps=5
-    )  # same shape, other step count: the same graph
+    # same shape, other step count: the same graph
+    cached_call.run([torch.ones(2, 2)], steps=5)
     cached_call.run([torch.ones(4, 2)], steps=3)
     assert len(cached_call.captures) == 2
     assert cached_call.counters.cache_hits == 1
@@ -304,7 +313,7 @@ def test_an_entry_without_an_engine_handle_is_used_once_and_not_kept(
 ) -> None:
     monkeypatch.setattr(torch.cuda, "synchronize", lambda *a, **k: None)
 
-    def no_handle(*args, **kwargs):
+    def no_handle(*args: Any, **kwargs: Any) -> _Entry:
         entry = entry_of(leaves=[torch.zeros(2, 2)])
         entry.tables = None
         return entry
@@ -316,13 +325,13 @@ def test_an_entry_without_an_engine_handle_is_used_once_and_not_kept(
 
 
 def test_a_tree_the_cache_cannot_describe_falls_back(cached_call, monkeypatch) -> None:
-    def unsupported(tree):
-        raise TypeError("Unsupported graph input")
+    def unsupported(tree) -> NoReturn:
+        msg = "Unsupported graph input"
+        raise TypeError(msg)
 
     monkeypatch.setattr(sampler_graph, "_flatten", unsupported)
-    assert (
-        cached_call.run([torch.ones(2)]) is None
-    )  # the caller runs the per-fold capture
+    # the caller runs the per-fold capture
+    assert cached_call.run([torch.ones(2)]) is None
     assert cached_call.counters.uncached == 1
 
 
@@ -331,15 +340,13 @@ def test_changed_weights_recapture(cached_call) -> None:
     cached_call.run(tree)
     model = cached_call.cache.weights  # token of the model the fold carries
     assert model is not None
-    cached_call.cache.weights = (
-        0,
-        0,
-    )  # the weights the graph was captured with are not the model's now
+    # the weights the graph was captured with are not the model's now
+    cached_call.cache.weights = (0, 0)
     cached_call.run(tree)
     assert len(cached_call.captures) == 2
 
 
-# ---- when the cache is not used --------------------------------------------------------------------------------------------------------------------
+# ---- when the cache is not used ----
 
 
 def test_training_and_missing_fold_use_no_cache() -> None:
@@ -353,12 +360,11 @@ def test_training_and_missing_fold_use_no_cache() -> None:
     assert scope.uncached == 1  # the training fold is counted
     with torch.no_grad():
         assert sampler_graph._cache_of(scope, fold) is scope.cache
-    assert (
-        sampler_graph._cache_of(SimpleNamespace(), fold) is None
-    )  # a scope without a cache (config off, engine without the API)
+    # a scope without a cache (config off, engine without the API)
+    assert sampler_graph._cache_of(SimpleNamespace(), fold) is None
 
 
-def _fake_engine_capture(monkeypatch, **attributes):
+def _fake_engine_capture(monkeypatch, **attributes: Any) -> None:
     module = types.ModuleType("miniworld_engine.capture")
     for name, value in attributes.items():
         setattr(module, name, value)
@@ -385,9 +391,8 @@ def test_an_engine_without_the_refresh_api_gets_no_cache(monkeypatch) -> None:
     )
     scope = SamplerScope(SimpleNamespace(bypass=0), config)
     assert scope.cache is None
-    assert (
-        sampler_graph._cache_of(scope, object()) is None
-    )  # every fold is captured on its own
+    # every fold is captured on its own
+    assert sampler_graph._cache_of(scope, object()) is None
 
 
 def test_an_engine_with_the_refresh_api_gets_one_and_the_config_can_turn_it_off(
@@ -405,11 +410,9 @@ def test_an_engine_with_the_refresh_api_gets_one_and_the_config_can_turn_it_off(
         sampler_graph_cache=True, max_graphs=3, sampler_graph_cache_fraction=0.25
     )
     scope = SamplerScope(SimpleNamespace(bypass=0), on)
-    assert (
-        scope.cache is not None
-        and scope.cache.max_entries == 3
-        and scope.cache.budget_fraction == 0.25
-    )
+    assert scope.cache is not None
+    assert scope.cache.max_entries == 3
+    assert scope.cache.budget_fraction == 0.25
     off = SimpleNamespace(
         sampler_graph_cache=False, max_graphs=3, sampler_graph_cache_fraction=0.25
     )
@@ -435,7 +438,7 @@ def test_scope_counters_reset_and_report_names() -> None:
     } <= set(SamplerScope.COUNTERS)
 
 
-# ---- the per-fold state of the model --------------------------------------------------------------------------------------------------------------
+# ---- the per-fold state of the model ----
 
 
 def test_grouped_fold_tree_drops_the_epochs_and_bind_restores_the_state() -> None:
@@ -451,12 +454,15 @@ def test_grouped_fold_tree_drops_the_epochs_and_bind_restores_the_state() -> Non
         ],
     }
     tree = sampler.fold_tree()
-    assert "epoch" not in tree["cond"][0] and tree["L"] == 4 and len(tree["cond"]) == 2
+    assert "epoch" not in tree["cond"][0]
+    assert tree["L"] == 4
+    assert len(tree["cond"]) == 2
     original = dict(sampler.state)
     static = {"L": 4, "pair_all": torch.ones(1), "cond": [{"base": torch.ones(1)}]}
     with sampler.bind_fold(static):
         assert sampler.state["pair_all"] is static["pair_all"]
-    assert sampler.state == original and sampler.state["cond"] is original["cond"]
+    assert sampler.state == original
+    assert sampler.state["cond"] is original["cond"]
 
 
 def test_head_adopts_a_fold_under_the_key_of_its_batch_and_embeddings() -> None:
@@ -475,18 +481,14 @@ def test_head_adopts_a_fold_under_the_key_of_its_batch_and_embeddings() -> None:
     }
     head.adopt_fold(batch, embeddings, tree)
     entry = head._fold
-    assert entry[0] == head._fold_key(
-        batch, embeddings, True
-    )  # what _conditioned looks up
-    assert (
-        head._conditioned(batch, embeddings, True)[1] is tree["pair_cond"]
-    )  # served, not remade
-    assert (
-        head.fold_tree().keys() == tree.keys()
-        and head.fold_tree()["pair_cond"] is tree["pair_cond"]
-    )
+    # what _conditioned looks up
+    assert entry[0] == head._fold_key(batch, embeddings, True)  # noqa: FBT003 - unit under test
+    # served, not remade
+    assert head._conditioned(batch, embeddings, True)[1] is tree["pair_cond"]  # noqa: FBT003 - unit under test
+    assert head.fold_tree().keys() == tree.keys()
+    assert head.fold_tree()["pair_cond"] is tree["pair_cond"]
     embeddings["single"].add_(1)  # a changed trunk output is another fold
-    assert entry[0] != head._fold_key(batch, embeddings, True)
+    assert entry[0] != head._fold_key(batch, embeddings, True)  # noqa: FBT003 - unit under test
 
 
 def test_token_dit_stack_reports_the_pair_cast_it_made() -> None:
@@ -495,18 +497,18 @@ def test_token_dit_stack_reports_the_pair_cast_it_made() -> None:
     stack = TokenDiTStack([])
     assert stack.engine_pair_cast() is None
     pair = torch.zeros(2, 2)
-    stack._pair_source, stack._pair_engine = (
-        (pair, pair._version),
-        pair[None],
-    )  # a view: no copy to rewrite
+    # a view: no copy to rewrite
+    stack._pair_source, stack._pair_engine = (pair, pair._version), pair[None]
     assert stack.engine_pair_cast() is None
     copy = pair.to(torch.bfloat16)[None]
     stack._pair_engine = copy
     found = stack.engine_pair_cast()
-    assert found is not None and found[0] is pair and found[1] is copy
+    assert found is not None
+    assert found[0] is pair
+    assert found[1] is copy
 
 
-# ---- what the graph reads from the engine's caches -----------------------------------------------------------------------------------------------
+# ---- what the graph reads from the engine's caches ----
 
 
 def test_hold_new_keeps_the_engine_entries_made_since_the_marks(monkeypatch) -> None:
@@ -521,9 +523,8 @@ def test_hold_new_keeps_the_engine_entries_made_since_the_marks(monkeypatch) -> 
     pack_entry = {key: value for entries in held for key, value in entries}
     stores["chunks"].clear()  # the engine evicts: the graph's references stay
     assert pack_entry["k"].numel() == 5
-    assert (
-        engine_capture.tensor_bytes(held) == 0
-    )  # CPU tensors are not counted (CUDA bytes only)
+    # CPU tensors are not counted (CUDA bytes only)
+    assert engine_capture.tensor_bytes(held) == 0
 
 
 def test_hold_helpers_do_nothing_on_an_engine_without_weight_caches(
@@ -534,31 +535,29 @@ def test_hold_helpers_do_nothing_on_an_engine_without_weight_caches(
     assert engine_capture.hold_new({}) == []
 
 
-def test_static_clone_keeps_expanded_dims_expanded_and_load_writes_the_unique_part() -> (
+def test_static_clone_keeps_expanded_dims_expanded_and_load_writes_the_unique_part() -> (  # noqa: E501 - test node id kept (pass tokens)
     None
 ):
     shared = torch.arange(6.0).reshape(1, 6).expand(4, 6)  # one mask served to 4 folds
     assert shared.stride(0) == 0
     static = sampler_graph._static_clone(shared)
-    assert static.stride(0) == 0 and torch.equal(static, shared)
+    assert static.stride(0) == 0
+    assert torch.equal(static, shared)
     assert sampler_graph._static_clone(torch.ones(3, 2)).stride() == (2, 1)
     pointer = static.data_ptr()
     entry = entry_of(leaves=[static, torch.zeros(2)])
     new = torch.full((1, 6), 7.0).expand(4, 6)
-    entry.load(
-        [new, torch.ones(2)], None
-    )  # a plain copy_ into an expanded tensor would raise
-    assert (
-        static.data_ptr() == pointer
-        and static.stride(0) == 0
-        and torch.equal(static, new)
-    )
+    # a plain copy_ into an expanded tensor would raise
+    entry.load([new, torch.ones(2)], None)
+    assert static.data_ptr() == pointer
+    assert static.stride(0) == 0
+    assert torch.equal(static, new)
 
 
 def test_a_fold_larger_than_the_cutoff_is_not_cached(cached_call, monkeypatch) -> None:
     monkeypatch.setattr(engine_capture, "tensor_bytes", lambda held, seen=None: 3 << 30)
-    assert (
-        cached_call.run([torch.ones(2, 2)]) is None
-    )  # the caller runs the per-fold capture: no static copy next to the fold
-    assert cached_call.counters.uncached == 1 and not cached_call.captures
+    # the caller runs the per-fold capture: no static copy next to the fold
+    assert cached_call.run([torch.ones(2, 2)]) is None
+    assert cached_call.counters.uncached == 1
+    assert not cached_call.captures
     assert cached_call.cache.max_fold_bytes == 2 << 30

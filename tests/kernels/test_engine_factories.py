@@ -1,4 +1,7 @@
-"""The factories build engine classes with FoldForge's choices: model keys, master / fp32 parameters, the RoseTTAFold3 fast block."""
+"""The factories build engine classes with FoldForge's choices.
+
+Model keys, master / fp32 parameters, the RoseTTAFold3 fast block.
+"""
 
 from __future__ import annotations
 
@@ -38,9 +41,8 @@ from foldforge.modules.engine.transformers import (
 def test_every_dense_family_has_model_keys():
     for family in {spec.family for spec in SPECS.values()}:
         assert family in factory.MODEL_KEYS, family
-    assert (
-        factory.model_keys("protenix2").triangle == "protenix"
-    )  # the triangle maps have no protenix_v2
+    # the triangle maps have no protenix_v2
+    assert factory.model_keys("protenix2").triangle == "protenix"
     with pytest.raises(ValueError, match="no engine selector keys"):
         factory.model_keys("nope")
 
@@ -51,9 +53,8 @@ def test_parameters_are_fp32_never_native_bf16(precision):
     assert isinstance(module, Transition)
     assert {p.dtype for p in module.parameters()} == {torch.float32}
     assert module.master_weights is (precision == "master")
-    module.to(
-        torch.bfloat16
-    )  # a bulk cast: masters and norm affines stay fp32 only under "master"
+    # a bulk cast: masters and norm affines stay fp32 only under "master"
+    module.to(torch.bfloat16)
     expected = torch.float32 if precision == "master" else torch.bfloat16
     assert module.expand_a.weight.dtype == expected
     assert module.ln_in.weight.dtype == torch.float32
@@ -66,7 +67,8 @@ def test_master_flag_reaches_every_mixin_below():
         d_pair=32, triangle_model="af3", d_single=64, n_head_single=4
     )
     mixins = [m for m in block.modules() if isinstance(m, MasterWeights)]
-    assert mixins and all(m.master_weights for m in mixins)
+    assert mixins
+    assert all(m.master_weights for m in mixins)
     assert {p.dtype for p in block.parameters()} == {torch.float32}
 
 
@@ -103,23 +105,22 @@ def test_triangle_classes_follow_the_model_keys():
 
 def test_opm_forms():
     grouped = factory.outer_product_mean(64, 32, 64, groups=8)
-    assert grouped.product_norm.eps == 0.1 and grouped.groups == 8
+    assert grouped.product_norm.eps == 0.1
+    assert grouped.groups == 8
     biased = factory.outer_product_mean(
         64, 32, 8, projection_bias=True, normalize_before_proj=False
     )
-    assert biased.to_left.bias is not None and not biased.normalize_before_proj
-    assert (
-        factory.outer_product_mean(16, 32, 8).count_offset is None
-    )  # the clamp divisor the kernels serve
+    assert biased.to_left.bias is not None
+    assert not biased.normalize_before_proj
+    # the clamp divisor the kernels serve
+    assert factory.outer_product_mean(16, 32, 8).count_offset is None
 
 
 def test_rosettafold3_fast_block_is_rf3_attention_with_plain_trimul():
     fast = pairformer_block(d_pair=32, triangle_model="rf3", parallel=True)
     assert type(fast.tri_atten_starting) is TriangleAttentionRF3
-    assert (
-        type(fast.tri_multi_outgoing) is TriangleMultiplication
-        and type(fast.tri_multi_incoming) is TriangleMultiplication
-    )
+    assert type(fast.tri_multi_outgoing) is TriangleMultiplication
+    assert type(fast.tri_multi_incoming) is TriangleMultiplication
     assert fast.config.parallel
     exact = pairformer_block(
         d_pair=32, triangle_model="rf3", parallel=True, divide_by_length=True
@@ -171,9 +172,11 @@ def test_dit_stacks_are_engine_blocks(family, token, atom, window):
 
 
 def test_esmfold2_atom_stack_is_the_engine_pair_block():
-    # engine 2.5.3+ ships AtomDiT("esmfold2_pair") (R6): the family's atom stack is the engine's, with the rotary tables
+    # engine 2.5.3+ ships AtomDiT("esmfold2_pair") (R6): the family's atom stack is the
+    # engine's, with the rotary tables
     stack = atom_dit_stack("esmfold2", n_blocks=3)
-    assert stack.rotary and type(stack.blocks[0]).__name__ == "AtomDiTESMFold2Pair"
+    assert stack.rotary
+    assert type(stack.blocks[0]).__name__ == "AtomDiTESMFold2Pair"
     assert (
         type(
             token_dit_stack(
@@ -188,7 +191,8 @@ def test_key_window_words():
     assert engine_key_window("slide") == ("slide", None)
     assert engine_key_window("slide_qblock") == ("slide_qblock", None)
     window, note = engine_key_window("circular")
-    assert window == "pad" and "circular" in note
+    assert window == "pad"
+    assert "circular" in note
     with pytest.raises(ValueError, match="unknown atom key window"):
         engine_key_window("zigzag")
 
@@ -196,10 +200,8 @@ def test_key_window_words():
 def test_configure_model_keeps_fp32_parameters_and_records_precision():
     model = torch.nn.Sequential(factory.transition(16, 2), torch.nn.Linear(16, 4))
     out = configure_model(model, "miniworld", torch.bfloat16, "cpu")
-    assert (
-        out.foldforge_precision == "master"
-        and out.foldforge_activation_dtype == torch.bfloat16
-    )
+    assert out.foldforge_precision == "master"
+    assert out.foldforge_activation_dtype == torch.bfloat16
     assert {p.dtype for p in out.parameters()} == {torch.float32}
     assert precision_of(torch.float32) == "fp32"
     with pytest.raises(ValueError, match="no parameter precision"):

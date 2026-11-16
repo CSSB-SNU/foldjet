@@ -73,7 +73,8 @@ def test_every_backend_spelling_reaches_one_loading_lifecycle(
     assert report["backend"] == recorded
     assert report["strict"] is True
     assert report["state_entries"] == seen[0][1]
-    # Parameters stay fp32 (master precision): the split is the loader's, not the backend's.
+    # Parameters stay fp32 (master precision): the split is the loader's, not the
+    # backend's.
     assert model.projection.weight.dtype == torch.float32
     assert model.foldforge_precision == "master"
     assert model.norm.weight.dtype == torch.float32
@@ -185,7 +186,10 @@ def test_af3_default_keeps_released_values_in_fp32_master_parameters(
 
 @pytest.mark.parametrize("dtype", [torch.float32, torch.bfloat16])
 def test_haiku_assign_loads_released_values_exactly_into_fp32(dtype):
-    """A released bf16 (or fp32) value is exact in an fp32 parameter: the loader copies, it does not round to a storage dtype."""
+    """A released bf16 (or fp32) value is exact in an fp32 parameter.
+
+    The loader copies, it does not round to a storage dtype.
+    """
     from foldforge.models.checkpoints.legacy.haiku import Param, ParamType, assign
 
     source = torch.full((3, 4), 1.000123, dtype=dtype)
@@ -273,7 +277,7 @@ def test_direct_model_construction_rejects_nonpositive_total_passes(recycles):
 @pytest.mark.parametrize("mode", ["fast", "exact"])
 def test_resolved_spec_is_complete_and_strict_json(family, mode):
     spec = spec_for(family, mode)
-    report = loading._resolved_spec(spec)  # noqa: SLF001 - serialization contract
+    report = loading._resolved_spec(spec)
     json.dumps(report, allow_nan=False)
     assert report["family"] == family
     assert report["pair_channel"] == spec.pair_channel

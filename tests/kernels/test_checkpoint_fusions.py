@@ -1,7 +1,11 @@
-"""The checkpoint equations of the pieces around the engine blocks: the released output gate and the engine's ``AdaptiveRMSNorm``.
+"""The checkpoint equations of the pieces around the engine blocks.
 
-``AdaptiveRMSNorm`` (ESMFold2's atom AdaLN: an affine-free RMSNorm, SiLU of the conditioning, identity-centred scale, no biases) is the
-engine class that replaces the rms-modulation kernel function FoldForge used to call; the equation is checked on its own backend.
+The released output gate and the engine's ``AdaptiveRMSNorm``.
+
+``AdaptiveRMSNorm`` (ESMFold2's atom AdaLN: an affine-free RMSNorm, SiLU of the
+conditioning, identity-centred scale, no biases) is the engine class that replaces the
+rms-modulation kernel function FoldForge used to call; the equation is checked on its
+own backend.
 """
 
 from __future__ import annotations
@@ -16,10 +20,13 @@ from foldforge.modules.engine.configure import configure_model
 
 
 def test_gated_projection_gradient():
-    """The released output gate ``linear(sigmoid(gate) * value)``: PyTorch statements, differentiable."""
+    """The released output gate ``linear(sigmoid(gate) * value)``.
+
+    PyTorch statements, differentiable.
+    """
     torch.manual_seed(71)
     layer = configure_model(AdaLNZero(32, 16, None), "pytorch", torch.float32, "cpu")
-    layer.requires_grad_(True)
+    layer.requires_grad_(requires_grad=True)
     g, v = (torch.randn(2, 8, 32, requires_grad=True) for _ in range(2))
     a = layer(v, gate_logits=g)
     b = F.linear(torch.sigmoid(g) * v, layer.transition2.weight)

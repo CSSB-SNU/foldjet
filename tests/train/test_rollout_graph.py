@@ -1,4 +1,8 @@
-"""The training rollout graph (``train/rollout_graph.py``): shape key, cache budget / eviction, fallbacks, step hook, inline sampler. CPU only (the device side is faked)."""
+"""The training rollout graph (``train/rollout_graph.py``).
+
+Shape key, cache budget / eviction, fallbacks, step hook, inline sampler. CPU only
+(the device side is faked).
+"""
 
 from __future__ import annotations
 
@@ -52,12 +56,12 @@ def test_tree_drops_msa_and_templates_and_keeps_the_trunk_outputs() -> None:
     tree = graph_tree(
         batch, {"pair": torch.zeros(3, 3, 2), "single": torch.zeros(3, 4)}
     )
-    assert tree["batch"].msa is None and tree["batch"].templates is None
+    assert tree["batch"].msa is None
+    assert tree["batch"].templates is None
     assert tree["batch"].mask is batch.mask
-    assert (
-        tree["batch"].token_features.seq_length is None
-        and batch.token_features.seq_length is not None
-    )  # the crop length is not part of the key
+    # the crop length is not part of the key
+    assert tree["batch"].token_features.seq_length is None
+    assert batch.token_features.seq_length is not None
     assert set(tree["emb"]) == {"pair", "single"}
 
 
@@ -89,25 +93,21 @@ def test_cache_evicts_least_recently_used_over_the_graph_count_and_byte_budget()
     cache.insert("e", fake_entry(retained=30), 50)
     assert list(cache.entries) == ["e"]
     report = graph.report()
-    assert (
-        report["entries"] == 1
-        and report["evictions"] >= 2
-        and report["disabled"] is None
-    )
+    assert report["entries"] == 1
+    assert report["evictions"] >= 2
+    assert report["disabled"] is None
 
 
 def test_entry_load_writes_the_static_buffers_and_checks_the_layout() -> None:
     static = [torch.zeros(2, 2), torch.zeros(3)]
     entry = fake_entry(leaves=static)
     entry.load([torch.ones(2, 2), torch.full((3,), 2.0)])
-    assert torch.equal(static[0], torch.ones(2, 2)) and torch.equal(
-        static[1], torch.full((3,), 2.0)
-    )
+    assert torch.equal(static[0], torch.ones(2, 2))
+    assert torch.equal(static[1], torch.full((3,), 2.0))
     with pytest.raises(RuntimeError):
         entry.load([torch.ones(2, 2)])
-    expanded = torch.zeros(1, 4).expand(
-        5, 4
-    )  # a stride-0 leaf: written through its unique part
+    # a stride-0 leaf: written through its unique part
+    expanded = torch.zeros(1, 4).expand(5, 4)
     fake_entry(leaves=[expanded]).load([torch.ones(1, 4).expand(5, 4)])
     assert torch.equal(expanded, torch.ones(5, 4))
 
@@ -133,10 +133,10 @@ def test_cpu_inputs_fall_back_to_the_eager_rollout() -> None:
         20,
         lambda *a: calls.append(a) or "eager",
     )
-    assert out == "eager" and len(calls) == 1
-    assert (
-        model.__dict__["_foldforge_rollout_graph"].fallbacks == 1
-    )  # the graph is made once per model
+    assert out == "eager"
+    assert len(calls) == 1
+    # the graph is made once per model
+    assert model.__dict__["_foldforge_rollout_graph"].fallbacks == 1
 
 
 def test_structural_tokens_are_not_served() -> None:
@@ -154,9 +154,9 @@ def test_step_hook_routes_to_the_graph_only_when_asked(
         rollout_graph, "mini_rollout", lambda *a: seen.append(a) or "graph-result"
     )
     assert step.mini_rollout("m", {}, "b", {}, 20, graph=True) == "graph-result"
-    assert (
-        len(seen) == 1 and seen[0][-1] is step.mini_rollout
-    )  # the eager rollout is the fallback handed over
+    assert len(seen) == 1
+    # the eager rollout is the fallback handed over
+    assert seen[0][-1] is step.mini_rollout
 
 
 def test_rollout_config_accepts_graph_and_defaults_to_after() -> None:
@@ -165,12 +165,15 @@ def test_rollout_config_accepts_graph_and_defaults_to_after() -> None:
 
 
 def test_inline_sampler_equals_the_eager_sampler_for_the_same_noise() -> None:
-    """``sample_inline`` (device-scalar churn branch, no host read) has the arithmetic of ``EulerSampler.sample``: same noise, same trajectory."""
+    """``sample_inline`` has the arithmetic of ``EulerSampler.sample``.
+
+    Device-scalar churn branch, no host read: same noise, same trajectory.
+    """
     sampler = EulerSampler(EulerSampler.Config())
     sigmas = torch.tensor([160.0, 40.0, 8.0, 1.5, 0.3, 0.05])
     weight = torch.tensor([[0.9, 0.1, 0.0], [0.0, 1.1, 0.2], [0.1, 0.0, 0.8]])
 
-    def denoise(coords, sigma):
+    def denoise(coords, sigma) -> torch.Tensor:
         return (
             coords @ weight / (1 + sigma.reshape(-1, *(1,) * (coords.ndim - 1)) ** 0.5)
         )

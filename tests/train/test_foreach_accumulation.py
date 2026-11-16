@@ -124,6 +124,5 @@ def test_switch_off(monkeypatch):
     for p in params:
         p.grad = torch.zeros_like(p)
     with foreach_accumulation(params):
-        assert all(
-            p.grad is not None for p in params
-        )  # autograd accumulates into them itself
+        # autograd accumulates into them itself
+        assert all(p.grad is not None for p in params)

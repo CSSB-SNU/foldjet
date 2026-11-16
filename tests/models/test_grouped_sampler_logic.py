@@ -1,4 +1,7 @@
-"""``models.grouped``: the parts of the trunk_seed x diffusion_seed sampler that need no GPU (refusals and the conditioning table)."""
+"""``models.grouped``: the trunk_seed x diffusion_seed sampler parts that need no GPU.
+
+The refusals and the conditioning table.
+"""
 
 from types import SimpleNamespace
 
@@ -13,7 +16,7 @@ def _stack(blocks: int = 2) -> SimpleNamespace:
     return SimpleNamespace(blocks=nn.ModuleList([nn.Identity() for _ in range(blocks)]))
 
 
-def _head(**override):
+def _head(**override: object) -> SimpleNamespace:
     enc = SimpleNamespace(atom_transformer_encoder=_stack())
     dec = SimpleNamespace(atom_transformer_decoder=_stack())
     head = SimpleNamespace(
@@ -67,9 +70,10 @@ def test_the_conditioning_table_is_one_row_per_noise_level_per_fold():
     folds = [{"base": base}, {"base": base + 1}]
     sampler.state["cond"] = folds
     levels = torch.tensor([0.5, 1.5, 2.5])
-    table = sampler._table(None, None, levels)  # noqa: SLF001
+    table = sampler._table(None, None, levels)
     assert table.shape == (3, 2, 4, 3), "[steps, folds, tokens, channels]"
     assert torch.allclose(table[:, 0], levels[:, None, None].expand(3, 4, 3))
     assert torch.allclose(table[:, 1], levels[:, None, None].expand(3, 4, 3) + 1)
-    # one level (the per-step call a graph-less run makes) gives the same row as the full table
-    assert torch.equal(sampler._table(None, None, levels[:1])[0], table[0])  # noqa: SLF001
+    # one level (the per-step call a graph-less run makes) gives the same row as the
+    # full table
+    assert torch.equal(sampler._table(None, None, levels[:1])[0], table[0])

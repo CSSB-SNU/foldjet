@@ -1,4 +1,8 @@
-"""``modules.dense.dead``: the numerically dead residual modules of a checkpoint are flagged once the weights are final."""
+"""``modules.dense.dead``: numerically dead residual modules are flagged.
+
+The numerically dead residual modules of a checkpoint are flagged once the weights
+are final.
+"""
 
 import torch
 from torch import nn
@@ -7,7 +11,10 @@ from foldforge.modules.dense.dead import THRESHOLD, clear_dead, is_dead, mark_de
 
 
 class Residual(nn.Module):
-    """Stands for an engine residual module: the class declares the plain ``dead`` flag the engine honours."""
+    """Stands for an engine residual module.
+
+    The class declares the plain ``dead`` flag the engine honours.
+    """
 
     dead = False
 
@@ -18,7 +25,10 @@ class Residual(nn.Module):
 
 
 class Plain(nn.Module):
-    """A module that does not declare the flag (the engine decides which of its modules honour it): never flagged."""
+    """A module that does not declare the flag: never flagged.
+
+    The engine decides which of its modules honour it.
+    """
 
     def __init__(self) -> None:
         super().__init__()
@@ -80,7 +90,8 @@ def test_the_flag_is_a_plain_attribute_so_compile_guards_on_it():
     assert module.dead is True
 
 
-# --- the engine contract `mark_dead` relies on (the engine declined to ship its own loader: FoldForge owns this) ---------------------
+# --- the engine contract `mark_dead` relies on --------------------------------------
+# (the engine declined to ship its own loader: FoldForge owns this)
 
 
 def test_the_engine_residual_classes_still_declare_the_dead_flag_false_by_default():
@@ -101,7 +112,8 @@ def test_the_engine_residual_classes_still_declare_the_dead_flag_false_by_defaul
         MSAPairWeightedAveraging,
     ):
         assert hasattr(cls, "dead"), (
-            f"{cls.__name__} lost the `dead` flag: dead-module skipping would silently stop (speed only)"
+            f"{cls.__name__} lost the `dead` flag: "
+            "dead-module skipping would silently stop (speed only)"
         )
         assert cls.dead is False, f"{cls.__name__}.dead must default to False"
 

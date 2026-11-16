@@ -1,5 +1,8 @@
-"""The backend policy on top of the engine's ``backends`` tuples: names, aliases, the table derived from the classes, the per-module
-choice, and the guard that implements ``engine.unsupported`` (the engine itself never falls back)."""
+"""The backend policy on top of the engine's ``backends`` tuples.
+
+Names, aliases, the table derived from the classes, the per-module choice, and the
+guard that implements ``engine.unsupported`` (the engine itself never falls back).
+"""
 
 from __future__ import annotations
 
@@ -24,7 +27,7 @@ from foldforge.modules.engine.serving import report_observations
 
 
 @pytest.fixture(autouse=True)
-def _fresh_log_state():
+def _fresh_log_state() -> None:
     policy.forget_logged_refusals()
 
 
@@ -55,7 +58,8 @@ def test_serves_is_derived_from_the_engine_classes():
         assert ("miniworld" in names) == bool(have & {"cuda", "triton"})
         assert ("cuequivariance" in names) == ("cueq" in have)
     assert "anthropic" not in table["conditioning"]
-    # engine 2.5.1: `opm` and `msa_pwa` have an `anthropic` backend (2.5.0 had none), so the table must list it
+    # engine 2.5.1: `opm` and `msa_pwa` have an `anthropic` backend (2.5.0 had none),
+    # so the table must list it
     assert "anthropic" in table["opm"]
     assert "anthropic" in table["msa_pwa"]
 
@@ -71,17 +75,19 @@ def test_choose_backend(monkeypatch):
     # H100: cuda where the class has it, pytorch for a class that has none
     monkeypatch.setattr(backends, "capability", lambda _d: (9, 0))
     assert backends.choose_backend("miniworld", Transition) == ("cuda", None)
-    # engine 2.5.4: AdaptiveLayerNorm has a portable triton backend (no cuda), so "miniworld" on H100 picks triton (2.5.3: pytorch)
+    # engine 2.5.4: AdaptiveLayerNorm has a portable triton backend (no cuda), so
+    # "miniworld" on H100 picks triton (2.5.3: pytorch)
     assert backends.choose_backend("miniworld", AdaptiveLayerNorm) == ("triton", None)
     assert backends.choose_backend("cueq", TriangleMultiplication) == ("cueq", None)
     assert backends.choose_backend("cuequivariance", TriangleAttention) == (
         "cueq",
         None,
     )
+    # engine 2.5.1 (2.5.0: no such backend)
     assert backends.choose_backend("anthropic", OuterProductMean) == (
         "anthropic",
         None,
-    )  # engine 2.5.1 (2.5.0: no such backend)
+    )
     name, why = backends.choose_backend("anthropic", AdaptiveLayerNorm)
     assert name == "pytorch"
     assert "no 'anthropic' backend" in why
@@ -96,7 +102,8 @@ def test_choose_backend(monkeypatch):
 
 def test_plan_resolve_reports_refused_ops(monkeypatch, caplog):
     monkeypatch.setattr(backends, "capability", lambda _d: (9, 0))
-    # `conditioning` (ConditionedTransition, AdaptiveLayerNorm ...) has no `anthropic` backend in the engine
+    # `conditioning` (ConditionedTransition, AdaptiveLayerNorm ...) has no `anthropic`
+    # backend in the engine
     plan = backends.BackendPlan.make(
         "pytorch", {"transition": "cuda", "conditioning": "anthropic"}
     )
@@ -136,21 +143,19 @@ def test_apply_plan_sets_the_backend_per_module_and_guards(monkeypatch):
     assert model.transition.backend == "cuda"
     assert model.norm.backend == "cuda"
     assert model.trimul.backend == "pytorch"
-    assert (
-        choices["transition"]["backend"] == "cuda"
-        and choices["trimul"]["op"] == "trimul"
-    )
+    assert choices["transition"]["backend"] == "cuda"
+    assert choices["trimul"]["op"] == "trimul"
 
 
 def test_unsupported_call_falls_back_once_and_logs_once(monkeypatch, caplog):
     monkeypatch.setattr(backends, "capability", lambda _d: (9, 0))
     model = _Model()
-    expected = Transition.forward(
-        model.transition, _x()
-    )  # pytorch backend of the same weights
+    # pytorch backend of the same weights
+    expected = Transition.forward(model.transition, _x())
     policy.apply_plan(model, backends.BackendPlan.make("cuda"))
     assert model.transition.backend == "cuda"
-    # a CPU tensor is outside the cuda backend's range: the engine raises, FoldForge's guard falls back
+    # a CPU tensor is outside the cuda backend's range: the engine raises, FoldForge's
+    # guard falls back
     assert model.transition.unsupported(_x()) is not None
     with pytest.raises(BackendUnsupported):
         Transition.forward(model.transition, _x())
@@ -171,13 +176,17 @@ def test_unsupported_error_policy_raises(monkeypatch):
     model = _Model()
     policy.apply_plan(model, backends.BackendPlan.make("cuda", unsupported="error"))
     with pytest.raises(
-        backends.BackendUnsupportedError, match="engine.unsupported: error"
+        backends.BackendUnsupportedError, match=r"engine.unsupported: error"
     ):
         model.transition(_x())
 
 
 def test_composite_children_are_refused_one_by_one(monkeypatch):
-    """A PairformerBlock stays on pytorch itself; each child has its own backend, so one child without a kernel does not take the block."""
+    """A PairformerBlock stays on pytorch itself.
+
+    Each child has its own backend, so one child without a kernel does not take the
+    block.
+    """
     from foldforge.modules.engine.pairformer import pairformer_block
 
     monkeypatch.setattr(backends, "capability", lambda _d: (9, 0))

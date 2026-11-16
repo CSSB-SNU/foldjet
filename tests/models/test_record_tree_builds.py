@@ -42,7 +42,7 @@ def haiku_flatten(records: dict) -> list[str]:
     """Return every record path the loader would ask the checkpoint for."""
     from foldforge.models.checkpoints.legacy import haiku
 
-    return list(haiku._process_translations_dict(d=records, _key_prefix=""))  # noqa: SLF001 - the loader's own walk
+    return list(haiku._process_translations_dict(d=records, _key_prefix=""))
 
 
 def test_a_widened_family_names_the_same_records():

@@ -173,9 +173,10 @@ def test_applies_only_where_torch_is_reproduced(monkeypatch):
     idx = torch.zeros(3, dtype=torch.long, device="cuda")
     assert gather_grad.applies(x, idx, 0)
     assert not gather_grad.applies(x.detach(), idx, 0)  # no autograd graph
+    # S == 1: torch's warp reduction
     assert not gather_grad.applies(
         torch.zeros(10, device="cuda", requires_grad=True), idx, 0
-    )  # S == 1: torch's warp reduction
+    )
     assert not gather_grad.applies(x, idx.int(), 0)
     with torch.no_grad():
         assert not gather_grad.applies(x, idx, 0)

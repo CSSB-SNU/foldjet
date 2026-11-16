@@ -1,9 +1,10 @@
-"""AF-family regressions that need no checkpoint: the sampler keeps its noise field; the engine norm keeps an fp32 optional affine."""
+"""AF-family regressions that need no checkpoint.
+
+The sampler keeps its noise field; the engine norm keeps an fp32 optional affine.
+"""
 
 from __future__ import annotations
 
-# Tests target private upstream equations directly without loading full checkpoints.
-# ruff: noqa: SLF001
 from unittest import mock
 
 import pytest

@@ -1,7 +1,8 @@
-# ruff: noqa: E501
-"""The 5I28 ESMFold2 forward fixes: the relative encoding built in its target dtype, the confidence head's per-fold re-embedding terms built once.
+"""The 5I28 ESMFold2 forward fixes.
 
-Both are exact rewrites: the same values, the same operations in the same order, fewer launches and no int64 one-hot.
+The relative encoding built in its target dtype, the confidence head's per-fold
+re-embedding terms built once. Both are exact rewrites: the same values, the same
+operations in the same order, fewer launches and no int64 one-hot.
 """
 
 from __future__ import annotations
@@ -99,7 +100,7 @@ def test_reembedding_split_equals_the_one_call_for_every_sample(monkeypatch):
 def test_the_sample_loop_builds_the_fold_terms_once_per_fold(monkeypatch):
     seen = []
 
-    def fake_forward(self, sample, *args):
+    def fake_forward(self, sample, *args: object) -> dict:
         seen.append(self._fold_cache)
         return {"x": sample.sum()[None]}
 
@@ -109,7 +110,7 @@ def test_the_sample_loop_builds_the_fold_terms_once_per_fold(monkeypatch):
     torch.nn.Module.__init__(confidence)
     confidence.reembed_pair = spec.confidence_reembed_pair
     confidence.row_pool_attn = None
-    confidence._fold_cache = None  # noqa: SLF001
+    confidence._fold_cache = None
     out = confidence._forward_samples(
         torch.ones(3, 2, 2, 3), {}, None, None, None, None
     )
@@ -117,36 +118,39 @@ def test_the_sample_loop_builds_the_fold_terms_once_per_fold(monkeypatch):
     assert len(seen) == 3
     assert isinstance(seen[0], dict)
     assert all(item is seen[0] for item in seen)  # one dict for the fold's samples
-    assert confidence._fold_cache is None  # noqa: SLF001 - dropped after the fold
+    assert confidence._fold_cache is None
 
 
 def test_fold_scope_opens_and_drops_the_cache():
     confidence = ConfidenceHead.__new__(ConfidenceHead)
     torch.nn.Module.__init__(confidence)
-    confidence._fold_cache = None  # noqa: SLF001
+    confidence._fold_cache = None
     with confidence.fold_scope():
-        assert confidence._fold_cache == {}  # noqa: SLF001
-    assert confidence._fold_cache is None  # noqa: SLF001
+        assert confidence._fold_cache == {}
+    assert confidence._fold_cache is None
     with pytest.raises(RuntimeError), confidence.fold_scope():
         raise RuntimeError
-    assert confidence._fold_cache is None  # noqa: SLF001
+    assert confidence._fold_cache is None
 
 
 def test_the_per_sample_confidence_calls_share_one_fold_scope():
-    """``_confidence_over_samples`` calls the head once per sample (chunk 1): all calls of a fold see the same cache dict."""
+    """All calls of a fold see the same cache dict.
+
+    ``_confidence_over_samples`` calls the head once per sample (chunk 1).
+    """
     from foldforge.models.architectures.af3 import AlphaFold3 as Model
 
     seen = []
 
     class Head(ConfidenceHead):
-        def __init__(self):
+        def __init__(self) -> None:
             torch.nn.Module.__init__(self)
             self._fold_cache = None
 
-        def sample_chunk(self, count, tokens):
+        def sample_chunk(self, count, tokens) -> int:
             return 1
 
-        def forward(self, **kwargs):
+        def forward(self, **kwargs: object) -> dict:
             seen.append(self._fold_cache)
             return {"x": kwargs["dense_atom_positions"].sum()[None]}
 
@@ -155,27 +159,33 @@ def test_the_per_sample_confidence_calls_share_one_fold_scope():
         pseudo_beta_info=SimpleNamespace(token_atoms_to_pseudo_beta=None),
     )
     model = SimpleNamespace(confidence_head=Head(), _head_batch=lambda b: b)
-    out = Model._confidence_over_samples(model, torch.ones(3, 4, 2, 3), {}, batch)  # noqa: SLF001
+    out = Model._confidence_over_samples(model, torch.ones(3, 4, 2, 3), {}, batch)
     assert out["x"].shape == (3, 1)
-    assert len(seen) == 3 and isinstance(seen[0], dict)
+    assert len(seen) == 3
+    assert isinstance(seen[0], dict)
     assert all(item is seen[0] for item in seen)
-    assert model.confidence_head._fold_cache is None  # noqa: SLF001
+    assert model.confidence_head._fold_cache is None
 
 
-def _stub_reembedding_head(monkeypatch):
-    """A ``reembed_pair`` head with the heavy parts stubbed (no pairformer, a counting ``fold_terms``): the sample-independent state and its use."""
+def _stub_reembedding_head(monkeypatch) -> tuple[ConfidenceHead, dict[str, int]]:
+    """A ``reembed_pair`` head with the heavy parts stubbed.
+
+    No pairformer, a counting ``fold_terms``: the sample-independent state and its use.
+    """
     calls = {"fold_terms": 0}
 
     class Reembedding(torch.nn.Module):
-        def fold_terms(self, pair, single, target_feat, batch):
+        def fold_terms(
+            self, pair, single, target_feat, batch
+        ) -> tuple[torch.Tensor, torch.Tensor]:
             calls["fold_terms"] += 1
             return pair * 2.0 + target_feat.sum(), single + 1.0
 
-        def sample_term(self, pair, positions, pair_mask):
+        def sample_term(self, pair, positions, pair_mask) -> torch.Tensor:
             return pair + positions.sum() * pair_mask[..., None]
 
     class Head(ConfidenceHead):
-        def __init__(self):
+        def __init__(self) -> None:
             torch.nn.Module.__init__(self)
             self.spec = SimpleNamespace(
                 confidence_global_norm=False, confidence_single_clamp=False
@@ -187,7 +197,7 @@ def _stub_reembedding_head(monkeypatch):
             self.row_pool_attn = None
             self._fold_cache = None
 
-        def _output_heads(self, pair, single, *args):
+        def _output_heads(self, pair, single, *args: object) -> dict:
             return {"pair": pair, "single": single}
 
     monkeypatch.setattr(
@@ -196,7 +206,7 @@ def _stub_reembedding_head(monkeypatch):
     return Head(), calls
 
 
-def _fold_inputs():
+def _fold_inputs() -> tuple[dict[str, torch.Tensor], torch.Tensor, list[torch.Tensor]]:
     generator = torch.Generator().manual_seed(3)
     embeddings = {
         "pair": torch.randn(4, 4, 2, generator=generator),
@@ -218,9 +228,8 @@ def test_a_call_with_the_fold_state_equals_the_call_that_builds_it(monkeypatch):
         expected = [
             confidence(s, embeddings, seq_mask, None, None, batch) for s in samples
         ]
-        assert calls["fold_terms"] == len(
-            samples
-        )  # no fold scope, no state: every call builds its own
+        # no fold scope, no state: every call builds its own
+        assert calls["fold_terms"] == len(samples)
         calls["fold_terms"] = 0
         state = confidence.fold_state(embeddings, seq_mask, batch)
         assert calls["fold_terms"] == 1
@@ -229,16 +238,14 @@ def test_a_call_with_the_fold_state_equals_the_call_that_builds_it(monkeypatch):
             confidence(s, embeddings, seq_mask, None, None, batch, fold=state)
             for s in samples
         ]
-        assert (
-            calls["fold_terms"] == 1
-        )  # the calls that were given the state build nothing
+        # the calls that were given the state build nothing
+        assert calls["fold_terms"] == 1
     for a, b in zip(expected, got, strict=True):
-        assert torch.equal(a["pair"], b["pair"]) and torch.equal(
-            a["single"], b["single"]
-        )
-    assert torch.equal(state["terms"][0], base[0]) and torch.equal(
-        state["terms"][1], base[1]
-    )  # the state is only read
+        assert torch.equal(a["pair"], b["pair"])
+        assert torch.equal(a["single"], b["single"])
+    # the state is only read
+    assert torch.equal(state["terms"][0], base[0])
+    assert torch.equal(state["terms"][1], base[1])
 
 
 def test_the_sample_loop_builds_the_fold_state_once_and_hands_it_to_every_sample():
@@ -247,19 +254,19 @@ def test_the_sample_loop_builds_the_fold_state_once_and_hands_it_to_every_sample
     seen = {"built": 0, "folds": []}
 
     class Head(ConfidenceHead):
-        def __init__(self, reembed):
+        def __init__(self, reembed) -> None:
             torch.nn.Module.__init__(self)
             self._fold_cache = None
             self.reembed_pair = reembed
 
-        def sample_chunk(self, count, tokens):
+        def sample_chunk(self, count, tokens) -> int:
             return 1
 
-        def fold_state(self, embeddings, seq_mask, batch):
+        def fold_state(self, embeddings, seq_mask, batch) -> dict:
             seen["built"] += 1
             return {"state": object()}
 
-        def forward(self, **kwargs):
+        def forward(self, **kwargs: object) -> dict:
             seen["folds"].append(kwargs.get("fold"))
             return {"x": kwargs["dense_atom_positions"].sum()[None]}
 
@@ -268,21 +275,18 @@ def test_the_sample_loop_builds_the_fold_state_once_and_hands_it_to_every_sample
         pseudo_beta_info=SimpleNamespace(token_atoms_to_pseudo_beta=None),
     )
 
-    def run(reembed, samples):
+    def run(reembed, samples) -> tuple[int, list]:
         seen["built"], seen["folds"] = 0, []
         model = SimpleNamespace(confidence_head=Head(reembed), _head_batch=lambda b: b)
-        Model._confidence_over_samples(model, torch.ones(samples, 4, 2, 3), {}, batch)  # noqa: SLF001
+        Model._confidence_over_samples(model, torch.ones(samples, 4, 2, 3), {}, batch)
         return seen["built"], list(seen["folds"])
 
-    built, folds = run(True, 3)
-    assert (
-        built == 1
-        and len(folds) == 3
-        and folds[0] is not None
-        and all(f is folds[0] for f in folds)
-    )
-    assert run(True, 1) == (0, [None])  # one sample: nothing to share
-    assert run(False, 3) == (
-        0,
-        [None] * 3,
-    )  # a head that does not re-embed has no fold state
+    built, folds = run(reembed=True, samples=3)
+    assert built == 1
+    assert len(folds) == 3
+    assert folds[0] is not None
+    assert all(f is folds[0] for f in folds)
+    # one sample: nothing to share
+    assert run(reembed=True, samples=1) == (0, [None])
+    # a head that does not re-embed has no fold state
+    assert run(reembed=False, samples=3) == (0, [None] * 3)

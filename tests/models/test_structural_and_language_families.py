@@ -196,7 +196,7 @@ def test_a_family_that_folds_from_a_language_model_refuses_to_fold_without_one()
         evoformer = Evoformer(spec)
     batch = type("Batch", (), {"lm_pair": None})()
     with pytest.raises(ValueError, match="folds from a language model"):
-        evoformer._embed_lm_pair(batch, torch.zeros(2, 2, 256), torch.ones(2, 2))  # noqa: SLF001 - the guard is the subject
+        evoformer._embed_lm_pair(batch, torch.zeros(2, 2, 256), torch.ones(2, 2))
 
 
 @pytest.mark.parametrize(
@@ -218,10 +218,10 @@ def test_nucleic_base_centre_follows_the_ring_system(residue, expected):
 def test_structural_roles_split_every_standard_residue_but_glycine():
     from foldforge.data.features import structural_tokens as st
 
-    assert st._BACKBONE["protein"] == frozenset(["N", "CA", "C", "O", "OXT"])  # noqa: SLF001 - the table is the subject
+    assert st._BACKBONE["protein"] == frozenset(["N", "CA", "C", "O", "OXT"])
     # Glycine is standard and splits to one token because its sidechain set is
     # empty, not because it is excluded from the standard table.
-    assert "GLY" in st._STANDARD["protein"]  # noqa: SLF001 - the table is the subject
+    assert "GLY" in st._STANDARD["protein"]
 
 
 def test_the_language_model_shim_mixes_the_tower_s_last_layers():

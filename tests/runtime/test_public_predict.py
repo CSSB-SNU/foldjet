@@ -1,7 +1,5 @@
 """Library requests, in-memory output and CLI adaptation share one execution API."""
 
-# ruff: noqa: SLF001 - verify the isolated engine compatibility bridge
-
 from __future__ import annotations
 
 import json

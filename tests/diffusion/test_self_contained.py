@@ -1,16 +1,23 @@
-"""``foldforge.diffusion`` must stay movable into its own package: no import of another foldforge module or of the engine."""
+"""``foldforge.diffusion`` must stay movable into its own package.
+
+No import of another foldforge module or of the engine.
+"""
 
 from __future__ import annotations
 
 import ast
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import foldforge.diffusion as diffusion
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 ROOT = Path(diffusion.__file__).parent
 
 
-def _imports(path: Path):
+def _imports(path: Path) -> Iterator[str]:
     for node in ast.walk(ast.parse(path.read_text())):
         if isinstance(node, ast.Import):
             for alias in node.names:

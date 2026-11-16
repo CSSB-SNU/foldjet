@@ -1,6 +1,8 @@
-# ruff: noqa: E501
-"""The two FoldForge-side sources of run-to-run differences (2026-11-13): the chirality gradient's float-atomic sum and the post-atom-cond
-LayerNorm that inductor compiled with a timing-picked block size inside the sampler step."""
+"""The two FoldForge-side sources of run-to-run differences (2026-11-13).
+
+The chirality gradient's float-atomic sum and the post-atom-cond LayerNorm that
+inductor compiled with a timing-picked block size inside the sampler step.
+"""
 
 from __future__ import annotations
 
@@ -11,10 +13,11 @@ from foldforge.modules.dense import atom_cross_attention as aca
 from foldforge.modules.dense.chirality import _segment_sum, dihedral_error_gradient
 
 
-def _overlapping(generator: torch.Generator, atoms: int = 40, centres: int = 90):
-    index = torch.randint(
-        0, atoms - 5, (centres * 4,), generator=generator
-    )  # atoms >= atoms - 5 stay empty
+def _overlapping(
+    generator: torch.Generator, atoms: int = 40, centres: int = 90
+) -> tuple[torch.Tensor, torch.Tensor, int]:
+    # atoms >= atoms - 5 stay empty
+    index = torch.randint(0, atoms - 5, (centres * 4,), generator=generator)
     values = (
         torch.randn(3, centres * 4, 3, generator=generator)
         * torch.logspace(-3, 3, centres * 4)[None, :, None]
@@ -51,32 +54,32 @@ def test_segment_sum_zeroes_non_finite_values_of_their_atom_only() -> None:
     index = torch.tensor([0, 0, 1, 2, 2, 3])
     got = _segment_sum(values, index, 5)
     assert torch.isfinite(got).all()
-    assert (
-        got[0, 0, 0] == 1 and got[0, 1, 0] == 1 and got[0, 3, 0] == 1
-    )  # one NaN row costs only its own term
+    # one NaN row costs only its own term
+    assert got[0, 0, 0] == 1
+    assert got[0, 1, 0] == 1
+    assert got[0, 3, 0] == 1
     assert got[0, 4].abs().sum() == 0
 
 
 def test_dihedral_error_gradient_is_repeatable_and_centre_order_free() -> None:
     generator = torch.Generator().manual_seed(7)
     xyz = torch.randn(2, 30, 3, generator=generator)
+    # overlapping centres
     centres = torch.stack(
         [torch.randperm(30, generator=generator)[:4] for _ in range(60)]
-    )  # overlapping centres
+    )
     targets = torch.randn(60, generator=generator)
     first = dihedral_error_gradient(xyz, centres, targets)
     assert torch.equal(first, dihedral_error_gradient(xyz, centres, targets))
     permutation = torch.randperm(60, generator=generator)
     shuffled = dihedral_error_gradient(xyz, centres[permutation], targets[permutation])
-    torch.testing.assert_close(
-        shuffled, first, rtol=1e-5, atol=1e-6
-    )  # the centres' own float32 terms are the same set; only the sum order moved
+    # the centres' own float32 terms are the same set; only the sum order moved
+    torch.testing.assert_close(shuffled, first, rtol=1e-5, atol=1e-6)
     assert dihedral_error_gradient(xyz, centres[:0], targets[:0]).abs().sum() == 0
 
 
-class _Stack(
-    torch.nn.Module
-):  # not a DiffusionCrossAttTransformer: stands for an engine stack
+# not a DiffusionCrossAttTransformer: stands for an engine stack
+class _Stack(torch.nn.Module):
     pass
 
 
@@ -92,7 +95,7 @@ def _state(channels: int = 8) -> aca.AtomFoldState:
     )
 
 
-def _modules(norm: torch.nn.Module | None):
+def _modules(norm: torch.nn.Module | None) -> tuple[torch.nn.Module, torch.nn.Module]:
     encoder = torch.nn.Module()
     encoder.atom_transformer_encoder = _Stack()
     decoder = torch.nn.Module()
@@ -109,10 +112,11 @@ def test_engine_stack_hoists_only_the_post_norm() -> None:
         out = aca.hoist_conditioning(state, encoder, decoder)
         expected = (norm(state.queries_single_cond), norm(state.keys_single_cond))
     projections, (queries, keys, decoder_projections) = out.hoisted
-    assert (
-        projections is None and decoder_projections is None
-    )  # the engine stack projects its own conditioning
-    assert torch.equal(queries, expected[0]) and torch.equal(keys, expected[1])
+    # the engine stack projects its own conditioning
+    assert projections is None
+    assert decoder_projections is None
+    assert torch.equal(queries, expected[0])
+    assert torch.equal(keys, expected[1])
 
 
 def test_engine_stack_without_post_norm_or_with_gradients_is_left_alone() -> None:

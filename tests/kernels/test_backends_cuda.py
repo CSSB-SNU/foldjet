@@ -1,7 +1,11 @@
-"""One H100: the ``miniworld`` policy gives the engine's own kernels and they agree with the engine's ``pytorch`` backend on master weights.
+"""One H100: the ``miniworld`` policy gives the engine's own kernels.
 
-Master parameters (fp32) with bf16 activations: the engine modules run their kernels under bf16 autocast / bf16 GEMMs themselves; no model-level
-cast is involved. Other cards: the policy gives ``triton`` and the test only checks that the guard serves or refuses by name.
+They agree with the engine's ``pytorch`` backend on master weights.
+
+Master parameters (fp32) with bf16 activations: the engine modules run their kernels
+under bf16 autocast / bf16 GEMMs themselves; no model-level cast is involved. Other
+cards: the policy gives ``triton`` and the test only checks that the guard serves or
+refuses by name.
 """
 
 from __future__ import annotations
@@ -47,16 +51,15 @@ def test_pairformer_block_policy_matches_pytorch():
     pair = torch.randn(1, 128, 128, 128, device="cuda", dtype=torch.bfloat16)
     single = torch.randn(1, 128, 384, device="cuda", dtype=torch.bfloat16)
     mask = torch.ones(1, 128, device="cuda", dtype=torch.bool)
-    with (
-        torch.no_grad(),
-        torch.autocast("cuda", dtype=torch.bfloat16),
-    ):  # master weights: bf16 activations under autocast
+    # master weights: bf16 activations under autocast
+    with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16):
         expected = reference(pair.clone(), mask, single.clone())
         actual = block(pair.clone(), mask, single.clone())
-    assert rms(actual[0], expected[0]) < 0.03 and rms(actual[1], expected[1]) < 0.03
+    assert rms(actual[0], expected[0]) < 0.03
+    assert rms(actual[1], expected[1]) < 0.03
     served = report_observations(block)["modules"]
     ran = {name: stats["served_host_calls"] for name, stats in served.items()}
-    print(ran)
+    print(ran)  # noqa: T201 - served backends land in the GPU job log
     major = torch.cuda.get_device_capability()[0]
     if major == 9:
         assert any("cuda" in calls for calls in ran.values()), ran

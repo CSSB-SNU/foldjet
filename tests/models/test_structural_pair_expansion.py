@@ -1,6 +1,8 @@
-"""OpenDDE's structural pair is built in row bands and equals the whole-tensor construction it replaced.
+"""OpenDDE's structural pair is built in row bands.
 
-The whole-tensor version held five ``[S, S, c]`` fp32 tensors at once (12.4 GiB each at 12 chains of 5I28): the out-of-memory step.
+It equals the whole-tensor construction it replaced. The whole-tensor version held
+five ``[S, S, c]`` fp32 tensors at once (12.4 GiB each at 12 chains of 5I28): the
+out-of-memory step.
 """
 
 from __future__ import annotations
@@ -17,7 +19,7 @@ ROLE = torch.tensor(
 )  # protein bb / sc, a DNA base, an atom
 
 
-def _whole_tensor_expand_pair(module, pair, parent, features):
+def _whole_tensor_expand_pair(module, pair, parent, features) -> torch.Tensor:
     """The construction this replaced, verbatim."""
     parent_pair = pair[parent][:, parent]
     role_pair = features["role_pair_type"]
@@ -75,9 +77,9 @@ def test_under_autocast_the_pair_is_stored_in_the_autocast_dtype(case, monkeypat
     with torch.autocast("cpu", dtype=torch.bfloat16):
         want = _whole_tensor_expand_pair(module, pair, PARENT, features)
         got = module.expand_pair(pair, PARENT, features)
-    assert (
-        want.dtype is torch.float32
-    )  # what the old construction handed the first refiner block, which rounded it to bf16
+    # what the old construction handed the first refiner block, which rounded it to
+    # bf16
+    assert want.dtype is torch.float32
     assert got.dtype is torch.bfloat16
     torch.testing.assert_close(
         got.float(), want.to(torch.bfloat16).float(), rtol=2e-2, atol=2e-2
@@ -90,7 +92,7 @@ def test_only_one_band_of_fp32_is_alive_at_a_time(case, monkeypatch):
     seen: list[int] = []
     original = module.role_pair_type_embedding.forward
 
-    def watch(index):
+    def watch(index) -> torch.Tensor:
         seen.append(index.shape[0])
         return original(index)
 

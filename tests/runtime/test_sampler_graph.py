@@ -193,14 +193,14 @@ def test_hatted_sigmas_follow_the_churn_rule():
     from foldforge.diffusion.edm.sampling import EulerSampler
 
     sigmas = torch.tensor([160.0, 60.0, 20.0, 0.9, 0.3], device="cuda")
-    af3 = sampler_graph._hatted(  # noqa: SLF001 - verify private churn schedule
+    af3 = sampler_graph._hatted(
         EulerSampler(EulerSampler.Config(**CONFIGS["af3"])).config, sigmas
     )
     # gamma_0 is on while sigma_next exceeds gamma_min
     torch.testing.assert_close(
         af3, sigmas[:-1] * torch.tensor([1.8, 1.8, 1.0, 1.0], device="cuda")
     )
-    edm = sampler_graph._hatted(  # noqa: SLF001 - verify private churn schedule
+    edm = sampler_graph._hatted(
         EulerSampler(EulerSampler.Config(**CONFIGS["edm"])).config, sigmas
     )
     torch.testing.assert_close(

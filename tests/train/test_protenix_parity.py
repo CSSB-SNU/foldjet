@@ -96,9 +96,8 @@ def _system(seed: int = 0) -> dict[str, Any]:
         m_slot.append(order[nbr])
     gt = torch.randn(RES, ATOMS, 3, generator=g) * 6.0
     pred = gt + torch.randn(RES, ATOMS, 3, generator=g) * 1.5
-    gt = torch.where(
-        resolved[..., None], gt, torch.zeros_like(gt)
-    )  # unresolved atoms carry no coordinates
+    # unresolved atoms carry no coordinates
+    gt = torch.where(resolved[..., None], gt, torch.zeros_like(gt))
     logits = torch.randn(RES, ATOMS, 2, generator=g) * 2.0
     flat = real.reshape(-1).nonzero(as_tuple=True)[0]
     token = flat // ATOMS

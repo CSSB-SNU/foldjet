@@ -1,8 +1,10 @@
-"""The ESM-C tower loads from the Transformers-port checkpoint layout, with every weight accounted for.
+"""The ESM-C tower loads from the Transformers-port checkpoint layout.
 
-The published ``esmc-6b`` directory carries ``esmc.layers.{i}.self_attn.q_proj`` ...; the vendored model reads
-``transformer.blocks.{i}.attn.layernorm_qkv`` ... . A loader that matched neither left the tower at its random initialisation with a
-warning only (every ESMFold2 fold since 2026-10-19 ran on it), so the layout is converted and anything unmatched raises.
+Every weight is accounted for. The published ``esmc-6b`` directory carries
+``esmc.layers.{i}.self_attn.q_proj`` ...; the vendored model reads
+``transformer.blocks.{i}.attn.layernorm_qkv`` ... . A loader that matched neither left
+the tower at its random initialisation with a warning only (every ESMFold2 fold since
+2026-10-19 ran on it), so the layout is converted and anything unmatched raises.
 """
 
 from __future__ import annotations
@@ -34,7 +36,10 @@ def _tiny() -> ESMCModel:
 
 
 def _to_port_layout(model: ESMCModel) -> dict[str, torch.Tensor]:
-    """The inverse of ``_esmc_from_port``, written out independently: what the Transformers port stores."""
+    """The inverse of ``_esmc_from_port``, written out independently.
+
+    What the Transformers port stores.
+    """
     state = model.state_dict()
     out = {
         "esmc.embed_tokens.weight": state["embed.weight"],
@@ -81,7 +86,7 @@ def test_port_layout_loads_to_the_same_weights(tmp_path):
     reference = _tiny()
     path = _write(tmp_path, _to_port_layout(reference), reference.config)
 
-    loaded = tower._load_esmc_weights(ESMCModel, path)  # noqa: SLF001
+    loaded = tower._load_esmc_weights(ESMCModel, path)
 
     expected = reference.state_dict()
     got = loaded.state_dict()
@@ -96,7 +101,7 @@ def test_port_layout_loads_to_the_same_weights(tmp_path):
 def test_port_layout_gives_the_same_forward(tmp_path):
     reference = _tiny()
     path = _write(tmp_path, _to_port_layout(reference), reference.config)
-    loaded = tower._load_esmc_weights(ESMCModel, path)  # noqa: SLF001
+    loaded = tower._load_esmc_weights(ESMCModel, path)
     tokens = torch.randint(4, 30, (1, 12))
     with torch.no_grad():
         want = reference(input_ids=tokens, output_hidden_states=True).hidden_states[-1]
@@ -111,7 +116,7 @@ def test_a_missing_weight_raises_instead_of_staying_random(tmp_path):
     del state["esmc.layers.1.mlp.down_proj.weight"]
     path = _write(tmp_path, state, reference.config)
     with pytest.raises((ValueError, KeyError)):
-        tower._load_esmc_weights(ESMCModel, path)  # noqa: SLF001
+        tower._load_esmc_weights(ESMCModel, path)
 
 
 def test_a_wrong_shape_raises(tmp_path):
@@ -120,4 +125,4 @@ def test_a_wrong_shape_raises(tmp_path):
     state["esmc.layers.0.self_attn.o_proj.weight"] = torch.zeros(D_MODEL + 1, D_MODEL)
     path = _write(tmp_path, state, reference.config)
     with pytest.raises((ValueError, RuntimeError)):
-        tower._load_esmc_weights(ESMCModel, path)  # noqa: SLF001
+        tower._load_esmc_weights(ESMCModel, path)

@@ -144,9 +144,8 @@ def test_the_adam_is_torch_adam_with_coupled_weight_decay_and_clip_ten():
     )
     optim.set_lr(opt, 1, cfg)  # lr(1) = max_lr
     for _ in range(3):
-        grads = [
-            torch.randn_like(p) * 30.0 for p in a.parameters()
-        ]  # norm well above 10: the clip acts
+        # norm well above 10: the clip acts
+        grads = [torch.randn_like(p) * 30.0 for p in a.parameters()]
         for p, q, g in zip(a.parameters(), b.parameters(), grads, strict=True):
             p.grad, q.grad = g.clone(), g.clone()
         norm = optim.clip_grad_norm(list(a.parameters()), cfg.grad_clip_max_norm)

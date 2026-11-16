@@ -1,7 +1,10 @@
-"""The af3-family graph is built from engine classes: parity with the dense released-layout graph, the converter and the format.
+"""The af3-family graph is built from engine classes.
 
-The dense graph (``spec_for(family)``) is the released layout the Haiku loader fills; the engine graph is what a ported
-family runs. Both are built on CPU in fp32 with the same random weights, the weights pass through the converter, and every piece the
+Parity with the dense released-layout graph, the converter and the format.
+
+The dense graph (``spec_for(family)``) is the released layout the Haiku loader fills;
+the engine graph is what a ported family runs. Both are built on CPU in fp32 with the
+same random weights, the weights pass through the converter, and every piece the
 engine graph holds as an engine class is compared with the dense piece it replaces.
 """
 
@@ -105,7 +108,7 @@ def test_the_graph_holds_engine_classes_with_engine_keys(pair_of_models):
     )
 
 
-def _pair_inputs(length, d_pair, d_single, seed=0):
+def _pair_inputs(length, d_pair, d_single, seed=0) -> dict[str, torch.Tensor]:
     generator = torch.Generator().manual_seed(seed)
     tokens = torch.ones(length)
     tokens[-3:] = 0
@@ -117,7 +120,7 @@ def _pair_inputs(length, d_pair, d_single, seed=0):
     }
 
 
-def _valid(x, mask):
+def _valid(x, mask) -> torch.Tensor:
     return x[mask > 0]
 
 
@@ -146,14 +149,15 @@ def test_trunk_pairformer_block_matches_dense(pair_of_models):
 
 
 def test_pair_only_blocks_match_dense_and_take_a_batch_axis(pair_of_models):
-    """The template embedder's blocks (pair 64, two heads' worth of width, transition factor 2), one call for several slots."""
+    """The template embedder's blocks, one call for several slots.
+
+    Pair 64, two heads' worth of width, transition factor 2.
+    """
     dense, engine = pair_of_models
-    want_block = dense.evoformer.template_embedding.single_template_embedding.template_embedding_iteration[
-        0
-    ]
-    got_block = engine.evoformer.template_embedding.single_template_embedding.template_embedding_iteration[
-        0
-    ]
+    dense_templates = dense.evoformer.template_embedding.single_template_embedding
+    want_block = dense_templates.template_embedding_iteration[0]
+    engine_templates = engine.evoformer.template_embedding.single_template_embedding
+    got_block = engine_templates.template_embedding_iteration[0]
     assert got_block.supports_template_batch
     x = _pair_inputs(20, 64, 1)
     slots = torch.randn(3, 20, 20, 64)
@@ -235,8 +239,12 @@ def test_diffusion_transformer_and_conditioning_transitions_match_dense(pair_of_
 
 @pytest.mark.parametrize("atoms", [130, 200])
 def test_atom_transformer_matches_dense(pair_of_models, atoms):
-    """The windowed atom transformer: 32 queries against 128 keys slid inside the real atoms. (Under 128 real atoms the dense AF3 mask
-    form lets a real query read the padded keys, the engine block switches them off: the two differ there by construction.)"""
+    """The windowed atom transformer: 32 queries against 128 keys inside the real atoms.
+
+    The keys slide inside the real atoms. (Under 128 real atoms the dense AF3 mask form
+    lets a real query read the padded keys, the engine block switches them off: the two
+    differ there by construction.)
+    """
     from miniworld_engine.modules.functional import slide_starts
 
     dense, engine = pair_of_models
@@ -269,7 +277,7 @@ def test_atom_transformer_matches_dense(pair_of_models, atoms):
     )
 
 
-# ------------------------------------------------------------------------------------------------------------------ the converter
+# ----------------------------------------------------------------------- the converter
 def test_the_converter_demands_every_released_key_is_read_or_a_known_discard(
     pair_of_models,
 ):

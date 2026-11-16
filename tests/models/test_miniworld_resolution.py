@@ -1,4 +1,7 @@
-"""Default checkpoint resolution (miniworld files, never a silent conversion) and the converter-only isolation of the legacy graph."""
+"""Default checkpoint resolution and the converter-only isolation of the legacy graph.
+
+Default resolution loads miniworld files, never a silent conversion.
+"""
 
 from __future__ import annotations
 
@@ -70,16 +73,24 @@ def test_the_loader_refuses_a_released_blob(tmp_path):
 
 
 def test_runtime_imports_nothing_of_the_legacy_released_graph():
-    """Load / predict / training paths never import the converter's dense graph, the Haiku codec or the released-layout modules."""
+    """Load / predict / training paths never import the legacy released graph.
+
+    Neither the converter's dense graph, the Haiku codec nor the released-layout
+    modules.
+    """
     code = (
         "import sys\n"
-        "import foldforge, foldforge.api, foldforge.models.loading, foldforge.models.execution\n"
-        "import foldforge.models.architectures.af3, foldforge.models.checkpoints.miniworld\n"
-        "bad = sorted(m for m in sys.modules if m.startswith('foldforge.models.checkpoints.legacy') or m.endswith('checkpoints.haiku'))\n"
+        "import foldforge, foldforge.api, foldforge.models.loading, "
+        "foldforge.models.execution\n"
+        "import foldforge.models.architectures.af3, "
+        "foldforge.models.checkpoints.miniworld\n"
+        "bad = sorted(m for m in sys.modules if "
+        "m.startswith('foldforge.models.checkpoints.legacy') or "
+        "m.endswith('checkpoints.haiku'))\n"
         "assert not bad, bad\n"
         "assert 'foldforge.modules.dense.pairformer' not in sys.modules\n"
     )
-    done = subprocess.run(
+    done = subprocess.run(  # noqa: S603 - fixed argv, literal code
         [sys.executable, "-c", code], capture_output=True, text=True, check=False
     )
     assert done.returncode == 0, done.stderr[-2000:]
@@ -93,7 +104,8 @@ def test_weights_convert_command_arguments(empty_root):
     runner = CliRunner()
     assert runner.invoke(weights, ["convert"]).exit_code != 0  # models or --all
     unknown = runner.invoke(weights, ["convert", "nonesuch"])
-    assert unknown.exit_code != 0 and "Unknown models" in unknown.output
+    assert unknown.exit_code != 0
+    assert "Unknown models" in unknown.output
     both = runner.invoke(weights, ["convert", "af3", "--all"])
     assert both.exit_code != 0
     skipped = runner.invoke(

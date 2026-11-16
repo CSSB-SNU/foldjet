@@ -1,14 +1,22 @@
-"""The Protenix lineage (protenix1, protenix2, opendde) is built from engine classes: parity with the dense released-layout graph.
+"""The Protenix lineage (protenix1, protenix2, opendde) is built from engine classes.
 
-The dense graph (``spec_for(family)``) is the released layout the Haiku loader fills; the engine graph is what a ported
-family runs. Both are built on CPU in fp32 with the same random weights, the weights pass through the converter
-(``miniworld.convert_state``), and every piece the engine graph holds as an engine class is compared with the dense piece it replaces:
+Parity with the dense released-layout graph.
 
-* protenix1: AF3 widths, the template stack widened only in its triangle multiplication (hidden 128 on pair 64, 4 heads x 32),
-* protenix2: pair 256, 8 heads, ``TokenDiT`` / ``AtomDiT`` key ``protenix_v2`` (the triangle classes have no such key: ``protenix``),
-* opendde: pair 384, 12 heads, the Boltz-style MSA block order, the structural-token refiner's ``extra_pair_bias``.
+The dense graph (``spec_for(family)``) is the released layout the Haiku loader fills;
+the engine graph is what a ported family runs. Both are built on CPU in fp32 with the
+same random weights, the weights pass through the converter
+(``miniworld.convert_state``), and every piece the engine graph holds as an engine
+class is compared with the dense piece it replaces:
 
-Shared parts of the engine graph (the MSA block parts, the converter rules) are covered by ``test_engine_graph.py`` for the AF3 family.
+* protenix1: AF3 widths, the template stack widened only in its triangle
+  multiplication (hidden 128 on pair 64, 4 heads x 32),
+* protenix2: pair 256, 8 heads, ``TokenDiT`` / ``AtomDiT`` key ``protenix_v2`` (the
+  triangle classes have no such key: ``protenix``),
+* opendde: pair 384, 12 heads, the Boltz-style MSA block order, the structural-token
+  refiner's ``extra_pair_bias``.
+
+Shared parts of the engine graph (the MSA block parts, the converter rules) are
+covered by ``test_engine_graph.py`` for the AF3 family.
 """
 
 from __future__ import annotations
@@ -60,7 +68,8 @@ def randomise(model: torch.nn.Module, seed: int) -> None:
 def pair_of_models(request):
     """(dense model, engine model with the dense weights converted into it)."""
     family = request.param
-    modules.OPM_COUNT_OFFSET = 1e-3  # the release's exact divisor: the kernels' clamp differs at small row counts
+    # the release's exact divisor: the kernels' clamp differs at small row counts
+    modules.OPM_COUNT_OFFSET = 1e-3
     try:
         dense = dense_model(
             small(family), num_recycles=1, num_samples=1, diffusion_steps=1
@@ -84,7 +93,7 @@ def pair_of_models(request):
     return dense.eval(), engine.eval()
 
 
-def _pair_inputs(length, d_pair, d_single, seed=0):
+def _pair_inputs(length, d_pair, d_single, seed=0) -> dict[str, torch.Tensor]:
     generator = torch.Generator().manual_seed(seed)
     tokens = torch.ones(length)
     tokens[-3:] = 0
@@ -96,19 +105,22 @@ def _pair_inputs(length, d_pair, d_single, seed=0):
     }
 
 
-def _valid(x, mask):
+def _valid(x, mask) -> torch.Tensor:
     return x[mask > 0]
 
 
-def _template_blocks(model):
-    """The template embedder's pair-stack blocks: the fused embedder (protenix) or AF3's single-template embedder (opendde)."""
+def _template_blocks(model) -> torch.nn.Module:
+    """The template embedder's pair-stack blocks.
+
+    The fused embedder (protenix) or AF3's single-template embedder (opendde).
+    """
     embedding = model.evoformer.template_embedding
     if hasattr(embedding, "tmpl_pairformer"):
         return embedding.tmpl_pairformer
     return embedding.single_template_embedding.template_embedding_iteration
 
 
-# ------------------------------------------------------------------------------------------------------------------ the port
+# ---------------------------------------------------------------------------- the port
 def test_the_family_is_ported():
     assert set(FAMILIES) <= set(MODEL_KEYS)
 
@@ -121,11 +133,12 @@ def test_the_graph_holds_engine_classes_with_engine_keys(pair_of_models):
     assert "evoformer.msa_stack.0.msa_attention1.ln_pair.weight" in keys
     assert "diffusion_head.transformer.blocks.3.attention.to_bias.weight" in keys
     assert "diffusion_head.pair_transition_0.squeeze.weight" in keys
-    # Protenix's atom blocks chain the K / V AdaLN (the key / value norm reads the query's output): one ``ada_ln_kv`` per block
+    # Protenix's atom blocks chain the K / V AdaLN (the key / value norm reads the
+    # query's output): one ``ada_ln_kv`` per block
     assert (
-        "evoformer_conditioning.atom_transformer_encoder.blocks.2.attention.ada_ln_kv.to_scale.weight"
-        in keys
-    )
+        "evoformer_conditioning.atom_transformer_encoder.blocks.2."
+        "attention.ada_ln_kv.to_scale.weight"
+    ) in keys
     assert not any(
         "pair_logits_projection" in k or "pair_input_layer_norm" in k for k in keys
     )
@@ -155,7 +168,7 @@ def test_the_graph_holds_engine_classes_with_engine_keys(pair_of_models):
 
 
 def test_the_template_stack_has_its_own_widths(pair_of_models):
-    dense, engine = pair_of_models
+    _, engine = pair_of_models
     spec = engine.spec
     block = _template_blocks(engine)[0]
     heads = spec.template_heads or spec.pair_heads
@@ -164,7 +177,8 @@ def test_the_template_stack_has_its_own_widths(pair_of_models):
         block.config.d_hidden_tri_attention * heads
         == (spec.template_qkv_dim or spec.template_channel // heads) * heads
     )
-    # the multiplication's hidden width: 128 on a 64-channel template pair for protenix1, the channel count otherwise
+    # the multiplication's hidden width: 128 on a 64-channel template pair for
+    # protenix1, the channel count otherwise
     hidden = spec.template_hidden_dim or spec.template_channel
     assert block.tri_multi_outgoing.to_left.weight.shape == (
         hidden,
@@ -242,7 +256,10 @@ def test_confidence_block_takes_samples_in_one_call(pair_of_models):
 
 
 def test_msa_block_matches_dense(pair_of_models):
-    """OpenDDE runs the MSA update before the outer product mean (the Boltz order); the Protenix families the AF3 order."""
+    """OpenDDE runs the MSA update before the outer product mean (the Boltz order).
+
+    The Protenix families run the AF3 order.
+    """
     dense, engine = pair_of_models
     spec = engine.spec
     assert engine.evoformer.msa_stack[0].msa_first == spec.msa_update_before_opm
@@ -265,7 +282,11 @@ def test_msa_block_matches_dense(pair_of_models):
 
 
 def test_diffusion_transformer_and_conditioning_transitions_match_dense(pair_of_models):
-    """Per-block pair LayerNorm / projection (released per block), the optional ``extra_pair_bias`` (OpenDDE), the pair transition."""
+    """Per-block pair LayerNorm / projection, ``extra_pair_bias``, the pair transition.
+
+    The pair LayerNorm / projection is released per block; the ``extra_pair_bias`` is
+    optional (OpenDDE).
+    """
     dense, engine = pair_of_models
     spec = engine.spec
     generator = torch.Generator().manual_seed(5)
@@ -305,8 +326,12 @@ def test_diffusion_transformer_and_conditioning_transitions_match_dense(pair_of_
 
 
 def test_structural_refiner_blocks_take_the_expander_bias():
-    """OpenDDE's refiner is the engine block with 8 single heads and pair transition factor 2; the bias reaches every head of its single
-    attention (``extra_pair_bias``), exactly as the dense block adds it."""
+    """OpenDDE's refiner: 8 single heads, pair transition factor 2, the expander bias.
+
+    OpenDDE's refiner is the engine block with 8 single heads and pair transition
+    factor 2; the bias reaches every head of its single attention
+    (``extra_pair_bias``), exactly as the dense block adds it.
+    """
     spec = small("opendde")
     dense_spec = small("opendde")
     modules.OPM_COUNT_OFFSET = None
@@ -344,7 +369,7 @@ def test_structural_refiner_blocks_take_the_expander_bias():
             x["seq_mask"],
             extra_pair_bias=bias,
         )
-        plain_pair, plain_single = graph.run_block(
+        _, plain_single = graph.run_block(
             got_block, x["pair"], x["pair_mask"], x["single"].clone(), x["seq_mask"]
         )
     torch.testing.assert_close(
@@ -360,8 +385,11 @@ def test_structural_refiner_blocks_take_the_expander_bias():
 
 @pytest.mark.parametrize("atoms", [130, 200])
 def test_atom_transformer_matches_dense(pair_of_models, atoms):
-    """The windowed atom transformer with the chained K / V AdaLN and the per-block atom pair norm: 32 queries against 128 keys slid inside
-    the real atoms (from 128 real atoms the dense AF3 mask form and the engine's agree; see ``docs/ENGINE-UNSUPPORTED.md``)."""
+    """The windowed atom transformer: chained K / V AdaLN, per-block atom pair norm.
+
+    32 queries against 128 keys slid inside the real atoms (from 128 real atoms the
+    dense AF3 mask form and the engine's agree; see ``docs/ENGINE-UNSUPPORTED.md``).
+    """
     from miniworld_engine.modules.functional import slide_starts
 
     dense, engine = pair_of_models
@@ -394,7 +422,7 @@ def test_atom_transformer_matches_dense(pair_of_models, atoms):
     )
 
 
-# ------------------------------------------------------------------------------------------------------------------ the converter
+# ----------------------------------------------------------------------- the converter
 def test_the_converter_demands_every_released_key_is_read_or_a_known_discard(
     pair_of_models,
 ):
@@ -410,7 +438,10 @@ def test_the_converter_demands_every_released_key_is_read_or_a_known_discard(
 
 
 def test_the_converter_covers_the_templates_and_the_refiner(pair_of_models):
-    """Every released key under a converted engine module is read or discarded; nothing of the engine graph is left unset."""
+    """Every released key under a converted engine module is read or discarded.
+
+    Nothing of the engine graph is left unset.
+    """
     dense, engine = pair_of_models
     state = miniworld.convert_state(dense.state_dict(), engine)
     assert set(state) - set(miniworld.LOOSE) == set(engine.state_dict())
@@ -425,7 +456,10 @@ def test_the_converter_covers_the_templates_and_the_refiner(pair_of_models):
 
 
 def test_known_discards_are_offsets_only(pair_of_models):
-    """What the converter drops: the softmax-invariant pair LayerNorm offsets (MSA PWA, the single attention, every DiT block)."""
+    """What the converter drops: the softmax-invariant pair LayerNorm offsets.
+
+    MSA PWA, the single attention, every DiT block.
+    """
     from foldforge.models.checkpoints.legacy.released import is_discarded
 
     dense, _ = pair_of_models

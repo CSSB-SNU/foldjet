@@ -1,5 +1,10 @@
-"""CPU tests of ``foldforge.train.compile``: which modules are wrapped, idempotence, forward equivalence through ``torch.compile`` (a toy block named like the
-engine class; the real blocks are exercised by ``scripts/train_protenix1.py --bench --compile``), the strict (no recompile) guard and the step-graph config key."""
+"""CPU tests of ``foldforge.train.compile``.
+
+Which modules are wrapped, idempotence, forward equivalence through ``torch.compile``
+(a toy block named like the engine class; the real blocks are exercised by
+``scripts/train_protenix1.py --bench --compile``), the strict (no recompile) guard and
+the step-graph config key.
+"""
 
 from __future__ import annotations
 
@@ -14,7 +19,7 @@ from foldforge.train.config import TrainConfig
 
 
 class PairformerBlock(nn.Module):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.linear = nn.Linear(4, 4)
 
@@ -46,7 +51,7 @@ def test_compiled_forward_matches_eager_and_does_not_recompile_across_instances(
     train_compile.enable_compile(model, "blocks")
     x = torch.randn(3, 4)
     expected = reference(x)
-    torch._dynamo.reset()  # noqa: SLF001
+    torch._dynamo.reset()
     first = model(x)
     with (
         train_compile.strict()
@@ -60,7 +65,7 @@ def test_compiled_forward_matches_eager_and_does_not_recompile_across_instances(
 def test_strict_refuses_a_new_shape():
     model = toy()
     train_compile.enable_compile(model, "blocks")
-    torch._dynamo.reset()  # noqa: SLF001
+    torch._dynamo.reset()
     model(torch.randn(3, 4))
     with train_compile.strict(), pytest.raises(Exception, match="Recompiling"):
         model(torch.randn(5, 4))
@@ -69,6 +74,5 @@ def test_strict_refuses_a_new_shape():
 def test_compile_is_part_of_the_step_graph_key():
     cfg = TrainConfig()
     assert cfg.compile == ""
-    assert (
-        replace(cfg, compile="all") != cfg
-    )  # the step graph is keyed on the config: eager and compiled captures never mix
+    # the step graph is keyed on the config: eager and compiled captures never mix
+    assert replace(cfg, compile="all") != cfg

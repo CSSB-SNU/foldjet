@@ -49,8 +49,9 @@ def original_module(family, path):
             key = f"{cls.name}.{getattr(fn, 'name', '')}"
             if isinstance(fn, ast.FunctionDef) and key in frozen:
                 replacements.append((fn.lineno - 1, fn.end_lineno, frozen[key]))
-    # A frozen method whose class moved to another file (the converter-only dense token transformer is in `legacy/transformer.py`) is
-    # checked where it now lives; at least one frozen body must be in this file.
+    # A frozen method whose class moved to another file (the converter-only dense token
+    # transformer is in `legacy/transformer.py`) is checked where it now lives; at
+    # least one frozen body must be in this file.
     assert replacements
     for start, end, body in sorted(replacements, reverse=True):
         lines[start:end] = body.splitlines(keepends=True)
@@ -116,7 +117,8 @@ def test_diffusion_composition_against_original():
 
 @pytest.mark.parametrize("last", [False, True])
 @GPU_PARITY
-def test_msa_order_against_original(last):  # noqa: ARG001 - the block has no last-block variant
+def test_msa_order_against_original(last):
+    # `last` is unused: the block has no last-block variant
     torch.manual_seed(19)
     path = "nn/pairformer.py"
     oldmod = original_module("af3", path)
@@ -137,7 +139,8 @@ def test_msa_order_against_original(last):  # noqa: ARG001 - the block has no la
         if a is None:
             assert b is None
         else:
-            # the released-layout block computes in its parameters' dtype (fp32 masters here), the frozen original in bf16: compare values
+            # the released-layout block computes in its parameters' dtype (fp32 masters
+            # here), the frozen original in bf16: compare values
             torch.testing.assert_close(a.float(), b.float(), rtol=0.01, atol=0.02)
 
 

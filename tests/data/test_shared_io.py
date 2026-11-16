@@ -205,7 +205,7 @@ def test_runtime_owns_forward_count_and_every_target_output(tmp_path, monkeypatc
         calls.append(repeats)
         return forward(), {"model_seconds_cold": 0.1, "model_seconds_warm_median": None}
 
-    def prepare(args, database, session) -> Iterator[runtime.Case]:  # noqa: ARG001 - shared callback or fixture signature
+    def prepare(args, database, session) -> Iterator[runtime.Case]:
         session.bind(object())
         for i in range(2):
             yield runtime.Case(
@@ -215,7 +215,7 @@ def test_runtime_owns_forward_count_and_every_target_output(tmp_path, monkeypatc
                 ),
             )
 
-    def execution(model, name, config) -> SimpleNamespace:  # noqa: ARG001 - shared callback or fixture signature
+    def execution(model, name, config) -> SimpleNamespace:
         executions.append((name, config))
         return SimpleNamespace(
             begin_request=lambda: None,

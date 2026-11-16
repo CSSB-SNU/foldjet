@@ -1,5 +1,4 @@
 """Public staged inference preserves ownership, RNGs and trunk reuse."""
-# ruff: noqa: SLF001 - instrument stage counts and ownership boundaries
 
 from __future__ import annotations
 

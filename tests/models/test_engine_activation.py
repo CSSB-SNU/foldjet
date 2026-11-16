@@ -1,8 +1,11 @@
-"""``engine_activation``: an fp32 activation enters the engine's master modules as the autocast dtype, never as fp32.
+"""``engine_activation``: engine master modules get autocast-dtype activations.
 
-The engine's ``MasterWeights`` contract is fp32 masters with bf16 activations. FoldForge handed fp32 tensors to TriMul / TriAttn /
-Transition / AttentionPairBias / AtomDiT in a bf16 run; their cuda backends refuse fp32 and the unchunked pytorch fallback allocated
-N^3 fp32 triangle-attention logits (the 5I28 out-of-memory cells at 1024+ tokens).
+An fp32 activation enters the engine's master modules as the autocast dtype, never as
+fp32. The engine's ``MasterWeights`` contract is fp32 masters with bf16 activations.
+FoldForge handed fp32 tensors to TriMul / TriAttn / Transition / AttentionPairBias /
+AtomDiT in a bf16 run; their cuda backends refuse fp32 and the unchunked pytorch
+fallback allocated N^3 fp32 triangle-attention logits (the 5I28 out-of-memory cells at
+1024+ tokens).
 """
 
 from __future__ import annotations
@@ -47,10 +50,10 @@ def test_a_disabled_autocast_region_inside_an_enabled_one_keeps_fp32():
 
 
 def test_rf3_template_distogram_edges_are_the_released_ones():
-    edges = fused_template._RF3_DISTOGRAM_EDGES  # noqa: SLF001
+    edges = fused_template._RF3_DISTOGRAM_EDGES
     released = torch.cat([torch.arange(1.0, 4.0, 0.1), torch.arange(4.0, 20.5, 0.5)])
     assert edges.shape == (63,)  # 64 distogram bins
     torch.testing.assert_close(edges, released, rtol=0, atol=0)
-    assert (
-        edges.device.type == "cpu"
-    )  # moved to the device once, through on_device (cached), never inside a CUDA-graph capture
+    # moved to the device once, through on_device (cached), never inside a CUDA-graph
+    # capture
+    assert edges.device.type == "cpu"

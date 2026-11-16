@@ -97,10 +97,7 @@ def main(path_in: str, path_out: str) -> None:
     ]
     out["lr_steps"] = np.array(steps)
     out["lr_values"] = np.array(
-        [
-            sched._get_step_lr(s)  # noqa: SLF001 - Protenix's own lr is the reference
-            for s in steps
-        ],
+        [sched._get_step_lr(s) for s in steps],
         dtype=np.float64,
     )
 

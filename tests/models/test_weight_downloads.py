@@ -1,7 +1,5 @@
 """Weight provisioning exercises real files and HTTP without multi-GB fixtures."""
 
-# ruff: noqa: SLF001 - exercise provisioning boundaries and failure paths
-
 from __future__ import annotations
 
 import hashlib

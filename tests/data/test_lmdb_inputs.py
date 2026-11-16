@@ -216,7 +216,8 @@ def test_templates_keep_one_hit_per_sequence(tmp_path):
 
 
 def test_templates_keep_repeated_hits_without_dedup(tmp_path):
-    # ``dedup=False`` (spec ``template_dedup: false``, FoldBench's own lists and the 2.4.0 / kit comparison runs): the first records in DB order.
+    # ``dedup=False`` (spec ``template_dedup: false``, FoldBench's own lists and the
+    # 2.4.0 / kit comparison runs): the first records in DB order.
     mols = {
         "1ABC_A": template_record(),
         "1ABC_B": template_record(),

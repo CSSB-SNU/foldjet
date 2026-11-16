@@ -1,5 +1,9 @@
-"""CPU tests of ``foldforge.train.bucket_batch``: padding / mask logic on small fake examples, the signature function, and the atom-attention gather
-tables against AF3's own ``AtomCrossAtt.compute_features`` (the rule the padded windows must follow)."""
+"""CPU tests of ``foldforge.train.bucket_batch``.
+
+Padding / mask logic on small fake examples, the signature function, and the
+atom-attention gather tables against AF3's own ``AtomCrossAtt.compute_features`` (the
+rule the padded windows must follow).
+"""
 
 from __future__ import annotations
 
@@ -30,7 +34,10 @@ TABLES = (
 
 
 def make_layout(atoms_per_token: list[int]):
-    """A token-atom layout [tokens, 24] with unique (chain, residue, atom) uids, ``atoms_per_token[t]`` real atoms in token ``t``."""
+    """A token-atom layout [tokens, 24] with unique (chain, residue, atom) uids.
+
+    ``atoms_per_token[t]`` real atoms in token ``t``.
+    """
     t = len(atoms_per_token)
     name = np.full((t, 24), "", dtype=object)
     res = np.zeros((t, 24), dtype=int)
@@ -202,9 +209,8 @@ def test_padding_is_masked_and_real_content_unchanged():
     assert not g["profile"][24:].any()
     assert torch.equal(out.atom_positions[:24], ex.atom_positions)
     assert not out.atom_positions[24:].any()
-    assert torch.equal(
-        out.atom_mask, g["pred_dense_atom_mask"]
-    )  # None -> the model's own mask
+    # None -> the model's own mask
+    assert torch.equal(out.atom_mask, g["pred_dense_atom_mask"])
     assert out.bond_pairs is None
     # dtypes never change
     assert {k: v.dtype for k, v in f.items()} == {k: v.dtype for k, v in g.items()}
@@ -252,11 +258,11 @@ def test_msa_pool_above_the_bucket_keeps_the_query_and_valid_rows():
     b = bucket_example(ex, spec)
     assert a.features["msa"].shape == (16, 24)
     assert a.features["msa_mask"].any(-1).all()  # 16 valid rows, no padding row
-    assert torch.equal(
-        a.features["msa"][0], ex.features["msa"][0]
-    )  # the query stays on top
+    # the query stays on top
+    assert torch.equal(a.features["msa"][0], ex.features["msa"][0])
     assert torch.equal(a.features["msa"], b.features["msa"])  # deterministic
-    # fewer valid rows than the bucket: only empty rows are cut, valid ones keep their order
+    # fewer valid rows than the bucket: only empty rows are cut, valid ones keep their
+    # order
     ex2 = fake_example(20, 160, 24, 192, msa_rows=40, msa_valid=5)
     c = bucket_example(ex2, spec)
     assert torch.equal(c.features["msa"][:5], ex2.features["msa"][:5])

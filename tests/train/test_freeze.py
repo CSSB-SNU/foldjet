@@ -1,6 +1,9 @@
-"""``train/freeze.py``: which parameters training does not update (and the gradient classification of a step), and RoseTTAFold3's shared MSA block.
+"""``train/freeze.py``: which parameters training does not update.
 
-The name tables use the real parameter names of the graph on stand-in modules (CPU, tiny tensors); the RoseTTAFold3 checks build the real graph.
+Also the gradient classification of a step, and RoseTTAFold3's shared MSA block.
+
+The name tables use the real parameter names of the graph on stand-in modules (CPU,
+tiny tensors); the RoseTTAFold3 checks build the real graph.
 """
 
 from __future__ import annotations
@@ -18,7 +21,10 @@ from foldforge.train.config import TrainConfig
 
 
 class Stand(nn.Module):
-    """A module tree with the given dotted parameter names (each a 2x2 tensor of ``fill``) and the family's spec."""
+    """A module tree with the given dotted parameter names and the family's spec.
+
+    Each parameter is a 2x2 tensor of ``fill``.
+    """
 
     def __init__(self, family: str, names: dict[str, float]) -> None:
         super().__init__()
@@ -82,14 +88,16 @@ def test_the_last_msa_block_updates_nothing_the_loss_reads_in_the_opm_first_orde
         "evoformer.msa_stack.3.msa_attention1.to_value.weight",
         "evoformer.msa_stack.3.msa_transition.squeeze.weight",
     }, (
-        "only the MSA-side parameters of the LAST block; its pair side (OPM, triangle, transition) trains"
+        "only the MSA-side parameters of the LAST block; its pair side (OPM, triangle, "
+        "transition) trains"
     )
     assert not frozen("boltz2", names), (
-        "Boltz order (MSA update before the OPM): the last block's MSA update reaches the pair"
+        "Boltz order (MSA update before the OPM): the last block's MSA update reaches "
+        "the pair"
     )
 
 
-def test_the_experimentally_resolved_head_is_frozen_because_the_recipe_has_no_loss_for_it():
+def test_the_experimentally_resolved_head_is_frozen_because_the_recipe_has_no_loss_for_it():  # noqa: E501 - test node id kept (pass tokens)
     names = {
         "confidence_head.experimentally_resolved_ln.weight": 1.0,
         "confidence_head.experimentally_resolved_ln.bias": 0.0,
@@ -116,7 +124,8 @@ def test_esmfold2_slots_the_original_lacks_are_frozen_only_while_they_are_zero()
     zero = {
         "evoformer_conditioning.pair_mlp_1.weight": 0.0,
         "diffusion_head.atom_cross_att_encoder.embed_trunk_pair_cond.weight": 0.0,
-        "diffusion_head.atom_cross_att_decoder.atom_transformer_decoder.pair_logits_projection.weight": 0.0,
+        "diffusion_head.atom_cross_att_decoder.atom_transformer_decoder."
+        "pair_logits_projection.weight": 0.0,
         "confidence_head.confidence_pairformer.2.single_transition.squeeze.weight": 0.0,
         "confidence_head.reembedding.contact_conditioning.contact_fourier.weight": 0.0,
         "evoformer.single_activations.weight": 0.0,
@@ -154,7 +163,7 @@ def test_apply_sets_requires_grad_and_the_optimizer_skips_the_frozen_parameters(
 
 
 def test_classify_gradient_separates_the_defects_from_the_by_design_zeros():
-    def param(value: float, grad):
+    def param(value: float, grad: float | None) -> nn.Parameter:
         p = nn.Parameter(torch.full((2, 2), value))
         p.grad = None if grad is None else torch.full((2, 2), grad)
         return p
@@ -190,7 +199,7 @@ def test_classify_gradient_separates_the_defects_from_the_by_design_zeros():
     )
 
 
-# --- RoseTTAFold3: one MSA module run four times ----------------------------------------------------------------------------------------
+# --- RoseTTAFold3: one MSA module run four times ---
 
 
 def small_rf3(*, shared: bool):
@@ -235,7 +244,8 @@ def test_the_shared_msa_block_is_one_parameter_set_with_the_unchanged_checkpoint
     names = [
         n for n, _ in shared.named_parameters() if n.startswith("evoformer.msa_stack.")
     ]
-    assert names and all(n.startswith("evoformer.msa_stack.0.") for n in names), (
+    assert names, "the optimizer sees the block once"
+    assert all(n.startswith("evoformer.msa_stack.0.") for n in names), (
         "the optimizer sees the block once"
     )
     assert sum(p.numel() for p in shared.parameters()) < sum(

@@ -1,4 +1,7 @@
-"""The guard in front of every non-pytorch engine call, the plan that picks backends, and the engine stacks inside a CUDA graph."""
+"""The guard in front of every non-pytorch engine call.
+
+Also the plan that picks backends, and the engine stacks inside a CUDA graph.
+"""
 
 from __future__ import annotations
 
@@ -22,17 +25,15 @@ def test_a_refused_call_runs_the_pytorch_backend_and_logs_once(caplog):
     layer = modules.transition(16, 2)
     x = torch.randn(1, 4, 16)
     expected = layer(x)
-    layer.set_backend(
-        _kernel_backend(layer)
-    )  # CPU tensors: the kernel backends refuse them
+    # CPU tensors: the kernel backends refuse them
+    layer.set_backend(_kernel_backend(layer))
     policy.guard(layer, "fallback")
     with caplog.at_level(logging.WARNING, logger="foldforge.backend"):
         first, second = layer(x), layer(x)
     torch.testing.assert_close(first, expected)
     torch.testing.assert_close(second, expected)
-    assert layer.backend == _kernel_backend(
-        layer
-    )  # the chosen backend is restored after the call
+    # the chosen backend is restored after the call
+    assert layer.backend == _kernel_backend(layer)
     assert (
         sum("refuses a call" in record.getMessage() for record in caplog.records) == 1
     )
@@ -54,9 +55,8 @@ def test_the_plan_gives_each_op_module_a_backend_and_keeps_composites_on_pytorch
     plan = BackendPlan.make("miniworld", None, "fallback")
     report = policy.apply_plan(model, plan, torch.device("cpu"))
     assert set(report) == {"block", "norm"}  # only engine op modules are in the plan
-    assert {entry["backend"] for entry in report.values()} == {
-        "pytorch"
-    }  # no CUDA device: nothing kernel-served
+    # no CUDA device: nothing kernel-served
+    assert {entry["backend"] for entry in report.values()} == {"pytorch"}
     assert report["block"]["op"] == "transition"
 
 

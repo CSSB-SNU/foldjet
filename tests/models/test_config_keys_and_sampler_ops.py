@@ -1,4 +1,8 @@
-"""The two switches that were environment variables (dead-module skip, graph pool snapshot) are config keys; the engine sampler ops are built in one place."""
+"""Config keys for the two former environment switches; sampler ops built in one place.
+
+The two switches that were environment variables (dead-module skip, graph pool
+snapshot) are config keys; the engine sampler ops are built in one place.
+"""
 
 import pytest
 import torch
@@ -28,7 +32,7 @@ def test_graph_pool_snapshot_is_off_by_default_and_an_execution_key():
 
 
 def test_unknown_keys_next_to_them_are_still_rejected():
-    with pytest.raises(ValueError, match="extra|Extra"):
+    with pytest.raises(ValueError, match=r"extra|Extra"):
         Config.model_validate({"engine": {"skip_dead_module": False}})
 
 

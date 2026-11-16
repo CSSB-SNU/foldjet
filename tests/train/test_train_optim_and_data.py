@@ -1,4 +1,7 @@
-"""``foldforge.train``: LR schedule, clipping, EMA, parameter groups, the batch-source plug-in and the checkpoint round trip (CPU, tiny model)."""
+"""``foldforge.train``: LR schedule, clipping, EMA, parameter groups.
+
+Also the batch-source plug-in and the checkpoint round trip (CPU, tiny model).
+"""
 
 import math
 
@@ -12,7 +15,10 @@ from foldforge.train.config import TrainConfig
 
 
 class Tiny(nn.Module):
-    """Parameter names follow the graph's prefixes: trunk, diffusion head, confidence head."""
+    """Parameter names follow the graph's prefixes.
+
+    Trunk, diffusion head, confidence head.
+    """
 
     def __init__(self) -> None:
         super().__init__()
@@ -54,7 +60,7 @@ def test_set_lr_floors_at_min_lr_after_warmup_and_scales_the_trunk_group():
     assert lrs["trunk"] == pytest.approx(1e-4)
 
 
-def test_every_parameter_is_in_the_optimizer_and_the_confidence_head_keeps_the_head_lr():
+def test_every_parameter_is_in_the_optimizer_and_the_confidence_head_keeps_the_head_lr():  # noqa: E501 - test node id kept (pass tokens)
     model = Tiny()
     trunk, heads = optim.split_parameters(model)
     assert {n.split(".")[0] for n, _ in trunk} == {"evoformer"}
@@ -173,7 +179,7 @@ def test_checkpoint_can_save_the_ema_as_the_model_without_touching_the_live_weig
 
 
 def test_checkpoint_refuses_a_path_without_the_native_suffix(tmp_path):
-    with pytest.raises(ValueError, match="miniworld.pt"):
+    with pytest.raises(ValueError, match=r"miniworld.pt"):
         checkpoint.save(
             nn.Linear(1, 1), tmp_path / "bad.pt", family="protenix1", source="test"
         )
@@ -187,12 +193,13 @@ def test_resume_without_training_state_starts_at_step_zero(tmp_path):
     assert checkpoint.resume(nn.Linear(2, 2), path) == 0
 
 
-def test_train_batch_fixed_index_fields_are_optional_and_with_fixed_atom_index_fills_them():
+def test_train_batch_fixed_index_fields_are_optional_and_with_fixed_atom_index_fills_them():  # noqa: E501 - test node id kept (pass tokens)
     batch = data.TrainBatch(
         features={"pred_dense_atom_mask": torch.tensor([[1, 0, 1], [0, 0, 1]])},
         atom_positions=torch.zeros(2, 3, 3),
     )
-    assert batch.present_index is None and batch.present_valid is None
+    assert batch.present_index is None
+    assert batch.present_valid is None
     filled = data.with_fixed_atom_index(batch, length=8)
     assert filled.present_index.tolist() == [0, 2, 5, 0, 0, 0, 0, 0]
     assert filled.present_valid.tolist() == [True, True, True] + [False] * 5
@@ -218,7 +225,8 @@ def test_features_to_device_keeps_the_gather_shape_metadata_on_the_host():
         },
         "a",
     )
-    assert info.input_shape == (3, 4) and out["a:input_shape"].device.type == "cpu"
+    assert info.input_shape == (3, 4)
+    assert out["a:input_shape"].device.type == "cpu"
 
 
 def test_device_parts_floats_replay_the_old_per_chunk_float_accumulation_exactly():

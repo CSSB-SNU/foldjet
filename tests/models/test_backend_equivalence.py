@@ -42,8 +42,11 @@ PLDDT = 3.0
 
 
 def _checkpoint_or_skip(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Skip without the AF3 checkpoint in the miniworld format (``python -m foldforge.models.checkpoints.miniworld convert af3``)
-    and the CCD database."""
+    """Skip without the AF3 checkpoint in the miniworld format and the CCD database.
+
+    The checkpoint comes from
+    ``python -m foldforge.models.checkpoints.miniworld convert af3``.
+    """
     from foldforge.data.ccd import default_path
     from foldforge.models.checkpoints import miniworld, resolve
 
@@ -136,8 +139,9 @@ def test_a_fold_on_each_backend_agrees_with_the_pytorch_backend(
     coordinates, plddt, ops = folds(backend, monkeypatch)
     assert ops["backend"] == backend
     for op, ran in ops["ops"].items():
-        # the plan records the ENGINE backend that runs the op: `miniworld` is cuda on an H100 (triton / pytorch elsewhere),
-        # `cuequivariance` is `cueq`; an op the backend does not serve runs pytorch
+        # the plan records the ENGINE backend that runs the op: `miniworld` is cuda on
+        # an H100 (triton / pytorch elsewhere), `cuequivariance` is `cueq`; an op the
+        # backend does not serve runs pytorch
         if backend not in SERVES[op]:
             allowed = {"pytorch"}
         elif backend == "miniworld":

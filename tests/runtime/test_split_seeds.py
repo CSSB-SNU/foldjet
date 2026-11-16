@@ -116,7 +116,7 @@ def test_af3_json_uses_requested_trunk_seed(tmp_path, monkeypatch):
     monkeypatch.setattr(featurisation, "featurise_input", inspect)
     database = SimpleNamespace(af3_ccd=lambda **_: {})
     with pytest.raises(FinishedInputCheckError):
-        next(dense_atoms._prepare(request, database, None))  # noqa: SLF001 - stop before loading weights
+        next(dense_atoms._prepare(request, database, None))
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA sampling boundaries")
@@ -151,13 +151,13 @@ def test_diffusion_seed_is_independent_of_trunk_and_graph(mode):
         return coords, (random.random(), np.random.random())
 
     def run(trunk_seed, diffusion_seed) -> tuple:
-        model._sample_diffusion = sample  # noqa: SLF001 - the binder's own name
+        model._sample_diffusion = sample
         bind_sampling_seed(model, diffusion_seed)
         seed_all(trunk_seed)
         trunk = torch.randn(4, device="cuda")
         state = RNGState.capture()
         with torch.no_grad():
-            result, host = model._sample_diffusion()  # noqa: SLF001 - the binder's own name
+            result, host = model._sample_diffusion()
         after = torch.rand(4, device="cuda")
         state.restore()
         assert torch.equal(after, torch.rand(4, device="cuda"))
@@ -183,10 +183,10 @@ def test_rebinding_diffusion_seed_keeps_one_wrapper_and_uses_latest_seed():
     model = SimpleNamespace(_sample_diffusion=lambda: torch.rand(4))
     before = torch.random.get_rng_state()
     bind_sampling_seed(model, 7)
-    wrapper = model._sample_diffusion  # noqa: SLF001 - verify wrapper identity
+    wrapper = model._sample_diffusion
     first = wrapper()
     bind_sampling_seed(model, 19)
-    assert model._sample_diffusion is wrapper  # noqa: SLF001 - verify wrapper identity
+    assert model._sample_diffusion is wrapper
     changed = wrapper()
     bind_sampling_seed(model, 7)
     torch.testing.assert_close(wrapper(), first, rtol=0, atol=0)

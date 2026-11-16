@@ -1,11 +1,17 @@
-"""ESMFold2's atom stack on the engine's ``AtomDiT("esmfold2_pair")`` block equals FoldForge's own ``DiffusionCrossAttTransformer``.
+"""ESMFold2's atom stack on the engine's ``AtomDiT("esmfold2_pair")`` block.
 
-The released-layout weights convert to the block layout (``released.esmfold2_atom_blocks_from_released``), the stack passes the per-atom rotary
-tables, and a native file written while the stack was FoldForge's own loads into the engine layout. Skipped on an engine without the class
-(2.5.1): there ``model_keys("esmfold2").atom_dit`` is ``None`` and the family keeps its own stack.
+It equals FoldForge's own ``DiffusionCrossAttTransformer``.
+
+The released-layout weights convert to the block layout
+(``released.esmfold2_atom_blocks_from_released``), the stack passes the per-atom
+rotary tables, and a native file written while the stack was FoldForge's own loads
+into the engine layout. Skipped on an engine without the class (2.5.1): there
+``model_keys("esmfold2").atom_dit`` is ``None`` and the family keeps its own stack.
 """
 
 from __future__ import annotations
+
+from typing import Any
 
 import pytest
 import torch
@@ -26,10 +32,8 @@ pytestmark = pytest.mark.skipif(
 )
 
 C, HEADS, BLOCKS, KEYS, QUERIES = 128, 4, 3, 192, 32
-ATOMS, REAL = (
-    200,
-    187,
-)  # 7 query windows, the last partly padding: the real atoms come first
+# 7 query windows, the last partly padding: the real atoms come first
+ATOMS, REAL = 200, 187
 
 
 def _randomize(module: nn.Module, std: float = 0.12) -> nn.Module:
@@ -39,9 +43,12 @@ def _randomize(module: nn.Module, std: float = 0.12) -> nn.Module:
     return module
 
 
-def _layout(seed: int = 0):
-    """The tensors a fold's atom layout hands the stack: queries [W, 32, C], the 192-key windows slid AF3's way, the pair, the rank window mask
-    and the rotary tables of queries and keys, from one reference conformer."""
+def _layout(seed: int = 0) -> dict[str, Any]:
+    """The tensors a fold's atom layout hands the stack.
+
+    Queries [W, 32, C], the 192-key windows slid AF3's way, the pair, the rank window
+    mask and the rotary tables of queries and keys, from one reference conformer.
+    """
     from miniworld_engine.modules.functional import slide_starts
 
     generator = torch.Generator().manual_seed(seed)
@@ -49,9 +56,8 @@ def _layout(seed: int = 0):
     padded = windows * QUERIES
     real = torch.arange(padded) < REAL
     starts = slide_starts(torch.tensor([REAL]), windows, KEYS)[0]  # [W]
-    idx = starts[:, None] + torch.arange(
-        KEYS
-    )  # [W, 192] into the flat padded atom list
+    # [W, 192] into the flat padded atom list
+    idx = starts[:, None] + torch.arange(KEYS)
     in_range = idx < padded
     idx = idx.clamp(max=padded - 1)
     keys_mask = (in_range & real[idx]).to(torch.float32)
@@ -73,21 +79,21 @@ def _layout(seed: int = 0):
     pair_mask = aca.sliding_window_mask(
         queries_mask, keys_mask, gather, ESMFOLD2.atom_window_half
     )
-    return dict(
-        act=act,
-        cond=cond,
-        keys_cond=keys_cond,
-        pair=pair,
-        gather=gather,
-        queries_mask=queries_mask,
-        keys_mask=keys_mask,
-        pair_mask=pair_mask,
-        rope_q=rope_q,
-        rope_k=rope_k,
-    )
+    return {
+        "act": act,
+        "cond": cond,
+        "keys_cond": keys_cond,
+        "pair": pair,
+        "gather": gather,
+        "queries_mask": queries_mask,
+        "keys_mask": keys_mask,
+        "pair_mask": pair_mask,
+        "rope_q": rope_q,
+        "rope_k": rope_k,
+    }
 
 
-def _dense_and_stack():
+def _dense_and_stack() -> tuple[nn.Module, nn.Module]:
     torch.manual_seed(0)
     dense = _randomize(DiffusionCrossAttTransformer(spec=ESMFOLD2)).eval()
     stack = atom_dit_stack("esmfold2", n_blocks=BLOCKS, precision="fp32")
@@ -103,15 +109,19 @@ def test_the_family_selects_the_engine_block():
     assert model_keys("esmfold2").atom_dit == "esmfold2_pair"
     assert model_keys("esmfold2-fast").atom_dit == "esmfold2_pair"
     stack = atom_dit_stack("esmfold2", n_blocks=BLOCKS, precision="fp32")
-    assert isinstance(stack, AtomDiTStack) and stack.rotary
-    # the atom cross-attention builds its rotary tables for this width (the whole model failed on its absence, which no stack-only test saw)
-    assert isinstance(stack.key_dim_per_head, int) and stack.key_dim_per_head > 0
+    assert isinstance(stack, AtomDiTStack)
+    assert stack.rotary
+    # the atom cross-attention builds its rotary tables for this width (the whole model
+    # failed on its absence, which no stack-only test saw)
+    assert isinstance(stack.key_dim_per_head, int)
+    assert stack.key_dim_per_head > 0
     assert type(stack.blocks[0]).__name__ == "AtomDiTESMFold2Pair"
 
 
 def test_the_converted_blocks_have_exactly_the_blocks_parameters():
     dense, stack = _dense_and_stack()
-    # strict loads above already prove the key sets; every dense tensor was read by the conversion
+    # strict loads above already prove the key sets; every dense tensor was read by the
+    # conversion
     tracked = released.Tracked(dense.state_dict())
     released.esmfold2_atom_blocks_from_released(tracked, n_head=HEADS)
     assert set(tracked.used) == set(dense.state_dict())
@@ -189,7 +199,7 @@ def test_a_native_file_of_the_dense_layout_loads_into_the_engine_layout():
         torch.ones(4, 4),
         torch.zeros(4),
     )
-    miniworld._adopt_dense_atom_stacks(graph, file_state)  # noqa: SLF001
+    miniworld._adopt_dense_atom_stacks(graph, file_state)
     assert not any(
         ".cross_attention." in k or ".transition_block." in k for k in file_state
     )
@@ -197,5 +207,5 @@ def test_a_native_file_of_the_dense_layout_loads_into_the_engine_layout():
     # a file already in the block layout is left alone
     again = dict(graph.state_dict())
     before = {k: v.clone() for k, v in again.items()}
-    miniworld._adopt_dense_atom_stacks(graph, again)  # noqa: SLF001
+    miniworld._adopt_dense_atom_stacks(graph, again)
     assert all(torch.equal(again[k], before[k]) for k in before)

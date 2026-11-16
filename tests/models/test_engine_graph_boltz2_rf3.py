@@ -1,10 +1,15 @@
-"""Boltz-2 and RoseTTAFold3 are built from engine classes: parity with the dense released-layout graph, and the converter's discards.
+"""Boltz-2 and RoseTTAFold3 are built from engine classes.
 
-Same method as ``test_engine_graph.py`` (random weights on CPU in fp32, passed through the converter, every engine piece compared with the
-dense piece it replaces), in BOTH modes: ``fast`` (AF3's computation: slid atom window, divide-after OPM, plain triangle multiplication for
-RoseTTAFold3) and ``exact`` (the release's: clipped ``pad`` window, clamped OPM, RoseTTAFold3's divide-by-length multiplication).
-The two families add three checks of their own: Boltz-2's / RoseTTAFold3's shared K / V AdaLN may be discarded only when it equals the
-query AdaLN, and RoseTTAFold3's bias-free query only when the released bias is all zero.
+Parity with the dense released-layout graph, and the converter's discards.
+
+Same method as ``test_engine_graph.py`` (random weights on CPU in fp32, passed through
+the converter, every engine piece compared with the dense piece it replaces), in BOTH
+modes: ``fast`` (AF3's computation: slid atom window, divide-after OPM, plain triangle
+multiplication for RoseTTAFold3) and ``exact`` (the release's: clipped ``pad`` window,
+clamped OPM, RoseTTAFold3's divide-by-length multiplication). The two families add
+three checks of their own: Boltz-2's / RoseTTAFold3's shared K / V AdaLN may be
+discarded only when it equals the query AdaLN, and RoseTTAFold3's bias-free query only
+when the released bias is all zero.
 """
 
 from __future__ import annotations
@@ -33,9 +38,13 @@ CASES = [
 
 @pytest.fixture(autouse=True)
 def bounded_cpu_threads():
-    """The comparisons are fp32 on the CPU at 1e-4: the engine's ``pytorch`` backend and the dense twin reduce in different orders, and with 32 or more
-    intra-op threads the rounding differs by up to 8e-4 in ``test_diffusion_transformer_matches_dense`` (a 16-core Slurm allocation; 8 and 16 threads pass).
-    Pin the pool to at most 16 threads so the result does not depend on the machine."""
+    """Pin the pool to at most 16 threads so the result does not depend on the machine.
+
+    The comparisons are fp32 on the CPU at 1e-4: the engine's ``pytorch`` backend and
+    the dense twin reduce in different orders, and with 32 or more intra-op threads the
+    rounding differs by up to 8e-4 in ``test_diffusion_transformer_matches_dense`` (a
+    16-core Slurm allocation; 8 and 16 threads pass).
+    """
     before = torch.get_num_threads()
     torch.set_num_threads(min(before, 16))
     yield
@@ -68,8 +77,12 @@ def randomise(model: torch.nn.Module, seed: int) -> None:
 
 
 def tie_to_the_engine_layout(model: torch.nn.Module) -> None:
-    """What a real release satisfies and random weights do not: the atom blocks' K / V AdaLN equals the query AdaLN (one shared AdaLN in the
-    engine classes) and RoseTTAFold3's query projection has a zero bias (the engine class has none)."""
+    """What a real release satisfies and random weights do not.
+
+    The atom blocks' K / V AdaLN equals the query AdaLN (one shared AdaLN in the engine
+    classes) and RoseTTAFold3's query projection has a zero bias (the engine class has
+    none).
+    """
     parameters = dict(model.named_parameters())
     with torch.no_grad():
         for name, p in parameters.items():
@@ -89,7 +102,8 @@ def tie_to_the_engine_layout(model: torch.nn.Module) -> None:
 def pair_of_models(request):
     """(dense model, engine model with the dense weights converted into it)."""
     family, mode = request.param
-    modules.OPM_COUNT_OFFSET = 1e-3  # the dense graph's exact AF3 divisor (the exact mode's clamp is the spec's own)
+    # the dense graph's exact AF3 divisor (the exact mode's clamp is the spec's own)
+    modules.OPM_COUNT_OFFSET = 1e-3
     try:
         dense = dense_model(
             small(family, mode), num_recycles=1, num_samples=1, diffusion_steps=1
@@ -180,13 +194,14 @@ def test_engine_classes_are_the_families_own(pair_of_models):
     else:
         assert (atom, token) == ("AtomDiTRoseTTAFold3", "TokenDiTRoseTTAFold3")
         assert attention == "TriangleAttentionRF3"
-        # fast mode builds the PLAIN multiplication explicitly, exact mode the RF3 one (contraction divided by the real length)
+        # fast mode builds the PLAIN multiplication explicitly, exact mode the RF3 one
+        # (contraction divided by the real length)
         assert multiplication == (
             "TriangleMultiplicationRF3" if mode == "exact" else "TriangleMultiplication"
         )
 
 
-def _pair_inputs(length, d_pair, d_single, seed=0):
+def _pair_inputs(length, d_pair, d_single, seed=0) -> dict[str, torch.Tensor]:
     generator = torch.Generator().manual_seed(seed)
     tokens = torch.ones(length)
     tokens[-3:] = 0
@@ -198,7 +213,7 @@ def _pair_inputs(length, d_pair, d_single, seed=0):
     }
 
 
-def _valid(x, mask):
+def _valid(x, mask) -> torch.Tensor:
     return x[mask > 0]
 
 
@@ -310,7 +325,11 @@ def test_diffusion_transformer_matches_dense(pair_of_models):
 
 @pytest.mark.parametrize("atoms", [130, 200])
 def test_atom_transformer_matches_dense(pair_of_models, atoms):
-    """32 queries against 128 keys: slid inside the real atoms (fast) or at the clipped ``32 w - 48`` start (exact, ``pad``)."""
+    """32 queries against 128 keys.
+
+    Slid inside the real atoms (fast) or at the clipped ``32 w - 48`` start (exact,
+    ``pad``).
+    """
     from miniworld_engine.modules.functional import slide_starts
 
     dense, engine = pair_of_models
@@ -350,13 +369,16 @@ def test_atom_transformer_matches_dense(pair_of_models, atoms):
     )
 
 
-# ------------------------------------------------------------------------------------------------------------------ the discards
+# ------------------------------------------------------------------------ the discards
 def test_shared_kv_adaln_is_discarded_only_when_equal_to_the_query_adaln(
     pair_of_models,
 ):
     dense, engine = pair_of_models
     state = dict(dense.state_dict())
-    key = "evoformer_conditioning.atom_transformer_encoder.cross_attention.1.k_adaptive_layernorm.single_cond_scale.weight"
+    key = (
+        "evoformer_conditioning.atom_transformer_encoder.cross_attention.1."
+        "k_adaptive_layernorm.single_cond_scale.weight"
+    )
     assert torch.equal(state[key], state[key.replace("k_adaptive", "q_adaptive")])
     miniworld.convert_state(
         state, engine

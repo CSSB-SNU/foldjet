@@ -1,9 +1,11 @@
-"""``released.py``: the released (dense) layout converts to the engine classes' own and the engine class computes the same thing.
+"""``released.py``: the released (dense) layout converts to the engine classes' own.
 
-Each test builds a dense FoldForge module with random weights (fp32, CPU), converts its state dict with the pure-tensor helpers, loads it
-strictly into the engine class on the ``pytorch`` backend, and compares the outputs where the pair is real. The checks that cannot be a
-parity (the atom transformers need the trunked atom layout) assert that the conversion loads strictly and consumes every released key
-except the declared discards.
+The engine class computes the same thing. Each test builds a dense FoldForge module
+with random weights (fp32, CPU), converts its state dict with the pure-tensor helpers,
+loads it strictly into the engine class on the ``pytorch`` backend, and compares the
+outputs where the pair is real. The checks that cannot be a parity (the atom
+transformers need the trunked atom layout) assert that the conversion loads strictly
+and consumes every released key except the declared discards.
 """
 
 from __future__ import annotations
@@ -109,7 +111,8 @@ def test_msa_pair_weighted_averaging_discards_the_pair_norm_bias():
     engine = factory.msa_pair_weighted_averaging(16, 32, 4, precision="fp32")
     state = dense.state_dict()
     converted = released.msa_pair_weighted_averaging_from_released(state)
-    assert released.is_discarded("pair_norm.bias") and "ln_pair.bias" not in converted
+    assert released.is_discarded("pair_norm.bias")
+    assert "ln_pair.bias" not in converted
     released.load(engine, converted)
     msa, pair = torch.randn(5, L, 16), torch.randn(L, L, 32)
     residues, _ = masks()
@@ -123,8 +126,13 @@ def test_msa_pair_weighted_averaging_discards_the_pair_norm_bias():
 
 @pytest.mark.parametrize("bias_after_norm", [False, True])
 def test_outer_product_mean(bias_after_norm):
-    """Dense ``bias_after_norm=False`` (AF3: the bias before the divide) is the engine's ``normalize_before_proj=False`` with AF3's
-    ``n + 1e-3`` divisor; ``True`` is ``normalize_before_proj=True`` (divisor ``clamp(n, 1)`` in the dense ``clamped_norm`` form)."""
+    """Dense ``bias_after_norm`` maps onto the engine's ``normalize_before_proj``.
+
+    ``False`` (AF3: the bias before the divide) is the engine's
+    ``normalize_before_proj=False`` with AF3's ``n + 1e-3`` divisor; ``True`` is
+    ``normalize_before_proj=True`` (divisor ``clamp(n, 1)`` in the dense
+    ``clamped_norm`` form).
+    """
     dense = randomize(
         OuterProductMean(
             16, 32, 6, bias_after_norm=bias_after_norm, clamped_norm=bias_after_norm
@@ -190,7 +198,8 @@ def test_token_stack_state_is_the_engine_layout():
         dense.state_dict(), n_head=16, super_block_size=4
     )
     assert len(blocks) == 8
-    # the ONE shared pair norm is broadcast to every block, the shared projection is sliced per block
+    # the ONE shared pair norm is broadcast to every block, the shared projection is
+    # sliced per block
     first = dense.state_dict()["pair_input_layer_norm.weight"]
     assert all(torch.equal(b["attention.ln_pair.weight"], first) for b in blocks)
     assert torch.equal(
@@ -205,15 +214,14 @@ def test_token_stack_state_is_the_engine_layout():
 )
 def test_atom_diffusion_transformer_loads_strictly(family):
     dense = randomize(DiffusionCrossAttTransformer(spec=SPECS[family])).eval()
-    if (
-        family == "rosettafold3"
-    ):  # the release has no query bias: its converted checkpoint carries zeros
+    # the release has no query bias: its converted checkpoint carries zeros
+    if family == "rosettafold3":
         with torch.no_grad():
             for attention in dense.cross_attention:
                 attention.q_projection.bias.zero_()
-    if (
-        family in ("boltz2", "chai1", "rosettafold3")
-    ):  # one AdaLN for queries and keys / values: the release ties them, the loader demands it
+    # one AdaLN for queries and keys / values: the release ties them, the loader
+    # demands it
+    if family in ("boltz2", "chai1", "rosettafold3"):
         parameters = dict(dense.named_parameters())
         with torch.no_grad():
             for name, p in parameters.items():

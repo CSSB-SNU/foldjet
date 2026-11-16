@@ -1,4 +1,7 @@
-"""Which autocast the diffusion head runs under: ``af3_default`` (``reference_precision``) disables the bf16 autocast for it only."""
+"""Which autocast the diffusion head runs under.
+
+``af3_default`` (``reference_precision``) disables the bf16 autocast for it only.
+"""
 
 from __future__ import annotations
 
@@ -9,7 +12,11 @@ from foldforge.modules.engine.configure import activation_autocast, diffusion_au
 
 
 class _Fake(nn.Module):
-    def __init__(self, precision: str, reference: bool) -> None:
+    def __init__(
+        self,
+        precision: str,
+        reference: bool,  # noqa: FBT001 - signature kept as is (lint-only change)
+    ) -> None:
         super().__init__()
         self.weight = nn.Parameter(torch.zeros(1))
         self.foldforge_precision = precision

@@ -1,6 +1,9 @@
 # Chemistry and model implementations are imported at each tested boundary.
 # ruff: noqa: TC003
-"""Shared CCD ownership regressions (the pairformer composition is tested in test_engine_graph.py)."""
+"""Shared CCD ownership regressions.
+
+The pairformer composition is tested in test_engine_graph.py.
+"""
 
 from __future__ import annotations
 
@@ -8,7 +11,6 @@ import json
 from pathlib import Path
 
 import pytest
-import torch
 
 from foldforge.data.ccd import CCDDatabase, current_database
 from foldforge.data.ccd.database import database_cache

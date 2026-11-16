@@ -1,9 +1,13 @@
-"""Confidence-head training glue: targets, loss and the mini-rollout step (tiny fakes, CPU)."""
+"""Confidence-head training glue.
+
+Targets, loss and the mini-rollout step (tiny fakes, CPU).
+"""
 
 from __future__ import annotations
 
 import math
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 import torch
@@ -21,7 +25,10 @@ ALA = CODES.index(residue_names.ALA)
 
 
 class FakeHead(nn.Module):
-    """The pieces of ConfidenceHead the loss reads (bins) plus a forward whose logits depend on the trunk inputs and on its own weights."""
+    """The pieces of ConfidenceHead the loss reads (bins) plus a forward.
+
+    The forward's logits depend on the trunk inputs and on its own weights.
+    """
 
     def __init__(self) -> None:
         super().__init__()
@@ -33,7 +40,7 @@ class FakeHead(nn.Module):
         self.pae = nn.Linear(4, 64)
         self.seen_positions = None
 
-    def forward(self, dense_atom_positions, embeddings, **_):
+    def forward(self, dense_atom_positions, embeddings, **_: Any):
         self.seen_positions = dense_atom_positions
         single, pair = embeddings["single"], embeddings["pair"]
         return {
@@ -67,7 +74,7 @@ def _rigid(x: torch.Tensor) -> torch.Tensor:
     return x @ q.T + torch.tensor([3.0, -2.0, 5.0])
 
 
-def _targets(pred, gt, head=None, aatype=None, mask=None):
+def _targets(pred, gt, head=None, aatype=None, mask=None) -> dict[str, Any]:
     head = head or FakeHead()
     return conf.confidence_targets(
         pred,
@@ -98,22 +105,30 @@ def test_a_perfect_structure_has_top_lddt_and_zero_errors():
     plddt, valid = targets["plddt"]
     assert valid.all()
     assert (plddt == 49).all(), "lDDT 1.0 is the last of the 50 bins"
-    assert (targets["pde"][0] == 0).all() and targets["pde"][1].all()
+    assert (targets["pde"][0] == 0).all()
+    assert targets["pde"][1].all()
     pae, pae_mask = targets["pae"]
-    assert (pae[pae_mask] == 0).all() and pae_mask.any(), (
+    assert (pae[pae_mask] == 0).all(), (
+        "a random frame can be near colinear and drop out; the rest are exact"
+    )
+    assert pae_mask.any(), (
         "a random frame can be near colinear and drop out; the rest are exact"
     )
 
 
 def test_the_targets_are_invariant_to_a_rigid_motion_of_the_prediction():
-    """Frame-aligned error and lDDT do not see a global rotation / translation (the PAE transform must be R^T d)."""
+    """Frame-aligned error and lDDT do not see a global rotation / translation.
+
+    The PAE transform must be R^T d.
+    """
     gt = _structure()
     moved = _targets(_rigid(gt), gt)
     reference = _targets(gt.clone(), gt)
     for name in ("plddt", "pde", "pae"):
         bins, mask = moved[name]
         assert mask.any()
-        # float noise (1e-6) of a rigid motion moves an exact zero error from bin 0 to bin 1 (the first break is 0): one bin of slack
+        # float noise (1e-6) of a rigid motion moves an exact zero error from bin 0 to
+        # bin 1 (the first break is 0): one bin of slack
         assert ((bins[mask] - reference[name][0][mask]).abs() <= 1).all(), name
         assert torch.equal(mask, reference[name][1]), name
 
@@ -134,8 +149,10 @@ def test_atoms_missing_in_the_ground_truth_drop_out_of_the_masks():
     mask[2] = False  # token 2 unresolved
     targets = _targets(gt.clone(), gt, mask=mask)
     assert not targets["plddt"][1][2].any()
-    assert not targets["pde"][1][2].any() and not targets["pde"][1][:, 2].any()
-    assert not targets["pae"][1][2].any() and not targets["pae"][1][:, 2].any()
+    assert not targets["pde"][1][2].any()
+    assert not targets["pde"][1][:, 2].any()
+    assert not targets["pae"][1][2].any()
+    assert not targets["pae"][1][:, 2].any()
 
 
 def test_a_token_without_a_frame_has_no_pae_rows_but_keeps_pde():
@@ -147,7 +164,7 @@ def test_a_token_without_a_frame_has_no_pae_rows_but_keeps_pde():
     assert targets["pde"][1][1, 1]
 
 
-def test_masked_ce_is_the_log_of_the_class_count_for_flat_logits_and_ignores_masked_positions():
+def test_masked_ce_is_the_log_of_the_class_count_for_flat_logits_and_ignores_masked_positions():  # noqa: E501 - test node id kept (pass tokens)
     logits = torch.zeros(4, 3, 8)
     target = torch.randint(0, 8, (4, 3))
     mask = torch.zeros(4, 3, dtype=torch.bool)
@@ -173,8 +190,11 @@ def test_confidence_loss_weights_the_three_terms():
 
 
 class FakeModel:
-    """AlphaFold3 surface ``confidence_step`` uses: rollout knobs, a diffusion head with ``_fold``, ``_prepare_diffusion_inputs`` / ``_sample_diffusion`` /
-    ``_head_batch`` and a confidence head."""
+    """AlphaFold3 surface ``confidence_step`` uses.
+
+    Rollout knobs, a diffusion head with ``_fold``, ``_prepare_diffusion_inputs`` /
+    ``_sample_diffusion`` / ``_head_batch`` and a confidence head.
+    """
 
     def __init__(self, x_mini: torch.Tensor) -> None:
         self.num_samples, self.diffusion_steps = 5, 200
@@ -184,11 +204,13 @@ class FakeModel:
         self.x_mini = x_mini
         self.calls: list[tuple[int, int, bool, bool]] = []
 
-    def _prepare_diffusion_inputs(self, features, batch_data, embeddings):
+    def _prepare_diffusion_inputs(
+        self, features, batch_data, embeddings
+    ) -> SimpleNamespace:
         self.prepared_with = embeddings
         return SimpleNamespace(batch=batch_data, embeddings=embeddings)
 
-    def _sample_diffusion(self, batch, embeddings):
+    def _sample_diffusion(self, batch, embeddings) -> dict[str, torch.Tensor]:
         self.calls.append(
             (
                 self.num_samples,
@@ -199,11 +221,11 @@ class FakeModel:
         )
         return {"atom_positions": self.x_mini[None]}
 
-    def _head_batch(self, batch_data):
+    def _head_batch(self, batch_data) -> Any:
         return batch_data
 
 
-def _batch():
+def _batch() -> SimpleNamespace:
     tokens = SimpleNamespace(
         mask=torch.ones(RES),
         asym_id=torch.zeros(RES, dtype=torch.long),
@@ -218,7 +240,7 @@ def _batch():
     )
 
 
-def test_confidence_step_detaches_the_trunk_rolls_out_without_grad_and_restores_the_model():
+def test_confidence_step_detaches_the_trunk_rolls_out_without_grad_and_restores_the_model():  # noqa: E501 - test node id kept (pass tokens)
     gt = _structure()
     model = FakeModel(gt + 0.5)
     model.diffusion_head.train()
@@ -242,12 +264,15 @@ def test_confidence_step_detaches_the_trunk_rolls_out_without_grad_and_restores_
     total.backward()
 
     assert set(parts) == {"plddt", "pde", "pae"}
-    # rollout: one sample, rollout_steps steps, head in eval mode, no grad; everything restored afterwards
+    # rollout: one sample, rollout_steps steps, head in eval mode, no grad; everything
+    # restored afterwards
     assert model.calls == [(1, 20, False, False)]
     assert (model.num_samples, model.diffusion_steps) == (5, 200)
-    assert model.diffusion_head.training and model.diffusion_head._fold is None
+    assert model.diffusion_head.training
+    assert model.diffusion_head._fold is None
     # stop gradient: the confidence loss reaches the confidence head only
-    assert trunk_single.grad is None and trunk_pair.grad is None
+    assert trunk_single.grad is None
+    assert trunk_pair.grad is None
     assert all(
         p.grad is not None and p.grad.abs().sum() > 0
         for p in model.confidence_head.parameters()
@@ -260,7 +285,7 @@ def test_confidence_step_detaches_the_trunk_rolls_out_without_grad_and_restores_
 def test_the_phase_timer_is_inert_when_disabled_and_reports_nothing():
     from foldforge.train.profile import PhaseTimer, arm_trunk_grad_marker, tensor_bytes
 
-    timer = PhaseTimer(False)
+    timer = PhaseTimer(False)  # noqa: FBT003 - positional flag of the API under test
     with timer.phase("x"):
         pass
     timer.mark("a")
@@ -287,8 +312,8 @@ def test_the_recipe_trains_the_confidence_head_in_the_same_stage():
     )
 
 
-# ---------------------------------------------------------------------------------------------------- fixed-length present-atom path
-def _random_inputs(seed: int, res: int = 7, atoms: int = 6):
+# ---- fixed-length present-atom path
+def _random_inputs(seed: int, res: int = 7, atoms: int = 6) -> tuple[torch.Tensor, ...]:
     g = torch.Generator().manual_seed(seed)
     gt = torch.randn(res, atoms, 3, generator=g) * 5.0
     pred = gt + torch.randn(gt.shape, generator=g)
@@ -299,7 +324,9 @@ def _random_inputs(seed: int, res: int = 7, atoms: int = 6):
     return pred, gt, mask, is_nuc, is_lig
 
 
-def _targets_fixed(pred, gt, mask, is_nuc, is_lig, length):
+def _targets_fixed(
+    pred, gt, mask, is_nuc, is_lig, length
+) -> tuple[dict[str, Any], dict[str, Any]]:
     from foldforge.train.data import fixed_atom_index
 
     res, atoms, _ = pred.shape
@@ -344,17 +371,13 @@ def test_fixed_atom_index_is_ascending_padded_and_grows_past_its_length():
     mask = torch.zeros(4, 5, dtype=torch.bool)
     mask[0, 1] = mask[2, 3] = mask[3, 4] = True
     index, valid = fixed_atom_index(mask, 8)
-    assert (
-        index.tolist() == [1, 13, 19, 0, 0, 0, 0, 0]
-        and valid.tolist() == [True] * 3 + [False] * 5
-    )
+    assert index.tolist() == [1, 13, 19, 0, 0, 0, 0, 0]
+    assert valid.tolist() == [True] * 3 + [False] * 5
     big = torch.ones(30, 40, dtype=torch.bool)  # 1200 atoms > 8
     index, valid = fixed_atom_index(big, 8)
-    assert (
-        index.shape == (1536,)
-        and int(valid.sum()) == 1200
-        and index[:1200].tolist() == list(range(1200))
-    )
+    assert index.shape == (1536,)
+    assert int(valid.sum()) == 1200
+    assert index[:1200].tolist() == list(range(1200))
 
 
 def test_per_atom_lddt_scalars_equal_the_old_tensor_constants():
@@ -362,7 +385,8 @@ def test_per_atom_lddt_scalars_equal_the_old_tensor_constants():
     x, y = pred.reshape(-1, 3), gt.reshape(-1, 3)
     nuc, lig = is_nuc.repeat_interleave(6), is_lig.repeat_interleave(6)
     lddt, valid = conf.per_atom_lddt(x, y, nuc, lig)
-    # reference: the pre-change formulation with device constants and the broadcast comparison
+    # reference: the pre-change formulation with device constants and the broadcast
+    # comparison
     pd, gd = torch.cdist(x, x), torch.cdist(y, y)
     radius = torch.where(nuc, gd.new_tensor(30.0), gd.new_tensor(15.0))
     pair = (gd > 0.0) & (gd < radius[None, :])
@@ -370,6 +394,5 @@ def test_per_atom_lddt_scalars_equal_the_old_tensor_constants():
     bins = torch.tensor((0.5, 1.0, 2.0, 4.0))
     kept = ((pd - gd).abs()[..., None] <= bins) & pair[..., None]
     frac = kept.sum(dim=-2).float() / (pair.sum(dim=-1, keepdim=True).float() + 1e-8)
-    assert torch.equal(lddt, frac.mean(dim=-1)) and torch.equal(
-        valid, pair.sum(dim=-1) > 0
-    )
+    assert torch.equal(lddt, frac.mean(dim=-1))
+    assert torch.equal(valid, pair.sum(dim=-1) > 0)
