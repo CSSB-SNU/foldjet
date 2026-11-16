@@ -78,7 +78,9 @@ class FusedOptimizer:
             {"params": [p for _, p in trunk], "lr": lr(cfg.max_lr * cfg.trunk_lr_scale), "scale": cfg.trunk_lr_scale, "name": "trunk"},
         ]
         kw = {"fused": True} if impl == "fused" else {"foreach": impl == "foreach"}
-        self.optimizer = torch.optim.Adam(groups, betas=cfg.betas, capturable=cuda, **kw)
+        if impl == "triton" and cfg.weight_decay:
+            raise ValueError("impl='triton' has no weight decay (the Protenix recipe's 1e-8): use 'foreach' / 'fused' or the default per-tensor path")
+        self.optimizer = torch.optim.Adam(groups, betas=cfg.betas, capturable=cuda, weight_decay=cfg.weight_decay, **kw)
         self.params = [p for g in self.optimizer.param_groups for p in g["params"]]
         self.ema = FusedEMA(model, cfg.ema_decay) if cfg.use_ema else None
         self.model = model

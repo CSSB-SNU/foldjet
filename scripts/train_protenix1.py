@@ -37,6 +37,7 @@ from foldforge.train import (
     freeze,
     fused_opt,
     optim,
+    recipes,
     prepare,
     step,
 )
@@ -161,6 +162,9 @@ def main() -> None:
     ap.add_argument("--min-lr", type=float, default=None)
     ap.add_argument("--warmup-steps", type=int, default=None)
     ap.add_argument("--trunk-lr-scale", type=float, default=None)
+    ap.add_argument("--recipe", choices=recipes.RECIPES, default="miniworld", help="miniworld (default, TrainConfig as it is) or protenix: Protenix v1 fine-tuning recipe (train/recipes.py: grad clip 10, Adam wd 1e-8, lr 1e-3 warmup 2000 af3 decay, loss weights, EMA 0.999); explicit flags below still override it")
+    ap.add_argument("--grad-clip", type=float, default=None, help="global grad-norm clip (default: the recipe, miniworld 1.0 / protenix 10)")
+    ap.add_argument("--weight-decay", type=float, default=None, help="Adam weight decay (default: the recipe, miniworld 0 / protenix 1e-8)")
     ap.add_argument(
         "--no-confidence",
         action="store_true",
@@ -196,6 +200,10 @@ def main() -> None:
     ap.add_argument("--keep-last", type=int, default=3, help="--save-every: keep the newest N step checkpoints (and every --keep-every-th step); 0 keeps all")
     ap.add_argument("--keep-every", type=int, default=500, help="--save-every: steps that are multiples of this are never pruned")
     ap.add_argument("--resume", default=None, help="continue from this step<N>.miniworld.pt (+ its .train.pt: optimizer, EMA, step); --steps is then the TOTAL step count")
+    ap.add_argument("--epoch-samples", type=int, default=25600, help="samples per epoch (MiniWorld train.train_item, the composed v200 recipe: 25600): steps per epoch = this / effective batch")
+    ap.add_argument("--epochs", type=int, default=None, help="TOTAL epochs (replaces --steps: steps = epochs x steps per epoch); with --resume this is also the total")
+    ap.add_argument("--save-every-epochs", type=int, default=0, help="save epoch<E>.miniworld.pt (+ .train.pt) at the end of every K-th epoch; never pruned (MiniWorld save_freq 5)")
+    ap.add_argument("--save-last", action="store_true", help="at the end of EVERY epoch overwrite last.miniworld.pt (+ .train.pt, last.step), like MiniWorld's last.pt; resume picks the newer of it and the epoch<E> checkpoints")
     ap.add_argument("--no-profile", action="store_true")
     ap.add_argument("--no-save", action="store_true", help="skip the final checkpoint (measurement runs)")
     ap.add_argument(
@@ -239,7 +247,7 @@ def main() -> None:
         if world.is_main:
             print(*a, **k)
 
-    cfg = TrainConfig()
+    cfg = recipes.apply(args.recipe, TrainConfig())  # before the flags: an explicit flag overrides the recipe value
     if args.effective_batch is not None:
         if args.grad_accum is not None:
             raise SystemExit("--effective-batch and --grad-accum are exclusive")
@@ -263,6 +271,8 @@ def main() -> None:
         ("min_lr", args.min_lr),
         ("warmup_steps", args.warmup_steps),
         ("trunk_lr_scale", args.trunk_lr_scale),
+        ("grad_clip_max_norm", args.grad_clip),
+        ("weight_decay", args.weight_decay),
         ("rollout_steps", args.rollout_steps),
         ("rollout", args.rollout_order),
         ("step_graph", True if args.step_graph else None),
@@ -277,6 +287,12 @@ def main() -> None:
     if args.no_confidence:
         changes["confidence"] = False
     cfg = replace(cfg, **changes)
+    effective = cfg.grad_accum_steps * world.world_size
+    if args.epoch_samples % effective:
+        raise SystemExit(f"--epoch-samples {args.epoch_samples} is not a multiple of the effective batch {effective}")
+    steps_per_epoch = args.epoch_samples // effective
+    if args.epochs is not None:  # --epochs replaces --steps (the default of 50 is only a placeholder)
+        args.steps = args.epochs * steps_per_epoch
     run_dir = Path(args.run_dir)
     if world.is_main:
         run_dir.mkdir(parents=True, exist_ok=True)
@@ -356,6 +372,9 @@ def main() -> None:
         ),
         flush=True,
     )
+    real_atoms = int(first.features["pred_dense_atom_mask"].sum())
+    resolved_atoms = int((first.atom_mask if first.atom_mask is not None else first.features["pred_dense_atom_mask"]).sum())
+    say("ATOMS first example: real=%d resolved=%d (the experimentally-resolved loss classifies the real ones)" % (real_atoms, resolved_atoms), flush=True)
     prep_info = prepare.enable_training(model, cfg)
     if args.msa_rows is not None:
         model.evoformer.num_msa = args.msa_rows  # MSA rows per recycle (the recipe: bucket_msa_size 128; FoldForge default 1024)
@@ -377,7 +396,7 @@ def main() -> None:
         flush=True,
     )
     by_rule: dict[str, list[str]] = defaultdict(list)
-    for frozen_name, rule in freeze.frozen_parameters(model).items():
+    for frozen_name, rule in freeze.frozen_parameters(model, cfg.loss).items():
         by_rule[rule.key].append(frozen_name)
     for rule_key, names in sorted(by_rule.items()):
         say("FROZEN", rule_key, len(names), "e.g.", names[0], flush=True)
@@ -562,7 +581,7 @@ def main() -> None:
                 )
         history.append(totals["loss"])
         say(
-            "STEP %4d lr=%.2e loss=%.4f diffusion=%.4f bond=%.4f distogram=%.4f plddt=%.4f pde=%.4f pae=%.4f gnorm=%.3f t=%.1fs"
+            "STEP %4d lr=%.2e loss=%.4f diffusion=%.4f bond=%.4f distogram=%.4f plddt=%.4f pde=%.4f pae=%.4f resolved=%.4f gnorm=%.3f t=%.1fs"
             % (
                 it,
                 lr,
@@ -573,6 +592,7 @@ def main() -> None:
                 totals["plddt"],
                 totals["pde"],
                 totals["pae"],
+                totals["resolved"],
                 norm,
                 time.time() - t0,
             ),
@@ -605,6 +625,18 @@ def main() -> None:
                         continue
                     p.unlink(missing_ok=True)
                     p.with_name(p.name.removesuffix(".miniworld.pt") + ".train.pt").unlink(missing_ok=True)
+        if not args.bench and world.is_main and args.save_every_epochs and (it + 1) % steps_per_epoch == 0 and ((it + 1) // steps_per_epoch) % args.save_every_epochs == 0:
+            epoch = (it + 1) // steps_per_epoch
+            checkpoint.save(model, run_dir / f"epoch{epoch:04d}.miniworld.pt", family=args.model, source="train", ema=ema, optimizer=optimizer, step=it + 1)
+            say("SAVED epoch", epoch, "step", it + 1, flush=True)
+        if not args.bench and world.is_main and args.save_last and (it + 1) % steps_per_epoch == 0:
+            # MiniWorld's last.pt: overwritten at the end of every epoch (written under a temporary name and renamed, so a kill mid-write leaves the previous one intact)
+            tmp = run_dir / "last_tmp.miniworld.pt"
+            checkpoint.save(model, tmp, family=args.model, source="train", ema=ema, optimizer=optimizer, step=it + 1)
+            for suffix in (".miniworld.pt", ".train.pt"):
+                (run_dir / f"last_tmp{suffix}").replace(run_dir / f"last{suffix}")
+            (run_dir / "last.step").write_text(str(it + 1))
+            say("SAVED last epoch", (it + 1) // steps_per_epoch, "step", it + 1, flush=True)
 
     if history:
         n = max(1, min(10, len(history) // 2))

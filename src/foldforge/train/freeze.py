@@ -27,6 +27,8 @@ if TYPE_CHECKING:
 
     from foldforge.modules.dense.spec import DenseSpec
 
+from foldforge.train.config import LossWeights
+
 _CONDITIONING = r"(?:evoformer_conditioning|diffusion_head\.atom_cross_att_encoder)"
 
 
@@ -42,11 +44,16 @@ class Rule:
     zero_filled: bool = False
     #: the rule applies to this spec only when the predicate holds
     when: Callable[[DenseSpec], bool] | None = None
+    #: name of a ``LossWeights`` field: the rule applies only while that loss weight is exactly 0 (the parameters have no other path to the loss, so a
+    #: zero weight leaves them without a gradient: "zero-weight", not a defect). ``None`` = the rule does not depend on the loss weights.
+    zero_weight: str | None = None
 
-    def regex(self, spec: DenseSpec) -> re.Pattern[str] | None:
+    def regex(self, spec: DenseSpec, weights: LossWeights | None = None) -> re.Pattern[str] | None:
         if self.families is not None and spec.family not in self.families:
             return None
         if self.when is not None and not self.when(spec):
+            return None
+        if self.zero_weight is not None and getattr(weights if weights is not None else LossWeights(), self.zero_weight) != 0.0:
             return None
         pattern = self.pattern(spec) if callable(self.pattern) else self.pattern
         return re.compile(pattern) if pattern else None
@@ -74,8 +81,18 @@ RULES: tuple[Rule, ...] = (
     ),
     Rule(
         "experimentally_resolved",
-        "the MiniWorld recipe trains no experimentally-resolved loss (weight 0, `train/loss/confidence.py`): the head never gets a gradient",
+        "the MiniWorld recipe trains no experimentally-resolved loss (weight 0, `train/loss/confidence.py`): the head never gets a gradient "
+        "(the `protenix` recipe gives it a weight and trains it)",
         r"confidence_head\.experimentally_resolved_(?:ln|logits)\..*",
+        zero_weight="resolved_loss",
+    ),
+    Rule(
+        "pae_zero_weight",
+        "the PAE loss has weight 0 (Protenix `alpha_pae` 0.0 in the initial / fine-tuning-1 stages, configs_base.py:402): the PAE head's only path to the "
+        "loss is that loss, so it gets no gradient. (Protenix itself keeps these parameters in Adam with an all-zero gradient and weight_decay 1e-8, "
+        "i.e. a decay-only update; FoldForge leaves the pretrained PAE head untouched instead.)",
+        r"confidence_head\.(?:pae_logits_ln|pae_logits|pae_inter_logits)\..*",
+        zero_weight="pae_loss",
     ),
     Rule(
         "boltz2_contact_fourier",
@@ -123,10 +140,11 @@ DATA_DEPENDENT = re.compile(
 UNDERFLOW_RELATIVE = 1e-6
 
 
-def frozen_parameters(model: nn.Module) -> dict[str, Rule]:
-    """``{parameter name: rule}`` of the parameters the policy freezes for ``model`` (its ``spec.family``). Zero-filled rules read the weights."""
+def frozen_parameters(model: nn.Module, weights: LossWeights | None = None) -> dict[str, Rule]:
+    """``{parameter name: rule}`` of the parameters the policy freezes for ``model`` (its ``spec.family``) under the loss ``weights`` (``None`` = the
+    MiniWorld recipe's defaults). Zero-filled rules read the weights of the model."""
     spec = model.spec
-    rules = [(rule, regex) for rule in RULES if (regex := rule.regex(spec)) is not None]
+    rules = [(rule, regex) for rule in RULES if (regex := rule.regex(spec, weights)) is not None]
     found: dict[str, Rule] = {}
     for name, param in model.named_parameters():
         for rule, regex in rules:
@@ -138,11 +156,11 @@ def frozen_parameters(model: nn.Module) -> dict[str, Rule]:
     return found
 
 
-def apply(model: nn.Module) -> dict[str, int]:
+def apply(model: nn.Module, weights: LossWeights | None = None) -> dict[str, int]:
     """Set ``requires_grad_(False)`` on the frozen parameters; returns ``{rule key: count}``."""
     counts: dict[str, int] = {}
     named = dict(model.named_parameters())
-    for name, rule in frozen_parameters(model).items():
+    for name, rule in frozen_parameters(model, weights).items():
         named[name].requires_grad_(False)
         counts[rule.key] = counts.get(rule.key, 0) + 1
     return counts

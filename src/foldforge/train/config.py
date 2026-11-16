@@ -29,6 +29,9 @@ class LossWeights:
     plddt_loss: float = 1.0
     pde_loss: float = 1.0
     pae_loss: float = 1.0
+    #: Experimentally-resolved head (Protenix ``ExperimentallyResolvedLoss``, ``train/loss/confidence.py::resolved_loss_value``). 0.0 in the MiniWorld
+    #: recipe: not computed, and the head stays frozen (``train/freeze.py``). The ``protenix`` recipe (``train/recipes.py``) trains it.
+    resolved_loss: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -51,6 +54,8 @@ class TrainConfig:
     confidence: bool = True
     #: Steps of the no-grad mini-rollout whose structure the confidence head reads (Protenix `N_step_mini_rollout`, MiniWorld `protenix_finetune`: 20).
     rollout_steps: int = 20
+    #: pLDDT / PDE / PAE targets built the way Protenix does (``train/loss/confidence.py::confidence_targets(protenix_targets=True)``); False = MiniWorld's.
+    targets_protenix: bool = False
     #: Where the mini-rollout runs inside a step: "after" the trunk backward (activations freed: least memory), "before" the diffusion forward, or "side"
     #: (a second CUDA stream overlapped with the diffusion-train forward / backward), or "graph" (the whole rollout as one CUDA graph per shape, replayed at the
     #: "after" placement: `train/rollout_graph.py`; no engine static_weights / static_inputs, so it follows the weights the optimizer changes).
@@ -76,6 +81,13 @@ class TrainConfig:
     decay_steps: int = 50_000
     decay_factor: float = 0.95
     betas: tuple[float, float] = (0.9, 0.95)
+    #: Adam ``weight_decay`` (torch ``Adam``: coupled L2, added to the gradient AFTER the clip). 0.0 = MiniWorld; the ``protenix`` recipe: 1e-8.
+    weight_decay: float = 0.0
+    #: Step decay counts from the end of the warm-up (MiniWorld: ``(step - warmup) // decay_steps``) or from step 0 (Protenix ``AlphaFold3LRScheduler``:
+    #: ``step // decay_every_n_steps``).
+    decay_from_warmup: bool = True
+    #: Which recipe set these values (``train/recipes.py``); informational, logged in CONFIG.
+    recipe: str = "miniworld"
     #: Multiplier of the LR of the trunk (input embedder, template / MSA / pairformer stack); the heads (diffusion, confidence, distogram) keep 1.0.
     trunk_lr_scale: float = 1.0
     grad_clip_max_norm: float = 1.0

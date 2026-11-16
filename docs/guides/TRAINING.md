@@ -19,6 +19,22 @@
 | recycle | 1~4 중 균등 추출, 마지막 pass만 기울기 |
 | 확산 | 증강 48개, EDM P_mean -1.2, P_std 1.5, sigma_data 16 |
 
+## Protenix 레시피 (`--recipe protenix`)
+
+기본은 위의 MiniWorld 레시피이고, `--recipe protenix`는 Protenix v1 자체의 파인튜닝 레시피로 바꾼다(`src/foldforge/train/recipes.py`, 값마다 Protenix 파일·줄 번호가
+`PROTENIX_REFERENCES`에 있다). 명령줄 플래그(`--max-lr`, `--warmup-steps`, `--grad-clip`, `--weight-decay` ...)는 레시피 값을 덮어쓴다. 데이터와 샘플러는 그대로다.
+
+| 항목 | Protenix | MiniWorld(기본) |
+|---|---|---|
+| grad clip | 10 (`configs_base.py:80`) | 1.0 |
+| Adam | `torch.optim.Adam`, betas (0.9, 0.95), weight decay 1e-8(결합형 L2, AdamW 아님), 파라미터 그룹 하나 | betas 같음, weight decay 0, 헤드/트렁크 두 그룹 |
+| 학습률 | 1e-3, warmup 2000, `step // 50000`마다 x0.95(0 스텝부터 셈), 하한 없음 (`finetune_demo.sh`, `lr_scheduler.py:85-91`) | 5e-3(CLI에서 보통 1e-4), warmup 1000, warmup 뒤부터 셈, 하한 1e-4 |
+| 손실 | diffusion 4, bond 4(=4x1), smooth LDDT 0, distogram 0.03, pLDDT/PDE/resolved 1e-4, PAE 0 (docs 표의 fine-tuning stage 1) | bond 1, pLDDT/PDE/PAE 1, resolved 없음 |
+| resolved 손실 | 구현(`loss/confidence.py::resolved_loss_value`), 헤드 학습 | 없음, 헤드 동결 |
+| PAE 가중치 0 | 헤드 파라미터는 기울기가 없으므로 `pae_zero_weight`로 동결(결함 아님) | 학습 |
+| 신뢰도 타깃 | pLDDT 이웃 = 중합체 Cα/C1', `<` 임계, PDE/PAE bin 경계 한 칸 이동 (`targets_protenix`) | MiniWorld 방식 |
+
+한 스텝의 손실 항은 STEP 줄에 따로 찍힌다(`diffusion bond distogram plddt pde pae resolved`).
 ## 경고: 학습률
 
 `max_lr=5e-3`은 MiniWorld에서 **동결된 트렁크 + 새로 초기화한 확산 헤드**에 쓰는 값이다. 사전학습된 Protenix 트렁크를 풀어 이 값으로 돌리면 가중치가
@@ -40,7 +56,8 @@ Protenix v1에는 모든 파라미터가 1e-37 수준인 모듈이 있다(추론
 |---|---|---|
 | `atom_pair_unused` | 입력 임베더·확산 헤드의 `single_to_pair_cond_row/col`, `embed_pair_offsets`, `embed_pair_distances` (`_1`이 없는 쪽, 모델당 8개) | `prepare`가 `_per_atom_conditioning`의 atom-pair 출력을 버린다(AF3도 버림). 실제로 쓰는 것은 `_1` 쪽이고 변환기는 원본 가중치 하나를 두 자리에 복사한다. 엔진 backward 문제가 아니다(R16 조사: 백엔드와 무관, 10개 모델 모두 같음) |
 | `last_msa_block` | 마지막 MSA 블록의 `msa_attention1`, `msa_transition` (OPM이 먼저인 모델: Protenix, AF3 계열, ESMFold2) | 마지막 블록이 갱신한 MSA는 버려져 손실에 닿지 않는다. Protenix·ESMFold2 체크포인트는 여기가 0으로 채워져 있다. Boltz 순서(MSA 갱신이 OPM보다 먼저)는 해당 없음 |
-| `experimentally_resolved` | confidence 헤드의 `experimentally_resolved_ln/logits` | MiniWorld 레시피에는 이 손실이 없다(가중치 0, `train/loss/confidence.py`). 원본 Protenix·Boltz-2는 학습하므로, 손실을 넣게 되면 이 규칙을 지운다 |
+| `experimentally_resolved` | confidence 헤드의 `experimentally_resolved_ln/logits` | MiniWorld 레시피에는 이 손실이 없다(가중치 0). 가중치가 0이 아니면(`--recipe protenix`) 동결하지 않는다 |
+| `pae_zero_weight` | confidence 헤드의 `pae_logits_ln`, `pae_logits`, `pae_inter_logits` | PAE 가중치가 정확히 0이면(`--recipe protenix`) 이 파라미터는 손실에 닿지 않는다 |
 | `boltz2_contact_fourier` | Boltz-2의 `contact_fourier` (입력·confidence 재임베딩, 가중치와 편향) | 원본에서 고정(고정 푸리에 특징)인데 FoldForge에서는 학습되고 있었다 |
 | `esmfold2_*` | ESMFold2의 단일 트랙(confidence pairformer의 `single_*`, `single_activations`, `prev_single_embedding*`), atom pair 슬롯(`pair_mlp_*`, `*_1`, `embed_trunk_*_cond`, `pair_logits_projection`), confidence의 contact·bond 재임베딩 | 원본에 없어서 변환기가 0으로 채운 자리. 학습하면 원본에 없는 용량이 생긴다. **값이 정확히 0일 때만** 동결한다(나중 체크포인트가 이 자리를 채우면 동결되지 않는다) |
 
