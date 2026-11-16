@@ -12,9 +12,9 @@ def weighted_align(
     if x.shape != y.shape:
         msg = "x and y must have the same shape."
         raise ValueError(msg)
-    # as released, weight=None raises AttributeError at `.shape` here, so the None
-    # branch below is unreachable
-    if weight.shape != x.shape[:-1]:  # pyright: ignore[reportOptionalMemberAccess]
+    if weight is None:
+        weight = torch.ones_like(x[..., 0])
+    if weight.shape != x.shape[:-1]:
         msg = (
             "weight must have the same shape as x and y except for the last dimension."
         )
@@ -29,10 +29,7 @@ def weighted_align(
     L = x.shape[-2]  # Length of the sequence
     original_shape = x.shape
     x, y = x.reshape(-1, L, 3), y.reshape(-1, L, 3)  # (AB, L, 3)
-    weight = weight.reshape(-1, L)  # pyright: ignore[reportOptionalMemberAccess]  # (AB, L)
-
-    if weight is None:
-        weight = torch.ones_like(x[..., 0])
+    weight = weight.reshape(-1, L)  # (AB, L)
 
     # Compute the weighted centroids
     w_sum = weight.sum(dim=-1, keepdim=True)

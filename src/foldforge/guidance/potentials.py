@@ -1228,14 +1228,18 @@ class VinaStericPotential(Potential):
         # to avoid constructing O(N^2) candidate pairs.
         if n_atoms == 0:
             return _cache_and_return(
-                torch.empty((2, 0), device=device, dtype=torch.long),
-                torch.empty((0,), device=device, dtype=torch.float32),  # pyright: ignore[reportCallIssue]  # pre-existing: 2 args to a 1-arg helper (TypeError if reached); kept as is
+                (
+                    torch.empty((2, 0), device=device, dtype=torch.long),
+                    torch.empty((0,), device=device, dtype=torch.float32),
+                )
             )
         # If all atoms map to the same chain id, there is no inter-chain pair.
         if torch.all(c_map == c_map[..., :1]):
             return _cache_and_return(
-                torch.empty((2, 0), device=device, dtype=torch.long),
-                torch.empty((0,), device=device, dtype=torch.float32),  # pyright: ignore[reportCallIssue]  # pre-existing: 2 args to a 1-arg helper (TypeError if reached); kept as is
+                (
+                    torch.empty((2, 0), device=device, dtype=torch.long),
+                    torch.empty((0,), device=device, dtype=torch.float32),
+                )
             )
 
         n_chains = int(c_map.max().item()) + 1
