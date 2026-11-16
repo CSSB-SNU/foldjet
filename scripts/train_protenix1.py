@@ -1,16 +1,28 @@
-"""Protenix v1 finetuning on the FoldForge graph (MiniWorld recipe). Phase 0/1: eager steps, one GPU, gradient accumulation.
+r"""Protenix v1 finetuning on the FoldForge graph (MiniWorld recipe).
 
-  # smoke: one fixed example (FoldBench target) overfit + gradient coverage + kernel table + checkpoint round trip
-  python scripts/train_protenix1.py --smoke --target 8ayg-assembly1 --steps 50 --warmup-steps 0 --run-dir RUN
+Phase 0/1: eager steps, one GPU, gradient accumulation.
 
-  # training from a data source (MiniWorld provides the adapter; FoldForge does not import MiniWorld)
-  python scripts/train_protenix1.py --batch-source my_pkg.adapter:batches --steps 100000 --run-dir RUN [--ckpt X.miniworld.pt]
+  # smoke: one fixed example (FoldBench target) overfit + gradient coverage + kernel
+  # table + checkpoint round trip
+  python scripts/train_protenix1.py --smoke --target 8ayg-assembly1 --steps 50 \
+      --warmup-steps 0 --run-dir RUN
 
-  # speed measurement of a backend (pytorch / cueq / miniworld): 30 real optimizer steps, effective batch 256 (8 GPUs: torchrun --nproc-per-node 8); docs/guides/TRAINING.md
-  python scripts/train_protenix1.py --bench --backend cueq --effective-batch 256 --steps 30 --warmup-steps 10 --bench-pool-cache POOL.pt
+  # training from a data source (MiniWorld provides the adapter; FoldForge does not
+  # import MiniWorld)
+  python scripts/train_protenix1.py --batch-source my_pkg.adapter:batches \
+      --steps 100000 --run-dir RUN [--ckpt X.miniworld.pt]
 
-The recipe (loss weights, Adam, clip, EMA, recycles, augmentations) is :class:`foldforge.train.config.TrainConfig`; read the lr warning there.
+  # speed measurement of a backend (pytorch / cueq / miniworld): 30 real optimizer
+  # steps, effective batch 256 (8 GPUs: torchrun --nproc-per-node 8);
+  # docs/guides/TRAINING.md
+  python scripts/train_protenix1.py --bench --backend cueq --effective-batch 256 \
+      --steps 30 --warmup-steps 10 --bench-pool-cache POOL.pt
+
+The recipe (loss weights, Adam, clip, EMA, recycles, augmentations) is
+:class:`foldforge.train.config.TrainConfig`; read the lr warning there.
 """
+
+# ruff: noqa: INP001, T201 - standalone script, print logging
 
 from __future__ import annotations
 
@@ -21,6 +33,7 @@ import time
 from collections import defaultdict
 from dataclasses import replace
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import torch
 
@@ -46,28 +59,43 @@ from foldforge.train import (
 )
 from foldforge.train.profile import PhaseTimer, tensor_bytes
 
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
 SPECS = Path("/home/psk6950/foldforge-scratch/foldbench/specs_all")
 
+#: |loss| above this counts as diverged (and as non-finite in --bench)
+_DIVERGED_LOSS = 1e6
 
-def smoke_batches(pred, target: str):
-    """One fixed example: FoldForge's own featurisation of a FoldBench target; the ground truth is the model's own pre-training prediction of it
-    (a STAND-IN: the real ground-truth atoms are not mapped to the dense layout in phase 0/1).
+
+def smoke_batches(pred: Any, target: str) -> Iterator[TrainBatch]:
+    """Yield one fixed example: FoldForge's own featurisation of a FoldBench target.
+
+    The ground truth is the model's own pre-training prediction of it (a STAND-IN:
+    the real ground-truth atoms are not mapped to the dense layout in phase 0/1).
     """
     example = bench.standin_example(pred, target)
     while True:
         yield example
 
 
-def split_sizes(model, example, cfg) -> dict:
-    """Bytes a 2-GPU split of the step would move (the mini-rollout on a second GPU): the diffusion-head parameters (re-synced after every
-    optimizer step), the trunk outputs the rollout reads (single / pair / target features, per crop), the predicted coordinates back.
+def split_sizes(
+    model: torch.nn.Module,
+    example: TrainBatch,
+    cfg: TrainConfig,  # noqa: ARG001 - kept for the call signature
+) -> dict:
+    """Bytes a 2-GPU split of the step would move (the mini-rollout on a second GPU).
+
+    The diffusion-head parameters (re-synced after every optimizer step), the trunk
+    outputs the rollout reads (single / pair / target features, per crop), the
+    predicted coordinates back.
     """
     features = {
         k: (v.float() if v.dtype == torch.float64 else v)
         for k, v in example.features.items()
     }
     with torch.no_grad(), activation_autocast(model):
-        batch_data = model._prepare_batch(features)
+        batch_data = model._prepare_batch(features)  # noqa: SLF001 - the model's own batch preparation
         emb = step.run_trunk_train(model, batch_data, 1)
     head = model.diffusion_head
     res, atoms, _ = example.atom_positions.shape
@@ -101,11 +129,17 @@ COVERAGE_COLUMNS = (
 
 
 def grad_coverage(model: torch.nn.Module) -> dict:
-    """Which parameters got a gradient from one step: groups by the first three name components; the confidence head is in the list (single-stage
-    training; only ``--no-confidence`` leaves it without a loss). A parameter is classified by ``train/freeze.py``: frozen (no path to the loss /
-    not in the original / fixed in the original: not counted as a defect), ``data_dependent`` (needs charged atoms / bonds in the example: smoke 7fvu),
-    ``underflow`` (a decayed module: the gradient is exactly zero because the weights are ~1e-37..1e-12 relative to the model's typical weight) and
-    the real defects ``none`` (no gradient), ``zero_live`` (zero gradient on a live weight) and ``nonfinite``.
+    """Count which parameters got a gradient from one step.
+
+    Groups by the first three name components; the confidence head is in the list
+    (single-stage training; only ``--no-confidence`` leaves it without a loss). A
+    parameter is classified by ``train/freeze.py``: frozen (no path to the loss /
+    not in the original / fixed in the original: not counted as a defect),
+    ``data_dependent`` (needs charged atoms / bonds in the example: smoke 7fvu),
+    ``underflow`` (a decayed module: the gradient is exactly zero because the
+    weights are ~1e-37..1e-12 relative to the model's typical weight) and the real
+    defects ``none`` (no gradient), ``zero_live`` (zero gradient on a live weight)
+    and ``nonfinite``.
     """
     scale = freeze.weight_scale(model)
     groups: dict[str, list[int]] = defaultdict(lambda: [0] * len(COVERAGE_COLUMNS))
@@ -123,7 +157,10 @@ def grad_coverage(model: torch.nn.Module) -> dict:
 
 
 def data_dependent_flow(model: torch.nn.Module) -> dict[str, bool]:
-    """Per data-dependent parameter (charge, bond embeddings): did a nonzero gradient reach it on this example?"""
+    """Report, per data-dependent parameter, whether a nonzero gradient reached it.
+
+    Data-dependent: the charge and bond embeddings; checked on this example.
+    """
     flow = {}
     for name, param in model.named_parameters():
         if freeze.DATA_DEPENDENT.fullmatch(name):
@@ -131,9 +168,17 @@ def data_dependent_flow(model: torch.nn.Module) -> dict[str, bool]:
     return flow
 
 
-def kernel_table(model, example, cfg, top: int = 30) -> list[tuple[str, float, int]]:
-    """CUDA kernels of one forward + backward by total GPU time: engine kernels versus plain aten GEMMs / elementwise (= the pytorch path)."""
-    from torch.profiler import ProfilerActivity, profile
+def kernel_table(
+    model: torch.nn.Module, example: TrainBatch, cfg: TrainConfig, top: int = 30
+) -> list[tuple[str, float, int]]:
+    """CUDA kernels of one forward + backward by total GPU time.
+
+    Engine kernels versus plain aten GEMMs / elementwise (= the pytorch path).
+    """
+    from torch.profiler import (  # noqa: PLC0415 - only the --smoke kernel table profiles
+        ProfilerActivity,
+        profile,
+    )
 
     model.zero_grad(set_to_none=True)
     with profile(activities=[ProfilerActivity.CUDA]) as prof:
@@ -148,13 +193,17 @@ def kernel_table(model, example, cfg, top: int = 30) -> list[tuple[str, float, i
     return rows[:top]
 
 
-def load_summary(model, backend: str) -> dict:
-    """What the loader chose: the plan (backend per op, fallbacks) and every engine module that does NOT run the requested backend, with the reason."""
+def load_summary(model: torch.nn.Module, backend: str) -> dict:
+    """Summarise what the loader chose.
+
+    The plan (backend per op, fallbacks) and every engine module that does NOT run
+    the requested backend, with the reason.
+    """
     report = getattr(model, "foldforge_load_report", {}) or {}
     plan = report.get("backends", {})
     modules = (report.get("engine_backends") or {}).get("modules", {})
     off = {}
-    for name, row in modules.items() if isinstance(modules, dict) else []:
+    for _name, row in modules.items() if isinstance(modules, dict) else []:
         if isinstance(row, dict) and row.get("reason"):
             key = f"{row.get('class')}:{row.get('op')}"
             off.setdefault(
@@ -169,7 +218,8 @@ def load_summary(model, backend: str) -> dict:
     return {"backend": backend, "plan": plan, "modules_not_on_requested_backend": off}
 
 
-def main() -> None:
+def main() -> None:  # noqa: C901, PLR0912, PLR0915 - one linear training driver
+    """Parse the flags, load the model and run the phase-0 checks and the training."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--smoke", action="store_true")
     ap.add_argument("--target", default="8ayg-assembly1")
@@ -195,7 +245,10 @@ def main() -> None:
         "--recipe",
         choices=recipes.RECIPES,
         default="miniworld",
-        help="miniworld (default, TrainConfig as it is) or protenix: Protenix v1 fine-tuning recipe (train/recipes.py: grad clip 10, Adam wd 1e-8, lr 1e-3 warmup 2000 af3 decay, loss weights, EMA 0.999); explicit flags below still override it",
+        help="miniworld (default, TrainConfig as it is) or protenix: Protenix v1 "
+        "fine-tuning recipe (train/recipes.py: grad clip 10, Adam wd 1e-8, lr 1e-3 "
+        "warmup 2000 af3 decay, loss weights, EMA 0.999); explicit flags below still "
+        "override it",
     )
     ap.add_argument(
         "--grad-clip",
@@ -212,19 +265,27 @@ def main() -> None:
     ap.add_argument(
         "--no-confidence",
         action="store_true",
-        help="DEBUG ONLY: skip the confidence head (the finetuning is one stage; every parameter trains)",
+        help="DEBUG ONLY: skip the confidence head (the finetuning is one stage; "
+        "every parameter trains)",
     )
     ap.add_argument("--rollout-steps", type=int, default=None)
     ap.add_argument(
         "--profile-phases",
         action="store_true",
-        help="per-phase GPU timing (CUDA events) of every step: trunk fwd per recycle, diffusion fwd / bwd, trunk bwd, mini-rollout, confidence fwd / bwd, optimizer + EMA",
+        help="per-phase GPU timing (CUDA events) of every step: trunk fwd per "
+        "recycle, diffusion fwd / bwd, trunk bwd, mini-rollout, confidence fwd / bwd, "
+        "optimizer + EMA",
     )
     ap.add_argument(
         "--rollout-order",
         choices=("after", "before", "side", "graph"),
         default=None,
-        help="where the mini-rollout runs: after the trunk backward (default, least memory), before the diffusion forward, or on a second CUDA stream (side), or graph: the 20-step rollout as ONE CUDA graph per shape, replayed after the trunk backward (train/rollout_graph.py; the noise is drawn inside the graph from the default CUDA generator; measured on the 5I28-size pool the losses and parameters are bitwise those of --rollout-order after)",
+        help="where the mini-rollout runs: after the trunk backward (default, least "
+        "memory), before the diffusion forward, or on a second CUDA stream (side), or "
+        "graph: the 20-step rollout as ONE CUDA graph per shape, replayed after the "
+        "trunk backward (train/rollout_graph.py; the noise is drawn inside the graph "
+        "from the default CUDA generator; measured on the 5I28-size pool the losses "
+        "and parameters are bitwise those of --rollout-order after)",
     )
     ap.add_argument(
         "--augment-chunk",
@@ -244,17 +305,22 @@ def main() -> None:
     ap.add_argument(
         "--activation-checkpointing",
         action="store_true",
-        help="recompute the pair-stack blocks in the backward instead of storing their activations",
+        help="recompute the pair-stack blocks in the backward instead of storing "
+        "their activations",
     )
     ap.add_argument(
         "--ckpt-policy",
         default="all",
-        help="which blocks --activation-checkpointing wraps: all (default) | none | pairformer (trunk only) | evoformer | except:<trunk|msa|template|confidence> | every:N / first:K / last:K (those trunk pairformer blocks plus every non-trunk block); 'none' also switches checkpointing off",
+        help="which blocks --activation-checkpointing wraps: all (default) | none | "
+        "pairformer (trunk only) | evoformer | except:<trunk|msa|template|confidence> "
+        "| every:N / first:K / last:K (those trunk pairformer blocks plus every "
+        "non-trunk block); 'none' also switches checkpointing off",
     )
     ap.add_argument(
         "--ckpt",
         default=None,
-        help="start from this .miniworld.pt (default: the registered model's checkpoint)",
+        help="start from this .miniworld.pt (default: the registered model's "
+        "checkpoint)",
     )
     ap.add_argument("--run-dir", default="runs/train_protenix1")
     ap.add_argument("--save-every", type=int, default=0)
@@ -262,7 +328,8 @@ def main() -> None:
         "--keep-last",
         type=int,
         default=3,
-        help="--save-every: keep the newest N step checkpoints (and every --keep-every-th step); 0 keeps all",
+        help="--save-every: keep the newest N step checkpoints (and every "
+        "--keep-every-th step); 0 keeps all",
     )
     ap.add_argument(
         "--keep-every",
@@ -273,30 +340,36 @@ def main() -> None:
     ap.add_argument(
         "--resume",
         default=None,
-        help="continue from this step<N>.miniworld.pt (+ its .train.pt: optimizer, EMA, step); --steps is then the TOTAL step count",
+        help="continue from this step<N>.miniworld.pt (+ its .train.pt: optimizer, "
+        "EMA, step); --steps is then the TOTAL step count",
     )
     ap.add_argument(
         "--epoch-samples",
         type=int,
         default=25600,
-        help="samples per epoch (MiniWorld train.train_item, the composed v200 recipe: 25600): steps per epoch = this / effective batch",
+        help="samples per epoch (MiniWorld train.train_item, the composed v200 "
+        "recipe: 25600): steps per epoch = this / effective batch",
     )
     ap.add_argument(
         "--epochs",
         type=int,
         default=None,
-        help="TOTAL epochs (replaces --steps: steps = epochs x steps per epoch); with --resume this is also the total",
+        help="TOTAL epochs (replaces --steps: steps = epochs x steps per epoch); "
+        "with --resume this is also the total",
     )
     ap.add_argument(
         "--save-every-epochs",
         type=int,
         default=0,
-        help="save epoch<E>.miniworld.pt (+ .train.pt) at the end of every K-th epoch; never pruned (MiniWorld save_freq 5)",
+        help="save epoch<E>.miniworld.pt (+ .train.pt) at the end of every K-th "
+        "epoch; never pruned (MiniWorld save_freq 5)",
     )
     ap.add_argument(
         "--save-last",
         action="store_true",
-        help="at the end of EVERY epoch overwrite last.miniworld.pt (+ .train.pt, last.step), like MiniWorld's last.pt; resume picks the newer of it and the epoch<E> checkpoints",
+        help="at the end of EVERY epoch overwrite last.miniworld.pt (+ .train.pt, "
+        "last.step), like MiniWorld's last.pt; resume picks the newer of it and the "
+        "epoch<E> checkpoints",
     )
     ap.add_argument("--no-profile", action="store_true")
     ap.add_argument(
@@ -308,23 +381,28 @@ def main() -> None:
         "--backend",
         choices=("pytorch", "cueq", "miniworld"),
         default="miniworld",
-        help="engine backend of every module: pytorch (reference), cueq (NVIDIA cuEquivariance where it has the op, the rest falls back to pytorch), miniworld (our kernels: cuda per module class on H100)",
+        help="engine backend of every module: pytorch (reference), cueq (NVIDIA "
+        "cuEquivariance where it has the op, the rest falls back to pytorch), "
+        "miniworld (our kernels: cuda per module class on H100)",
     )
     ap.add_argument(
         "--no-activation-checkpointing",
         action="store_true",
-        help="--bench turns --activation-checkpointing on (pytorch and cueq OOM an 80 GB H100 at 384 tokens without it); this keeps it off",
+        help="--bench turns --activation-checkpointing on (pytorch and cueq OOM an "
+        "80 GB H100 at 384 tokens without it); this keeps it off",
     )
     ap.add_argument(
         "--effective-batch",
         type=int,
         default=None,
-        help="micro batch 1 x grad_accum x world size; sets grad_accum = N / world size (error if not divisible)",
+        help="micro batch 1 x grad_accum x world size; sets grad_accum = N / world "
+        "size (error if not divisible)",
     )
     ap.add_argument(
         "--dist-backend",
         default="nccl",
-        help="torch.distributed backend under torchrun (gloo: two processes on one GPU, for tests)",
+        help="torch.distributed backend under torchrun (gloo: two processes on one "
+        "GPU, for tests)",
     )
     ap.add_argument(
         "--seed", type=int, default=None, help="base seed (default: TrainConfig.seed)"
@@ -335,17 +413,20 @@ def main() -> None:
         const="fused",
         default=None,
         choices=("foreach", "fused", "triton"),
-        help="clip + Adam + EMA as multi-tensor launches (train/fused_opt.py; capturable Adam, device lr); default: the per-tensor path of train/optim.py",
+        help="clip + Adam + EMA as multi-tensor launches (train/fused_opt.py; "
+        "capturable Adam, device lr); default: the per-tensor path of train/optim.py",
     )
     ap.add_argument(
         "--bench",
         action="store_true",
-        help="speed measurement of --steps real optimizer steps (implies --no-save --no-profile; no phase-0 micro step / coverage / kernel table)",
+        help="speed measurement of --steps real optimizer steps (implies --no-save "
+        "--no-profile; no phase-0 micro step / coverage / kernel table)",
     )
     ap.add_argument(
         "--bench-pool",
         default="default",
-        help="'default' (targets near --bench-tokens) or comma separated FoldBench targets; STAND-IN examples",
+        help="'default' (targets near --bench-tokens) or comma separated FoldBench "
+        "targets; STAND-IN examples",
     )
     ap.add_argument(
         "--bench-tokens",
@@ -356,12 +437,15 @@ def main() -> None:
     ap.add_argument(
         "--micro-log",
         action="store_true",
-        help="--bench: print one MICRO line per micro step on every rank (global index, example, recycles, loss) to compare runs micro step by micro step",
+        help="--bench: print one MICRO line per micro step on every rank (global "
+        "index, example, recycles, loss) to compare runs micro step by micro step",
     )
     ap.add_argument(
         "--bench-dump",
         default=None,
-        help="--bench: directory to write the step-0 gradients (grads_step0.pt) and the final parameters (params.pt) of rank 0, for run-to-run / eager-vs-compile comparison",
+        help="--bench: directory to write the step-0 gradients (grads_step0.pt) and "
+        "the final parameters (params.pt) of rank 0, for run-to-run / eager-vs-compile "
+        "comparison",
     )
     ap.add_argument(
         "--bench-pool-count", type=int, default=8, help="targets of the default pool"
@@ -369,12 +453,17 @@ def main() -> None:
     ap.add_argument(
         "--bench-pool-cache",
         default=None,
-        help="build the pool once (rank 0) into this file and load it everywhere: identical stand-in labels for every backend",
+        help="build the pool once (rank 0) into this file and load it everywhere: "
+        "identical stand-in labels for every backend",
     )
     ap.add_argument(
         "--step-graph",
         action="store_true",
-        help="the WHOLE micro step (trunk recycles + diffusion + confidence + backward, gradient accumulation into persistent .grad) as ONE CUDA graph per (recycles, shape signature), replayed (train/step_graph.py); the mini-rollout is recorded inline; needs --bench-bucket (one shape) to stay at <= 4 graphs; default off",
+        help="the WHOLE micro step (trunk recycles + diffusion + confidence + "
+        "backward, gradient accumulation into persistent .grad) as ONE CUDA graph per "
+        "(recycles, shape signature), replayed (train/step_graph.py); the mini-rollout "
+        "is recorded inline; needs --bench-bucket (one shape) to stay at <= 4 graphs; "
+        "default off",
     )
     ap.add_argument(
         "--compile",
@@ -382,18 +471,24 @@ def main() -> None:
         const="all",
         default=None,
         choices=tuple(train_compile.REGIONS),
-        help="torch.compile(dynamic=False) of the pair-stack / diffusion blocks (train/compile.py); composes with --step-graph and --activation-checkpointing; default off (eager)",
+        help="torch.compile(dynamic=False) of the pair-stack / diffusion blocks "
+        "(train/compile.py); composes with --step-graph and "
+        "--activation-checkpointing; default off (eager)",
     )
     ap.add_argument(
         "--msa-rows",
         type=int,
         default=None,
-        help="MSA rows drawn per recycle (default: the model's 1024; MiniWorld recipe bucket_msa_size: 128)",
+        help="MSA rows drawn per recycle (default: the model's 1024; MiniWorld "
+        "recipe bucket_msa_size: 128)",
     )
     ap.add_argument(
         "--bench-bucket",
         action="store_true",
-        help="pad every example to ONE shape (train/bucket_batch.py: --bench-tokens tokens, --bucket-atoms atoms, --bucket-msa-pool raw MSA rows, --bucket-templates), so a CUDA graph of the micro step has one signature; also applies to --batch-source streams; default off",
+        help="pad every example to ONE shape (train/bucket_batch.py: --bench-tokens "
+        "tokens, --bucket-atoms atoms, --bucket-msa-pool raw MSA rows, "
+        "--bucket-templates), so a CUDA graph of the micro step has one signature; "
+        "also applies to --batch-source streams; default off",
     )
     ap.add_argument(
         "--bucket-atoms",
@@ -405,7 +500,8 @@ def main() -> None:
         "--bucket-msa-pool",
         type=int,
         default=16384,
-        help="--bench-bucket: raw MSA pool rows before the per-recycle draw (16384 = the largest FoldForge MSA bucket: nothing is cut)",
+        help="--bench-bucket: raw MSA pool rows before the per-recycle draw (16384 = "
+        "the largest FoldForge MSA bucket: nothing is cut)",
     )
     ap.add_argument(
         "--bucket-templates", type=int, default=4, help="--bench-bucket: templates"
@@ -422,16 +518,16 @@ def main() -> None:
     if args.steps is None:
         args.steps = 50
 
-    def say(*a, **k) -> None:  # only rank 0 prints
+    def say(*a: object, **k: Any) -> None:  # only rank 0 prints
         if world.is_main:
             print(*a, **k)
 
-    cfg = recipes.apply(
-        args.recipe, TrainConfig()
-    )  # before the flags: an explicit flag overrides the recipe value
+    # before the flags: an explicit flag overrides the recipe value
+    cfg = recipes.apply(args.recipe, TrainConfig())
     if args.effective_batch is not None:
         if args.grad_accum is not None:
-            raise SystemExit("--effective-batch and --grad-accum are exclusive")
+            msg = "--effective-batch and --grad-accum are exclusive"
+            raise SystemExit(msg)
         try:
             args.grad_accum = dist.accum_for_effective_batch(
                 args.effective_batch, world.world_size
@@ -441,8 +537,10 @@ def main() -> None:
     if args.bench and not args.no_activation_checkpointing:
         args.activation_checkpointing = True
     if args.bench and args.augment_chunk is None:
-        # No chunking: the recipe runs all augmentations in one forward / backward. (An earlier --bench default of 8 was never asked for; it made
-        # eager ~60% slower at 384 tokens.) With activation checkpointing (the --bench default) 48 augmentations at 384 peak 36 GiB on miniworld.
+        # No chunking: the recipe runs all augmentations in one forward / backward.
+        # (An earlier --bench default of 8 was never asked for; it made eager ~60%
+        # slower at 384 tokens.) With activation checkpointing (the --bench default)
+        # 48 augmentations at 384 peak 36 GiB on miniworld.
         args.augment_chunk = 0
     if args.seed is not None:
         cfg = replace(cfg, seed=args.seed)
@@ -466,29 +564,33 @@ def main() -> None:
         ("recycles_max", args.recycles),
     ):
         if value is not None:
-            changes[key] = value
+            changes[key] = value  # noqa: PERF403 - kept as the loop over the flag table
     if args.no_confidence:
         changes["confidence"] = False
     cfg = replace(cfg, **changes)
     effective = cfg.grad_accum_steps * world.world_size
     if args.epoch_samples % effective:
-        raise SystemExit(
-            f"--epoch-samples {args.epoch_samples} is not a multiple of the effective batch {effective}"
+        msg = (
+            f"--epoch-samples {args.epoch_samples} is not a multiple of the effective "
+            f"batch {effective}"
         )
+        raise SystemExit(msg)
     steps_per_epoch = args.epoch_samples // effective
-    if (
-        args.epochs is not None
-    ):  # --epochs replaces --steps (the default of 50 is only a placeholder)
+    # --epochs replaces --steps (the default of 50 is only a placeholder)
+    if args.epochs is not None:
         args.steps = args.epochs * steps_per_epoch
     run_dir = Path(args.run_dir)
     if world.is_main:
         run_dir.mkdir(parents=True, exist_ok=True)
     dist.init_process_group(world, args.dist_backend)
-    # legacy streams (smoke / --batch-source): rank r seeds seed + r (rank 0 = the single-process run); --bench draws every micro step from
-    # bench.micro_plan(seed, global micro index) instead, which does not depend on the order or the rank count
+    # legacy streams (smoke / --batch-source): rank r seeds seed + r (rank 0 = the
+    # single-process run); --bench draws every micro step from
+    # bench.micro_plan(seed, global micro index) instead, which does not depend on the
+    # order or the rank count
     rng = prepare.seed_everything(cfg.seed + world.rank)
 
-    # dead modules must run in training (their parameters train): do not flag them at load
+    # dead modules must run in training (their parameters train): do not flag them at
+    # load
     pred = ff.load_model(
         args.model,
         config={
@@ -500,7 +602,7 @@ def main() -> None:
         if world.world_size == 1
         else torch.device("cuda", torch.cuda.current_device()),
     )
-    model = pred._network
+    model = pred._network  # noqa: SLF001 - the predictor's network is the model trained
     device = pred.device
     say(
         "LOAD_REPORT",
@@ -520,9 +622,9 @@ def main() -> None:
     )
 
     if args.bench_bucket:
-        bench.FIXED_LENGTH = max(
-            bench.FIXED_LENGTH, args.bucket_atoms
-        )  # present-atom index of one length for every example (else 512-multiples per example split the step-graph key)
+        # present-atom index of one length for every example (else 512-multiples per
+        # example split the step-graph key)
+        bench.FIXED_LENGTH = max(bench.FIXED_LENGTH, args.bucket_atoms)
     bucket_spec = (
         bucket_batch.BucketSpec(
             tokens=args.bench_tokens,
@@ -554,12 +656,9 @@ def main() -> None:
             log=say,
         )
         say(
-            "POOL targets=%s tokens=%s build_s=%.1f"
-            % (
-                ",".join(targets),
-                [bench.real_tokens(e) for e in pool],
-                time.time() - t_pool,
-            ),
+            f"POOL targets={','.join(targets)} "
+            f"tokens={[bench.real_tokens(e) for e in pool]} "
+            f"build_s={time.time() - t_pool:.1f}",
             flush=True,
         )
         source = iter(())
@@ -573,7 +672,8 @@ def main() -> None:
             source = bucket_batch.bucket_source(source, bucket_spec)
         first = next(source)
     else:
-        raise SystemExit("give --smoke, --bench or --batch-source module:callable")
+        msg = "give --smoke, --bench or --batch-source module:callable"
+        raise SystemExit(msg)
     say(
         "INFO",
         json.dumps(
@@ -594,13 +694,15 @@ def main() -> None:
         ).sum()
     )
     say(
-        "ATOMS first example: real=%d resolved=%d (the experimentally-resolved loss classifies the real ones)"
-        % (real_atoms, resolved_atoms),
+        f"ATOMS first example: real={real_atoms:d} resolved={resolved_atoms:d} (the "
+        "experimentally-resolved loss classifies the real ones)",
         flush=True,
     )
     prep_info = prepare.enable_training(model, cfg)
     if args.msa_rows is not None:
-        model.evoformer.num_msa = args.msa_rows  # MSA rows per recycle (the recipe: bucket_msa_size 128; FoldForge default 1024)
+        # MSA rows per recycle (the recipe: bucket_msa_size 128; FoldForge default
+        # 1024)
+        model.evoformer.num_msa = args.msa_rows
     dist.broadcast_parameters(
         list(model.parameters())
         + [b for b in model.buffers() if b.is_floating_point()],
@@ -608,19 +710,13 @@ def main() -> None:
     )
     if cfg.compile:
         say(
-            "COMPILE blocks=%d region=%s"
-            % (train_compile.enable_compile(model, cfg.compile), cfg.compile),
+            f"COMPILE blocks={train_compile.enable_compile(model, cfg.compile):d} "
+            f"region={cfg.compile}",
             flush=True,
         )  # before the checkpoint wrapper: it recomputes the compiled forward
     if args.activation_checkpointing:
-        say(
-            "ACT_CKPT policy=%s blocks=%d"
-            % (
-                args.ckpt_policy,
-                prepare.enable_activation_checkpointing(model, args.ckpt_policy),
-            ),
-            flush=True,
-        )
+        blocks = prepare.enable_activation_checkpointing(model, args.ckpt_policy)
+        say(f"ACT_CKPT policy={args.ckpt_policy} blocks={blocks:d}", flush=True)
     trunk, heads = optim.split_parameters(model)
     say(
         "PREPARE",
@@ -657,14 +753,15 @@ def main() -> None:
             if any(v[column[c]] for c in defects) and in_loss(k)
         }
         say(
-            "GRAD_COVERAGE groups=%d  groups_with_defects=%d  (defect = no gradient / zero gradient on a live weight / nonfinite; frozen, data-dependent and underflow are classified, not defects)"
-            % (len(cover), len(bad)),
+            f"GRAD_COVERAGE groups={len(cover):d}  groups_with_defects={len(bad):d}  "
+            "(defect = no gradient / zero gradient on a live weight / nonfinite; "
+            "frozen, data-dependent and underflow are classified, not defects)",
             flush=True,
         )
         sums = [0] * len(COVERAGE_COLUMNS)
         for key, row in sorted(cover.items()):
             if in_loss(key):
-                sums = [a + b for a, b in zip(sums, row)]
+                sums = [a + b for a, b in zip(sums, row, strict=False)]
             defect = any(row[column[c]] for c in defects)
             flag = (
                 ""
@@ -677,24 +774,28 @@ def main() -> None:
             )
             say(
                 f"GRAD {key:60s} "
-                + " ".join(f"{c}={v:4d}" for c, v in zip(COVERAGE_COLUMNS, row))
+                + " ".join(
+                    f"{c}={v:4d}" for c, v in zip(COVERAGE_COLUMNS, row, strict=False)
+                )
                 + flag,
                 flush=True,
             )
         say(
-            "GRAD_SUM " + " ".join(f"{c}={v}" for c, v in zip(COVERAGE_COLUMNS, sums)),
+            "GRAD_SUM "
+            + " ".join(
+                f"{c}={v}" for c, v in zip(COVERAGE_COLUMNS, sums, strict=False)
+            ),
             flush=True,
         )
         for name, flowing in sorted(data_dependent_flow(model).items()):
             say(f"DATA_DEPENDENT {name} gradient_flows={flowing}", flush=True)
         tmask = first.features.get("template_atom_mask")
         if tmask is not None:
+            real_templates = int(tmask.reshape(tmask.shape[0], -1).any(-1).sum())
+            real_template_atoms = int(tmask.sum())
             say(
-                "TEMPLATES real_templates=%d real_atoms=%d"
-                % (
-                    int(tmask.reshape(tmask.shape[0], -1).any(-1).sum()),
-                    int(tmask.sum()),
-                ),
+                f"TEMPLATES real_templates={real_templates:d} "
+                f"real_atoms={real_template_atoms:d}",
                 flush=True,
             )
         if args.smoke and not args.no_profile:
@@ -722,14 +823,16 @@ def main() -> None:
     bench_peak = [0.0, 0.0]
     diverged_printed = False
     accum = cfg.grad_accum_steps
-    micro_scale = (
-        1.0 / (accum * world.world_size)
-    )  # the SUM over ranks of the scaled gradients is the mean over accum x world micro steps
-    from foldforge.modules.engine.serving import report_observations, reset_observations
+    # the SUM over ranks of the scaled gradients is the mean over accum x world micro
+    # steps
+    micro_scale = 1.0 / (accum * world.world_size)
+    from foldforge.modules.engine.serving import (  # noqa: PLC0415 - imported after the model load, as before
+        report_observations,
+        reset_observations,
+    )
 
-    reset_observations(
-        model
-    )  # the dispatch table counts the training steps only (not the load / pool build)
+    # the dispatch table counts the training steps only (not the load / pool build)
+    reset_observations(model)
     if args.bench_dump and world.is_main:
         Path(args.bench_dump).mkdir(parents=True, exist_ok=True)
         torch.save(
@@ -737,26 +840,24 @@ def main() -> None:
             Path(args.bench_dump) / "params_init.pt",
         )
     compile_warmup_s = 0.0
-    if (
-        cfg.compile and not cfg.step_graph
-    ):  # compile every variant (no-grad recycles, grad + checkpoint recompute, 48-sample diffusion, rollout) before the timed steps; a step graph warms up in its capture
+    # compile every variant (no-grad recycles, grad + checkpoint recompute, 48-sample
+    # diffusion, rollout) before the timed steps; a step graph warms up in its capture
+    if cfg.compile and not cfg.step_graph:
         t_warm = time.time()
         step.micro_step(model, first, cfg, passes=cfg.recycles_max, scale=0.0)
         torch.cuda.synchronize()
         optimizer.zero_grad(set_to_none=True)
         compile_warmup_s = time.time() - t_warm
-        say("COMPILE_WARMUP seconds=%.1f" % compile_warmup_s, flush=True)
+        say(f"COMPILE_WARMUP seconds={compile_warmup_s:.1f}", flush=True)
     t0 = time.time()
     guard = contextlib.ExitStack()
-    if (
-        cfg.compile and args.bench and not cfg.step_graph
-    ):  # nothing compiles after the warm-up (a step graph checks its own captures)
+    # nothing compiles after the warm-up (a step graph checks its own captures)
+    if cfg.compile and args.bench and not cfg.step_graph:
         guard.enter_context(train_compile.strict())
     for it in range(start_step, args.steps):
         lr = fopt.set_lr(it, cfg) if fopt else optim.set_lr(optimizer, it, cfg)
-        optimizer.zero_grad(
-            set_to_none=not cfg.step_graph
-        )  # a step graph accumulates into the SAME .grad tensors: zeroed in place
+        # a step graph accumulates into the SAME .grad tensors: zeroed in place
+        optimizer.zero_grad(set_to_none=not cfg.step_graph)
         totals = defaultdict(float)
         timer = PhaseTimer(args.profile_phases)
         if args.profile_phases or args.bench:
@@ -789,23 +890,18 @@ def main() -> None:
             )
             bench_micro += 1
             if args.bench and args.micro_log:
+                g = bench.global_micro_index(
+                    it, micro, accum, world.rank, world.world_size
+                )
                 print(
-                    "MICRO rank=%d g=%d example=%s passes=%d loss=%.7f diffusion=%.7f"
-                    % (
-                        world.rank,
-                        bench.global_micro_index(
-                            it, micro, accum, world.rank, world.world_size
-                        ),
-                        example.name,
-                        passes,
-                        out["loss"],
-                        out["diffusion"],
-                    ),
+                    f"MICRO rank={world.rank:d} g={g:d} example={example.name} "
+                    f"passes={passes:d} loss={out['loss']:.7f} "
+                    f"diffusion={out['diffusion']:.7f}",
                     flush=True,
                 )
             for k, v in out.items():
                 totals[k] += v / accum
-            if it == 0 and micro < 2:
+            if it == 0 and micro < 2:  # noqa: PLR2004 - the first two micro steps
                 for line in bench.format_table(
                     bench.engine_table(report_observations(model)),
                     f"ENGINE_AFTER_MICRO{micro + 1}",
@@ -844,14 +940,15 @@ def main() -> None:
             bench_peak = [max(bench_peak[0], peak), max(bench_peak[1], reserved)]
             finite = (
                 totals["loss"] == totals["loss"]
-                and abs(totals["loss"]) < 1e6
-                and norm == norm
+                and abs(totals["loss"]) < _DIVERGED_LOSS
+                and norm == norm  # noqa: PLR0124 - NaN check
                 and abs(norm) != float("inf")
             )
             bench_nonfinite += 0 if finite else 1
             say(
-                "BENCHSTEP it=%d wall_s=%.3f loss=%.4f lr=%.3e peak_gib=%.2f micro_steps=%d gnorm=%.6f"
-                % (it, wall, totals["loss"], lr, peak, accum * world.world_size, norm),
+                f"BENCHSTEP it={it:d} wall_s={wall:.3f} loss={totals['loss']:.4f} "
+                f"lr={lr:.3e} peak_gib={peak:.2f} "
+                f"micro_steps={accum * world.world_size:d} gnorm={norm:.6f}",
                 flush=True,
             )
         if args.profile_phases:
@@ -863,8 +960,8 @@ def main() -> None:
             phases["persist_after_step_gib"] = torch.cuda.memory_allocated() / 2**30
             phases["reserved_gib"] = torch.cuda.memory_reserved() / 2**30
             say(
-                "PHASES %4d %s"
-                % (it, json.dumps({k: round(v, 2) for k, v in phases.items()})),
+                f"PHASES {it:4d} "
+                f"{json.dumps({k: round(v, 2) for k, v in phases.items()})}",
                 flush=True,
             )
             if it == 0:
@@ -908,24 +1005,15 @@ def main() -> None:
                 )
         history.append(totals["loss"])
         say(
-            "STEP %4d lr=%.2e loss=%.4f diffusion=%.4f bond=%.4f distogram=%.4f plddt=%.4f pde=%.4f pae=%.4f resolved=%.4f gnorm=%.3f t=%.1fs"
-            % (
-                it,
-                lr,
-                totals["loss"],
-                totals["diffusion"],
-                totals["bond"],
-                totals["distogram"],
-                totals["plddt"],
-                totals["pde"],
-                totals["pae"],
-                totals["resolved"],
-                norm,
-                time.time() - t0,
-            ),
+            f"STEP {it:4d} lr={lr:.2e} loss={totals['loss']:.4f} "
+            f"diffusion={totals['diffusion']:.4f} bond={totals['bond']:.4f} "
+            f"distogram={totals['distogram']:.4f} plddt={totals['plddt']:.4f} "
+            f"pde={totals['pde']:.4f} pae={totals['pae']:.4f} "
+            f"resolved={totals['resolved']:.4f} gnorm={norm:.3f} "
+            f"t={time.time() - t0:.1f}s",
             flush=True,
         )
-        if not (totals["loss"] == totals["loss"]) or abs(totals["loss"]) > 1e6:
+        if totals["loss"] != totals["loss"] or abs(totals["loss"]) > _DIVERGED_LOSS:
             if args.bench:  # keep timing: NaN does not change the step-time class
                 if not diverged_printed:
                     say("DIVERGED at step", it, "(--bench keeps timing)", flush=True)
@@ -948,9 +1036,9 @@ def main() -> None:
                 optimizer=optimizer,
                 step=it + 1,
             )
-            if (
-                args.keep_last > 0
-            ):  # prune: the newest --keep-last step checkpoints and every --keep-every-th step stay
+            # prune: the newest --keep-last step checkpoints and every --keep-every-th
+            # step stay
+            if args.keep_last > 0:
                 done = sorted(
                     (int(p.name[4:].split(".")[0]), p)
                     for p in run_dir.glob("step*.miniworld.pt")
@@ -987,7 +1075,9 @@ def main() -> None:
             and args.save_last
             and (it + 1) % steps_per_epoch == 0
         ):
-            # MiniWorld's last.pt: overwritten at the end of every epoch (written under a temporary name and renamed, so a kill mid-write leaves the previous one intact)
+            # MiniWorld's last.pt: overwritten at the end of every epoch (written under
+            # a temporary name and renamed, so a kill mid-write leaves the previous one
+            # intact)
             tmp = run_dir / "last_tmp.miniworld.pt"
             checkpoint.save(
                 model,
@@ -1012,14 +1102,14 @@ def main() -> None:
     if history:
         n = max(1, min(10, len(history) // 2))
         say(
-            "CURVE first%d_mean=%.4f last%d_mean=%.4f min=%.4f"
-            % (n, sum(history[:n]) / n, n, sum(history[-n:]) / n, min(history)),
+            f"CURVE first{n:d}_mean={sum(history[:n]) / n:.4f} "
+            f"last{n:d}_mean={sum(history[-n:]) / n:.4f} min={min(history):.4f}",
             flush=True,
         )
 
-    if (
-        args.bench_dump and world.is_main
-    ):  # numerics comparison: the parameters after the last step (the gradients of step 0 are saved in the loop)
+    # numerics comparison: the parameters after the last step (the gradients of step 0
+    # are saved in the loop)
+    if args.bench_dump and world.is_main:
         torch.save(
             {n: p.detach().cpu() for n, p in model.named_parameters()},
             Path(args.bench_dump) / "params.pt",
@@ -1027,13 +1117,13 @@ def main() -> None:
     checksum = dist.param_checksum(params)
     agree = dist.ranks_agree(checksum, world, device)
     say(
-        "PARAM_CHECKSUM sum_abs=%.10f ranks_identical=%s" % (checksum, agree),
+        f"PARAM_CHECKSUM sum_abs={checksum:.10f} ranks_identical={agree}",
         flush=True,
     )
     if args.bench:
-        import importlib.metadata
+        import importlib.metadata  # noqa: PLC0415 - only --bench reports the engine
 
-        import miniworld_engine
+        import miniworld_engine  # noqa: PLC0415 - only --bench reports the engine
 
         engine_version = importlib.metadata.version("miniworld-engine")
 
@@ -1058,9 +1148,8 @@ def main() -> None:
                 json.dumps(model.__dict__["_foldforge_step_graph"].report()),
                 flush=True,
             )
-        if (
-            "_foldforge_rollout_graph" in model.__dict__
-        ):  # --rollout-order graph: captures, replays, cache entries, bytes held
+        # --rollout-order graph: captures, replays, cache entries, bytes held
+        if "_foldforge_rollout_graph" in model.__dict__:
             say(
                 "ROLLOUT_GRAPH",
                 json.dumps(model.__dict__["_foldforge_rollout_graph"].report()),
@@ -1093,7 +1182,7 @@ def main() -> None:
             "pool": [e.name for e in pool],
             "commit": bench.git_commit(),
             "engine_version": engine_version,
-            "engine_file": list(miniworld_engine.__path__)[0],
+            "engine_file": next(iter(miniworld_engine.__path__)),
             "gpu": torch.cuda.get_device_name(device),
             "dist_backend": args.dist_backend if world.world_size > 1 else None,
         }
@@ -1131,7 +1220,7 @@ def main() -> None:
         len(blob["state_dict"]),
         "format",
         blob["format"],
-        "max_abs_diff(first50)=%.3g" % worst,
+        f"max_abs_diff(first50)={worst:.3g}",
         flush=True,
     )
 
@@ -1143,6 +1232,6 @@ if __name__ == "__main__":
         print(
             "OOM",
             str(error)[:240].replace("\n", " "),
-            "max_allocated_gib=%.1f" % (torch.cuda.max_memory_allocated() / 2**30),
+            f"max_allocated_gib={torch.cuda.max_memory_allocated() / 2**30:.1f}",
             flush=True,
         )

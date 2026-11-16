@@ -204,13 +204,13 @@ class IndexGather(torch.autograd.Function):
     """
 
     @staticmethod
-    def forward(ctx, arr: torch.Tensor, idx: torch.Tensor, dim: int) -> torch.Tensor:  # noqa: ANN001
+    def forward(ctx, arr: torch.Tensor, idx: torch.Tensor, dim: int) -> torch.Tensor:
         ctx.save_for_backward(idx)
         ctx.in_shape = arr.shape
         ctx.dim = dim
         return arr[(slice(None),) * dim + (idx,)]
 
     @staticmethod
-    def backward(ctx, grad: torch.Tensor):  # noqa: ANN001, ANN205
+    def backward(ctx, grad: torch.Tensor):
         (idx,) = ctx.saved_tensors
         return index_grad(grad, idx, ctx.in_shape, ctx.dim), None, None

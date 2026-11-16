@@ -1,8 +1,12 @@
-"""FoldForge's Protenix-recipe pieces against Protenix's OWN functions on a tiny structure (CPU).
+"""FoldForge's Protenix-recipe pieces against Protenix's OWN functions (CPU).
 
-Skipped unless ``FOLDFORGE_PROTENIX_PY`` (the Protenix environment's python, ``~/foldforge-base/envs/protenix/.venv/bin/python``) and
-``FOLDFORGE_PROTENIX_SRC`` (``~/foldforge-base/protenix``) are set: ``protenix_reference.py`` runs in a subprocess of that environment and returns Protenix's
-values (resolved loss, pLDDT / PDE target bins, af3 lr scheduler, configs_base settings); the FoldForge side runs in this process. Run it in a Slurm CPU job.
+Runs on a tiny structure. Skipped unless ``FOLDFORGE_PROTENIX_PY`` (the Protenix
+environment's python, ``~/foldforge-base/envs/protenix/.venv/bin/python``) and
+``FOLDFORGE_PROTENIX_SRC`` (``~/foldforge-base/protenix``) are set:
+``protenix_reference.py`` runs in a subprocess of that environment and returns
+Protenix's values (resolved loss, pLDDT / PDE target bins, af3 lr scheduler,
+configs_base settings); the FoldForge side runs in this process. Run it in a Slurm
+CPU job.
 """
 
 from __future__ import annotations
@@ -11,6 +15,7 @@ import math
 import os
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
@@ -27,13 +32,16 @@ PY = os.environ.get("FOLDFORGE_PROTENIX_PY")
 SRC = os.environ.get("FOLDFORGE_PROTENIX_SRC")
 pytestmark = pytest.mark.skipif(
     not (PY and SRC),
-    reason="needs FOLDFORGE_PROTENIX_PY and FOLDFORGE_PROTENIX_SRC (Protenix environment)",
+    reason=(
+        "needs FOLDFORGE_PROTENIX_PY and FOLDFORGE_PROTENIX_SRC (Protenix environment)"
+    ),
 )
 
 CODES = residue_names.POLYMER_TYPES_WITH_UNKNOWN_AND_GAP
 ATOMS = atom_types.DENSE_ATOM_NUM
 LIGAND = len(CODES) + 1  # an aatype outside the polymer alphabet
-#: (aatype name or None = ligand, atom names present in the crop, atom names that are NOT resolved, pseudo-beta atom, plddt neighbour atom)
+#: (aatype name or None = ligand, atom names present in the crop, atom names that
+#: are NOT resolved, pseudo-beta atom, plddt neighbour atom)
 TOKENS = [
     (residue_names.ALA, ["N", "CA", "C", "O", "CB"], [], "CB", "CA"),
     (residue_names.ALA, ["N", "CA", "C", "O", "CB"], [], "CB", "CA"),
@@ -59,8 +67,11 @@ TOKENS = [
 RES = len(TOKENS)
 
 
-def _system(seed: int = 0):
-    """Dense tensors plus the flat per-atom view Protenix takes (every atom of the crop: resolved or not)."""
+def _system(seed: int = 0) -> dict[str, Any]:
+    """Dense tensors plus the flat per-atom view Protenix takes.
+
+    The flat view holds every atom of the crop: resolved or not.
+    """
     g = torch.Generator().manual_seed(seed)
     real = torch.zeros(RES, ATOMS, dtype=torch.bool)
     resolved = torch.zeros(RES, ATOMS, dtype=torch.bool)
@@ -140,12 +151,13 @@ def reference(tmp_path_factory):
     np.savez(work / "in.npz", **system["flat_in"])
     script = Path(__file__).with_name("protenix_reference.py")
     env = {**os.environ, "PROTENIX_SRC": SRC}
-    done = subprocess.run(
+    done = subprocess.run(  # noqa: S603 - trusted: the configured Protenix python
         [PY, str(script), str(work / "in.npz"), str(work / "out.npz")],
         env=env,
         capture_output=True,
         text=True,
         timeout=900,
+        check=False,
     )
     assert done.returncode == 0, done.stderr[-3000:]
     return system, dict(np.load(work / "out.npz"))
@@ -185,11 +197,13 @@ def test_the_plddt_targets_equal_protenixs_atom_by_atom(reference):
         valid.reshape(-1)[flat][resolved_flat].numpy(), np.ones(len(ours), bool)
     ), "Protenix keeps every resolved atom, with or without neighbours"
     assert len(ours) == len(ref["plddt_bins"])
-    # identical bins; a ``<`` vs float noise tie at a bin edge may move one atom by one bin
+    # identical bins; a ``<`` vs float noise tie at a bin edge may move one atom by
+    # one bin
     differ = ours != ref["plddt_bins"]
     assert differ.sum() <= max(1, len(ours) // 50), (ours, ref["plddt_bins"])
     assert np.abs(ours - ref["plddt_bins"]).max() <= 1
-    # the default (MiniWorld) pLDDT neighbour set is NOT Protenix's: the two must differ on this system
+    # the default (MiniWorld) pLDDT neighbour set is NOT Protenix's: the two must
+    # differ on this system
     mini = (
         conf.confidence_targets(
             system["pred"],
@@ -248,9 +262,8 @@ def test_the_pde_targets_equal_protenixs(reference):
         _Head(),
     )["pde"][0]
     sel = ref["pde_mask"].astype(bool)
-    assert (mini.numpy()[sel] - ref["pde_bins"][sel] >= 0).all() and (
-        mini.numpy()[sel] != ref["pde_bins"][sel]
-    ).any()
+    assert (mini.numpy()[sel] - ref["pde_bins"][sel] >= 0).all()
+    assert (mini.numpy()[sel] != ref["pde_bins"][sel]).any()
 
 
 def test_the_af3_learning_rate_equals_protenixs_scheduler_at_every_checked_step(
@@ -275,7 +288,8 @@ def test_the_recipe_values_equal_the_defaults_and_stage_one_overrides_of_configs
     alpha_conf, alpha_pae, alpha_except, alpha_diff, alpha_disto, alpha_bond, smooth = (
         ref["weights"]
     )
-    # configs_base.py defaults are the INITIAL-training values (alpha_bond 0, smooth_lddt 1); the fine-tuning stage 1 of the docs table is bond 1 / smooth 0
+    # configs_base.py defaults are the INITIAL-training values (alpha_bond 0,
+    # smooth_lddt 1); the fine-tuning stage 1 of the docs table is bond 1 / smooth 0
     assert (alpha_conf, alpha_pae, alpha_except, alpha_diff, alpha_disto) == (
         1e-4,
         0.0,
@@ -285,29 +299,29 @@ def test_the_recipe_values_equal_the_defaults_and_stage_one_overrides_of_configs
     )
     assert (alpha_bond, smooth) == (0.0, 1.0)
     w = cfg.loss
-    assert w.diffusion_loss == alpha_diff and w.distogram_loss == alpha_disto
-    assert (
-        w.plddt_loss == w.pde_loss == w.resolved_loss == alpha_conf * alpha_except
-        and w.pae_loss == alpha_conf * 1.0
-    )  # PAE on: alpha_pae 1.0 (configs_base.py:402 "1 in finetuning stage 3"; the default there is 0.0)
-    assert (
-        w.bond_loss == alpha_diff * 1.0 and w.smooth_lddt_loss == 0.0
-    )  # stage 1: alpha_bond 1.0, smooth_lddt 0
+    assert w.diffusion_loss == alpha_diff
+    assert w.distogram_loss == alpha_disto
+    assert w.plddt_loss == w.pde_loss == w.resolved_loss == alpha_conf * alpha_except
+    # PAE on: alpha_pae 1.0 (configs_base.py:402 "1 in finetuning stage 3"; the
+    # default there is 0.0)
+    assert w.pae_loss == alpha_conf * 1.0
+    # stage 1: alpha_bond 1.0, smooth_lddt 0
+    assert w.bond_loss == alpha_diff * 1.0
+    assert w.smooth_lddt_loss == 0.0
     clip, beta1, beta2, wd, adamw = ref["optim"]
     assert (cfg.grad_clip_max_norm, cfg.betas, cfg.weight_decay) == (
         clip,
         (beta1, beta2),
         wd,
-    ) and adamw == 0.0
+    )
+    assert adamw == 0.0
     mse_weight, w_dna, w_rna, w_lig = ref["mse"]
-    assert math.isclose(mse_weight, 1 / 3) and (
-        w.alpha_dna,
-        w.alpha_rna,
-        w.alpha_ligand,
-    ) == (w_dna, w_rna, w_lig)
+    assert math.isclose(mse_weight, 1 / 3)
+    assert (w.alpha_dna, w.alpha_rna, w.alpha_ligand) == (w_dna, w_rna, w_lig)
     p_mean, p_std, sigma_data, model_sigma_data = ref["noise"]
     assert (cfg.noise.P_mean, cfg.noise.P_std, cfg.noise.sigma_data) == (
         p_mean,
         p_std,
         sigma_data,
-    ) and model_sigma_data == cfg.noise.sigma_data
+    )
+    assert model_sigma_data == cfg.noise.sigma_data

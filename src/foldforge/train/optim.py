@@ -1,7 +1,8 @@
-"""Adam(0.9, 0.95) with MiniWorld's step-decay schedule, global grad-norm clip, fp32 EMA.
+"""Adam(0.9, 0.95), MiniWorld's step-decay schedule, global grad-norm clip, fp32 EMA.
 
-The parameters are the fp32 masters of the model (FoldForge keeps fp32 parameters and runs the activations in bf16 under autocast), so
-Adam and the EMA work on fp32 directly. Phase 3 replaces the three loops below by the fused kernels of MiniWorld's
+The parameters are the fp32 masters of the model (FoldForge keeps fp32 parameters and
+runs the activations in bf16 under autocast), so Adam and the EMA work on fp32
+directly. Phase 3 replaces the three loops below by the fused kernels of MiniWorld's
 ``benchmarks/protenix_finetune/pfx_fused_opt.py``.
 """
 
@@ -16,8 +17,10 @@ if TYPE_CHECKING:
 
     from foldforge.train.config import TrainConfig
 
-#: Parameter-name prefixes of the heads (LR scale 1.0): the diffusion, confidence and distogram heads. Everything else is the trunk
-#: (`trunk_lr_scale`). Single-stage finetuning: every parameter is in the optimizer except the frozen ones (`train/freeze.py`).
+#: Parameter-name prefixes of the heads (LR scale 1.0): the diffusion, confidence and
+#: distogram heads. Everything else is the trunk (`trunk_lr_scale`). Single-stage
+#: finetuning: every parameter is in the optimizer except the frozen ones
+#: (`train/freeze.py`).
 HEAD_PREFIXES = ("diffusion_head.", "confidence_head.", "distogram_head.")
 
 
@@ -27,7 +30,10 @@ def split_parameters(
     list[tuple[str, nn.Parameter]],
     list[tuple[str, nn.Parameter]],
 ]:
-    """``(trunk, heads)`` named parameters that train (a frozen one, ``requires_grad`` False, is in neither: ``train/freeze.py``)."""
+    """Return the ``(trunk, heads)`` named parameters that train.
+
+    A frozen one, ``requires_grad`` False, is in neither: ``train/freeze.py``.
+    """
     trunk, heads = [], []
     for name, param in model.named_parameters():
         if not param.requires_grad:
@@ -40,6 +46,7 @@ def split_parameters(
 
 
 def build_optimizer(model: nn.Module, cfg: TrainConfig) -> torch.optim.Optimizer:
+    """Build torch Adam: heads at ``max_lr``, trunk at ``max_lr * trunk_lr_scale``."""
     trunk, heads = split_parameters(model)
     groups = [
         {
@@ -55,14 +62,19 @@ def build_optimizer(model: nn.Module, cfg: TrainConfig) -> torch.optim.Optimizer
             "name": "trunk",
         },
     ]
-    # weight_decay 0.0 (MiniWorld) is torch's default, so the MiniWorld recipe builds the very same optimizer as before.
+    # weight_decay 0.0 (MiniWorld) is torch's default, so the MiniWorld recipe builds
+    # the very same optimizer as before.
     return torch.optim.Adam(groups, betas=cfg.betas, weight_decay=cfg.weight_decay)
 
 
 def lr_factor(step: int, cfg: TrainConfig) -> float:
-    """MiniWorld ``get_step_decay_scheduler_with_warmup``: linear warmup 0 -> 1, then ``decay_factor ** ((step - warmup) // decay_steps)``.
-    ``decay_from_warmup=False`` is Protenix's ``AlphaFold3LRScheduler._get_step_lr`` (protenix/utils/lr_scheduler.py:78-84): the decay count is
-    ``step // decay_steps`` (from step 0).
+    """Return the LR multiplier of ``step``.
+
+    MiniWorld ``get_step_decay_scheduler_with_warmup``: linear warmup 0 -> 1, then
+    ``decay_factor ** ((step - warmup) // decay_steps)``. ``decay_from_warmup=False``
+    is Protenix's ``AlphaFold3LRScheduler._get_step_lr``
+    (protenix/utils/lr_scheduler.py:78-84): the decay count is ``step // decay_steps``
+    (from step 0).
     """
     if step < cfg.warmup_steps:
         return step / float(cfg.warmup_steps)
@@ -71,6 +83,7 @@ def lr_factor(step: int, cfg: TrainConfig) -> float:
 
 
 def set_lr(optimizer: torch.optim.Optimizer, step: int, cfg: TrainConfig) -> float:
+    """Set every group's LR for ``step``; return the base LR."""
     factor = lr_factor(step, cfg)
     base = (
         max(cfg.min_lr, cfg.max_lr * factor)
@@ -98,7 +111,10 @@ def clip_grad_norm(params: list[torch.Tensor], max_norm: float) -> torch.Tensor:
 
 
 class EMA:
-    """Exponential moving average of the parameters (fp32 shadow); ``swap_in`` / ``swap_out`` evaluate with the EMA weights."""
+    """Exponential moving average of the parameters (fp32 shadow).
+
+    ``swap_in`` / ``swap_out`` evaluate with the EMA weights.
+    """
 
     def __init__(self, model: nn.Module, decay: float) -> None:
         self.decay = decay
@@ -107,20 +123,24 @@ class EMA:
 
     @torch.no_grad()
     def update(self, model: nn.Module) -> None:
+        """Lerp every shadow towards the current parameter by ``1 - decay``."""
         for n, p in model.named_parameters():
             self.shadow[n].lerp_(p.detach(), 1.0 - self.decay)
 
     @torch.no_grad()
     def swap_in(self, model: nn.Module) -> None:
+        """Back up the parameters and load the EMA weights into ``model``."""
         for n, p in model.named_parameters():
             self._backup[n] = p.detach().clone()
             p.copy_(self.shadow[n])
 
     @torch.no_grad()
     def swap_out(self, model: nn.Module) -> None:
+        """Restore the parameters backed up by :meth:`swap_in`."""
         for n, p in model.named_parameters():
             p.copy_(self._backup[n])
         self._backup.clear()
 
     def state_dict(self) -> dict[str, torch.Tensor]:
+        """Return the shadow weights on the CPU."""
         return {n: t.cpu() for n, t in self.shadow.items()}

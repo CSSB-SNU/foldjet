@@ -72,7 +72,7 @@ def load_cache(path: str | None) -> int:
     return n
 
 
-def _entry(res_name, ccd, features, ru, ref_max_modified_date):
+def _entry(res_name, ccd, features, ru, ref_max_modified_date):  # noqa: ARG001 - kept for the call signature
     e = _ENTRIES.get(res_name, _MISSING)
     if e is not _MISSING:
         return e
@@ -260,7 +260,7 @@ _PRE: dict = {}
 
 
 def record_start() -> None:
-    global _REC
+    global _REC  # noqa: PLW0603 - module-level recording buffer
     _REC = []
 
 
@@ -287,7 +287,9 @@ def precompute(rec: list) -> None:
         _state["parallel_embeds"] = _state.get("parallel_embeds", 0) + len(todo)
         with ThreadPoolExecutor(threads) as ex:
             for (code, seed, mi, _), res in zip(
-                todo, ex.map(lambda a: embed(a[3], a[0], a[1], a[2]), todo)
+                todo,
+                ex.map(lambda a: embed(a[3], a[0], a[1], a[2]), todo),
+                strict=False,
             ):
                 _PRE[(code, seed, mi)] = res
 

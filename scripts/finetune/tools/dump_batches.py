@@ -23,7 +23,6 @@ def work(args):
         _ds[rank] = ft_adapter.SampleDataset(s, 0, rank)
     done = 0
     for key in chunk:
-        t = time.perf_counter()
         out = _ds[rank][key]
         info = {
             k: v

@@ -1,13 +1,15 @@
 """Switch a loaded (inference) FoldForge model to training mode.
 
-``configure_model`` leaves the model in ``eval()`` with ``requires_grad_(False)`` and ``load_model`` marks dead (numerically zero)
-modules so inference can skip them; both are undone here. Dead modules MUST run in training (their parameters train).
+``configure_model`` leaves the model in ``eval()`` with ``requires_grad_(False)``
+and ``load_model`` marks dead (numerically zero) modules so inference can skip
+them; both are undone here. Dead modules MUST run in training (their parameters
+train).
 """
 
 from __future__ import annotations
 
 import random
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import torch
 
@@ -15,26 +17,32 @@ from foldforge.modules.dense.dead import clear_dead
 from foldforge.train import freeze
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from torch import nn
 
     from foldforge.train.config import TrainConfig
 
 
 def enable_training(model: nn.Module, cfg: TrainConfig) -> dict[str, object]:
-    """``train()``, gradients on for every parameter except the frozen ones (``train/freeze.py``: parameters with no path to the loss, slots the original
-    model lacks, parameters the original keeps fixed), dead skip off, distogram / confidence logits kept for the loss.
+    """Switch to ``train()`` with gradients on for every non-frozen parameter.
+
+    The frozen ones (``train/freeze.py``) are parameters with no path to the loss,
+    slots the original model lacks and parameters the original keeps fixed. Dead
+    skip goes off, and the distogram / confidence logits are kept for the loss.
     """
     cleared = clear_dead(model)
     model.train()
-    model.requires_grad_(True)
+    model.requires_grad_(True)  # noqa: FBT003 - torch API positional flag
     frozen = freeze.apply(model, cfg.loss)
-    model.foldforge_sampler_scope = None  # no per-shape inference sampler graph in training (static_weights / refresh would go stale); rollout="graph" sets its own inline scope (train/rollout_graph.py)
-    model.confidence_head.save_logits = (
-        cfg.confidence
-    )  # the head returns its logits only when asked
-    model.distogram_head.save_distogram = (
-        True  # the head returns its logits only when asked
-    )
+    # No per-shape inference sampler graph in training (static_weights / refresh
+    # would go stale); rollout="graph" sets its own inline scope
+    # (train/rollout_graph.py).
+    model.foldforge_sampler_scope = None
+    # The head returns its logits only when asked.
+    model.confidence_head.save_logits = cfg.confidence
+    # The head returns its logits only when asked.
+    model.distogram_head.save_distogram = True
     return {
         "dead_cleared": cleared,
         "frozen": frozen,
@@ -48,15 +56,20 @@ def draw_passes(cfg: TrainConfig, rng: random.Random) -> int:
 
 
 def seed_everything(seed: int) -> random.Random:
+    """Seed torch (CPU and every CUDA device); return a ``random.Random(seed)``."""
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     return random.Random(seed)
 
 
 def disable_inference_only_ops(model: nn.Module) -> int:
-    """The sampler's fused rigid-motion glue (``AugmentNoise`` / ``AlignEuler``) is inference-only (no autograd): set the module-level
-    ``foldforge_sampler_glue = False`` (the switch ``af3`` reads). The atom encoder's ``PoolAtoms`` stays on: it is differentiable in ``x`` since
-    engine 2.5.3 (R17), so training no longer needs the torch gather. Returns the module count.
+    """Turn off the sampler's inference-only fused rigid-motion glue.
+
+    The glue (``AugmentNoise`` / ``AlignEuler``) has no autograd: set the
+    module-level ``foldforge_sampler_glue = False`` (the switch ``af3`` reads). The
+    atom encoder's ``PoolAtoms`` stays on: it is differentiable in ``x`` since
+    engine 2.5.3 (R17), so training no longer needs the torch gather. Returns the
+    module count.
     """
     count = 0
     for module in model.modules():
@@ -65,11 +78,14 @@ def disable_inference_only_ops(model: nn.Module) -> int:
     return count
 
 
-#: Block classes whose forward is recomputed in the backward under activation checkpointing (the pair-stack blocks that dominate the activation
-#: memory: the engine ``PairformerBlock`` of the trunk / templates / confidence head and FoldForge's ``EvoformerBlock``).
+#: Block classes whose forward is recomputed in the backward under activation
+#: checkpointing (the pair-stack blocks that dominate the activation memory: the
+#: engine ``PairformerBlock`` of the trunk / templates / confidence head and
+#: FoldForge's ``EvoformerBlock``).
 CHECKPOINTED_BLOCKS = ("PairformerBlock", "EvoformerBlock")
 
-#: Block groups a policy can name (by the module path of the block's list: ``trunk_pairformer.N``, ``msa_stack.N``, ``tmpl_pairformer`` /
+#: Block groups a policy can name (by the module path of the block's list:
+#: ``trunk_pairformer.N``, ``msa_stack.N``, ``tmpl_pairformer`` /
 #: ``template_embedding_iteration``, ``confidence_pairformer``).
 CKPT_GROUPS = ("trunk", "msa", "template", "confidence")
 
@@ -85,11 +101,14 @@ def _block_group(name: str) -> str:
 
 
 def ckpt_select(groups: dict[str, list[str]], policy: str) -> set[str]:
-    """The block names ``policy`` wraps, from ``groups`` (group -> block names in module order).
+    """Return the block names ``policy`` wraps.
 
-    ``all`` (every block, the default), ``none``, ``pairformer`` (trunk blocks only), ``evoformer`` (MSA blocks only), ``except:<group>``
-    (all but one group: trunk / msa / template / confidence), and ``every:N`` / ``first:K`` / ``last:K``: those trunk pairformer blocks
-    (index % N == 0 / the first K / the last K) PLUS every block of the other groups.
+    ``groups`` maps group -> block names in module order. Policies: ``all`` (every
+    block, the default), ``none``, ``pairformer`` (trunk blocks only),
+    ``evoformer`` (MSA blocks only), ``except:<group>`` (all but one group:
+    trunk / msa / template / confidence), and ``every:N`` / ``first:K`` /
+    ``last:K``: those trunk pairformer blocks (index % N == 0 / the first K / the
+    last K) PLUS every block of the other groups.
     """
     names = {n for blocks in groups.values() for n in blocks}
     trunk = groups.get("trunk", [])
@@ -114,17 +133,24 @@ def ckpt_select(groups: dict[str, list[str]], policy: str) -> set[str]:
         else:
             chosen = trunk[len(trunk) - k :] if k < len(trunk) else trunk
         return others | set(chosen)
-    raise ValueError(
-        f"unknown checkpoint policy {policy!r} (all | none | pairformer | evoformer | except:<{'|'.join(CKPT_GROUPS)}> | every:N | first:K | last:K)"
+    msg = (
+        f"unknown checkpoint policy {policy!r} (all | none | pairformer | "
+        f"evoformer | except:<{'|'.join(CKPT_GROUPS)}> | every:N | first:K | "
+        "last:K)"
     )
+    raise ValueError(msg)
 
 
 def enable_activation_checkpointing(model: nn.Module, policy: str = "all") -> int:
-    """Wrap the forward of the pair-stack blocks ``policy`` selects (default ``all``: every block) in ``torch.utils.checkpoint`` (non-reentrant,
-    RNG preserved) so its activations are recomputed in the backward instead of stored. Returns the number of blocks wrapped. Training only:
-    ``torch.is_grad_enabled()`` is the guard.
+    """Wrap the forward of the selected pair-stack blocks in a checkpoint.
+
+    ``policy`` (default ``all``: every block) selects the blocks; each forward runs
+    under ``torch.utils.checkpoint`` (non-reentrant, RNG preserved) so its
+    activations are recomputed in the backward instead of stored. Returns the
+    number of blocks wrapped. Training only: ``torch.is_grad_enabled()`` is the
+    guard.
     """
-    from torch.utils.checkpoint import checkpoint
+    from torch.utils.checkpoint import checkpoint  # noqa: PLC0415 - lazy, training only
 
     blocks: dict[str, nn.Module] = {}
     groups: dict[str, list[str]] = {}
@@ -137,18 +163,19 @@ def enable_activation_checkpointing(model: nn.Module, policy: str = "all") -> in
         groups.setdefault(_block_group(name), []).append(name)
     chosen = ckpt_select(groups, policy)
     count = 0
-    for name in blocks:
+    for name, module in blocks.items():
         if name not in chosen:
             continue
-        module = blocks[name]
         forward = module.forward
 
-        def wrapped(*args, _forward=forward, **kwargs):
+        def wrapped(
+            *args: Any, _forward: Callable[..., Any] = forward, **kwargs: Any
+        ) -> Any:
             if torch.is_grad_enabled():
                 return checkpoint(_forward, *args, use_reentrant=False, **kwargs)
             return _forward(*args, **kwargs)
 
         module.forward = wrapped
-        module._ff_checkpointed = True
+        module._ff_checkpointed = True  # noqa: SLF001 - marker on the wrapped block
         count += 1
     return count

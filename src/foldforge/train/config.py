@@ -1,10 +1,14 @@
-"""The finetuning recipe. Values are MiniWorld's (configs/miniworld/phase2a_diffusion_medium_v200_b200_joint.yaml chain,
-loss/diffusion_v102_ft.yaml, train/default.yaml), not Protenix's finetune_demo.sh.
+"""The finetuning recipe.
 
-WARNING -- learning rate. ``max_lr=5e-3`` is MiniWorld's value for a FROZEN trunk plus a freshly initialised diffusion head
-(docs/pipeline.md there). Applied to a pretrained, UNFROZEN Protenix trunk it can destroy the weights. Keep the recipe value as the
-default, watch the first steps (``scripts/train_protenix1.py --smoke`` reports the loss curve) and lower ``trunk_lr_scale`` /
-``max_lr`` if it diverges.
+Values are MiniWorld's (configs/miniworld/phase2a_diffusion_medium_v200_b200_joint.yaml
+chain, loss/diffusion_v102_ft.yaml, train/default.yaml), not Protenix's
+finetune_demo.sh.
+
+WARNING -- learning rate. ``max_lr=5e-3`` is MiniWorld's value for a FROZEN trunk plus
+a freshly initialised diffusion head (docs/pipeline.md there). Applied to a pretrained,
+UNFROZEN Protenix trunk it can destroy the weights. Keep the recipe value as the
+default, watch the first steps (``scripts/train_protenix1.py --smoke`` reports the loss
+curve) and lower ``trunk_lr_scale`` / ``max_lr`` if it diverges.
 """
 
 from __future__ import annotations
@@ -20,23 +24,30 @@ class LossWeights:
     alpha_dna: float = 5.0
     alpha_rna: float = 5.0
     alpha_ligand: float = 10.0
-    #: 0.0 in the finetune loss file: not implemented in phase 1 (MiniWorld uses the engine's ``smooth_lddt`` kernel).
+    #: 0.0 in the finetune loss file: not implemented in phase 1 (MiniWorld uses the
+    #: engine's ``smooth_lddt`` kernel).
     smooth_lddt_loss: float = 0.0
     bond_loss: float = 1.0
     distogram_loss: float = 0.03
-    #: Confidence head, trained jointly (single stage): MiniWorld `loss/confidence_only.yaml` (per-bin cross entropy, weight 1.0 each). The
+    #: Confidence head, trained jointly (single stage): MiniWorld
+    #: `loss/confidence_only.yaml` (per-bin cross entropy, weight 1.0 each). The
     #: experimentally-resolved head has no MiniWorld counterpart and is not trained.
     plddt_loss: float = 1.0
     pde_loss: float = 1.0
     pae_loss: float = 1.0
-    #: Experimentally-resolved head (Protenix ``ExperimentallyResolvedLoss``, ``train/loss/confidence.py::resolved_loss_value``). 0.0 in the MiniWorld
-    #: recipe: not computed, and the head stays frozen (``train/freeze.py``). The ``protenix`` recipe (``train/recipes.py``) trains it.
+    #: Experimentally-resolved head (Protenix ``ExperimentallyResolvedLoss``,
+    #: ``train/loss/confidence.py::resolved_loss_value``). 0.0 in the MiniWorld
+    #: recipe: not computed, and the head stays frozen (``train/freeze.py``). The
+    #: ``protenix`` recipe (``train/recipes.py``) trains it.
     resolved_loss: float = 0.0
 
 
 @dataclass(frozen=True)
 class EDMNoise:
-    """EDM AF3 noise distribution (MiniWorld: P_mean -1.2, P_std 1.5, sigma_data 16, sigma_max 160, sigma_min 4e-4)."""
+    """EDM AF3 noise distribution.
+
+    MiniWorld: P_mean -1.2, P_std 1.5, sigma_data 16, sigma_max 160, sigma_min 4e-4.
+    """
 
     P_mean: float = -1.2
     P_std: float = 1.5
@@ -48,50 +59,72 @@ class EDMNoise:
 
 @dataclass(frozen=True)
 class TrainConfig:
+    """The whole training configuration (loss weights, noise, step, optimizer, EMA)."""
+
     loss: LossWeights = field(default_factory=LossWeights)
     noise: EDMNoise = field(default_factory=EDMNoise)
-    #: Train the confidence head in the same step (default). `False` is a debug switch only: the finetuning is ONE stage, every parameter trains.
+    #: Train the confidence head in the same step (default). `False` is a debug switch
+    #: only: the finetuning is ONE stage, every parameter trains.
     confidence: bool = True
-    #: Steps of the no-grad mini-rollout whose structure the confidence head reads (Protenix `N_step_mini_rollout`, MiniWorld `protenix_finetune`: 20).
+    #: Steps of the no-grad mini-rollout whose structure the confidence head reads
+    #: (Protenix `N_step_mini_rollout`, MiniWorld `protenix_finetune`: 20).
     rollout_steps: int = 20
-    #: pLDDT / PDE / PAE targets built the way Protenix does (``train/loss/confidence.py::confidence_targets(protenix_targets=True)``); False = MiniWorld's.
+    #: pLDDT / PDE / PAE targets built the way Protenix does
+    #: (``train/loss/confidence.py::confidence_targets(protenix_targets=True)``);
+    #: False = MiniWorld's.
     targets_protenix: bool = False
-    #: Where the mini-rollout runs inside a step: "after" the trunk backward (activations freed: least memory), "before" the diffusion forward, or "side"
-    #: (a second CUDA stream overlapped with the diffusion-train forward / backward), or "graph" (the whole rollout as one CUDA graph per shape, replayed at the
-    #: "after" placement: `train/rollout_graph.py`; no engine static_weights / static_inputs, so it follows the weights the optimizer changes).
+    #: Where the mini-rollout runs inside a step: "after" the trunk backward
+    #: (activations freed: least memory), "before" the diffusion forward, or "side"
+    #: (a second CUDA stream overlapped with the diffusion-train forward / backward),
+    #: or "graph" (the whole rollout as one CUDA graph per shape, replayed at the
+    #: "after" placement: `train/rollout_graph.py`; no engine static_weights /
+    #: static_inputs, so it follows the weights the optimizer changes).
     rollout: str = "after"
-    #: The whole micro step as ONE CUDA graph per (recycles, shape signature) (`train/step_graph.py`, `--step-graph`); the rollout is recorded inline in it.
-    #: Needs one example shape (`--bench-bucket`) to stay at <= recycles_max graphs. Gradients accumulate into persistent `.grad` (zeroed in place).
+    #: The whole micro step as ONE CUDA graph per (recycles, shape signature)
+    #: (`train/step_graph.py`, `--step-graph`); the rollout is recorded inline in it.
+    #: Needs one example shape (`--bench-bucket`) to stay at <= recycles_max graphs.
+    #: Gradients accumulate into persistent `.grad` (zeroed in place).
     step_graph: bool = False
-    #: torch.compile of the pair-stack / diffusion blocks (`train/compile.py`, `--compile`): "" = off (eager), "blocks" | "diffusion" | "all". Composes with `step_graph`.
+    #: torch.compile of the pair-stack / diffusion blocks (`train/compile.py`,
+    #: `--compile`): "" = off (eager), "blocks" | "diffusion" | "all". Composes with
+    #: `step_graph`.
     compile: str = ""
-    #: Diffusion augmentations per forward / backward chunk (0 = all `num_augment` at once); smaller chunks hold fewer diffusion activations.
+    #: Diffusion augmentations per forward / backward chunk (0 = all `num_augment` at
+    #: once); smaller chunks hold fewer diffusion activations.
     augment_chunk: int = 0
-    #: Measurement only: run one part of the step alone ("trunk", "diffusion", "rollout", "confidence"); "" = the whole step.
+    #: Measurement only: run one part of the step alone ("trunk", "diffusion",
+    #: "rollout", "confidence"); "" = the whole step.
     only: str = ""
     #: Diffusion samples (augmentations) per micro step.
     num_augment: int = 48
-    #: Total trunk passes per step, drawn uniformly from this range; only the last pass carries gradient.
+    #: Total trunk passes per step, drawn uniformly from this range; only the last
+    #: pass carries gradient.
     recycles_min: int = 1
     recycles_max: int = 4
-    #: Optimizer: torch Adam(betas=(0.9, 0.95)); LR = max_lr * lambda(step) (linear warmup, then x decay_factor every decay_steps), floor min_lr.
+    #: Optimizer: torch Adam(betas=(0.9, 0.95)); LR = max_lr * lambda(step) (linear
+    #: warmup, then x decay_factor every decay_steps), floor min_lr.
     max_lr: float = 5e-3
     min_lr: float = 1e-4
     warmup_steps: int = 1000
     decay_steps: int = 50_000
     decay_factor: float = 0.95
     betas: tuple[float, float] = (0.9, 0.95)
-    #: Adam ``weight_decay`` (torch ``Adam``: coupled L2, added to the gradient AFTER the clip). 0.0 = MiniWorld; the ``protenix`` recipe: 1e-8.
+    #: Adam ``weight_decay`` (torch ``Adam``: coupled L2, added to the gradient AFTER
+    #: the clip). 0.0 = MiniWorld; the ``protenix`` recipe: 1e-8.
     weight_decay: float = 0.0
-    #: Step decay counts from the end of the warm-up (MiniWorld: ``(step - warmup) // decay_steps``) or from step 0 (Protenix ``AlphaFold3LRScheduler``:
-    #: ``step // decay_every_n_steps``).
+    #: Step decay counts from the end of the warm-up (MiniWorld:
+    #: ``(step - warmup) // decay_steps``) or from step 0 (Protenix
+    #: ``AlphaFold3LRScheduler``: ``step // decay_every_n_steps``).
     decay_from_warmup: bool = True
-    #: Which recipe set these values (``train/recipes.py``); informational, logged in CONFIG.
+    #: Which recipe set these values (``train/recipes.py``); informational, logged in
+    #: CONFIG.
     recipe: str = "miniworld"
-    #: Multiplier of the LR of the trunk (input embedder, template / MSA / pairformer stack); the heads (diffusion, confidence, distogram) keep 1.0.
+    #: Multiplier of the LR of the trunk (input embedder, template / MSA / pairformer
+    #: stack); the heads (diffusion, confidence, distogram) keep 1.0.
     trunk_lr_scale: float = 1.0
     grad_clip_max_norm: float = 1.0
-    #: Micro steps per optimizer step (effective batch = grad_accum_steps x world size).
+    #: Micro steps per optimizer step (effective batch = grad_accum_steps x world
+    #: size).
     grad_accum_steps: int = 32
     ema_decay: float = 0.999
     use_ema: bool = True

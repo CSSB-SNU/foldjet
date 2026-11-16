@@ -31,7 +31,7 @@ for extra in (
     if extra.is_dir() and str(extra) not in sys.path:
         sys.path.append(str(extra))
 
-import _mwshim  # noqa: E402, F401
+import _mwshim  # noqa: F401
 
 
 def _env(name: str, default, cast=str):
@@ -84,7 +84,7 @@ def rank_world() -> tuple[int, int]:
 
         if dist.is_available() and dist.is_initialized():
             return dist.get_rank(), dist.get_world_size()
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: S110 - torch.distributed probe is optional
         pass
     return _env("RANK", 0, int), _env("WORLD_SIZE", 1, int)
 
@@ -154,16 +154,16 @@ class SampleDataset:
                 self.failures += 1
                 print(f"FT_SKIP pos={position} idx={index} {exc}", flush=True)
                 if not spares:
-                    raise RuntimeError(f"position {position}: no spare index left")
+                    raise RuntimeError(f"position {position}: no spare index left")  # noqa: B904 - keep the traceback as is
                 index = int(spares.pop(0))
-            except Exception as exc:  # noqa: BLE001 - one bad record (unreadable LMDB value, RDKit failure, ...) must not end a multi-day run
+            except Exception as exc:  # one bad record (unreadable LMDB value, RDKit failure, ...) must not end a multi-day run
                 self.failures += 1
                 print(
                     f"FT_ERROR pos={position} idx={index} {type(exc).__name__}: {str(exc)[:300]}",
                     flush=True,
                 )
                 if not spares:
-                    raise RuntimeError(f"position {position}: no spare index left")
+                    raise RuntimeError(f"position {position}: no spare index left")  # noqa: B904 - keep the traceback as is
                 index = int(spares.pop(0))
         else:
             raise RuntimeError(
@@ -317,7 +317,7 @@ class Source:
             for item in self._it:
                 self._q.put(item)
             self._q.put(StopIteration())
-        except BaseException as exc:  # noqa: BLE001  (handed to the training thread)
+        except BaseException as exc:  # (handed to the training thread)
             self._q.put(exc)
 
     def _next_item(self):

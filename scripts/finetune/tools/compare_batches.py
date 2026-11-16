@@ -48,7 +48,7 @@ for f in fa:
         print("KEY DIFF", f)
         bad += 1
         continue
-    for k in ta:
+    for k in ta:  # noqa: PLC0206 - indexes ta and tb in parallel
         n_t += 1
         if (
             ta[k].dtype != tb[k].dtype

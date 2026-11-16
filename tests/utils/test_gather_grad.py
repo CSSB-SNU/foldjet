@@ -1,6 +1,10 @@
-"""``foldforge.utils.gather_grad`` against torch's own ``index`` backward, BITWISE (CUDA): every dtype / slice size / leading-dim layout the
-atom layouts use, pile-ups of thousands of duplicates on one target, exact zeros of both signs, subnormals, inf / NaN, overflow; and
-``atom_layout.convert`` (forward + backward) with the kernel on and off."""
+"""``foldforge.utils.gather_grad`` against torch's own ``index`` backward (CUDA).
+
+BITWISE: every dtype / slice size / leading-dim layout the atom layouts use,
+pile-ups of thousands of duplicates on one target, exact zeros of both signs,
+subnormals, inf / NaN, overflow; and ``atom_layout.convert`` (forward + backward)
+with the kernel on and off.
+"""
 
 import pytest
 import torch
@@ -17,13 +21,15 @@ def _bits(t: torch.Tensor) -> torch.Tensor:
     return t.contiguous().view({2: torch.int16, 4: torch.int32}[t.element_size()])
 
 
-def _torch_grad(shape, dtype, idx, dim, grad):
+def _torch_grad(shape, dtype, idx, dim, grad) -> torch.Tensor:
     x = torch.zeros(shape, dtype=dtype, device="cuda", requires_grad=True)
     (gx,) = torch.autograd.grad(x[(slice(None),) * dim + (idx,)], x, grad)
     return gx
 
 
-def _indices(n_in, idx_shape, gen, pile=0.0, target=0, negative=False):
+def _indices(
+    n_in, idx_shape, gen, pile=0.0, target=0, *, negative=False
+) -> torch.Tensor:
     n = 1
     for s in idx_shape:
         n *= s
@@ -38,7 +44,7 @@ def _indices(n_in, idx_shape, gen, pile=0.0, target=0, negative=False):
     return idx.view(idx_shape).cuda()
 
 
-def _gradient(shape, dtype, gen, zeros=0.5):
+def _gradient(shape, dtype, gen, zeros=0.5) -> torch.Tensor:
     g = torch.randn(shape, generator=gen) * torch.exp(
         torch.randn(shape, generator=gen) * 3
     )
@@ -111,14 +117,19 @@ def test_index_grad_bitwise(dtype, case):
             g[torch.randint(0, g.numel(), (3,), generator=gen)] = float("-inf")
         ref = _torch_grad(shape, dtype, idx, dim, grad)
         ours = gather_grad.index_grad(grad, idx, torch.Size(shape), dim)
-        assert ours.shape == ref.shape and ours.dtype == ref.dtype
+        assert ours.shape == ref.shape
+        assert ours.dtype == ref.dtype
         assert torch.equal(_bits(ours), _bits(ref)), (
-            f"case {case} trial {trial}: {(_bits(ours) != _bits(ref)).sum().item()} elements differ"
+            f"case {case} trial {trial}: "
+            f"{(_bits(ours) != _bits(ref)).sum().item()} elements differ"
         )
 
 
 def test_index_grad_dense_duplicates_bitwise():
-    """Every tile holds many nonzero duplicates of a target (the one-by-one path), plus all-zero and one-nonzero tiles."""
+    """Every tile holds many nonzero duplicates of a target (the one-by-one path).
+
+    Plus all-zero and one-nonzero tiles.
+    """
     gen = torch.Generator().manual_seed(3)
     for s, dtype in [(128, torch.bfloat16), (16, torch.bfloat16), (384, torch.float16)]:
         n_in = 7
@@ -135,7 +146,10 @@ def test_index_grad_dense_duplicates_bitwise():
 
 
 def test_convert_forward_backward_same_bits(monkeypatch):
-    """``atom_layout.convert`` with the kernel and with torch's backward: identical output and input gradient (mask applied, padding pile-up)."""
+    """``atom_layout.convert`` with the kernel and with torch's backward.
+
+    Identical output and input gradient (mask applied, padding pile-up).
+    """
     gen = torch.Generator().manual_seed(11)
     idx = _indices(384, (128, 32), gen, pile=0.4, target=383)
     mask = (torch.rand((128, 32), generator=gen) < 0.6).cuda()
@@ -145,7 +159,7 @@ def test_convert_forward_backward_same_bits(monkeypatch):
     outs, grads = [], []
     for flag in ("1", "0"):
         monkeypatch.setenv("FOLDFORGE_GATHER_GRAD", flag)
-        x = base.clone().requires_grad_(True)
+        x = base.clone().requires_grad_(requires_grad=True)
         y = atom_layout.convert(info, x, layout_axes=(1,))
         (gx,) = torch.autograd.grad(y, x, grad)
         outs.append(y.detach())

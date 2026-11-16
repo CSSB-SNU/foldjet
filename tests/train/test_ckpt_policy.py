@@ -1,4 +1,7 @@
-"""``prepare.enable_activation_checkpointing`` policies: how many blocks each wraps on a fake model (CPU)."""
+"""``prepare.enable_activation_checkpointing`` policies.
+
+How many blocks each wraps on a fake model (CPU).
+"""
 
 from __future__ import annotations
 
@@ -63,20 +66,17 @@ def test_counts(policy, count):
 
 def test_positions():
     _, names = wrapped("every:4")
-    assert {
-        f"trunk_pairformer.{i}" for i in (0, 4)
-    } <= names and "trunk_pairformer.1" not in names
+    assert {f"trunk_pairformer.{i}" for i in (0, 4)} <= names
+    assert "trunk_pairformer.1" not in names
     _, names = wrapped("last:2")
-    assert {
-        "trunk_pairformer.6",
-        "trunk_pairformer.7",
-    } <= names and "trunk_pairformer.5" not in names
+    assert {"trunk_pairformer.6", "trunk_pairformer.7"} <= names
+    assert "trunk_pairformer.5" not in names
 
 
 def test_unknown_policy():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="unknown checkpoint policy"):
         wrapped("bogus")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="unknown checkpoint policy"):
         wrapped("every:0")
 
 

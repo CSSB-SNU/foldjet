@@ -1,10 +1,16 @@
-"""Reference values from Protenix's own code, for ``test_protenix_parity.py``. NOT a pytest module: run it with the Protenix environment's python.
+"""Reference values from Protenix's own code, for ``test_protenix_parity.py``.
 
-    PROTENIX_SRC=~/foldforge-base/protenix  ~/foldforge-base/envs/protenix/.venv/bin/python protenix_reference.py IN.npz OUT.npz
+NOT a pytest module: run it with the Protenix environment's python.
 
-``IN.npz`` holds flat per-atom arrays of one tiny structure (every atom of the crop, resolved or not); the outputs are what ``protenix/model/loss.py`` makes of
-them: the experimentally-resolved loss, the pLDDT target bins (``calculate_atom_bespoke_lddt`` + ``PLDDTLoss.bins_from_lddt``), the PDE target bins
-(``PDELoss.calculate_label``), the af3 learning-rate scheduler values, and the loss / optimizer settings of ``configs/configs_base.py``.
+    export PROTENIX_SRC=~/foldforge-base/protenix
+    ~/foldforge-base/envs/protenix/.venv/bin/python protenix_reference.py IN.npz OUT.npz
+
+``IN.npz`` holds flat per-atom arrays of one tiny structure (every atom of the crop,
+resolved or not); the outputs are what ``protenix/model/loss.py`` makes of them: the
+experimentally-resolved loss, the pLDDT target bins (``calculate_atom_bespoke_lddt`` +
+``PLDDTLoss.bins_from_lddt``), the PDE target bins (``PDELoss.calculate_label``), the
+af3 learning-rate scheduler values, and the loss / optimizer settings of
+``configs/configs_base.py``.
 """
 
 from __future__ import annotations
@@ -40,7 +46,8 @@ def main(path_in: str, path_out: str) -> None:
         coordinate_mask=d["coordinate_mask"].float(),
     ).numpy()
 
-    # pLDDT target, as ProtenixLoss.calculate_losses (loss.py:1753-1770): only the atoms with coordinates
+    # pLDDT target, as ProtenixLoss.calculate_losses (loss.py:1753-1770): only the
+    # atoms with coordinates
     lddt, weight = calculate_atom_bespoke_lddt(
         pred_coordinate=pred[None][..., coord_mask, :],
         true_coordinate=true[..., coord_mask, :],
@@ -90,7 +97,11 @@ def main(path_in: str, path_out: str) -> None:
     ]
     out["lr_steps"] = np.array(steps)
     out["lr_values"] = np.array(
-        [sched._get_step_lr(s) for s in steps], dtype=np.float64
+        [
+            sched._get_step_lr(s)  # noqa: SLF001 - Protenix's own lr is the reference
+            for s in steps
+        ],
+        dtype=np.float64,
     )
 
     # settings of configs_base.py

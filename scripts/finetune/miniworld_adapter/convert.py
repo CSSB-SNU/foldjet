@@ -169,7 +169,7 @@ class Converter:
             kind = np.asarray(sc.value)[:, 0]
             src = np.asarray(sc.src).astype(np.int64)
             dst = np.asarray(sc.dst).astype(np.int64)
-        except Exception:  # noqa: BLE001 - no struct_conn edges in this crop
+        except Exception:  # no struct_conn edges in this crop
             return None, None
         keep = kind == "covale"
         src, dst = src[keep], dst[keep]
@@ -352,7 +352,7 @@ class Converter:
     def _convert(
         self,
         raw,
-        seed,
+        seed,  # noqa: ARG002 - kept for the call signature
         conf_seed,
         pose_seed,
         flat,
@@ -365,7 +365,7 @@ class Converter:
         dense_conventions,
         t0,
     ) -> Converted:
-        all_tokens, token_atoms, standard_idx = features.tokenizer(
+        all_tokens, token_atoms, _standard_idx = features.tokenizer(
             flat,
             ccd=self.ccd,
             max_atoms_per_token=ATOMS_PER_TOKEN,
@@ -440,14 +440,14 @@ class Converter:
         )
         pl_bonds, ll_bonds = self._bond_layouts(raw, flat)
         rng = np.random.RandomState(conf_seed)
-        ref_kw = dict(
-            all_token_atoms_layout=token_atoms,
-            ccd=self.ccd,
-            padding_shapes=padding,
-            chemical_components_data=chem,
-            ref_max_modified_date=None,
-            conformer_max_iterations=None,
-        )
+        ref_kw = {
+            "all_token_atoms_layout": token_atoms,
+            "ccd": self.ccd,
+            "padding_shapes": padding,
+            "chemical_components_data": chem,
+            "ref_max_modified_date": None,
+            "conformer_max_iterations": None,
+        }
         import fast_ref as _fr
 
         if self._parallel_embed and _fr.has_big_component(

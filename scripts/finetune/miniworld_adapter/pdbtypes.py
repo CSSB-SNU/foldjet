@@ -5,10 +5,13 @@ catalog is row i of the filtered TSV; the item ids are compared as a check.
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import mwconfig  # noqa: F401
 import numpy as np
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 TYPES = (
     "protein_protein",

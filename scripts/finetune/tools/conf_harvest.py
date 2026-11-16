@@ -20,7 +20,7 @@ _ds = None
 
 
 def work(chunk):
-    global _ds
+    global _ds  # noqa: PLW0603 - per-process dataset cache
     sys.path.insert(0, AD)
     import numpy as np
     import torch
@@ -41,7 +41,7 @@ def work(chunk):
         rng = np.random.default_rng(ft_adapter.sample_seed(0, RANK, pos))
         try:
             raw = mwsample.process_item(_ds, idx, rng, spares=list(spares))
-        except Exception:
+        except Exception:  # noqa: S112 - skip unreadable items
             continue
         names = np.char.strip(
             np.asarray(raw.cifmol.residues.chem_comp_id.value).astype(str)
@@ -72,22 +72,28 @@ if __name__ == "__main__":
                 flush=True,
             )
             if i % 10 == 0:
-                json.dump(
-                    {
-                        "counts": dict(tot),
-                        "n_examples": len(ninst),
-                        "max_instances": max(ninst),
-                    },
-                    open(OUT, "w"),
-                )
+                with open(OUT, "w") as fh:
+                    json.dump(
+                        {
+                            "counts": dict(tot),
+                            "n_examples": len(ninst),
+                            "max_instances": max(ninst),
+                        },
+                        fh,
+                    )
             if time.time() - t > 470:
                 print("time guard", flush=True)
                 p.terminate()
                 break
-    json.dump(
-        {"counts": dict(tot), "n_examples": len(ninst), "max_instances": max(ninst)},
-        open(OUT, "w"),
-    )
+    with open(OUT, "w") as fh:
+        json.dump(
+            {
+                "counts": dict(tot),
+                "n_examples": len(ninst),
+                "max_instances": max(ninst),
+            },
+            fh,
+        )
     print(
         "codes", len(tot), "examples", len(ninst), "max residue instances", max(ninst)
     )

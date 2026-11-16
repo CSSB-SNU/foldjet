@@ -56,13 +56,15 @@ def build_shard(job):
                 flush=True,
             )
     path = os.path.join(OUT, "conf_%05d_K%d.pkl" % (si, K))
-    pickle.dump(out, open(path + ".tmp", "wb"), protocol=5)
+    with open(path + ".tmp", "wb") as fh:
+        pickle.dump(out, fh, protocol=5)
     os.replace(path + ".tmp", path)
     return si, len(out)
 
 
 if __name__ == "__main__":
-    codes = json.load(open(CODES))
+    with open(CODES) as fh:
+        codes = json.load(fh)
     os.makedirs(OUT, exist_ok=True)
     jobs = [
         (i, codes[i * SHARD : (i + 1) * SHARD])
