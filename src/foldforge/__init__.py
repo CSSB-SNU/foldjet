@@ -13,6 +13,8 @@ triangle multiplication is a change to all of them at once.
 from importlib import import_module
 from typing import TYPE_CHECKING, Any
 
+# first: the allocator default (expandable segments) before anything touches CUDA
+from foldforge import allocator  # noqa: F401
 from foldforge.errors import (
     ConcurrentCallError,
     FoldForgeError,

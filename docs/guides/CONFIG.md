@@ -95,11 +95,23 @@ miniworld-engine 2.5.0 has no autotune cache (launch configs come from the engin
 Replaces fields of the family's `DenseSpec` after it is chosen, to flip one forward convention of a release and
 measure it. A field that changes a parameter shape makes the strict weight load fail loudly.
 
+## CUDA allocator: expandable segments by default
+
+`import foldforge` sets `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` when neither `PYTORCH_CUDA_ALLOC_CONF` nor
+`PYTORCH_ALLOC_CONF` (torch's newer name) is in the environment (`src/foldforge/allocator.py`). A variable that is present is kept as it
+is, whatever its value: `PYTORCH_CUDA_ALLOC_CONF=` (empty) runs with torch's own defaults, any other value is yours. torch reads the
+variable when its CUDA caching allocator initialises (the first CUDA allocation), so the default takes effect also when `torch` was
+imported first; if CUDA is already initialised when `foldforge` is imported, the same setting is applied to the live allocator and the
+segments allocated from then on are expandable. Child processes inherit the variable.
+
+Why: on H100 (AF3, engine 2.5.12, bf16, compile + CUDA graphs, 2026-11-17; 3 targets of ~1,160 tokens) the same speed or 1-2 % faster
+and 24 % less peak reserved memory, CUDA graph capture and replay unaffected.
+
 ## What stays an environment variable
 
 Locations and the machine, not behaviour: `FOLDFORGE_HOME`, `FOLDFORGE_CHECKPOINT_DIR`, `FOLDFORGE_CCD_DB`,
 `FOLDFORGE_RUNS`, `FOLDFORGE_RELEASE_ROOT`, `FOLDFORGE_BENCHMARKS`; `CUDA_VISIBLE_DEVICES`, `SLURM_*`, `XDG_CACHE_HOME`,
-`TORCH_EXTENSIONS_DIR`, `CUTLASS_PATH`; the location of the Anthropic release for the `anthropic` backend, `MINIWORLD_ANTHROPIC_ROOT` (BACKENDS.md); `CUBLAS_WORKSPACE_CONFIG` (set by `utils.seed` for deterministic cuBLAS); the
+`TORCH_EXTENSIONS_DIR`, `CUTLASS_PATH`, `PYTORCH_CUDA_ALLOC_CONF` (default above); the location of the Anthropic release for the `anthropic` backend, `MINIWORLD_ANTHROPIC_ROOT` (BACKENDS.md); `CUBLAS_WORKSPACE_CONFIG` (set by `utils.seed` for deterministic cuBLAS); the
 test inputs `FOLDFORGE_TEST_CCD_DB` and `MINIWORLD_TEST_SOURCE`.
 
 ## Removed variables
