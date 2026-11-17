@@ -34,6 +34,7 @@ p.add_argument("--wid", type=int, required=True)
 p.add_argument("--addr", required=True)
 p.add_argument("--authkey-file", required=True)
 p.add_argument("--model", default="af3")
+p.add_argument("--checkpoint", default=None, help="a checkpoint file instead of the model's released / converted weights (e.g. a fine-tune's epochNNNN.miniworld.pt)")
 p.add_argument("--specs", required=True)
 p.add_argument("--out", required=True)
 p.add_argument("--seeds", default="42,66,101,2024,8888")
@@ -319,7 +320,7 @@ t_all = time.time()
 pending: list = []
 exit_code = 0
 busy_s = 0.0
-with ff.load_model(args.model, config=config, device="cuda:0") as model:
+with ff.load_model(args.model, config=config, checkpoint=args.checkpoint, device="cuda:0") as model:
     from foldforge.api import plan_prediction
 
     bucketing = bool(model._options.config.execution.bucketing)
