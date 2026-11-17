@@ -33,8 +33,14 @@ def observations_of(module: torch.nn.Module) -> Observations:
     return stats
 
 
-def observe_call(module: torch.nn.Module, backend: str, refusal: str | None) -> None:
-    """Record one call outside Dynamo tracing: ``backend`` ran it, or ``refusal`` sent it to the pytorch backend."""
+def observe_call(
+    module: torch.nn.Module,
+    backend: str,
+    refusal: str | None,
+    served_by: str = "pytorch",
+) -> None:
+    """Record one call outside Dynamo tracing: ``backend`` ran it, or ``refusal`` sent it to ``served_by`` (the next backend of the
+    ladder that takes it: ``triton`` or ``pytorch``)."""
     if torch.compiler.is_compiling():
         return
     stats = observations_of(module)
@@ -42,7 +48,7 @@ def observe_call(module: torch.nn.Module, backend: str, refusal: str | None) -> 
         stats.served[backend] += 1
     else:
         stats.refused[refusal] += 1
-        stats.served["pytorch"] += 1
+        stats.served[served_by] += 1
 
 
 def reset_observations(model: torch.nn.Module) -> None:

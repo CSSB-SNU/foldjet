@@ -39,6 +39,74 @@ def test_a_refused_call_runs_the_pytorch_backend_and_logs_once(caplog):
     )
 
 
+class _Ladder(nn.Module):
+    """An engine-like op.
+
+    cuda refuses calls past ``limit`` rows; triton takes them
+    (unless ``triton_refuses``).
+    """
+
+    backends = ("pytorch", "triton", "cuda")
+
+    def __init__(self, limit: int, triton_refuses: bool = False) -> None:  # noqa: FBT001, FBT002 - test helper
+        super().__init__()
+        self.backend, self.limit, self.triton_refuses = "pytorch", limit, triton_refuses
+
+    def set_backend(self, backend: str) -> _Ladder:
+        self.backend = backend
+        return self
+
+    def unsupported(self, x: torch.Tensor) -> str | None:
+        check = getattr(self, f"_supports_{self.backend}", None)
+        return None if check is None else check(x)
+
+    def _supports_cuda(self, x: torch.Tensor) -> str | None:
+        return (
+            None
+            if x.shape[0] <= self.limit
+            else f"N <= {self.limit}, got N={x.shape[0]}"
+        )
+
+    def _supports_triton(self, x: torch.Tensor) -> str | None:
+        return "triton refuses" if self.triton_refuses else None
+
+    def _forward_cuda(self, x: torch.Tensor) -> str:
+        return "cuda"
+
+    def _forward_triton(self, x: torch.Tensor) -> str:
+        return f"triton:{self.backend}"
+
+    def _forward_pytorch(self, x: torch.Tensor) -> str:
+        return "pytorch"
+
+    def forward(self, x: torch.Tensor) -> str:
+        return getattr(self, f"_forward_{self.backend}")(x)
+
+
+def test_a_call_the_cuda_backend_refuses_runs_triton_before_pytorch():
+    """The engine ladder: cuda -> triton -> pytorch.
+
+    E.g. MSAPairWeightedAveraging past 2048 tokens runs its Triton kernels.
+    """
+    policy.forget_logged_refusals()
+    layer = policy.guard(_Ladder(limit=4).set_backend("cuda"), "fallback")
+    assert layer(torch.zeros(4)) == "cuda"
+    assert (
+        layer(torch.zeros(8)) == "triton:triton"
+    )  # served with the module's backend set to triton for the call
+    assert layer.backend == "cuda"  # restored
+    refusing = policy.guard(
+        _Ladder(limit=4, triton_refuses=True).set_backend("cuda"), "fallback"
+    )
+    assert refusing(torch.zeros(8)) == "pytorch"
+    assert (
+        policy.fallback_backend(
+            _Ladder(limit=4).set_backend("triton"), "triton", torch.zeros(8)
+        )
+        == "pytorch"
+    )
+
+
 def test_the_error_policy_raises_the_engine_reason():
     layer = modules.transition(16, 2)
     layer.set_backend(_kernel_backend(layer))

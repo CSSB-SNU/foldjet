@@ -8,8 +8,9 @@ what the engine leaves to its caller:
    (:func:`~foldforge.modules.engine.backends.choose_backend`) and installs the guard. Composite blocks (``PairformerBlock``,
    ``Pairformer``) stay on ``pytorch`` themselves and their children are set one by one, so an op that has no kernel is refused alone
    instead of taking the whole block down.
-2. The guard asks ``module.unsupported(*args)`` before the call. A reason under ``engine.unsupported: fallback`` runs the engine
-   ``pytorch`` backend of that module for the call and logs the reason ONCE; under ``error`` it raises ``BackendUnsupportedError``.
+2. The guard asks ``module.unsupported(*args)`` before the call. A reason under ``engine.unsupported: fallback`` runs the next backend
+   of the engine ladder that takes the call (``cuda`` -> ``triton`` -> ``pytorch``, :func:`fallback_backend`) and logs the reason
+   ONCE; under ``error`` it raises ``BackendUnsupportedError``.
 """
 
 from __future__ import annotations
@@ -39,9 +40,10 @@ def forget_logged_refusals() -> None:
     _LOGGED.clear()
 
 
-def refuse(module: nn.Module, reason: str) -> bool:
-    """A call the module's backend refuses: True when the caller must run the pytorch backend, after ONE log line per (class, backend,
-    reason); raises under ``engine.unsupported: error`` (the module's ``foldforge_unsupported``)."""
+def refuse(module: nn.Module, reason: str, served_by: str = "pytorch") -> bool:
+    """A call the module's backend refuses: True when the caller must run ``served_by`` (the next backend of the ladder that takes the
+    call), after ONE log line per (class, backend, reason); raises under ``engine.unsupported: error`` (the module's
+    ``foldforge_unsupported``)."""
     cls, backend = type(module).__name__, cast("str", module.backend)
     if getattr(module, "foldforge_unsupported", "fallback") == "error":
         message = f"{cls} backend {backend!r} refuses a call (engine.unsupported: error): {reason}"
@@ -50,12 +52,26 @@ def refuse(module: nn.Module, reason: str) -> bool:
     if key not in _LOGGED:
         _LOGGED.add(key)
         logger.warning(
-            "%s backend %s refuses a call: %s; running its pytorch backend for it",
+            "%s backend %s refuses a call: %s; running its %s backend for it",
             cls,
             backend,
             reason,
+            served_by,
         )
     return True
+
+
+def fallback_backend(module: nn.Module, backend: str, *args: Any, **kwargs: Any) -> str:
+    """The backend a call refused by ``backend`` runs on: the engine's own ladder, ``cuda`` -> ``triton`` -> ``pytorch``.
+
+    ``triton`` when the class has it and its own range takes the call (``_supports_triton``; without one it claims every call), else the
+    reference ``pytorch``. E.g. MSAPairWeightedAveraging past 2048 tokens: the H100 kernels hold a row of N logits (N <= 2048 in
+    inference), the Triton kernels have no such limit."""
+    if backend == "cuda" and "triton" in getattr(module, "backends", ()):
+        check = getattr(module, "_supports_triton", None)
+        if check is None or check(*args, **kwargs) is None:
+            return "triton"
+    return "pytorch"
 
 
 def guard(module: nn.Module, unsupported: str = "fallback") -> nn.Module:
@@ -75,11 +91,12 @@ def guard(module: nn.Module, unsupported: str = "fallback") -> nn.Module:
         if reason is None:
             observe_call(module, backend, None)
             return getattr(module, f"_forward_{backend}")(*args, **kwargs)
-        refuse(module, reason)
-        observe_call(module, backend, reason)
-        module.backend = "pytorch"  # pyright: ignore[reportArgumentType]  # plain attribute
+        served_by = fallback_backend(module, backend, *args, **kwargs)
+        refuse(module, reason, served_by)
+        observe_call(module, backend, reason, served_by)
+        module.backend = served_by  # pyright: ignore[reportArgumentType]  # plain attribute
         try:
-            return module._forward_pytorch(*args, **kwargs)  # pyright: ignore[reportCallIssue]  # engine op method
+            return getattr(module, f"_forward_{served_by}")(*args, **kwargs)
         finally:
             module.backend = backend  # pyright: ignore[reportArgumentType]  # plain attribute
 
