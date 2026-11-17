@@ -41,8 +41,8 @@ TOKENS_PER_CHAIN = 128
 SIZES = (1, 2, 4, 8, 12, 16)
 
 #: model -> (recycles, template_n, extra config). Trunk passes are 4 everywhere, as the
-#: kits: ``recycles`` counts total passes except for AF3, which counts additional ones
-#: (3 -> 4 passes); ESMFold2's kit runs num_loops 3 = 4 steps. RoseTTAFold3 takes one
+#: kits: ``recycles`` counts total trunk passes for every family, AF3 included (records
+#: before 2026-11-17 ran AF3 with 3 = 3 passes); ESMFold2's kit runs num_loops 3 = 4 steps. RoseTTAFold3 takes one
 #: coordinate set per chain (template_n 1) and its family turns input templates off by
 #: default: switched on here, as in the 2026-10-29 run.
 MODELS: dict[str, tuple[int, int, dict]] = {
@@ -50,7 +50,7 @@ MODELS: dict[str, tuple[int, int, dict]] = {
     "protenix2": (4, 4, {}),
     "opendde": (4, 4, {}),
     "esmfold2": (4, 0, {}),  # the checkpoint takes no templates
-    "af3": (3, 4, {}),
+    "af3": (4, 4, {}),
     "boltz2": (4, 4, {}),
     "chai1": (4, 4, {}),
     "openfold3": (4, 4, {}),
