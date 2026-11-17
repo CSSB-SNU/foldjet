@@ -29,6 +29,7 @@ from foldforge.modules.dense.spec import ALPHAFOLD3, DenseSpec
 from foldforge.modules.dense.structural_tokens import StructuralTokenExpander
 from foldforge.modules.dense.template import TemplateEmbedding
 from foldforge.modules.engine import graph as engine_graph
+from foldforge.modules.engine import modules as engine_modules
 from foldforge.modules.engine.configure import diffusion_autocast
 from foldforge.utils.rigid_align import kabsch_rotation
 
@@ -180,7 +181,7 @@ class Evoformer(nn.Module):
         self.left_single = nn.Linear(c_pair_init, self.pair_channel, bias=False)
         self.right_single = nn.Linear(c_pair_init, self.pair_channel, bias=False)
 
-        self.prev_embedding_layer_norm = nn.LayerNorm(self.pair_channel)
+        self.prev_embedding_layer_norm = engine_modules.layer_norm(self.pair_channel)
         self.prev_embedding = nn.Linear(
             self.pair_channel, self.pair_channel, bias=False
         )
@@ -234,7 +235,9 @@ class Evoformer(nn.Module):
             self.c_target_feat, self.seq_channel, bias=False
         )
 
-        self.prev_single_embedding_layer_norm = nn.LayerNorm(self.seq_channel)
+        self.prev_single_embedding_layer_norm = engine_modules.layer_norm(
+            self.seq_channel
+        )
         self.prev_single_embedding = nn.Linear(
             self.seq_channel, self.seq_channel, bias=False
         )

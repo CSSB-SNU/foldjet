@@ -26,6 +26,7 @@ from foldforge.modules.dense import confidence as scoring
 from foldforge.modules.dense.spec import ALPHAFOLD3, DenseSpec
 from foldforge.modules.dense.template import template_embedding_mean
 from foldforge.modules.engine import graph as engine_graph
+from foldforge.modules.engine import modules as engine_modules
 from foldforge.utils.device_constants import built_on_device, on_device
 
 _EPS = 1e-10
@@ -207,13 +208,13 @@ class FusedTemplateEmbedding(nn.Module):
         self.spec = spec
         self.build, width = _FEATURES[spec.template]
         channels = spec.template_channel
-        self.z_norm = nn.LayerNorm(spec.pair_channel)
+        self.z_norm = engine_modules.layer_norm(spec.pair_channel)
         self.z_proj = nn.Linear(spec.pair_channel, channels, bias=False)
         self.a_proj = nn.Linear(width, channels, bias=False)
         self.tmpl_pairformer = nn.ModuleList(
             [self._block(spec, channels) for _ in range(spec.template_layers)]
         )
-        self.v_norm = nn.LayerNorm(channels)
+        self.v_norm = engine_modules.layer_norm(channels)
         self.u_proj = nn.Linear(channels, spec.pair_channel, bias=False)
 
     @staticmethod

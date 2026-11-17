@@ -114,7 +114,9 @@ class DiffusionHead(nn.Module):
         # halves, so which width it runs at is a real difference in the path.
         self.compress_trunk_pair = trunk_pair_channel != pair_channel
         if self.compress_trunk_pair:
-            self.z_trunk_norm = nn.LayerNorm(trunk_pair_channel, bias=False)
+            self.z_trunk_norm = engine_modules.layer_norm(
+                trunk_pair_channel, bias=False
+            )
             self.z_trunk_projection = nn.Linear(
                 trunk_pair_channel, pair_channel, bias=False
             )
@@ -126,7 +128,7 @@ class DiffusionHead(nn.Module):
             if self.pair_init_cond
             else (pair_channel if spec.diffusion_projected_relpos else 139)
         )
-        self.pair_cond_initial_norm = nn.LayerNorm(
+        self.pair_cond_initial_norm = engine_modules.layer_norm(
             self.c_pair_cond_initial, bias="pair_cond_initial_norm" in affine
         )
         self.pair_cond_initial_projection = nn.Linear(
@@ -138,7 +140,9 @@ class DiffusionHead(nn.Module):
 
         self.cond_final_norm = spec.diffusion_cond_final_norm
         if self.cond_final_norm:
-            self.pair_cond_final_norm = nn.LayerNorm(self.pair_channel, bias=True)
+            self.pair_cond_final_norm = engine_modules.layer_norm(
+                self.pair_channel, bias=True
+            )
 
         # Trunk single plus the target features -- unless there is no trunk
         # single at all, in which case the conditioning is the features alone.
@@ -148,7 +152,7 @@ class DiffusionHead(nn.Module):
             if self.pair_only_trunk
             else spec.seq_channel + spec.target_feat_channel + 2 * padded_single_cond
         )
-        self.single_cond_initial_norm = nn.LayerNorm(
+        self.single_cond_initial_norm = engine_modules.layer_norm(
             self.c_single_cond_initial, bias="single_cond_initial_norm" in affine
         )
         self.single_cond_initial_projection = nn.Linear(
@@ -160,7 +164,7 @@ class DiffusionHead(nn.Module):
         self._fold = None
         self._fold_epoch = 0
         self.c_noise_embedding = 256
-        self.noise_embedding_initial_norm = nn.LayerNorm(
+        self.noise_embedding_initial_norm = engine_modules.layer_norm(
             self.c_noise_embedding, bias="noise_embedding_initial_norm" in affine
         )
         self.noise_embedding_initial_projection = nn.Linear(
@@ -170,7 +174,9 @@ class DiffusionHead(nn.Module):
         self.single_transition_0 = self._transition(spec, self.seq_channel)
         self.single_transition_1 = self._transition(spec, self.seq_channel)
         if spec.diffusion_cond_final_norm:
-            self.single_cond_final_norm = nn.LayerNorm(self.seq_channel, bias=True)
+            self.single_cond_final_norm = engine_modules.layer_norm(
+                self.seq_channel, bias=True
+            )
 
         self.atom_cross_att_encoder = AtomCrossAttEncoder(
             per_token_channels=self.c_act,
@@ -183,7 +189,9 @@ class DiffusionHead(nn.Module):
         )
 
         self.single_cond_embedding_norm = (
-            nn.LayerNorm(self.seq_channel, bias="single_cond_embedding_norm" in affine)
+            engine_modules.layer_norm(
+                self.seq_channel, bias="single_cond_embedding_norm" in affine
+            )
             if spec.single_cond_embedding_norm
             else None
         )
@@ -199,7 +207,9 @@ class DiffusionHead(nn.Module):
             num_blocks=spec.diffusion_blocks,
         )
 
-        self.output_norm = nn.LayerNorm(self.c_act, bias="output_norm" in affine)
+        self.output_norm = engine_modules.layer_norm(
+            self.c_act, bias="output_norm" in affine
+        )
 
         self.atom_cross_att_decoder = AtomCrossAttDecoder(spec=spec)
 

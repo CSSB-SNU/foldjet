@@ -21,6 +21,7 @@ from foldforge.data.features import dense_protein as protein_data_processing
 from foldforge.modules.dense import confidence as scoring
 from foldforge.modules.dense.spec import ALPHAFOLD3, DenseSpec
 from foldforge.modules.engine import graph as engine_graph
+from foldforge.modules.engine import modules as engine_modules
 from foldforge.utils import dense_geometry as geometry
 from foldforge.utils.device_constants import on_device
 
@@ -211,7 +212,7 @@ class SingleTemplateEmbedding(nn.Module):
 
         self.dgram_features_config = DistogramFeaturesConfig()
 
-        self.query_embedding_norm = nn.LayerNorm(pair_channel)
+        self.query_embedding_norm = engine_modules.layer_norm(pair_channel)
         self.template_feature_bias = (
             nn.Parameter(torch.zeros(self.num_channels))
             if spec.template_feature_bias
@@ -233,7 +234,7 @@ class SingleTemplateEmbedding(nn.Module):
             [self._block(spec) for _ in range(self.template_stack_num_layer)]
         )
 
-        self.output_layer_norm = nn.LayerNorm(self.num_channels)
+        self.output_layer_norm = engine_modules.layer_norm(self.num_channels)
 
     def _block(self, spec: DenseSpec) -> nn.Module:
         """One pair-stack block of the template embedder."""

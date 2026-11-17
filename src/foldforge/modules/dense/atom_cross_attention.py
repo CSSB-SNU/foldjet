@@ -25,6 +25,7 @@ from foldforge.modules.dense.diffusion_transformer import (
 )
 from foldforge.modules.dense.spec import ALPHAFOLD3, DenseSpec
 from foldforge.modules.engine import graph as engine_graph
+from foldforge.modules.engine import modules as engine_modules
 from foldforge.modules.engine.sampler_ops import pool_atoms
 from foldforge.modules.engine.transformers import atom_dit_stack, engine_key_window
 from foldforge.utils import atom_layout
@@ -312,7 +313,7 @@ class AtomCrossAttEncoder(nn.Module):
                 torch.zeros(self.per_atom_channels)
             )
         self.atom_features_norm = (
-            nn.LayerNorm(self.per_atom_channels, bias=True)
+            engine_modules.layer_norm(self.per_atom_channels, bias=True)
             if spec.normed_atom_features
             else None
         )
@@ -394,7 +395,7 @@ class AtomCrossAttEncoder(nn.Module):
 
         if self.with_trunk_single_cond is True:
             self.c_trunk_single_cond = trunk_single_channels
-            self.lnorm_trunk_single_cond = nn.LayerNorm(
+            self.lnorm_trunk_single_cond = engine_modules.layer_norm(
                 self.c_trunk_single_cond,
                 bias="lnorm_trunk_single_cond" in spec.affine_norms,
             )
@@ -417,13 +418,23 @@ class AtomCrossAttEncoder(nn.Module):
 
         if self.with_trunk_pair_cond is True:
             self.c_trunk_pair_cond = trunk_pair_channels
-            self.lnorm_trunk_pair_cond = nn.LayerNorm(
+            self.lnorm_trunk_pair_cond = engine_modules.layer_norm(
                 self.c_trunk_pair_cond,
                 bias="lnorm_trunk_pair_cond" in spec.affine_norms,
             )
             self.embed_trunk_pair_cond = nn.Linear(
                 self.c_trunk_pair_cond, self.per_atom_pair_channels, bias=False
             )
+
+        # The parameter-free norm of the conditioning sum (``spec.atom_cond_norm``):
+        # an engine LayerNorm without an affine, so no state-dict key.
+        self.atom_cond_layer_norm = (
+            engine_modules.layer_norm(
+                self.per_atom_channels, bias=False, elementwise_affine=False
+            )
+            if spec.atom_cond_norm
+            else None
+        )
 
     def _chiral_features(
         self, batch: feat_batch.Batch, token_atoms_act: torch.Tensor
@@ -597,15 +608,13 @@ class AtomCrossAttEncoder(nn.Module):
                 layout_axes=(-2,),
             )
 
-        if self.spec.atom_cond_norm:
+        if self.atom_cond_layer_norm is not None:
             # Normalise the conditioning SUM. It carries no parameters, so no
             # blob names it and no shape check can miss it -- but every adaptive
             # norm in the atom stacks scales by (s + 1) off this vector, so
             # without it the atom representation runs away rather than being
             # merely a little off.
-            queries_single_cond = F.layer_norm(
-                queries_single_cond, queries_single_cond.shape[-1:]
-            )
+            queries_single_cond = self.atom_cond_layer_norm(queries_single_cond)
 
         if not self.spec.pre_trunk_atom_query:
             query_base = queries_single_cond
@@ -927,12 +936,12 @@ class AtomCrossAttDecoder(nn.Module):
         # A second, affine norm over the encoder's atom conditioning. AF3 reuses
         # the encoder's unchanged.
         self.post_atom_cond_layer_norm = (
-            nn.LayerNorm(self.per_atom_channels, bias=True)
+            engine_modules.layer_norm(self.per_atom_channels, bias=True)
             if spec.post_atom_cond_norm
             else None
         )
 
-        self.atom_features_layer_norm = nn.LayerNorm(
+        self.atom_features_layer_norm = engine_modules.layer_norm(
             self.per_atom_channels, bias="atom_features_layer_norm" in spec.affine_norms
         )
         self.atom_features_to_position_update = nn.Linear(

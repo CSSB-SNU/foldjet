@@ -26,6 +26,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from foldforge.modules.dense.spec import ALPHAFOLD3, DenseSpec
+from foldforge.modules.engine import modules as engine_modules
 from foldforge.utils import atom_layout
 
 Tensor = torch.Tensor
@@ -212,12 +213,12 @@ class AdaptiveLayerNorm(nn.Module):
             self.layer_norm = (
                 RMSNorm()
                 if rms_norm
-                else nn.LayerNorm(
+                else engine_modules.layer_norm(
                     self.c_x, eps=eps, elementwise_affine=False, bias=False
                 )
             )
             if not identity_scale:
-                self.single_cond_layer_norm = nn.LayerNorm(
+                self.single_cond_layer_norm = engine_modules.layer_norm(
                     self.c_single_cond, bias=False
                 )
             self.single_cond_scale = nn.Linear(
@@ -225,7 +226,7 @@ class AdaptiveLayerNorm(nn.Module):
             )
             self.single_cond_bias = nn.Linear(self.c_single_cond, self.c_x, bias=False)
         else:
-            self.layer_norm = nn.LayerNorm(self.c_x, eps=eps)
+            self.layer_norm = engine_modules.layer_norm(self.c_x, eps=eps)
 
     def project_cond(self, single_cond: torch.Tensor) -> tuple[Tensor, Tensor]:
         """The conditioning's scale and shift projections, which ``forward`` takes back as ``projected``: they read ``single_cond`` only, so a
@@ -463,8 +464,8 @@ class CrossAttention(nn.Module):
         self.key_masked = key_masked
         self.use_gating_query = gating_query
         if kq_norm:
-            self.query_layer_norm = nn.LayerNorm(key_dim)
-            self.key_layer_norm = nn.LayerNorm(key_dim)
+            self.query_layer_norm = engine_modules.layer_norm(key_dim)
+            self.key_layer_norm = engine_modules.layer_norm(key_dim)
         self.key_dim = key_dim
         self.value_dim = value_dim
         self.c_single_cond = c_single_cond
@@ -646,7 +647,7 @@ class DiffusionCrossAttTransformer(nn.Module):
         if self.per_block_pair:
             self.pair_input_layer_norm = nn.ModuleList(
                 [
-                    nn.LayerNorm(
+                    engine_modules.layer_norm(
                         self.c_pair_cond,
                         bias="pair_input_layer_norm" in spec.affine_norms,
                     )
@@ -660,7 +661,7 @@ class DiffusionCrossAttTransformer(nn.Module):
                 ]
             )
         else:
-            self.pair_input_layer_norm = nn.LayerNorm(
+            self.pair_input_layer_norm = engine_modules.layer_norm(
                 self.c_pair_cond,
                 bias="pair_input_layer_norm" in spec.affine_norms,
             )

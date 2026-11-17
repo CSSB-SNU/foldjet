@@ -17,6 +17,7 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 
+from foldforge.modules.engine import modules as engine_modules
 from foldforge.modules.engine.configure import engine_activation
 
 #: The vendor's structural-token roles.
@@ -54,7 +55,7 @@ class StructuralTokenExpander(nn.Module):
 
         self.single_input_role_embedding = nn.Embedding(N_ROLES, c_target_feat)
         self.single_role_embedding = nn.Embedding(N_ROLES, c_single)
-        self.single_split_norm = nn.LayerNorm(c_single)
+        self.single_split_norm = engine_modules.layer_norm(c_single)
         self.single_split_1 = nn.Linear(c_single, 2 * c_single, bias=False)
         self.single_split_2 = nn.Linear(2 * c_single, c_single, bias=False)
 

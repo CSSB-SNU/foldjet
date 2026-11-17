@@ -25,6 +25,7 @@ from foldforge.modules.dense import featurization, template
 from foldforge.modules.dense.pair_init import ContactConditioning, token_bond_types
 from foldforge.modules.dense.spec import ALPHAFOLD3, DenseSpec
 from foldforge.modules.engine import graph as engine_graph
+from foldforge.modules.engine import modules as engine_modules
 from foldforge.utils import atom_layout
 from foldforge.utils.device_constants import built_on_device
 
@@ -63,7 +64,7 @@ class DistogramHead(nn.Module):
         if hidden:
             # A head trained post-hoc on a frozen trunk, as an MLP rather than the
             # single projection AF3 reads the pair with.
-            self.input_layer_norm = nn.LayerNorm(self.c_pair)
+            self.input_layer_norm = engine_modules.layer_norm(self.c_pair)
             self.hidden = nn.Linear(self.c_pair, 2 * self.c_pair, bias=True)
             width = 2 * self.c_pair
         self.half_logits = nn.Linear(width, self.num_bins, bias=bias)
@@ -174,10 +175,10 @@ class ConfidenceReembedding(nn.Module):
         self.chain_bucket_on_same_chain = chain_bucket_on_same_chain
         if esm_classes:
             c_target_feat += 4
-        self.s_inputs_norm = nn.LayerNorm(c_target_feat)
-        self.s_norm = nn.LayerNorm(c_single)
+        self.s_inputs_norm = engine_modules.layer_norm(c_target_feat)
+        self.s_norm = engine_modules.layer_norm(c_single)
         self.s_input_to_s = nn.Linear(c_target_feat, c_single, bias=False)
-        self.z_norm = nn.LayerNorm(c_pair)
+        self.z_norm = engine_modules.layer_norm(c_pair)
         self.rel_pos_project = nn.Linear(139, c_pair, bias=False)
         self.token_bonds_project = nn.Linear(1, c_pair, bias=False)
         self.token_bonds_type_embed = nn.Linear(7, c_pair, bias=False)
@@ -347,7 +348,9 @@ class ConfidenceHead(nn.Module):
             [self._block(spec) for _ in range(n_pairformer_layers)]
         )
 
-        head_norm = nn.LayerNorm if spec.confidence_head_norms else nn.Identity
+        head_norm = (
+            engine_modules.layer_norm if spec.confidence_head_norms else nn.Identity
+        )
         self.logits_ln = head_norm(self.c_pair)
         self.left_half_distance_logits = nn.Linear(
             self.c_pair, self.num_bins, bias=False
@@ -441,7 +444,7 @@ class ConfidenceHead(nn.Module):
                 # throws away.
                 self.distance_feat_project = nn.Linear(1, self.c_pair, bias=False)
         if self.spec.confidence_single_clamp:
-            self.input_single_norm = nn.LayerNorm(self.c_single)
+            self.input_single_norm = engine_modules.layer_norm(self.c_single)
 
     def _embed_features(
         self,
