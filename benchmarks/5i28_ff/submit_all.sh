@@ -5,7 +5,7 @@
 set -euo pipefail
 : "${OUT_ROOT:?}" "${FOLDFORGE_5I28_FASTA:?}" "${FOLDFORGE_5I28_MSA_DB:?}" "${FOLDFORGE_5I28_TEMPLATE_DB:?}"
 HERE=$(cd "$(dirname "$0")" && pwd); export FOLDFORGE_REPO=${FOLDFORGE_REPO:-$(cd "$HERE/../.." && pwd)}
-MODELS=${MODELS:-"protenix1 protenix2 opendde esmfold2 af3 boltz2 chai1 openfold3 rosettafold3"}
+MODELS=${MODELS:-"protenix1 protenix2 opendde esmfold2 esmfold2-fast intellifold2 af3 boltz2 chai1 openfold3 rosettafold3"}
 mkdir -p "$OUT_ROOT/logs"; cd "$OUT_ROOT/logs"
 DEP=()
 if [ "${NO_GATE:-0}" != 1 ]; then

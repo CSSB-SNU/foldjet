@@ -50,6 +50,8 @@ MODELS: dict[str, tuple[int, int, dict]] = {
     "protenix2": (4, 4, {}),
     "opendde": (4, 4, {}),
     "esmfold2": (4, 0, {}),  # the checkpoint takes no templates
+    "esmfold2-fast": (4, 0, {}),  # same family, 24 trunk blocks, no MSA stack; no kit
+    "intellifold2": (4, 4, {}),  # the AF3 graph at wider channels; no kit
     "af3": (4, 4, {}),
     "boltz2": (4, 4, {}),
     "chai1": (4, 4, {}),
