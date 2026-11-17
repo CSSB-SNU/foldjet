@@ -496,7 +496,9 @@ def maybe_spawn_extras(p):
     ):
         return
     if (
-        sum(it["cost"] for b, q in sched.queues.items() if small(b) for it in q)
+        sched.unassigned(small)
+        == 0  # nothing small left (also after the end): never start a slot
+        or sum(it["cost"] for b, q in sched.queues.items() if small(b) for it in q)
         / len(gpus)
         < args.small_min_left_s
     ):
