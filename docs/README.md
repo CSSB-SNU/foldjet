@@ -14,6 +14,8 @@
   Addendum: [the atom DiT conditioning bug (n >= 12) and a rerun on the fixed engine](records/5i28_atom_blocks_check_20261112.md) (2026-11-12).
   A100: [nine models on an A100 80GB PCIe](records/5i28_foldforge_a100_20261112.md) (2026-11-12, Triton path, 4-5.5x slower than the H100).
   Kit side: [the Anthropic kits re-measured](records/5i28_anthropic_kits_20261111.md) (2026-11-11, ten kits, one H100 per job; harness in `benchmarks/5i28_kits/`, data in `records/data/`).
+- [FoldBench end to end](../benchmarks/foldbench/README.md): the walltime of all 1,522 FoldBench targets through FoldForge AF3 in one job on 1..N GPUs
+  (bucket-affine scheduler, small-target concurrency under MPS). Record: [2026-11-17](records/foldbench_e2e_20261117.md) (engine 2.5.12, 5.27 / 5.31 h vs af3kit 6.36 / 6.27 h).
 - [Code structure](guides/CODE-STRUCTURE.md): shared runtime and code ownership.
 - [Backends](guides/BACKENDS.md): `pytorch | cuda | triton | anthropic | cueq` (aliases `miniworld`, `cuequivariance`), `fallback | error`, precision `master | fp32`, how to compare backends. Measurements of the pre-2.5.0 engine: [archive](archive/BACKENDS-engine-2.3.md).
 - [What the engine does not support](ENGINE-UNSUPPORTED.md) (categorized: what, where, what FoldForge does meanwhile) and [requests to the engine team](ENGINE-REQUESTS.md) (numbered, prioritized).

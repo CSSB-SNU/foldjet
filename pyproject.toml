@@ -158,6 +158,10 @@ known-third-party = ["wandb"]
   "PLR0915",
   "T201",
 ]
+# The FoldBench end-to-end harness: a multi-process scheduler written as module-level scripts (globals shared with the receiver /
+# finisher threads, imports after the fork setup), node-local /tmp for the worker socket and the CUDA MPS pipe directory by design,
+# the engine-private featurisation hooks of FoldForge, long log-format lines. Imports, correctness and security otherwise still checked.
+"benchmarks/foldbench/**" = ["ANN", "E402", "E501", "SLF001", "SIM102", "SIM105", "SIM115", "PTH", "PLW0603", "TRY003", "TRY300", "EM102", "S108", "S603", "S607", "S112", "BLE001", "PLR2004", "PLR0912", "FBT002", "FBT003"]
 # The MiniWorld data adapter of the fine-tune and its tools: operational scripts run as `python file.py` / imported by
 # path (no package), lazy imports in the DataLoader workers, print logging. Imports, correctness and security still checked.
 "scripts/finetune/**" = ["D", "ANN", "S101", "INP001", "FBT001", "FBT002", "FBT003", "PLC0415", "C901", "PLR0912", "PLR0915", "T201", "E501", "PLR2004", "N803", "N806", "UP031", "TRY003", "EM101", "EM102", "PTH", "SLF001", "BLE001", "S301", "E402"]
