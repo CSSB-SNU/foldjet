@@ -1,0 +1,79 @@
+kit,n,tokens,value_s,mode,status,n_timed,forwards_s,templates,source,job,node
+af3_jax,1,128,1.040,fast,ok,5,50.310;1.760;1.050;1.050;1.040;1.040;1.040,templates_real=4/4,2026-11-18 steady,58122,node01
+af3_jax,2,256,1.570,fast,ok,5,41.100;2.300;1.570;1.570;1.570;1.570;1.560,templates_real=4/4,2026-11-18 steady,58123,node01
+af3_jax,4,512,2.890,fast,ok,5,40.820;3.810;2.890;2.880;2.890;2.890;2.880,templates_real=4/4,2026-11-18 steady,58123,node01
+af3_jax,8,1024,7.360,fast,ok,5,47.300;7.820;7.360;7.550;7.350;7.360;7.380,templates_real=4/4,2026-11-18 steady,58124,node01
+af3_jax,12,1536,15.030,fast,ok,5,54.970;15.430;15.020;15.110;15.020;15.040;15.030,templates_real=4/4,2026-11-18 steady,58124,node01
+af3_jax,16,2048,27.120,fast,ok,5,66.990;27.740;27.120;27.110;27.120;27.160;27.120,templates_real=4/4,2026-11-18 steady,58125,node01
+af3_torch,1,128,1.011,fast,ok,5,22.225;1.031;0.996;1.046;1.011;1.001;1.012,templates_real=4/4,2026-11-18 steady,58130,node01
+af3_torch,2,256,1.182,fast,ok,5,13.450;1.188;1.178;1.185;1.182;1.181;1.183,templates_real=4/4,2026-11-18 steady,58131,node01
+af3_torch,4,512,1.936,fast,ok,5,9.750;1.935;1.933;1.936;1.937;1.932;1.956,templates_real=4/4,2026-11-18 steady,58131,node01
+af3_torch,8,1024,5.380,fast,ok,5,15.337;5.370;5.372;5.380;5.534;5.379;5.382,templates_real=4/4,2026-11-18 steady,58132,node01
+af3_torch,12,1536,11.711,fast,ok,5,19.452;11.681;11.696;11.699;11.711;11.720;11.712,templates_real=4/4,2026-11-18 steady,58132,node01
+af3_torch,16,2048,21.984,fast,ok,5,27.971;21.945;21.963;21.984;21.986;22.002;21.977,templates_real=4/4,2026-11-18 steady,58133,node01
+openfold3,1,128,0.875,fast,ok,5,33.592;0.914;0.889;0.875;0.869;0.884;0.869,templates_real=4/4,2026-11-18 steady,58145,node01
+openfold3,2,256,1.174,fast,ok,5,3.341;1.214;1.170;1.170;1.176;1.174;1.179,templates_real=4/4,2026-11-18 steady,58146,node01
+openfold3,4,512,2.251,fast,ok,5,5.771;2.321;2.251;2.248;2.254;2.251;2.252,templates_real=4/4,2026-11-18 steady,58146,node01
+openfold3,8,1024,6.112,fast,ok,5,8.104;6.111;6.105;6.122;6.112;6.112;6.114,templates_real=4/4,2026-11-18 steady,58147,node01
+openfold3,12,1536,13.182,fast,ok,5,15.362;13.175;13.181;13.190;13.182;13.176;13.190,templates_real=4/4,2026-11-18 steady,58147,node01
+openfold3,16,2048,24.217,fast,ok,5,25.949;24.225;24.217;24.217;24.213;24.244;24.215,templates_real=4/4,2026-11-18 steady,58148,node01
+rosettafold3,1,128,2.167,fast,ok,5,16.635;2.225;2.208;2.173;2.167;2.165;2.157,templates_real=1/1,2026-11-18 steady,58138,node01
+rosettafold3,2,256,3.332,fast,ok,5,6.331;3.343;3.332;3.345;3.334;3.331;3.330,templates_real=1/1,2026-11-18 steady,58139,node01
+rosettafold3,4,512,4.203,fast,ok,5,7.459;4.203;4.199;4.203;4.201;4.204;4.218,templates_real=1/1,2026-11-18 steady,58139,node01
+rosettafold3,8,1024,9.113,fast,ok,5,13.924;9.103;9.075;9.106;9.114;9.120;9.113,templates_real=1/1,2026-11-18 steady,58140,node01
+rosettafold3,12,1536,17.480,fast,ok,5,19.460;17.474;17.496;17.486;17.479;17.479;17.480,templates_real=1/1,2026-11-18 steady,58140,node01
+rosettafold3,16,2048,30.042,fast,ok,5,49.819;29.999;30.093;30.042;29.990;29.965;30.189,templates_real=1/1,2026-11-18 steady,58141,node01
+chai1,1,128,3.633,fast,ok,5,183.634;3.623;3.600;3.617;3.633;3.703;3.690,templates_real=4/4,2026-11-18 steady,58115,node01
+chai1,2,256,3.641,fast,ok,5,33.582;3.645;3.637;3.637;3.641;3.659;3.646,templates_real=4/4,2026-11-18 steady,58117,node01
+chai1,4,512,7.703,fast,ok,5,43.053;7.736;7.748;7.659;7.703;7.632;7.781,templates_real=4/4,2026-11-18 steady,58117,node01
+chai1,8,1024,20.474,fast,ok,5,56.139;20.228;20.250;20.474;20.807;20.425;20.776,templates_real=4/4,2026-11-18 steady,58108,node01
+chai1,12,1536,40.382,fast,ok,5,84.976;40.629;39.949;40.382;40.350;40.740;42.548,templates_real=4/4,2026-11-18 steady,58116,node01
+chai1,16,2048,67.644,fast,ok,4,208.755;68.779;70.354;67.651;67.637;67.276,templates_real=4/4,2026-11-18 steady,58107,node01
+esmfold2,1,128,0.308,fast,ok,5,5.667;0.426;0.306;0.308;0.308;0.308;0.308,,2026-11-18 steady,58275,node01
+esmfold2,2,256,0.562,fast,ok,5,1.365;0.689;0.563;0.564;0.562;0.562;0.562,,2026-11-18 steady,58275,node01
+esmfold2,4,512,1.266,fast,ok,5,2.534;1.466;1.267;1.265;1.266;1.266;1.280,,2026-11-18 steady,58275,node01
+esmfold2,8,1024,3.944,fast,ok,5,4.328;4.215;3.941;3.944;3.944;3.949;3.958,,2026-11-18 steady,58275,node01
+esmfold2,12,1536,9.378,fast,ok,5,10.085;9.808;9.344;9.526;9.409;9.378;9.350,,2026-11-18 steady,58275,node01
+esmfold2,16,2048,,big,failed,0,,,2026-11-18 steady,58291,node01
+esmfold2_fast,1,128,0.284,fast,ok,5,30.784;0.429;0.284;0.284;0.284;0.283;0.285,,2026-11-18 steady,58112,node01
+esmfold2_fast,2,256,0.483,fast,ok,5,2.797;0.598;0.484;0.481;0.484;0.483;0.483,,2026-11-18 steady,58112,node01
+esmfold2_fast,4,512,1.001,fast,ok,5,4.469;1.232;1.003;1.003;1.001;1.000;1.000,,2026-11-18 steady,58112,node01
+esmfold2_fast,8,1024,2.780,fast,ok,5,4.400;3.066;2.780;2.783;2.780;2.772;2.785,,2026-11-18 steady,58112,node01
+esmfold2_fast,12,1536,6.698,fast,ok,5,7.248;7.018;6.746;6.698;6.618;6.698;6.607,,2026-11-18 steady,58112,node01
+esmfold2_fast,16,2048,,big,failed,0,,,2026-11-18 steady,58112,node01
+boltz2,1,128,0.691,fast,ok,5,4.483;0.684;0.704;0.681;0.685;0.705;0.691,,2026-11-15 steady (kit not re-run),54120,node02
+boltz2,2,256,1.209,fast,ok,5,2.189;1.189;1.200;1.209;1.209;1.204;1.217,,2026-11-15 steady (kit not re-run),54120,node02
+boltz2,4,512,2.718,fast,ok,5,3.824;2.716;2.729;2.718;2.699;3.283;2.700,,2026-11-15 steady (kit not re-run),54120,node02
+boltz2,8,1024,8.210,fast,ok,5,8.766;8.190;8.191;8.210;8.217;8.208;8.229,,2026-11-15 steady (kit not re-run),54120,node02
+boltz2,12,1536,17.961,fast,ok,5,18.878;17.926;17.953;17.963;17.961;17.961;17.975,,2026-11-15 steady (kit not re-run),54120,node02
+boltz2,16,2048,33.722,big,ok,5,36.311;33.725;33.676;33.774;33.730;33.722;33.685,,2026-11-18 steady,58292,node01
+protenix_v1,1,128,1.139,fast,ok,5,7.472;1.140;1.161;1.150;1.139;1.128;1.126,templates=[ 7 Found 4 templates; 7 real=4 dummy=0;],2026-11-18 steady,58109,node01
+protenix_v1,2,256,1.337,fast,ok,5,4.215;1.334;1.321;1.338;1.331;1.350;1.337,templates=[ 7 Found 4 templates; 7 real=4 dummy=0;],2026-11-18 steady,58109,node01
+protenix_v1,4,512,2.137,fast,ok,5,5.584;2.117;2.114;2.161;2.133;2.137;2.147,templates=[ 7 Found 4 templates; 7 real=4 dummy=0;],2026-11-18 steady,58109,node01
+protenix_v1,8,1024,6.438,fast,ok,5,8.598;6.325;6.355;6.535;6.389;6.438;6.463,templates=[ 7 Found 4 templates; 7 real=4 dummy=0;],2026-11-18 steady,58109,node01
+protenix_v1,12,1536,14.797,fast,ok,5,16.674;14.532;14.584;14.959;14.643;14.797;14.803,templates=[ 7 Found 4 templates; 7 real=4 dummy=0;],2026-11-18 steady,58109,node01
+protenix_v1,16,2048,32.391,fast,ok,5,35.477;31.932;32.080;32.839;32.230;32.391;32.429,templates=[ 7 Found 4 templates; 7 real=4 dummy=0;],2026-11-18 steady,58109,node01
+protenix_v2,1,128,0.660,fast,ok,5,17.372;0.664;0.653;0.660;0.673;0.665;0.660,templates=[ 7 Found 4 templates; 7 real=4/4;],2026-11-18 steady,58118,node01
+protenix_v2,2,256,1.030,fast,ok,5,3.333;1.021;1.020;1.044;1.020;1.030;1.034,templates=[ 7 Found 4 templates; 7 real=4/4;],2026-11-18 steady,58118,node01
+protenix_v2,4,512,2.296,fast,ok,5,4.318;2.243;2.265;2.335;2.277;2.296;2.305,templates=[ 7 Found 4 templates; 7 real=4/4;],2026-11-18 steady,58118,node01
+protenix_v2,8,1024,7.639,fast,ok,5,9.106;7.543;7.564;7.771;7.593;7.639;7.684,templates=[ 7 Found 4 templates; 7 real=4/4;],2026-11-18 steady,58118,node01
+protenix_v2,12,1536,17.865,fast,ok,5,19.353;17.661;17.701;18.134;17.801;17.865;18.003,templates=[ 7 Found 4 templates; 7 real=4/4;],2026-11-18 steady,58118,node01
+protenix_v2,16,2048,39.376,fast,ok,5,40.230;38.856;38.929;39.615;40.297;39.297;39.376,templates=[ 7 Found 4 templates; 7 real=4/4;],2026-11-18 steady,58118,node01
+opendde,1,128,4.223,fast,ok,5,30.720;4.647;4.223;4.075;4.224;4.331;4.085,templates=[ 7 Found 4 templates; 1 real=4/4;],2026-11-18 steady,58126,node01
+opendde,2,256,3.727,fast,ok,5,5.618;3.814;3.731;3.727;3.705;3.687;3.729,templates=[ 7 Found 4 templates; 1 real=4/4;],2026-11-18 steady,58126,node01
+opendde,4,512,6.954,fast,ok,5,14.776;6.915;6.945;7.022;6.980;6.954;6.847,templates=[ 7 Found 4 templates; 1 real=4/4;],2026-11-18 steady,58126,node01
+opendde,8,1024,23.676,fast,ok,5,25.888;23.960;24.132;23.573;23.676;23.659;23.702,templates=[ 7 Found 4 templates; 1 real=4/4;],2026-11-18 steady,58126,node01
+opendde,12,1536,58.970,fast,ok,5,61.836;59.010;58.970;58.785;58.984;58.955;59.100,templates=[ 7 Found 4 templates; 1 real=4/4;],2026-11-18 steady,58134,node01
+opendde,16,2048,482.831,big,ok,5,466.798;511.943;500.959;493.899;482.831;479.263;477.974,templates=[ 7 Found 4 templates; 1 real=4/4;],2026-11-18 steady,58436,node01
+intellifold2,1,128,1.500,fast,ok,5,40.010;2.090;1.500;1.500;1.500;1.500;1.500,templates_real=4/4,2026-11-18 steady,58113,node01
+intellifold2,2,256,3.720,fast,ok,5,46.300;4.220;3.720;3.710;3.720;3.710;3.720,templates_real=4/4,2026-11-18 steady,58113,node01
+intellifold2,4,512,12.360,fast,ok,5,54.320;12.850;12.360;12.360;12.350;12.350;12.370,templates_real=4/4,2026-11-18 steady,58113,node01
+intellifold2,8,1024,57.730,fast,ok,5,105.980;58.300;57.940;57.730;57.730;57.730;57.740,templates_real=4/4,2026-11-18 steady,58113,node01
+intellifold2,12,1536,,big(fast OOM),oom(fast+big),0,,templates_real=4/4,2026-11-18 steady,58114,node01
+intellifold2,16,2048,,big(fast OOM),oom(fast+big),0,,templates_real=4/4,2026-11-18 steady,58114,node01
+intellifold2_notxla,1,128,1.460,fast,ok,5,45.310;1.950;1.460;1.460;1.460;1.460;1.460,templates_real=4/4,2026-11-18 steady,58277,node01
+intellifold2_notxla,2,256,3.280,fast,ok,5,47.770;3.790;3.280;3.280;3.280;3.280;3.280,templates_real=4/4,2026-11-18 steady,58277,node01
+intellifold2_notxla,4,512,9.760,fast,ok,5,55.520;10.230;9.740;9.750;9.760;9.760;9.770,templates_real=4/4,2026-11-18 steady,58277,node01
+intellifold2_notxla,8,1024,38.760,fast,ok,5,85.650;39.420;38.780;38.760;38.760;38.750;38.790,templates_real=4/4,2026-11-18 steady,58277,node01
+intellifold2_notxla,12,1536,96.320,fast,ok,5,143.100;97.000;96.500;96.440;96.200;96.200;96.320,templates_real=4/4,2026-11-18 steady,58278,node01
+intellifold2_notxla,16,2048,188.370,fast,ok,5,228.150;189.180;189.040;188.390;188.260;188.270;188.370,templates_real=4/4,2026-11-18 steady,58121,node01
