@@ -327,6 +327,18 @@ with ff.load_model(args.model, config=config, checkpoint=args.checkpoint, device
     ex = getattr(model, "_execution", None)
     load_s = time.time() - t_all
     log(f"model {args.model} loaded in {load_s:.0f} s")
+    # Engine 3.x FP8 (MINIWORLD_FP8 set): log the routes in force; after every trunk_seed group, outside any graph, fp8.check() -- a route
+    # that saturated the e4m3 range had its scale raised in place, so the group is run again (at most FP8_REDO times; then kept and logged).
+    FP8 = None
+    try:
+        import miniworld_engine.fp8 as _fp8
+
+        if _fp8.preset():
+            FP8 = _fp8
+            log(f"FB_FP8 preset={_fp8.preset()} model={_fp8.model()} status={_fp8.status()}")
+    except ImportError:
+        pass
+    FP8_REDO = 3
 
     gstate = {"res_bucket": None, "graphs": True}
 
@@ -492,6 +504,7 @@ with ff.load_model(args.model, config=config, checkpoint=args.checkpoint, device
             fetched = set()
             si = 0
             rank_basis = None
+            fp8_redo: dict = {}
             while si < len(seeds):
                 bucket = res_bucket(inputs)
                 g = max(
@@ -572,6 +585,17 @@ with ff.load_model(args.model, config=config, checkpoint=args.checkpoint, device
                     )
                     send("groupcap", bucket, state["group_cap"][bucket])
                     continue
+                if FP8 is not None and FP8.check():
+                    fp8_redo[si] = fp8_redo.get(si, 0) + 1
+                    if fp8_redo[si] <= FP8_REDO:
+                        log(
+                            f"FB_FP8_SATURATED {t} seeds={[r[0] for r in recs]} redo {fp8_redo[si]}/{FP8_REDO} (scales raised)"
+                        )
+                        del results_, recs
+                        continue
+                    log(
+                        f"FB_FP8_SATURATED_KEPT {t} seeds={[r[0] for r in recs]}: still saturated after {FP8_REDO} redos, kept"
+                    )
                 for (s, _trunk, t_trunk, wait_loader), res in zip(
                     recs, results_, strict=True
                 ):
@@ -638,6 +662,7 @@ with ff.load_model(args.model, config=config, checkpoint=args.checkpoint, device
                             "load_wait_s": load_wait,
                             "stages": stages,
                             "graphs": gstate["graphs"],
+                            "fp8_redo": sum(fp8_redo.values()) if FP8 is not None else None,
                             "peak_alloc_gib": round(
                                 torch.cuda.max_memory_allocated() / 2**30, 1
                             ),
@@ -648,6 +673,9 @@ with ff.load_model(args.model, config=config, checkpoint=args.checkpoint, device
                     )
                 )
             send("computed", t, round(gpu_s, 2), round(load_wait, 2))
+            if FP8 is not None and hasattr(FP8, "route_stats") and not state.get("fp8_routes_logged"):
+                state["fp8_routes_logged"] = True  # once, after the first target: the routes this worker's model takes
+                log(f"FB_FP8_ROUTES first_target={t} {json.dumps(FP8.route_stats(), sort_keys=True)}")
         except Exception as exc:
             busy_s += time.time() - tw
             kind = type(exc).__name__
@@ -689,6 +717,8 @@ with ff.load_model(args.model, config=config, checkpoint=args.checkpoint, device
         pending.clear()
     for it in rest:
         finish(it, block=True)
+    if FP8 is not None and hasattr(FP8, "route_stats"):  # engine >= 3.0.2: which FP8 routes fired (eager / capture-time counts; replays do not count)
+        log(f"FB_FP8_ROUTES {json.dumps(FP8.route_stats(), sort_keys=True)}")
     send("bye", round(busy_s, 1), exit_code)
 for _ in fprocs:
     jobq.put(None)
