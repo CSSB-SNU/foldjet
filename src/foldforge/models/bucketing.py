@@ -25,10 +25,10 @@ TOKEN_SHAPES = tuple(range(TOKEN_BUCKET_SIZE, ATOM_SHAPES[-1] + 1, TOKEN_BUCKET_
 # 1024 is the shared inference policy's per-recycle MSA sample; without it every
 # adapter padded those rows to 2048 and ran the MSA stack half on padding.
 MSA_SHAPES = (1024, 2048, 4096, 8192, 16384)
-# FoldForge's own atom ladder (the engine keeps no shape-key constant any more); the two
-# extra rungs only size padding so long homo-oligomer inputs can run until memory,
+# FoldForge's own atom ladder (the engine keeps no shape-key constant any more); the
+# rungs above 8192 only size padding so long homo-oligomer inputs can run until memory,
 # not the ladder, stops them.
-ATOM_BUCKETS = (*ATOM_SHAPES, 16384, 32768)
+ATOM_BUCKETS = (*ATOM_SHAPES, 16384, 32768, 40960, 49152, 65536, 98304, 131072)
 
 
 def token_bucket(size: int) -> int:

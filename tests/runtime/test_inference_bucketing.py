@@ -54,11 +54,13 @@ def test_policy_keeps_atom_msa_edges_and_uses_128_step_tokens():
     from foldforge.models.bucketing import ATOM_BUCKETS
 
     assert ATOM_BUCKETS[: len(ATOM_SHAPES)] == ATOM_SHAPES
-    assert ATOM_BUCKETS[len(ATOM_SHAPES) :] == (16384, 32768)
+    assert ATOM_BUCKETS[len(ATOM_SHAPES) :] == (16384, 32768, 40960, 49152, 65536, 98304, 131072)
     assert BucketShape.select(4096, 31456, 3).atom_bucket == 32768
     assert BucketShape.select(1024, 8193, 3).atom_bucket == 16384
+    assert BucketShape.select(4224, 32769, 3).atom_bucket == 40960
+    assert BucketShape.select(6144, 58368, 3).atom_bucket == 65536
     with pytest.raises(ValueError, match="atoms"):
-        BucketShape.select(4096, 32769, 3)
+        BucketShape.select(8192, 131073, 3)
     assert BucketShape.select(1140, 4591, 2049) == BucketShape(
         1140, 4591, 2049, 1152, 8192, 4096
     )
@@ -67,7 +69,7 @@ def test_policy_keeps_atom_msa_edges_and_uses_128_step_tokens():
         with pytest.raises(ValueError, match="tokens"):
             token_bucket(size)
     with pytest.raises(ValueError, match="atoms"):
-        BucketShape.select(1140, 32769, None)
+        BucketShape.select(1140, 131073, None)
     with pytest.raises(ValueError, match="msa"):
         BucketShape.select(1140, 4591, 16385)
 
