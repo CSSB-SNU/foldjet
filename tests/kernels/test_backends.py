@@ -91,17 +91,14 @@ def test_choose_backend(monkeypatch):
     name, why = backends.choose_backend("anthropic", AdaptiveLayerNorm)
     assert name == "pytorch"
     assert "no 'anthropic' backend" in why
-    # the RTX 5090: cuda
-    monkeypatch.setattr(backends, "capability", lambda _d: (12, 0))
-    assert backends.choose_backend("miniworld", Transition) == ("cuda", None)
-    assert backends.choose_backend("cuda", Transition) == ("cuda", None)
-    # another card (A100): triton, and cuda is refused by name
-    monkeypatch.setattr(backends, "capability", lambda _d: (8, 0))
-    assert backends.choose_backend("miniworld", Transition) == ("triton", None)
-    assert (
-        backends.choose_backend("cuda", Transition)[1]
-        == "the cuda backend is used on H100 (sm_90) and RTX 5090 (sm_120) only"
-    )
+    # every card: cuda is the default (A100 sm_80, RTX 5090 sm_120); no device: pytorch
+    for cc in ((8, 0), (12, 0)):
+        monkeypatch.setattr(backends, "capability", lambda _d, cc=cc: cc)
+        assert backends.choose_backend("miniworld", Transition) == ("cuda", None)
+        assert backends.choose_backend("cuda", Transition) == ("cuda", None)
+    monkeypatch.setattr(backends, "capability", lambda _d: None)
+    assert backends.choose_backend("miniworld", Transition) == ("pytorch", None)
+    assert backends.choose_backend("cuda", Transition)[0] == "pytorch"
 
 
 def test_plan_resolve_reports_refused_ops(monkeypatch, caplog):

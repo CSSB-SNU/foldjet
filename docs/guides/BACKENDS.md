@@ -20,13 +20,13 @@ engine:
 | `triton` | the engine's portable Triton kernels; the module must have them |
 | `anthropic` | the engine's connection to Anthropic's uplifting-biomolecular-modeling release (a baseline: connected, never gated on accuracy) |
 | `cueq` | the engine's connection to NVIDIA cuEquivariance (a baseline) |
-| `miniworld` (default, alias) | the engine's own kernels, chosen **per module class**: `cuda` where the class has it and the card is an H100, else `triton` where the class has it and a CUDA device exists, else `pytorch` (not a refusal) |
+| `miniworld` (default, alias) | the engine's own kernels, chosen **per module class**: `cuda` where the class has it and a CUDA device exists (every card: H100, A100, RTX 5090, ...; the engine refuses a call outside a card's range itself and the ladder runs `triton`, then `pytorch`), else `triton` where the class has it and a CUDA device exists, else `pytorch` (not a refusal) |
 | `cuequivariance` (alias) | `cueq` |
 
 `miniworld_engine` (the engine package name) is accepted by the loader as `miniworld`. The aliases are FoldForge policy (`modules/engine/backends.py::ALIASES`);
 the engine itself knows only `pytorch | cuda | triton | anthropic | cueq`.
 
-A named backend (`cuda`, `triton`, `anthropic`, `cueq`) the module class does not have, `cuda` off an H100, and `cuda` / `triton` without a CUDA
+A named backend (`cuda`, `triton`, `anthropic`, `cueq`) the module class does not have, and `cuda` / `triton` without a CUDA
 device are **refusals**: the module runs `pytorch` and the reason is recorded. Whether a particular CALL is inside a backend's range (shape, dtype,
 mask, gradient) is the module's own `unsupported(*args)`, asked at the call.
 

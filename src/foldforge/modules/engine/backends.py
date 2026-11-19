@@ -71,10 +71,6 @@ OP_CLASSES: dict[str, tuple[str, ...]] = {
 OPS = tuple(OP_CLASSES)
 UNSUPPORTED = ("fallback", "error")
 
-#: Cards whose engine `cuda` backend FoldForge uses: H100 (sm_90) and RTX 5090 (sm_120; engine cards 5090_sm120 since 2.5.x). The A100
-#: (sm_80) stays on triton until the engine fixes its TriAttn training path (sm80 forward_train called the attention op without key_mask).
-_CUDA_CARDS = ((9, 0), (12, 0))
-
 
 class BackendUnsupportedError(RuntimeError):
     """A (backend, module) combination the engine does not serve, with ``engine.unsupported: error``."""
@@ -143,15 +139,16 @@ def choose_backend(  # noqa: PLR0911 - one return per refusal reason
 ) -> tuple[str, str | None]:
     """``(backend, reason)`` of one engine class: the backend it runs under ``requested`` and, when that is not what was asked for, why.
 
-    ``miniworld`` is the policy of the engine's own kernels: ``cuda`` where the class has it and the card is an H100 or an RTX 5090, else ``triton`` where
-    the class has it and a CUDA device exists, else ``pytorch`` (not a refusal: nothing named was asked for). A named backend the class
-    does not have, or ``cuda`` off those cards, is a refusal: ``pytorch`` runs and the reason says why (``engine.unsupported: error`` raises
-    it). Whether a CALL is in the backend's range is the module's own ``unsupported()``, asked when it is made."""
+    ``miniworld`` is the policy of the engine's own kernels: ``cuda`` where the class has it and a CUDA device exists, on every card (the
+    engine serves its cards and refuses a call outside a card's range itself; the ladder then runs triton, then pytorch), else ``triton``
+    where the class has it and a CUDA device exists, else ``pytorch`` (not a refusal: nothing named was asked for). A named backend the class
+    does not have, or ``cuda`` / ``triton`` without a CUDA device, is a refusal: ``pytorch`` runs and the reason says why
+    (``engine.unsupported: error`` raises it). Whether a CALL is in the backend's range is the module's own ``unsupported()``, asked when it is made."""
     name = ALIASES.get(requested, requested)
     have = tuple(cls.backends)
     cc = capability(device)
     if name is None:
-        if "cuda" in have and cc in _CUDA_CARDS:
+        if "cuda" in have and cc is not None:
             return "cuda", None
         if "triton" in have and cc is not None:
             return "triton", None
@@ -163,8 +160,6 @@ def choose_backend(  # noqa: PLR0911 - one return per refusal reason
             "pytorch",
             f"{cls.__name__} has no {name!r} backend (available: {', '.join(have)})",
         )
-    if name == "cuda" and cc not in _CUDA_CARDS:
-        return "pytorch", "the cuda backend is used on H100 (sm_90) and RTX 5090 (sm_120) only"
     if name in ("cuda", "triton") and cc is None:
         return "pytorch", f"the {name} backend needs a CUDA device"
     return name, None
