@@ -328,6 +328,12 @@ with ff.load_model(args.model, config=config, checkpoint=args.checkpoint, device
     load_s = time.time() - t_all
     log(f"model {args.model} loaded in {load_s:.0f} s")
 
+    # FP8 guard contract (miniworld_engine/fp8.py): after every forward, outside any graph, fp8.check() once; True = a static-scale route saturated
+    # and was rescaled -> run that forward again (at most 3 times). Active only when MINIWORLD_FP8 is set; the counts go to run.json ("fp8").
+    fp8_mod = None
+    if os.environ.get("MINIWORLD_FP8"):
+        import miniworld_engine.fp8 as fp8_mod
+
     gstate = {"res_bucket": None, "graphs": True}
 
     def res_bucket(inputs):
@@ -407,6 +413,7 @@ with ff.load_model(args.model, config=config, checkpoint=args.checkpoint, device
                         "peak_alloc_gib": meta.get("peak_alloc_gib"),
                         "peak_reserved_gib": meta.get("peak_reserved_gib"),
                         "multi": {"worker": WID, "graphs": meta["graphs"]},
+                        **({"fp8": meta["fp8"]} if meta.get("fp8") else {}),
                     }
                 )
             )
@@ -492,6 +499,9 @@ with ff.load_model(args.model, config=config, checkpoint=args.checkpoint, device
             fetched = set()
             si = 0
             rank_basis = None
+            fp8_info = {"checks": 0, "saturated": 0, "redo": 0, "unresolved": 0}
+            if fp8_mod is not None:
+                fp8_mod.check()  # clear a flag left by loading or the previous target
             while si < len(seeds):
                 bucket = res_bucket(inputs)
                 g = max(
@@ -572,6 +582,14 @@ with ff.load_model(args.model, config=config, checkpoint=args.checkpoint, device
                     )
                     send("groupcap", bucket, state["group_cap"][bucket])
                     continue
+                if fp8_mod is not None:
+                    fp8_info["checks"] += 1
+                    if fp8_mod.check():  # a route saturated: its scales were raised in place; run this group again (as the OOM path does)
+                        fp8_info["saturated"] += 1
+                        if fp8_info["redo"] < 3:
+                            fp8_info["redo"] += 1
+                            continue
+                        fp8_info["unresolved"] += 1  # still saturated after 3 redos: kept, flagged in run.json
                 for (s, _trunk, t_trunk, wait_loader), res in zip(
                     recs, results_, strict=True
                 ):
@@ -638,6 +656,7 @@ with ff.load_model(args.model, config=config, checkpoint=args.checkpoint, device
                             "load_wait_s": load_wait,
                             "stages": stages,
                             "graphs": gstate["graphs"],
+                            "fp8": fp8_info if fp8_mod is not None else None,
                             "peak_alloc_gib": round(
                                 torch.cuda.max_memory_allocated() / 2**30, 1
                             ),
