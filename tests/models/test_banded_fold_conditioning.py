@@ -266,3 +266,28 @@ def test_a_release_inside_sampling_leaves_one_collection_for_the_next_call(monke
     assert run._collect_pending is False
     run.release_fold_state()
     assert collections == ["gc"]  # once
+
+
+def test_band_decision_uses_the_unbanded_peak_not_the_pair_copy(monkeypatch):
+    """AF3 at 19 chains of 128 tokens: the fp32 pair copy is 3 GiB (the old 4 GiB rule: unbanded), the conditioning peak 17.6 GiB."""
+    spec = specs.ALPHAFOLD3
+    head = DiffusionHead(spec)
+    n = 19 * 128
+    pair = torch.empty(1, 1, 1).expand(n, n, spec.pair_channel)
+    c_cat = spec.pair_channel + 139
+    peak = head._unbanded_peak_bytes(pair)
+    # 128 (cast copy) + 139 (relative features) + 2 x 267 (concatenation, LayerNorm output) channels, fp32
+    assert peak == n * n * 4 * (spec.pair_channel + 139 + 2 * c_cat)
+    assert n * n * spec.pair_channel * 4 < 4 << 30 < peak
+    assert head._pair_band_rows(pair) is None  # CPU tensor: the fixed 24 GiB cap alone; 17.6 GiB is below it
+
+    # a CUDA pair: 40% of what the allocator can still hand out is the limit
+    fake = SimpleNamespace(is_cuda=True, device="cuda:0", shape=pair.shape, element_size=pair.element_size)
+    monkeypatch.setattr(torch.cuda, "mem_get_info", lambda device: (20 << 30, 32 << 30))
+    monkeypatch.setattr(torch.cuda, "memory_reserved", lambda device: 6 << 30)
+    monkeypatch.setattr(torch.cuda, "memory_allocated", lambda device: 2 << 30)
+    assert DiffusionHead._band_limit_bytes(fake) == pytest.approx(0.4 * (24 << 30))  # (20 + 6 - 2) GiB spare
+    monkeypatch.setattr(torch.cuda, "mem_get_info", lambda device: (70 << 30, 80 << 30))
+    assert DiffusionHead._band_limit_bytes(fake) == 24 << 30  # the cap binds on a big card
+    monkeypatch.setattr(torch.cuda, "mem_get_info", lambda device: (_ for _ in ()).throw(RuntimeError("capture")))
+    assert DiffusionHead._band_limit_bytes(fake) == 24 << 30
