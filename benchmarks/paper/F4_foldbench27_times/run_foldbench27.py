@@ -157,11 +157,14 @@ def main() -> None:
     meta = ffpaper.run_meta(experiment="F4", model=args.model, arm=args.arm, config=config)
     (args.out / "meta").mkdir(parents=True, exist_ok=True)
     (args.out / "meta" / f"{args.arm}__{args.model}.json").write_text(json.dumps(meta, indent=1))
-    ident = {k: meta[k] for k in ("card", "gpu", "host", "slurm_job_id", "foldforge_commit", "engine_version_installed", "engine_loaded_from")}
+    ident = {k: meta[k] for k in ("card", "gpu", "host", "slurm_job_id", "foldforge_commit", "engine_version_installed", "engine_version_loaded", "engine_loaded_from")}
     import torch
 
     t_load = time.monotonic()
     with ff.load_model(args.model, config=config, device="cuda:0") as model:
+        if args.arm != "torch":
+            ffpaper.backend_plan()  # first in the log: every engine class must be served by cuda (a Triton / PyTorch route in an engine run is a bug)
+        table_done = args.arm == "torch"
         print(f"loaded {args.model} in {time.monotonic() - t_load:.1f} s gpu={meta['gpu']} engine={meta['engine_version_installed']} from {meta['engine_loaded_from']}", flush=True)
         for target, task, tokens in todo:
             if time.monotonic() - start > args.deadline_s:
@@ -195,6 +198,10 @@ def main() -> None:
                                              "model_seconds_cold": result.report.get("model_seconds_cold"),
                                              "peak_alloc_gib": round(torch.cuda.max_memory_allocated() / 2**30, 2),
                                              "report_seconds": report, "out": str(out)})
+                if not table_done:  # per-class backend table after the first forward
+                    tab = ffpaper.backend_table(model)
+                    table_done = True
+                    ffpaper.append_jsonl(args.out / "meta" / f"{args.arm}__{args.model}_backends.jsonl", {"target": target, "all_cuda": tab["all_cuda"] if tab else None, "table": tab})
                 print(f"ok {target} tokens={tokens} warm={result.report.get('model_seconds_warm_median')} wall={wall:.1f}s redo={redo}", flush=True)
             except Exception as error:  # noqa: BLE001
                 ffpaper.append_jsonl(jsonl, {**base, "status": "error", "oom": ffpaper.oom_of(error) is not None, "error": f"{type(error).__name__}: {str(error)[:500]}",

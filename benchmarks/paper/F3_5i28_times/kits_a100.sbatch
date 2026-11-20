@@ -6,7 +6,7 @@
 # the repository. Kits are never modified; kit-native modes only (fast, big on fast OOM), no other retry.
 #SBATCH -p A100
 #SBATCH --gres=gpu:1
-#SBATCH -c 16
+#SBATCH --cpus-per-task=8
 #SBATCH --mem=120G
 #SBATCH --time=04:00:00
 #SBATCH -o /home/psk6950/foldforge-scratch/paper/logs/%x_%j.log
@@ -20,7 +20,7 @@ mkdir -p "$DONE" "$R/queues"
 export KIT_BENCH
 bash "$HERE/F3_5i28_times/kits/queue_lines.sh" "$KIT" ${SIZES:-1 2 4 8 12 16} > "$R/queues/$KIT.txt"
 cat "$R/queues/$KIT.txt"
-export NG=1 QFILE=$R/queues/$KIT.txt PIN=16 PY=$FF_ENV/bin/python
+export QFILE=$R/queues/$KIT.txt PIN=8   # the A100 harness copy of queue3.sh (no host probe: no python on the host side there)
 echo "JOB $SLURM_JOB_ID host=$(hostname) kit=$KIT rep=${REP:-1} $(date -Is)"
-bash "$KIT_BENCH/queue3.sh"
+bash "$KIT_BENCH/queue_a100.sh"
 echo "END $(date -Is)"

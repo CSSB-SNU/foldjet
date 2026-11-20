@@ -55,7 +55,8 @@ def foldforge_rows(card_dir: Path) -> list[dict]:
             "fp8_saturated": ("" if arm == "engine" else str(any(bool(r.get("fp8_saturated")) for r in last.values()))),
             "jobs": ";".join(sorted({str(r.get("slurm_job_id")) for r in last.values()})),
             "foldforge_commit": ";".join(sorted({r.get("foldforge_commit", "")[:9] for r in last.values()})),
-            "engine": ";".join(sorted({str(r.get("engine")) for r in last.values()})),
+            "engine": ";".join(sorted({str(r.get("engine_loaded") or r.get("engine")) for r in last.values()})),
+            "all_cuda": ";".join(sorted({str(r.get("all_cuda")) for r in last.values()})),
         })
     return rows
 

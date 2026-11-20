@@ -64,6 +64,8 @@ def main() -> int:
     if not todo:
         return 0
     predictor = ff.load_model(args.model, config=config)
+    ffpaper.backend_plan()  # first in the log: every engine class must be served by cuda (a Triton / PyTorch route in an engine run is a bug)
+    table_done = False
     if args.arm == "engine_fp8":
         ffpaper.fp8_check()  # clear a flag left from loading
     for n in todo:
@@ -72,7 +74,8 @@ def main() -> int:
         torch.cuda.reset_peak_memory_stats()
         cell = {"experiment": "F3", "model": args.model, "arm": args.arm, "rep": args.rep, "n": n, "tokens": H.TOKENS_PER_CHAIN * n,
                 "card": meta["card"], "gpu": meta["gpu"], "host": meta["host"], "slurm_job_id": meta["slurm_job_id"],
-                "foldforge_commit": meta["foldforge_commit"], "engine": meta["engine_version_installed"], "engine_from": meta["engine_loaded_from"]}
+                "foldforge_commit": meta["foldforge_commit"], "engine": meta["engine_version_installed"], "engine_from": meta["engine_loaded_from"],
+                "engine_loaded": meta["engine_version_loaded"]}
         t0 = time.time()
         try:
             result = predictor(ff.load_inputs(spec))
@@ -86,6 +89,10 @@ def main() -> int:
                 "cuda_graph_captures": report.get("cuda_graph_captures"), "compile": report.get("compile"),
             }
             result = None
+            if not table_done:  # per-class backend table after the first forward (set vs served vs refused host calls)
+                tab = ffpaper.backend_table(predictor)
+                cell["all_cuda"] = tab["all_cuda"] if tab else None
+                table_done = True
         except Exception as error:  # noqa: BLE001 - a failed cell is data
             oom = ffpaper.oom_of(error)
             cell |= {"status": "oom" if oom else "failed", "error": str(oom or error).splitlines()[0][:300],

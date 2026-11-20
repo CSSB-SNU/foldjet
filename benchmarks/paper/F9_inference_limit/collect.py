@@ -31,7 +31,7 @@ def main() -> None:
         probes = [json.loads(x) for x in (lim.parent / "sizes.jsonl").read_text().splitlines() if x.strip()]
         ident = next((p for p in probes if p.get("foldforge_commit")), {})
         rows.append({"card": a.card, **s, "tried": ";".join(map(str, s.get("tried", []))),
-                     **{k: ident.get(k, "") for k in ("gpu", "gpu_total_gib", "host", "slurm_job_id", "foldforge_commit", "engine_version_installed", "engine_loaded_from", "exec")}})
+                     **{k: ident.get(k, "") for k in ("gpu", "gpu_total_gib", "host", "slurm_job_id", "foldforge_commit", "engine_version_installed", "engine_version_loaded", "engine_loaded_from", "exec", "all_cuda")}})
         for p in sorted(probes, key=lambda p: p["n"]):
             sizes.append({"card": a.card, "predictor": pred, "arm": arm, **{k: p.get(k, "") for k in (
                 "n", "tokens", "status", "model_peak_alloc_gib", "model_peak_reserved_gib", "process_peak_alloc_gib", "process_peak_reserved_gib", "model_s", "wall_s",

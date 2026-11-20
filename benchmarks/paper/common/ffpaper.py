@@ -77,7 +77,7 @@ def run_meta(**extra) -> dict:
     try:
         import miniworld_engine
 
-        engine_from = str(Path(miniworld_engine.__file__).parent)
+        engine_from = str(list(miniworld_engine.__path__)[0])
     except Exception:  # noqa: BLE001
         engine_from = None
     try:
@@ -90,6 +90,7 @@ def run_meta(**extra) -> dict:
         "foldforge_dirty": bool(_git(repo, "status", "--porcelain", "--untracked-files=no")),
         "engine_version_installed": engine,
         "engine_loaded_from": engine_from,  # differs from the installed one when PYTHONPATH shadows it (a release candidate)
+        "engine_version_loaded": engine_source_version(engine_from) or engine,
         "engine_source_override": os.environ.get("PYTHONPATH", "") or None,
         "torch": torch.__version__,
         "gpu": gpu,
@@ -150,4 +151,61 @@ def oom_of(error: BaseException | None) -> BaseException | None:
         if isinstance(error, torch.OutOfMemoryError):
             return error
         error = error.__cause__ or error.__context__
+    return None
+
+
+def backend_plan(device: str = "cuda:0") -> dict | None:
+    """Per op class, the backend FoldForge's engine policy chooses on this card (printed first in a real run: a Triton / PyTorch route in an engine run is a bug)."""
+    try:
+        import torch
+        from foldforge.modules.engine.backends import OPS, choose_backend, op_classes
+
+        dev = torch.device(device)
+        plan = {op: {c.__name__: choose_backend("miniworld", c, dev)[0] for c in op_classes(op)} for op in OPS}
+        print("BACKEND_PLAN " + json.dumps(plan, default=str), flush=True)
+        return plan
+    except Exception as error:  # noqa: BLE001 - diagnostics never break a run
+        print("BACKEND_PLAN unavailable:", repr(error)[:200], flush=True)
+        return None
+
+
+def backend_table(predictor) -> dict | None:
+    """What the modules of a loaded predictor were set to and what the engine really served (host calls) per class, after a forward. `all_cuda`: every class set to cuda,
+    every served call cuda, no refused call."""
+    try:
+        import collections
+
+        from foldforge.modules.engine.serving import report_observations
+
+        rep = report_observations(predictor._network)["modules"]
+        agg = collections.defaultdict(lambda: [collections.Counter(), collections.Counter(), collections.Counter(), 0])
+        for m in rep.values():
+            a = agg[m["class"]]
+            a[0][str(m["backend"])] += 1
+            a[1].update(m["served_host_calls"])
+            a[2].update(m["refused_host_calls"])
+            a[3] += 1
+        all_cuda = True
+        classes = {}
+        for c, (s, v, r, k) in sorted(agg.items()):
+            classes[c] = {"modules": k, "set": dict(s), "served": dict(v), "refused": dict(r)}
+            all_cuda &= set(s) <= {"cuda"} and set(v) <= {"cuda"} and not r
+        out = {"all_cuda": bool(all_cuda), "classes": classes}
+        print("BACKEND_TABLE " + json.dumps(out, default=str), flush=True)
+        return out
+    except Exception as error:  # noqa: BLE001
+        print("BACKEND_TABLE unavailable:", repr(error)[:200], flush=True)
+        return None
+
+
+def engine_source_version(engine_from: str | None) -> str | None:
+    """Version of an engine source tree that shadows the installed engine (a release candidate): `version` of the pyproject.toml above `src/`."""
+    if not engine_from:
+        return None
+    for parent in Path(engine_from).parents[:3]:
+        toml = parent / "pyproject.toml"
+        if toml.exists():
+            for line in toml.read_text().splitlines():
+                if line.strip().startswith("version"):
+                    return line.split("=", 1)[1].strip().strip('"')
     return None

@@ -38,7 +38,7 @@ def main() -> None:
             if r["status"] == "ok" and r.get("model_seconds_warm_median") is not None:
                 c[arm] = r["model_seconds_warm_median"]
                 c[f"{arm}_peak_gib"] = r.get("peak_alloc_gib", "")
-                for k in ("foldforge_commit", "engine_version_installed", "slurm_job_id", "host", "gpu"):
+                for k in ("foldforge_commit", "engine_version_installed", "engine_version_loaded", "slurm_job_id", "host", "gpu"):
                     c.setdefault(f"{arm}_{k}", r.get(k, ""))
                 c.pop(f"{arm}_failed", None)
             else:
