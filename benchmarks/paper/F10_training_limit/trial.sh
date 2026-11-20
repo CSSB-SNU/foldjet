@@ -22,6 +22,6 @@ cd "$FF_REPO" || exit 1
 { echo "TRIALMETA card=$CARD host=$(hostname) slurm_job=${SLURM_JOB_ID:-none} arm=$ARM tokens=$L atoms=$A aug_chunk=$CHUNK ckpt=$CKPT blocks=$NB $(date -Is)"
   ${TRIAL_WRAPPER:-} python "$HERE/../train_common/trial_main.py" --bench --model protenix1 --backend "$backend" --recipe protenix --steps 3 --grad-accum 1 --warmup-steps 1 \
     --augment-chunk "$CHUNK" --bench-bucket --bench-tokens "$L" --bucket-atoms "$A" --bench-pool "$(cat "$HERE/../train_common/pool_targets.txt")" \
-    --bench-pool-cache "$POOL_DIR/pool_protenix1.pt" --msa-rows 1024 --recycles 4 --run-dir "$OUT/runs/trial" --step-graph "${extra[@]}" 2>&1 | grep -av "Warning\|warn"
+    --bench-pool-cache "$POOL_DIR/pool_protenix1.pt" --msa-rows 1024 --recycles 4 --run-dir "$OUT/runs/trial" --step-graph "${extra[@]}" 2>&1 | grep -a --line-buffered -v "Warning\|warn"
   echo "rc=${PIPESTATUS[0]} $(date -Is)"; } > "$LOG"
 exit 0

@@ -39,7 +39,7 @@ for rep in $(seq 1 "$REPEATS"); do
       { echo "RUNMETA card=$CARD host=$(hostname) slurm_job=$JOB model=$model arm=$arm backend=$backend compile=${extra[*]:-none} aug_chunk=$chunk repeat=$rep steps=$STEPS accum=$ACCUM"
         python scripts/train_protenix1.py --bench --model "$model" --backend "$backend" --recipe protenix --steps "$STEPS" --grad-accum "$ACCUM" \
           --warmup-steps 1 --augment-chunk "$chunk" --bench-bucket --bench-pool "$POOL" --bench-pool-cache "$POOL_DIR/pool_$model.pt" \
-          --run-dir "$OUT/runs/$tag" --step-graph "${extra[@]}" 2>&1 | grep -av "Warning\|warn"
+          --run-dir "$OUT/runs/$tag" --step-graph "${extra[@]}" 2>&1 | grep -a --line-buffered -v "Warning\|warn"
         echo "rc=${PIPESTATUS[0]} $(date -Is)"; } > "$log"
       # keep the lines the table needs on the console
       grep -a "^BENCHSTEP\|^OOM\|^rc=" "$log" | cut -c1-200
