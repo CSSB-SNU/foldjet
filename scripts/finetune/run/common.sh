@@ -11,8 +11,8 @@ export FT_DATA_CONFIG=${FT_DATA_CONFIG:-$FT_ADAPTER/data_20261014_local_ft.yaml}
 export FT_PUMP=${FT_PUMP:-1} FT_WORKERS=${FT_WORKERS:-16} FT_SEED=${FT_SEED:-0} FT_LOG_EVERY=${FT_LOG_EVERY:-25}
 export OMP_NUM_THREADS=2 MKL_NUM_THREADS=2
 CKPT0=${CKPT0:-$HOME/.cache/foldforge/checkpoints/protenix/protenix1.miniworld.pt}
-EFFECTIVE=256
-EPOCH_SAMPLES=25600
+EFFECTIVE=${EFFECTIVE:-256}
+EPOCH_SAMPLES=${EPOCH_SAMPLES:-25600}
 SPE=$((EPOCH_SAMPLES / EFFECTIVE))
 
 # train RUN_DIR TOTAL_EPOCHS [extra args...]: 2 ranks; resumes from the newer of last.* and epoch*
