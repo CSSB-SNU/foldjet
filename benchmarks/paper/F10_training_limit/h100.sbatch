@@ -4,4 +4,4 @@
 # F10 on one H100. Resumable: results.jsonl is read back, so a second submission continues where a deadline stopped the first.
 # Smoke: SMOKE=1 sbatch --time=00:10:00 --export=ALL h100.sbatch
 export CARD=h100
-exec "$(dirname "$(readlink -f "$0")")/run_f10.sh"
+exec "${FF_REPO:-$(git -C "${SLURM_SUBMIT_DIR:-.}" rev-parse --show-toplevel)}/benchmarks/paper/F10_training_limit/run_f10.sh"

@@ -31,7 +31,7 @@ case $CARD in
   rtx5090)
     export FFENV=${FFENV:-$HOME/ff/FoldForge/.pixi/envs/default}
     export FOLDFORGE_HOME=${FOLDFORGE_HOME:-$HOME/ff/home}
-    export PAPER_CACHE=${PAPER_CACHE:-$HOME/mwe/jit/paper_train}
+    export PAPER_CACHE=${PAPER_CACHE:-$HOME/mwe/jit/rc306ff}
     export XDG_CACHE_HOME=$PAPER_CACHE/xdg TORCHINDUCTOR_CACHE_DIR=$PAPER_CACHE/inductor
     export CUDA_HOME=/usr/local/cuda-12.8 PATH=/usr/local/cuda-12.8/bin:$PATH MINIWORLD_ENGINE_HEADER_CACHE=$HOME/.cache/miniworld_engine_headers
     export MINIWORLD_ENGINE_BUILD_ARCH=sm120 MAX_JOBS=4 TORCHINDUCTOR_COMPILE_THREADS=4 PAPER_OUT=${PAPER_OUT_5090:-$HOME/ff/paper}

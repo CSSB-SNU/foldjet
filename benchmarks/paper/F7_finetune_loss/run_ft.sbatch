@@ -12,7 +12,7 @@
 set -u
 BACKEND=${BACKEND:?set BACKEND=miniworld or pytorch}
 RUN_ROOT=${RUN_ROOT:-$HOME/foldforge-scratch/paper/F7_finetune_loss/h100/runs}
-export FF_REPO=${FF_REPO:-$(cd "$(dirname "$(readlink -f "$0")")/../../.." && pwd)}
+export FF_REPO=${FF_REPO:-$(git -C "${SLURM_SUBMIT_DIR:-.}" rev-parse --show-toplevel)}  # submit from inside the checkout
 # environment of the earlier fine-tune chain (warm caches; pixi env of the 3.0.1 worktree; pyarrow for the MiniWorld loader)
 export FFENV=${FFENV:-$HOME/foldforge-scratch/ff_301/.pixi/envs/default} FT_EXTRA_SITE=${FT_EXTRA_SITE:-$HOME/foldforge-scratch/ft_train/extra_site}
 export FT_CONF_CACHE=${FT_CONF_CACHE:-$HOME/foldforge-scratch/ft_train/conf_cache}
