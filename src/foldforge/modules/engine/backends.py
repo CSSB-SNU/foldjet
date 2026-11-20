@@ -71,8 +71,6 @@ OP_CLASSES: dict[str, tuple[str, ...]] = {
 OPS = tuple(OP_CLASSES)
 UNSUPPORTED = ("fallback", "error")
 
-_H100 = (9, 0)
-
 
 class BackendUnsupportedError(RuntimeError):
     """A (backend, module) combination the engine does not serve, with ``engine.unsupported: error``."""
@@ -141,15 +139,16 @@ def choose_backend(  # noqa: PLR0911 - one return per refusal reason
 ) -> tuple[str, str | None]:
     """``(backend, reason)`` of one engine class: the backend it runs under ``requested`` and, when that is not what was asked for, why.
 
-    ``miniworld`` is the policy of the engine's own kernels: ``cuda`` where the class has it and the card is an H100, else ``triton`` where
-    the class has it and a CUDA device exists, else ``pytorch`` (not a refusal: nothing named was asked for). A named backend the class
-    does not have, or ``cuda`` off an H100, is a refusal: ``pytorch`` runs and the reason says why (``engine.unsupported: error`` raises
-    it). Whether a CALL is in the backend's range is the module's own ``unsupported()``, asked when it is made."""
+    ``miniworld`` is the policy of the engine's own kernels: ``cuda`` where the class has it and a CUDA device exists, on every card (the
+    engine serves its cards and refuses a call outside a card's range itself; the ladder then runs triton, then pytorch), else ``triton``
+    where the class has it and a CUDA device exists, else ``pytorch`` (not a refusal: nothing named was asked for). A named backend the class
+    does not have, or ``cuda`` / ``triton`` without a CUDA device, is a refusal: ``pytorch`` runs and the reason says why
+    (``engine.unsupported: error`` raises it). Whether a CALL is in the backend's range is the module's own ``unsupported()``, asked when it is made."""
     name = ALIASES.get(requested, requested)
     have = tuple(cls.backends)
     cc = capability(device)
     if name is None:
-        if "cuda" in have and cc == _H100:
+        if "cuda" in have and cc is not None:
             return "cuda", None
         if "triton" in have and cc is not None:
             return "triton", None
@@ -161,8 +160,6 @@ def choose_backend(  # noqa: PLR0911 - one return per refusal reason
             "pytorch",
             f"{cls.__name__} has no {name!r} backend (available: {', '.join(have)})",
         )
-    if name == "cuda" and cc != _H100:
-        return "pytorch", "the cuda backend is H100 only (sm_90)"
     if name in ("cuda", "triton") and cc is None:
         return "pytorch", f"the {name} backend needs a CUDA device"
     return name, None
