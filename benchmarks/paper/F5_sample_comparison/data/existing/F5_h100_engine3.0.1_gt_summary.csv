@@ -1,0 +1,9 @@
+id,card,engine_version,foldforge_commit,arm,kind,n,median_abs_diff,mean_signed_diff,within_ref_sd,r
+F5,h100,torch/engine/engine_fp8 3.0.1; engine_fp8v2 3.0.2,,engine,all,255,0.0034,0.0036,0.9176,0.9979
+F5,h100,torch/engine/engine_fp8 3.0.1; engine_fp8v2 3.0.2,,engine,interface,124,0.0025,0.0062,0.9355,0.9973
+F5,h100,torch/engine/engine_fp8 3.0.1; engine_fp8v2 3.0.2,,engine,ligand,39,0.0068,0.0028,0.9231,0.9991
+F5,h100,torch/engine/engine_fp8 3.0.1; engine_fp8v2 3.0.2,,engine,monomer,92,0.0039,0.0003,0.8913,0.9977
+F5,h100,torch/engine/engine_fp8 3.0.1; engine_fp8v2 3.0.2,,engine_fp8v2,all,255,0.0047,-0.0008,0.8392,0.9946
+F5,h100,torch/engine/engine_fp8 3.0.1; engine_fp8v2 3.0.2,,engine_fp8v2,interface,124,0.0033,0.0052,0.9113,0.9952
+F5,h100,torch/engine/engine_fp8 3.0.1; engine_fp8v2 3.0.2,,engine_fp8v2,ligand,39,0.0053,0.0043,0.8462,0.9975
+F5,h100,torch/engine/engine_fp8 3.0.1; engine_fp8v2 3.0.2,,engine_fp8v2,monomer,92,0.0066,-0.011,0.7391,0.9876

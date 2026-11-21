@@ -1,0 +1,3 @@
+arm,steps,last_step,median_s_per_step,hours,common_steps,mean_loss_common,pearson_r_loss_common,jobs
+engine,1424,1423,108.0,42.92,433,0.3841,0.979,55416 55417
+pytorch,433,432,369.1,44.4,433,0.384,0.979,55376 55377 55378

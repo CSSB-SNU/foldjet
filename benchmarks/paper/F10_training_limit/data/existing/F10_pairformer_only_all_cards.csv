@@ -1,0 +1,19 @@
+id,card,gpu,engine_version,setting,blocks,L,ckpt,graph,compile,step_ms_median,max_blocks,peak_alloc_gib,peak_reserved_gib,status,first_failing,slurm_job_or_host,note
+F10s,h100,NVIDIA H100 80GB HBM3,3.0.2,speed,4,384,False,True,False,17.72,,4.14,4.30,ok,,59141,
+F10s,h100,NVIDIA H100 80GB HBM3,3.0.2,speed,4,384,True,True,False,22.19,,1.51,1.63,ok,,59141,
+F10s,h100,NVIDIA H100 80GB HBM3,3.0.2,speed,4,384,False,True,True,17.75,,4.13,4.30,ok,,59141,
+F10s,h100,NVIDIA H100 80GB HBM3,3.0.2,speed,4,384,False,False,False,31.55,,4.11,4.16,ok,,59141,
+F10s,h100,NVIDIA H100 80GB HBM3,3.0.2,max_blocks,,384,False,True,False,,84,76.68,77.77,ok,85,59141,
+F10s,h100,NVIDIA H100 80GB HBM3,3.0.2,max_blocks,,384,True,True,False,,>=100,,,ok,,59141,896 blocks fit (63.75 / 76.49 GiB); 928 failed; search stopped (user: > 100 blocks is not of interest)
+F10s,a100,NVIDIA A100 80GB PCIe,3.0.5,speed,4,384,False,True,False,40.84,,4.53,5.10,ok,,96028 (cssb3 gpu02),
+F10s,a100,NVIDIA A100 80GB PCIe,3.0.5,speed,4,384,True,True,False,50.95,,1.80,2.29,ok,,96028 (cssb3 gpu02),
+F10s,a100,NVIDIA A100 80GB PCIe,3.0.5,speed,4,384,False,True,True,40.72,,4.53,5.09,ok,,96028 (cssb3 gpu02),
+F10s,a100,NVIDIA A100 80GB PCIe,3.0.5,speed,4,384,False,False,False,45.43,,4.50,4.74,ok,,96028 (cssb3 gpu02),
+F10s,a100,NVIDIA A100 80GB PCIe,3.0.5,max_blocks,,384,False,True,False,,75,74.31,78.50,ok,76,96028 (cssb3 gpu02),
+F10s,a100,NVIDIA A100 80GB PCIe,3.0.5,max_blocks,100,384,True,True,False,,>=100,8.55,13.57,ok,,96028 (cssb3 gpu02),try --blocks 100 --ckpt
+F10s,rtx5090,NVIDIA GeForce RTX 5090,3.0.5,speed,4,384,False,True,False,34.19,,4.29,4.81,ok,,cssb-rtx,
+F10s,rtx5090,NVIDIA GeForce RTX 5090,3.0.5,speed,4,384,True,True,False,43.04,,1.87,2.29,ok,,cssb-rtx,
+F10s,rtx5090,NVIDIA GeForce RTX 5090,3.0.5,speed,4,384,False,True,True,34.14,,4.29,4.89,ok,,cssb-rtx,
+F10s,rtx5090,NVIDIA GeForce RTX 5090,3.0.5,speed,4,384,False,False,False,35.02,,4.17,4.39,ok,,cssb-rtx,
+F10s,rtx5090,NVIDIA GeForce RTX 5090,3.0.5,max_blocks,,384,False,True,False,,31,27.99,29.86,ok,32,cssb-rtx,
+F10s,rtx5090,NVIDIA GeForce RTX 5090,3.0.5,max_blocks,100,384,True,True,False,,>=100,8.63,13.72,ok,,cssb-rtx,try --blocks 100 --ckpt

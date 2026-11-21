@@ -1,0 +1,35 @@
+id,card,predictor,arm,kit,status,largest_ok_contiguous,tokens_ok_contiguous,largest_ok_any,first_not_ok,first_not_ok_status,non_monotonic,peak_allocated_gib_at_edge,peak_reserved_gib_at_edge,tried,engine_version,foldforge_commit,node,jobs,source,reason
+F9,rtx5090,af3,engine,,failed,,,24,1,failed,True,,,1 8 16 18 19 20 21 22 23 24 25 26,3.0.5,fdad9e260,cssb-rtx,,/home/psk6950/foldforge-scratch/paper/F9/rtx5090/legacy/af3_305 /home/psk6950/foldforge-scratch/paper/F9/rtx5090/legacy/af3_305_n1,non-finite AF3 coordinates
+F9,rtx5090,af3,pytorch,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,af3,kit,af3_jax,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,af3,kit,af3_torch,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,openfold3,engine,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,openfold3,pytorch,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,openfold3,kit,openfold3,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,rosettafold3,engine,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,rosettafold3,pytorch,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,rosettafold3,kit,rf3,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,chai1,engine,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,chai1,pytorch,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,chai1,kit,chai1,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,esmfold2,engine,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,esmfold2,pytorch,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,esmfold2,kit,esmfold2,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,esmfold2-fast,engine,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,esmfold2-fast,pytorch,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,esmfold2-fast,kit,esmfold2_fast,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,boltz2,engine,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,boltz2,pytorch,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,boltz2,kit,boltz2,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,protenix1,engine,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,protenix1,pytorch,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,protenix1,kit,protenix_v1,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,protenix2,engine,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,protenix2,pytorch,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,protenix2,kit,protenix_v2,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,opendde,engine,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,opendde,pytorch,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,opendde,kit,opendde,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,intellifold2,engine,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,intellifold2,pytorch,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,intellifold2,kit,intellifold2,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card

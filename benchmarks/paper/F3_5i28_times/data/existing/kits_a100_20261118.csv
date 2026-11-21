@@ -1,0 +1,79 @@
+kit,n,tokens,status,mode,steady_median_s,n_timed,forwards_s,template_evidence,msa_evidence,job,host,marker
+af3_jax,1,128,ok,fast,1.920,5,"70.63 2.33 1.92 2.01 2.01 1.90 1.90","templates_real=4/4","msa_rows=6790",94738,gpu05,kit_af3_jax_x1
+af3_jax,2,256,ok,fast,3.030,5,"71.33 3.49 3.03 3.03 3.02 3.01 3.03","templates_real=4/4","msa_rows=6790",94738,gpu05,kit_af3_jax_x2
+af3_jax,4,512,ok,fast,6.010,5,"78.93 6.45 6.00 5.99 6.01 6.04 6.04","templates_real=4/4","msa_rows=6790",94738,gpu05,kit_af3_jax_x4
+af3_jax,8,1024,ok,fast,17.870,5,"88.98 17.98 17.72 17.79 17.87 17.93 17.98","templates_real=4/4","msa_rows=6790",94738,gpu05,kit_af3_jax_x8
+af3_jax,12,1536,ok,fast,39.930,5,"111.31 39.56 39.61 39.76 39.93 40.09 40.09","templates_real=4/4","msa_rows=6790",94738,gpu05,kit_af3_jax_x12
+af3_jax,16,2048,ok,fast,79.390,5,"151.30 78.62 78.88 79.39 78.90 79.79 79.99","templates_real=4/4","msa_rows=6790",94738,gpu05,kit_af3_jax_x16
+af3_torch,1,128,ok,fast,1.634,5,"59.076 1.637 1.632 1.767 1.643 1.634 1.616","templates_real=4/4","msa_rows=6790",94747,gpu01,kit_af3_torch_x1
+af3_torch,2,256,ok,fast,2.220,5,"30.963 2.235 2.238 2.22 2.203 2.238 2.205","templates_real=4/4","msa_rows=6790",94747,gpu01,kit_af3_torch_x2
+af3_torch,4,512,ok,fast,4.260,5,"49.187 4.171 4.202 4.241 4.26 4.271 4.272","templates_real=4/4","msa_rows=6790",94747,gpu01,kit_af3_torch_x4
+af3_torch,8,1024,ok,fast,13.400,5,"53.449 13.054 13.225 13.336 13.4 13.435 13.458","templates_real=4/4","msa_rows=6790",94747,gpu01,kit_af3_torch_x8
+af3_torch,12,1536,ok,fast,29.350,5,"54.939 29.137 29.414 29.44 29.35 29.263 29.219","templates_real=4/4","msa_rows=6790",94747,gpu01,kit_af3_torch_x12
+af3_torch,16,2048,ok,fast,55.461,5,"78.886 55.545 55.758 55.559 55.461 55.303 55.213","templates_real=4/4","msa_rows=6790",94747,gpu01,kit_af3_torch_x16
+openfold3,1,128,ok,fast,1.373,5,"35.221 1.477 1.355 1.374 1.373 1.370 1.380","templates_real=4/4","msa_rows=6790",94708,gpu05,kit_openfold3_x1
+openfold3,2,256,ok,fast,2.170,5,"4.220 2.214 2.171 2.171 2.145 2.170 2.146","templates_real=4/4","msa_rows=6790",94708,gpu05,kit_openfold3_x2
+openfold3,4,512,ok,fast,4.251,5,"26.825 4.369 4.236 4.247 4.255 4.251 4.255","templates_real=4/4","msa_rows=6790",94708,gpu05,kit_openfold3_x4
+openfold3,8,1024,ok,fast,12.836,5,"16.144 12.625 12.701 12.767 12.836 12.893 12.942","templates_real=4/4","msa_rows=6790",94708,gpu05,kit_openfold3_x8
+openfold3,12,1536,ok,fast,28.734,5,"30.312 28.243 28.469 28.620 28.734 28.799 28.880","templates_real=4/4","msa_rows=6790",94708,gpu05,kit_openfold3_x12
+openfold3,16,2048,ok,fast,53.667,5,"55.625 52.977 53.332 53.667 53.846 53.432 53.736","templates_real=4/4","msa_rows=6790",94708,gpu05,kit_openfold3_x16
+rosettafold3,1,128,ok,fast,3.894,5,"38.616 3.863 3.894 3.891 3.860 4.132 3.895","templates_real=1/1","msa_rows=6789",94736,gpu05,kit_rf3_x1
+rosettafold3,2,256,ok,fast,6.177,5,"14.618 6.050 6.265 6.281 6.177 6.051 6.064","templates_real=1/1","msa_rows=6789",94736,gpu05,kit_rf3_x2
+rosettafold3,4,512,ok,fast,7.799,5,"26.013 8.026 8.042 7.799 7.799 7.795 7.789","templates_real=1/1","msa_rows=6789",94736,gpu05,kit_rf3_x4
+rosettafold3,8,1024,ok,fast,19.182,5,"29.429 18.817 19.188 19.008 19.117 19.182 19.247","templates_real=1/1","msa_rows=6789",94736,gpu05,kit_rf3_x8
+rosettafold3,12,1536,ok,fast,38.965,5,"45.274 38.201 38.683 38.940 38.965 39.090 39.457","templates_real=1/1","msa_rows=6789",94736,gpu05,kit_rf3_x12
+rosettafold3,16,2048,ok,fast,69.431,5,"70.152 67.868 68.682 69.637 69.317 69.431 69.707","templates_real=1/1","msa_rows=6789",94736,gpu05,kit_rf3_x16
+chai1,1,128,ok,fast,9.175,5,"42.706 9.109 9.175 9.188 9.085 9.115 9.180","templates_real=4/4","msa_rows=6789",94751,gpu01,kit_chai1_x1
+chai1,2,256,ok,fast,9.426,5,"14.023 9.477 9.457 9.471 9.426 9.379 9.414","templates_real=4/4","msa_rows=6789",94751,gpu01,kit_chai1_x2
+chai1,4,512,ok,fast,21.578,5,"26.497 21.473 21.577 21.578 21.592 21.589 21.534","templates_real=4/4","msa_rows=6789",94751,gpu01,kit_chai1_x4
+chai1,8,1024,ok,fast,56.185,5,"62.348 56.710 56.292 56.246 56.185 55.198 55.282","templates_real=4/4","msa_rows=6789",94751,gpu01,kit_chai1_x8
+chai1,12,1536,ok,fast,106.944,5,"112.637 107.730 106.912 106.318 106.944 107.260 106.992","templates_real=4/4","msa_rows=6789",94751,gpu01,kit_chai1_x12
+chai1,16,2048,ok,fast,179.806,4,"185.571 179.101 180.344 178.583 180.372 179.269","templates_real=4/4","msa_rows=6789",94751,gpu01,kit_chai1_x16
+esmfold2,1,128,ok,fast,0.620,5,"34.276 0.811 0.621 0.621 0.619 0.619 0.620","","",94789,gpu02,kit_esmfold2_x1
+esmfold2,2,256,ok,fast,1.332,5,"11.033 1.569 1.330 1.334 1.332 1.331 1.336","","",94789,gpu02,kit_esmfold2_x2
+esmfold2,4,512,ok,fast,3.362,5,"5.033 3.640 3.360 3.355 3.362 3.364 3.365","","",94789,gpu02,kit_esmfold2_x4
+esmfold2,8,1024,ok,fast,11.473,5,"13.679 11.817 11.418 11.438 11.473 11.477 11.477","","",94789,gpu02,kit_esmfold2_x8
+esmfold2,12,1536,ok,fast,26.710,5,"28.107 27.323 26.721 26.711 26.691 26.710 26.682","","",94789,gpu02,kit_esmfold2_x12
+esmfold2,16,2048,failed,big(fast OOM),,0,"","","",94789,gpu02,kit_esmfold2_x16
+esmfold2_fast,1,128,ok,fast,0.542,5,"44.649 0.706 0.542 0.542 0.541 0.542 0.543","","",94790,gpu02,kit_esmfold2_fast_x1
+esmfold2_fast,2,256,ok,fast,1.081,5,"10.309 1.307 1.082 1.081 1.081 1.081 1.082","","",94790,gpu02,kit_esmfold2_fast_x2
+esmfold2_fast,4,512,ok,fast,2.440,5,"3.383 2.726 2.440 2.435 2.442 2.439 2.449","","",94790,gpu02,kit_esmfold2_fast_x4
+esmfold2_fast,8,1024,ok,fast,7.607,5,"9.928 7.998 7.607 7.605 7.606 7.632 7.625","","",94790,gpu02,kit_esmfold2_fast_x8
+esmfold2_fast,12,1536,ok,fast,17.368,5,"18.585 18.045 17.348 17.368 17.376 17.400 17.367","","",94790,gpu02,kit_esmfold2_fast_x12
+esmfold2_fast,16,2048,failed,big(fast OOM),,0,"","","",94790,gpu02,kit_esmfold2_fast_x16
+boltz2,1,128,ok,fast,2.191,5,"63.904 2.189 2.196 2.189 2.186 2.195 2.191","","",94744,gpu06,kit_boltz2_x1
+boltz2,2,256,ok,fast,3.997,5,"10.850 3.992 3.989 3.998 3.997 3.996 3.997","","",94744,gpu06,kit_boltz2_x2
+boltz2,4,512,ok,fast,9.096,5,"11.566 9.064 9.098 9.087 9.093 9.096 9.106","","",94744,gpu06,kit_boltz2_x4
+boltz2,8,1024,ok,fast,25.717,5,"27.212 25.573 25.650 25.717 25.796 25.768 25.701","","",94744,gpu06,kit_boltz2_x8
+boltz2,12,1536,ok,fast,54.291,5,"57.661 54.410 54.250 54.295 54.288 54.291 54.358","","",94744,gpu06,kit_boltz2_x12
+boltz2,16,2048,ok,big(fast OOM),96.088,5,"99.513 95.616 96.060 96.088 95.874 96.191 96.474","","",94744,gpu06,kit_boltz2_x16
+protenix_v1,1,128,ok,fast,3.060,5,"41.809 3.065 3.060 3.069 3.063 3.009 3.011","templates=[ 7 Found 4 templates  7 real=4 dummy=0 ]","msa=[N_msa 6790 ]",94748,gpu06,sep_protenix_v1_x1
+protenix_v1,2,256,ok,fast,4.181,5,"7.899 4.171 4.180 4.194 4.178 4.192 4.181","templates=[ 7 Found 4 templates  7 real=4 dummy=0 ]","msa=[N_msa 6790 ]",94748,gpu06,sep_protenix_v1_x2
+protenix_v1,4,512,ok,fast,8.188,5,"26.973 8.060 8.099 8.253 8.152 8.188 8.227","templates=[ 7 Found 4 templates  7 real=4 dummy=0 ]","msa=[N_msa 6790 ]",94748,gpu06,sep_protenix_v1_x4
+protenix_v1,8,1024,ok,fast,23.134,5,"28.845 22.652 22.773 23.316 22.943 23.134 23.258","templates=[ 7 Found 4 templates  7 real=4 dummy=0 ]","msa=[N_msa 6790 ]",94748,gpu06,sep_protenix_v1_x8
+protenix_v1,12,1536,ok,fast,48.726,5,"57.412 47.752 48.108 49.218 48.573 48.726 48.790","templates=[ 7 Found 4 templates  7 real=4 dummy=0 ]","msa=[N_msa 6790 ]",94748,gpu06,sep_protenix_v1_x12
+protenix_v1,16,2048,ok,fast,97.785,5,"106.461 97.195 96.858 98.979 97.386 97.785 97.994","templates=[ 7 Found 4 templates  7 real=4 dummy=0 ]","msa=[N_msa 6790 ]",94748,gpu06,sep_protenix_v1_x16
+protenix_v2,1,128,ok,fast,2.418,5,"17.098 2.402 2.404 2.436 2.406 2.418 2.428","templates=[ 7 Found 4 templates  7 real=4/4 ]","msa=[N_msa 6790 ]",94749,gpu06,sep_protenix_v2_x1
+protenix_v2,2,256,ok,fast,4.318,5,"6.717 4.260 4.280 4.370 4.305 4.318 4.337","templates=[ 7 Found 4 templates  7 real=4/4 ]","msa=[N_msa 6790 ]",94749,gpu06,sep_protenix_v2_x2
+protenix_v2,4,512,ok,fast,9.054,5,"30.939 8.885 8.933 9.163 8.993 9.054 9.107","templates=[ 7 Found 4 templates  7 real=4/4 ]","msa=[N_msa 6790 ]",94749,gpu06,sep_protenix_v2_x4
+protenix_v2,8,1024,ok,fast,27.998,5,"33.669 27.274 27.406 28.081 27.685 27.998 28.117","templates=[ 7 Found 4 templates  7 real=4/4 ]","msa=[N_msa 6790 ]",94749,gpu06,sep_protenix_v2_x8
+protenix_v2,12,1536,ok,fast,61.155,5,"65.388 60.085 60.620 62.088 60.833 61.155 61.455","templates=[ 7 Found 4 templates  7 real=4/4 ]","msa=[N_msa 6790 ]",94749,gpu06,sep_protenix_v2_x12
+protenix_v2,16,2048,ok,fast,124.413,5,"125.052 123.746 124.413 126.436 124.607 121.603 122.936","templates=[ 7 Found 4 templates  7 real=4/4 ]","msa=[N_msa 6790 ]",94749,gpu06,sep_protenix_v2_x16
+opendde,1,128,ok,fast,6.747,5,"25.849 6.746 6.606 6.677 6.750 6.747 6.810","templates=[ 7 Found 4 templates  1 real=4/4 ]","msa=[N_msa 6790 ]",94743,gpu05,sep_opendde_x1
+opendde,2,256,ok,fast,6.896,5,"9.150 6.821 6.903 6.912 6.896 6.873 6.881","templates=[ 7 Found 4 templates  1 real=4/4 ]","msa=[N_msa 6790 ]",94743,gpu05,sep_opendde_x2
+opendde,4,512,ok,fast,15.657,5,"28.880 15.532 15.535 15.657 15.578 15.776 15.787","templates=[ 7 Found 4 templates  1 real=4/4 ]","msa=[N_msa 6790 ]",94743,gpu05,sep_opendde_x4
+opendde,8,1024,ok,fast,57.319,5,"76.358 57.378 57.512 57.200 57.400 57.242 57.319","templates=[ 7 Found 4 templates  1 real=4/4 ]","msa=[N_msa 6790 ]",94743,gpu05,sep_opendde_x8
+opendde,12,1536,ok,fast,140.983,5,"140.579 140.534 140.412 140.971 140.983 141.197 141.588","templates=[ 7 Found 4 templates  1 real=4/4 ]","msa=[N_msa 6790 ]",94743,gpu05,sep_opendde_x12
+opendde,16,2048,ok,big(fast OOM),1038.690,5,"985.888 1121.701 1078.014 1057.143 1038.690 1033.909 1034.636","templates=[ 7 Found 4 templates  1 real=4/4 ]","msa=[N_msa 6790 ]",94743,gpu05,sep_opendde_x16
+intellifold2,1,128,oom,big(fast OOM),,0,"","templates_real=4/4","",94739,gpu06,kit_intellifold2_x1
+intellifold2,2,256,oom,big(fast OOM),,0,"","templates_real=4/4","",94741,gpu06,kit_intellifold2_x2
+intellifold2,4,512,oom,big(fast OOM),,0,"","templates_real=4/4","",94741,gpu06,kit_intellifold2_x4
+intellifold2,8,1024,oom,big(fast OOM),,0,"","templates_real=4/4","",94741,gpu06,kit_intellifold2_x8
+intellifold2,12,1536,ok,big(fast OOM),307.490,5,"395.66 308.14 307.49 308.10 307.26 307.37 307.66","templates_real=4/4","",94741,gpu06,kit_intellifold2_x12
+intellifold2,16,2048,ok,big(fast OOM),622.000,5,"713.85 619.93 622.00 621.37 621.20 622.61 623.26","templates_real=4/4","",94741,gpu06,kit_intellifold2_x16
+intellifold2_notxla,1,128,oom,big(fast OOM),,0,"","templates_real=4/4","",94742,gpu05,kit_intellifold2_notxla_x1
+intellifold2_notxla,2,256,oom,big(fast OOM),,0,"","templates_real=4/4","",94742,gpu05,kit_intellifold2_notxla_x2
+intellifold2_notxla,4,512,oom,big(fast OOM),,0,"","templates_real=4/4","",94742,gpu05,kit_intellifold2_notxla_x4
+intellifold2_notxla,8,1024,oom,big(fast OOM),,0,"","templates_real=4/4","",94742,gpu05,kit_intellifold2_notxla_x8
+intellifold2_notxla,12,1536,ok,big(fast OOM),200.520,5,"283.67 201.08 200.40 200.44 200.53 200.52 200.62","templates_real=4/4","",94742,gpu05,kit_intellifold2_notxla_x12
+intellifold2_notxla,16,2048,ok,big(fast OOM),391.460,5,"473.01 391.79 391.31 391.31 391.46 392.55 391.88","templates_real=4/4","",94742,gpu05,kit_intellifold2_notxla_x16

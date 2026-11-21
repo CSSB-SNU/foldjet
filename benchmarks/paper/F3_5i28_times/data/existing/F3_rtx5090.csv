@@ -1,0 +1,216 @@
+id,card,predictor,side,arm,n,tokens,value_s,mode,status,n_timed,forwards_s,kit_over_ff_bf16,fp8_saturated,engine_version,foldforge_commit,gpu,node,job,source,reason
+F3,rtx5090,af3,foldforge,ff_bf16,1,128,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,af3,foldforge,ff_bf16,2,256,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,af3,foldforge,ff_bf16,4,512,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,af3,foldforge,ff_bf16,8,1024,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,af3,foldforge,ff_bf16,12,1536,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,af3,foldforge,ff_bf16,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,openfold3,foldforge,ff_bf16,1,128,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,openfold3,foldforge,ff_bf16,2,256,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,openfold3,foldforge,ff_bf16,4,512,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,openfold3,foldforge,ff_bf16,8,1024,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,openfold3,foldforge,ff_bf16,12,1536,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,openfold3,foldforge,ff_bf16,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,rosettafold3,foldforge,ff_bf16,1,128,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,rosettafold3,foldforge,ff_bf16,2,256,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,rosettafold3,foldforge,ff_bf16,4,512,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,rosettafold3,foldforge,ff_bf16,8,1024,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,rosettafold3,foldforge,ff_bf16,12,1536,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,rosettafold3,foldforge,ff_bf16,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,chai1,foldforge,ff_bf16,1,128,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,chai1,foldforge,ff_bf16,2,256,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,chai1,foldforge,ff_bf16,4,512,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,chai1,foldforge,ff_bf16,8,1024,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,chai1,foldforge,ff_bf16,12,1536,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,chai1,foldforge,ff_bf16,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2,foldforge,ff_bf16,1,128,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2,foldforge,ff_bf16,2,256,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2,foldforge,ff_bf16,4,512,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2,foldforge,ff_bf16,8,1024,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2,foldforge,ff_bf16,12,1536,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2,foldforge,ff_bf16,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2-fast,foldforge,ff_bf16,1,128,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2-fast,foldforge,ff_bf16,2,256,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2-fast,foldforge,ff_bf16,4,512,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2-fast,foldforge,ff_bf16,8,1024,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2-fast,foldforge,ff_bf16,12,1536,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2-fast,foldforge,ff_bf16,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,boltz2,foldforge,ff_bf16,1,128,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,boltz2,foldforge,ff_bf16,2,256,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,boltz2,foldforge,ff_bf16,4,512,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,boltz2,foldforge,ff_bf16,8,1024,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,boltz2,foldforge,ff_bf16,12,1536,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,boltz2,foldforge,ff_bf16,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix1,foldforge,ff_bf16,1,128,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix1,foldforge,ff_bf16,2,256,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix1,foldforge,ff_bf16,4,512,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix1,foldforge,ff_bf16,8,1024,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix1,foldforge,ff_bf16,12,1536,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix1,foldforge,ff_bf16,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix2,foldforge,ff_bf16,1,128,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix2,foldforge,ff_bf16,2,256,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix2,foldforge,ff_bf16,4,512,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix2,foldforge,ff_bf16,8,1024,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix2,foldforge,ff_bf16,12,1536,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix2,foldforge,ff_bf16,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,opendde,foldforge,ff_bf16,1,128,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,opendde,foldforge,ff_bf16,2,256,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,opendde,foldforge,ff_bf16,4,512,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,opendde,foldforge,ff_bf16,8,1024,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,opendde,foldforge,ff_bf16,12,1536,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,opendde,foldforge,ff_bf16,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,intellifold2,foldforge,ff_bf16,1,128,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,intellifold2,foldforge,ff_bf16,2,256,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,intellifold2,foldforge,ff_bf16,4,512,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,intellifold2,foldforge,ff_bf16,8,1024,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,intellifold2,foldforge,ff_bf16,12,1536,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,intellifold2,foldforge,ff_bf16,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,af3,foldforge,ff_fp8,1,128,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,af3,foldforge,ff_fp8,2,256,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,af3,foldforge,ff_fp8,4,512,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,af3,foldforge,ff_fp8,8,1024,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,af3,foldforge,ff_fp8,12,1536,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,af3,foldforge,ff_fp8,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,openfold3,foldforge,ff_fp8,1,128,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,openfold3,foldforge,ff_fp8,2,256,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,openfold3,foldforge,ff_fp8,4,512,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,openfold3,foldforge,ff_fp8,8,1024,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,openfold3,foldforge,ff_fp8,12,1536,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,openfold3,foldforge,ff_fp8,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,rosettafold3,foldforge,ff_fp8,1,128,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,rosettafold3,foldforge,ff_fp8,2,256,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,rosettafold3,foldforge,ff_fp8,4,512,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,rosettafold3,foldforge,ff_fp8,8,1024,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,rosettafold3,foldforge,ff_fp8,12,1536,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,rosettafold3,foldforge,ff_fp8,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,chai1,foldforge,ff_fp8,1,128,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,chai1,foldforge,ff_fp8,2,256,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,chai1,foldforge,ff_fp8,4,512,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,chai1,foldforge,ff_fp8,8,1024,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,chai1,foldforge,ff_fp8,12,1536,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,chai1,foldforge,ff_fp8,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2,foldforge,ff_fp8,1,128,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2,foldforge,ff_fp8,2,256,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2,foldforge,ff_fp8,4,512,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2,foldforge,ff_fp8,8,1024,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2,foldforge,ff_fp8,12,1536,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2,foldforge,ff_fp8,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2-fast,foldforge,ff_fp8,1,128,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2-fast,foldforge,ff_fp8,2,256,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2-fast,foldforge,ff_fp8,4,512,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2-fast,foldforge,ff_fp8,8,1024,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2-fast,foldforge,ff_fp8,12,1536,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2-fast,foldforge,ff_fp8,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,boltz2,foldforge,ff_fp8,1,128,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,boltz2,foldforge,ff_fp8,2,256,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,boltz2,foldforge,ff_fp8,4,512,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,boltz2,foldforge,ff_fp8,8,1024,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,boltz2,foldforge,ff_fp8,12,1536,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,boltz2,foldforge,ff_fp8,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix1,foldforge,ff_fp8,1,128,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix1,foldforge,ff_fp8,2,256,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix1,foldforge,ff_fp8,4,512,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix1,foldforge,ff_fp8,8,1024,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix1,foldforge,ff_fp8,12,1536,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix1,foldforge,ff_fp8,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix2,foldforge,ff_fp8,1,128,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix2,foldforge,ff_fp8,2,256,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix2,foldforge,ff_fp8,4,512,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix2,foldforge,ff_fp8,8,1024,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix2,foldforge,ff_fp8,12,1536,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,protenix2,foldforge,ff_fp8,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,opendde,foldforge,ff_fp8,1,128,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,opendde,foldforge,ff_fp8,2,256,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,opendde,foldforge,ff_fp8,4,512,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,opendde,foldforge,ff_fp8,8,1024,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,opendde,foldforge,ff_fp8,12,1536,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,opendde,foldforge,ff_fp8,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,intellifold2,foldforge,ff_fp8,1,128,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,intellifold2,foldforge,ff_fp8,2,256,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,intellifold2,foldforge,ff_fp8,4,512,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,intellifold2,foldforge,ff_fp8,8,1024,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,intellifold2,foldforge,ff_fp8,12,1536,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,intellifold2,foldforge,ff_fp8,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,af3,kit,af3_jax,1,128,,exact,refused_on_sm120,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,
+F3,rtx5090,af3,kit,af3_jax,2,256,,exact,refused_on_sm120,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,
+F3,rtx5090,af3,kit,af3_jax,4,512,,fast/big/exact,refused_on_sm120,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"decided at n=1,2: fast/big exit 3 (FPF Pallas serve layer: no_tiles_cc120 for triattn/trimul), exact exit 1 (Pallas GLU kernel NotImplementedError 'program_id' on cc 12.0)"
+F3,rtx5090,af3,kit,af3_jax,8,1024,,fast/big/exact,refused_on_sm120,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"decided at n=1,2: fast/big exit 3 (FPF Pallas serve layer: no_tiles_cc120 for triattn/trimul), exact exit 1 (Pallas GLU kernel NotImplementedError 'program_id' on cc 12.0)"
+F3,rtx5090,af3,kit,af3_jax,12,1536,,fast/big/exact,refused_on_sm120,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"decided at n=1,2: fast/big exit 3 (FPF Pallas serve layer: no_tiles_cc120 for triattn/trimul), exact exit 1 (Pallas GLU kernel NotImplementedError 'program_id' on cc 12.0)"
+F3,rtx5090,af3,kit,af3_jax,16,2048,,fast/big/exact,refused_on_sm120,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"decided at n=1,2: fast/big exit 3 (FPF Pallas serve layer: no_tiles_cc120 for triattn/trimul), exact exit 1 (Pallas GLU kernel NotImplementedError 'program_id' on cc 12.0)"
+F3,rtx5090,af3,kit,af3_torch,1,128,1.093,fast,ok_kit_partial,5,44.429;1.089;1.094;1.085;1.093;1.082;1.095,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"kit DONE rc=3 PARTIAL refused=fallback: fpf trimul_exact / opm / glu_proj levers served 0 calls on sm_120 (stock fallback), the rest engaged"
+F3,rtx5090,af3,kit,af3_torch,2,256,1.686,fast,ok_kit_partial,5,31.6;1.72;1.684;1.684;1.686;1.686;1.686,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"kit DONE rc=3 PARTIAL refused=fallback: fpf trimul_exact / opm / glu_proj levers served 0 calls on sm_120 (stock fallback), the rest engaged"
+F3,rtx5090,af3,kit,af3_torch,4,512,4.078,fast,ok_kit_partial,5,26.526;4.067;4.063;4.078;4.078;4.087;4.088,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"kit DONE rc=3 PARTIAL refused=fallback: fpf trimul_exact / opm / glu_proj levers served 0 calls on sm_120 (stock fallback), the rest engaged"
+F3,rtx5090,af3,kit,af3_torch,8,1024,12.569,fast,ok_kit_partial,5,38.491;12.459;12.5;12.535;12.569;12.584;12.606,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"kit DONE rc=3 PARTIAL refused=fallback: fpf trimul_exact / opm / glu_proj levers served 0 calls on sm_120 (stock fallback), the rest engaged"
+F3,rtx5090,af3,kit,af3_torch,12,1536,27.694,fast,ok_kit_partial,5,54.402;27.358;27.53;27.632;27.694;27.735;27.766,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"kit DONE rc=3 PARTIAL refused=fallback: fpf trimul_exact / opm / glu_proj levers served 0 calls on sm_120 (stock fallback), the rest engaged"
+F3,rtx5090,af3,kit,af3_torch,16,2048,49.093,fast,partial_4_timed,4,94.176;48.504;48.886;49.047;49.139;49.196,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"only 6 of 7 forwards: the next one ran out of GPU memory; value = median of the 4 after cold+2nd | kit DONE rc=3 PARTIAL refused=fallback: fpf trimul_exact / opm / glu_proj levers served 0 calls on sm_120 (stock fallback), the rest engaged"
+F3,rtx5090,af3,kit,af3_torch,16,2048,49.051,big,ok_kit_partial,5,69.998;48.447;48.75;48.924;49.051;49.064;49.168,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"kit DONE rc=3 PARTIAL refused=fallback: fpf trimul_exact / opm / glu_proj levers served 0 calls on sm_120 (stock fallback), the rest engaged"
+F3,rtx5090,boltz2,kit,boltz2,1,128,1.123,fast,ok_kit_not_active,5,5.215;1.132;1.128;1.134;1.123;1.122;1.058,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"kit exit gate rc 3 / NOT ACTIVE: fpf_opm/pwa Triton tiles > 99 KB smem on sm_120 fall back to stock, exactln not applied"
+F3,rtx5090,boltz2,kit,boltz2,2,256,2.047,fast,ok_kit_not_active,5,3.082;2.045;2.044;2.047;2.071;2.065;2.017,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"kit exit gate rc 3 / NOT ACTIVE: fpf_opm/pwa Triton tiles > 99 KB smem on sm_120 fall back to stock, exactln not applied"
+F3,rtx5090,boltz2,kit,boltz2,4,512,6.241,big,ok_kit_not_active,5,7.979;6.218;6.229;6.241;6.242;6.25;6.236,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"kit exit gate rc 3 / NOT ACTIVE: fpf_opm/pwa Triton tiles > 99 KB smem on sm_120 fall back to stock, exactln not applied"
+F3,rtx5090,boltz2,kit,boltz2,8,1024,17.511,big,partial_4_timed_kit_not_active,4,21.18;17.386;17.446;17.496;17.527;17.543,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"only 6 of 7 forwards: the next one ran out of GPU memory; value = median of the 4 after cold+2nd | kit exit gate rc 3 / NOT ACTIVE: fpf_opm/pwa Triton tiles > 99 KB smem on sm_120 fall back to stock, exactln not applied"
+F3,rtx5090,boltz2,kit,boltz2,12,1536,,big,ram_cap_16GB,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,
+F3,rtx5090,boltz2,kit,boltz2,16,2048,,big,ram_cap_16GB,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,
+F3,rtx5090,chai1,kit,chai1,1,128,4.505,fast,ok,5,63.789;4.501;4.521;4.498;4.5;4.512;4.505,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,
+F3,rtx5090,chai1,kit,chai1,2,256,4.816,fast,ok,5,22.715;4.796;4.809;4.803;4.816;4.827;4.82,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,
+F3,rtx5090,chai1,kit,chai1,4,512,11.401,fast,ok,5,38.168;11.413;11.386;11.398;11.401;11.413;11.419,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,
+F3,rtx5090,chai1,kit,chai1,8,1024,,fast,ram_cap_16GB,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,kit exits 1 after its forwards (as on H100); seed_folds_ok in log
+F3,rtx5090,chai1,kit,chai1,12,1536,,fast,ram_cap_16GB,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,kit exits 1 after its forwards (as on H100); seed_folds_ok in log
+F3,rtx5090,chai1,kit,chai1,16,2048,,fast,ram_cap_16GB,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,kit exits 1 after its forwards (as on H100); seed_folds_ok in log
+F3,rtx5090,esmfold2,kit,esmfold2,1,128,,fast,ram_cap_16GB,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"one process all n (H100 method): killed by the 16 GB RAM cap while loading ESM-C 6B (6 fp32 shards, 24 GB) before the first forward"
+F3,rtx5090,esmfold2,kit,esmfold2,2,256,,fast,ram_cap_16GB,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"one process all n (H100 method): killed by the 16 GB RAM cap while loading ESM-C 6B (6 fp32 shards, 24 GB) before the first forward"
+F3,rtx5090,esmfold2,kit,esmfold2,4,512,,fast,ram_cap_16GB,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"one process all n (H100 method): killed by the 16 GB RAM cap while loading ESM-C 6B (6 fp32 shards, 24 GB) before the first forward"
+F3,rtx5090,esmfold2,kit,esmfold2,8,1024,,fast,ram_cap_16GB,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"one process all n (H100 method): killed by the 16 GB RAM cap while loading ESM-C 6B (6 fp32 shards, 24 GB) before the first forward"
+F3,rtx5090,esmfold2,kit,esmfold2,12,1536,,fast,ram_cap_16GB,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"one process all n (H100 method): killed by the 16 GB RAM cap while loading ESM-C 6B (6 fp32 shards, 24 GB) before the first forward"
+F3,rtx5090,esmfold2,kit,esmfold2,16,2048,,fast,ram_cap_16GB,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"one process all n (H100 method): killed by the 16 GB RAM cap while loading ESM-C 6B (6 fp32 shards, 24 GB) before the first forward"
+F3,rtx5090,opendde,kit,opendde,1,128,,exact,refused_on_sm120,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,
+F3,rtx5090,opendde,kit,opendde,2,256,,fast/big/exact,refused_on_sm120,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"decided at n=1 (exit 5 in every mode): the kit's pinned cuequivariance 0.10.0 (cu12) ops have no sm_120 image (cueq_triatt/cueq_trimul probe 'no kernel image'), the kit refuses without them"
+F3,rtx5090,opendde,kit,opendde,4,512,,fast/big/exact,refused_on_sm120,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"decided at n=1 (exit 5 in every mode): the kit's pinned cuequivariance 0.10.0 (cu12) ops have no sm_120 image (cueq_triatt/cueq_trimul probe 'no kernel image'), the kit refuses without them"
+F3,rtx5090,opendde,kit,opendde,8,1024,,fast/big/exact,refused_on_sm120,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"decided at n=1 (exit 5 in every mode): the kit's pinned cuequivariance 0.10.0 (cu12) ops have no sm_120 image (cueq_triatt/cueq_trimul probe 'no kernel image'), the kit refuses without them"
+F3,rtx5090,opendde,kit,opendde,12,1536,,fast/big/exact,refused_on_sm120,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"decided at n=1 (exit 5 in every mode): the kit's pinned cuequivariance 0.10.0 (cu12) ops have no sm_120 image (cueq_triatt/cueq_trimul probe 'no kernel image'), the kit refuses without them"
+F3,rtx5090,opendde,kit,opendde,16,2048,,fast/big/exact,refused_on_sm120,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"decided at n=1 (exit 5 in every mode): the kit's pinned cuequivariance 0.10.0 (cu12) ops have no sm_120 image (cueq_triatt/cueq_trimul probe 'no kernel image'), the kit refuses without them"
+F3,rtx5090,openfold3,kit,openfold3,1,128,,exact,ram_cap_16GB,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,
+F3,rtx5090,openfold3,kit,openfold3,2,256,,exact,ram_cap_16GB,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,
+F3,rtx5090,openfold3,kit,openfold3,4,512,,fast/exact,ram_cap_16GB,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"7 queries per process exceed 16 GB host RAM at n=1,2 (fast is also refused on sm_120: pair_transition core 'arch-sm120-not-measured', strict); 4 queries exceed it at n=4; not run above"
+F3,rtx5090,openfold3,kit,openfold3,8,1024,,fast/exact,ram_cap_16GB,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"7 queries per process exceed 16 GB host RAM at n=1,2 (fast is also refused on sm_120: pair_transition core 'arch-sm120-not-measured', strict); 4 queries exceed it at n=4; not run above"
+F3,rtx5090,openfold3,kit,openfold3,12,1536,,fast/exact,ram_cap_16GB,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"7 queries per process exceed 16 GB host RAM at n=1,2 (fast is also refused on sm_120: pair_transition core 'arch-sm120-not-measured', strict); 4 queries exceed it at n=4; not run above"
+F3,rtx5090,openfold3,kit,openfold3,16,2048,,fast/exact,ram_cap_16GB,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"7 queries per process exceed 16 GB host RAM at n=1,2 (fast is also refused on sm_120: pair_transition core 'arch-sm120-not-measured', strict); 4 queries exceed it at n=4; not run above"
+F3,rtx5090,openfold3,kit,openfold3,1,128,2.011,exact,ok,2,49.893;2.056;2.02;2.003,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,
+F3,rtx5090,openfold3,kit,openfold3,2,256,3.145,exact,ok,2,29.587;3.203;3.143;3.147,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,
+F3,rtx5090,openfold3,kit,openfold3,4,512,,exact,ram_cap_16GB,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"REDUCED: 4 forwards per process (7 exceed the 16 GB host-RAM cap): cold+2nd dropped, 2 timed"
+F3,rtx5090,protenix1,kit,protenix_v1,1,128,1.699,fast,ok,5,4.314;1.713;1.699;1.719;1.699;1.696;1.706,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,
+F3,rtx5090,protenix1,kit,protenix_v1,2,256,2.574,fast,ok,5,18.863;2.567;2.574;2.588;2.575;2.572;2.574,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,
+F3,rtx5090,protenix1,kit,protenix_v1,4,512,5.449,fast,ok,5,7.148;5.351;5.389;5.575;5.414;5.449;5.488,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,
+F3,rtx5090,protenix1,kit,protenix_v1,8,1024,15.042,fast,ok,5,23.07;14.633;14.751;15.293;14.903;15.042;15.169,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,
+F3,rtx5090,protenix1,kit,protenix_v1,12,1536,,exact,gpu_oom,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,
+F3,rtx5090,protenix1,kit,protenix_v1,16,2048,,exact,gpu_oom,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,
+F3,rtx5090,protenix2,kit,protenix_v2,1,128,,fast/big/exact/off,refused_on_sm120,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"n=1 probes (pre/probes.txt): stock fast_layernorm extension has no sm_120 image (upstream arch list 70-100) -> 'no kernel image' in every mode incl. off; LAYERNORM_TYPE=torch -> kit refuses partial activation (ln_core) in fast/big, exact hits a Triton kernel needing 131072 B smem > 101376 on sm_120"
+F3,rtx5090,protenix2,kit,protenix_v2,2,256,,fast/big/exact/off,refused_on_sm120,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"n=1 probes (pre/probes.txt): stock fast_layernorm extension has no sm_120 image (upstream arch list 70-100) -> 'no kernel image' in every mode incl. off; LAYERNORM_TYPE=torch -> kit refuses partial activation (ln_core) in fast/big, exact hits a Triton kernel needing 131072 B smem > 101376 on sm_120"
+F3,rtx5090,protenix2,kit,protenix_v2,4,512,,fast/big/exact/off,refused_on_sm120,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"n=1 probes (pre/probes.txt): stock fast_layernorm extension has no sm_120 image (upstream arch list 70-100) -> 'no kernel image' in every mode incl. off; LAYERNORM_TYPE=torch -> kit refuses partial activation (ln_core) in fast/big, exact hits a Triton kernel needing 131072 B smem > 101376 on sm_120"
+F3,rtx5090,protenix2,kit,protenix_v2,8,1024,,fast/big/exact/off,refused_on_sm120,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"n=1 probes (pre/probes.txt): stock fast_layernorm extension has no sm_120 image (upstream arch list 70-100) -> 'no kernel image' in every mode incl. off; LAYERNORM_TYPE=torch -> kit refuses partial activation (ln_core) in fast/big, exact hits a Triton kernel needing 131072 B smem > 101376 on sm_120"
+F3,rtx5090,protenix2,kit,protenix_v2,12,1536,,fast/big/exact/off,refused_on_sm120,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"n=1 probes (pre/probes.txt): stock fast_layernorm extension has no sm_120 image (upstream arch list 70-100) -> 'no kernel image' in every mode incl. off; LAYERNORM_TYPE=torch -> kit refuses partial activation (ln_core) in fast/big, exact hits a Triton kernel needing 131072 B smem > 101376 on sm_120"
+F3,rtx5090,protenix2,kit,protenix_v2,16,2048,,fast/big/exact/off,refused_on_sm120,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"n=1 probes (pre/probes.txt): stock fast_layernorm extension has no sm_120 image (upstream arch list 70-100) -> 'no kernel image' in every mode incl. off; LAYERNORM_TYPE=torch -> kit refuses partial activation (ln_core) in fast/big, exact hits a Triton kernel needing 131072 B smem > 101376 on sm_120"
+F3,rtx5090,rosettafold3,kit,rosettafold3,1,128,1.938,fast,ok,5,24.554;1.925;1.944;1.934;1.946;1.938;1.923,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,
+F3,rtx5090,rosettafold3,kit,rosettafold3,2,256,3.336,fast,ok,5,14.17;3.332;3.338;3.336;3.337;3.336;3.331,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,
+F3,rtx5090,rosettafold3,kit,rosettafold3,4,512,5.206,fast,ok,5,24.115;5.19;5.195;5.2;5.209;5.207;5.206,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,
+F3,rtx5090,rosettafold3,kit,rosettafold3,8,1024,,big,ram_cap_16GB,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,
+F3,rtx5090,rosettafold3,kit,rosettafold3,12,1536,,fast/big,ram_cap_16GB,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"7 copies exceed 16 GB host RAM from n=8 (also with 4 copies at n=8); n=12/16 killed in the first (pre-serial) pass too, not re-run serially"
+F3,rtx5090,rosettafold3,kit,rosettafold3,16,2048,,fast/big,ram_cap_16GB,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"7 copies exceed 16 GB host RAM from n=8 (also with 4 copies at n=8); n=12/16 killed in the first (pre-serial) pass too, not re-run serially"
+F3,rtx5090,rosettafold3,kit,rosettafold3,8,1024,,fast,ram_cap_16GB,0,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,"REDUCED: 4 forwards per process (7 exceed the 16 GB host-RAM cap): cold+2nd dropped, 2 timed"
+F3,rtx5090,esmfold2-fast,kit,esmfold2_fast,1,128,,,not_measured,,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,no kit record for this card / cell
+F3,rtx5090,esmfold2-fast,kit,esmfold2_fast,2,256,,,not_measured,,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,no kit record for this card / cell
+F3,rtx5090,esmfold2-fast,kit,esmfold2_fast,4,512,,,not_measured,,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,no kit record for this card / cell
+F3,rtx5090,esmfold2-fast,kit,esmfold2_fast,8,1024,,,not_measured,,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,no kit record for this card / cell
+F3,rtx5090,esmfold2-fast,kit,esmfold2_fast,12,1536,,,not_measured,,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,no kit record for this card / cell
+F3,rtx5090,esmfold2-fast,kit,esmfold2_fast,16,2048,,,not_measured,,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,no kit record for this card / cell
+F3,rtx5090,intellifold2,kit,intellifold2,1,128,,,not_measured,,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,no kit record for this card / cell
+F3,rtx5090,intellifold2,kit,intellifold2,2,256,,,not_measured,,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,no kit record for this card / cell
+F3,rtx5090,intellifold2,kit,intellifold2,4,512,,,not_measured,,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,no kit record for this card / cell
+F3,rtx5090,intellifold2,kit,intellifold2,8,1024,,,not_measured,,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,no kit record for this card / cell
+F3,rtx5090,intellifold2,kit,intellifold2,12,1536,,,not_measured,,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,no kit record for this card / cell
+F3,rtx5090,intellifold2,kit,intellifold2,16,2048,,,not_measured,,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,no kit record for this card / cell
+F3,rtx5090,intellifold2,kit,intellifold2_notxla,1,128,,,not_measured,,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,no kit record for this card / cell
+F3,rtx5090,intellifold2,kit,intellifold2_notxla,2,256,,,not_measured,,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,no kit record for this card / cell
+F3,rtx5090,intellifold2,kit,intellifold2_notxla,4,512,,,not_measured,,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,no kit record for this card / cell
+F3,rtx5090,intellifold2,kit,intellifold2_notxla,8,1024,,,not_measured,,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,no kit record for this card / cell
+F3,rtx5090,intellifold2,kit,intellifold2_notxla,12,1536,,,not_measured,,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,no kit record for this card / cell
+F3,rtx5090,intellifold2,kit,intellifold2_notxla,16,2048,,,not_measured,,,,,,,,,,/home/psk6950/foldforge-scratch/ff_paper/benchmarks/paper/F3_5i28_speed/data/kits_rtx5090_20261118.csv,no kit record for this card / cell
