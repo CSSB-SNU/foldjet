@@ -16,4 +16,4 @@ cd "$FF_REPO"
 exec "$HOME/mwe/gpu.sh" "$SECS" bash -c '
   echo "JOB local host=$(hostname) $(date -Is)"; nvidia-smi --query-gpu=name,memory.used,driver_version --format=csv,noheader
   python -u '"$HERE"'/F3_5i28_times/run_ff.py --model '"$MODEL"' --arm '"$ARM"' --out '"$OUT"' --rep '"${REP:-1}"' --repeats '"${REPEATS:-6}"' --sizes '"${SIZES:-1 2 4 8 12 16}"' 2>&1 | grep --line-buffered -v UserWarning
-  echo "END rc=${PIPESTATUS[0]} $(date -Is)"' 2>&1 | tee -a "$PAPER_OUT/logs/f3_${CARD}_${ARM}_rep${REP:-1}_${MODEL}.log"
+  rc=${PIPESTATUS[0]}; echo "END rc=$rc $(date -Is)"; exit $rc' 2>&1 | tee -a "$PAPER_OUT/logs/f3_${CARD}_${ARM}_rep${REP:-1}_${MODEL}.log"

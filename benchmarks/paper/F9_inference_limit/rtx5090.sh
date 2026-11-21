@@ -14,4 +14,4 @@ OUT=$PAPER_OUT/F9/$CARD/$ARM/$MODEL
 exec "$HOME/mwe/gpu.sh" "$SECS" bash -c '
   echo "JOB local host=$(hostname) $(date -Is)"; nvidia-smi --query-gpu=name,memory.used,driver_version --format=csv,noheader
   python -u '"$HERE"'/F9_inference_limit/limit_search.py --model '"$MODEL"' --arm '"$ARM"' --out '"$OUT"' '"${STEPS:+--steps $STEPS}"'
-  echo "END rc=$? $(date -Is)"' 2>&1 | tee -a "$PAPER_OUT/logs/f9_${CARD}_${ARM}_${MODEL}.log"
+  rc=$?; echo "END rc=$rc $(date -Is)"; exit $rc' 2>&1 | tee -a "$PAPER_OUT/logs/f9_${CARD}_${ARM}_${MODEL}.log"

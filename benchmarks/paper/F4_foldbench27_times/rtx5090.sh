@@ -12,4 +12,4 @@ export OMP_NUM_THREADS=8
 exec "$HOME/mwe/gpu.sh" "$SECS" bash -c '
   echo "JOB local host=$(hostname) $(date -Is)"; nvidia-smi --query-gpu=name,memory.used,driver_version --format=csv,noheader
   python -u '"$HERE"'/F4_foldbench27_times/run_foldbench27.py '"$MODEL $ARM"' --out '"$PAPER_OUT/F4/$CARD"' 2>&1 | grep --line-buffered -av "Warning\|warn("
-  echo "END rc=${PIPESTATUS[0]} $(date -Is)"' 2>&1 | tee -a "$PAPER_OUT/logs/f4_${CARD}_${ARM}_${MODEL}.log"
+  rc=${PIPESTATUS[0]}; echo "END rc=$rc $(date -Is)"; exit $rc' 2>&1 | tee -a "$PAPER_OUT/logs/f4_${CARD}_${ARM}_${MODEL}.log"

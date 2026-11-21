@@ -146,7 +146,7 @@ def main() -> None:
         todo.append((target, task, tokens))
     print(f"RUN F4 model={args.model} arm={args.arm} todo={[t[0] for t in todo]}", flush=True)
     if not todo:
-        return
+        sys.exit(incomplete(jsonl, only))
     config = {
         "backend": ffpaper.BACKEND[args.arm], "precision": "bf16", "mode": "exact", "trunk_seed": 0, "diffusion_seed": 0,
         "trunk": {"recycles": recycles}, "diffusion": {"steps": 200},
@@ -209,6 +209,23 @@ def main() -> None:
                 print(f"error {target}: {type(error).__name__}: {str(error)[:200]}", flush=True)
                 error = None
                 torch.cuda.empty_cache()
+    sys.exit(incomplete(jsonl, only))  # non-zero unless every selected target has a valid final row: a driver must never mark a failed run done
+
+
+def incomplete(jsonl: Path, only: set[str]) -> int:
+    """Count of selected targets without a VALID final row (ok, an out-of-memory error = a result, or a recorded timeout); any other error / no row = invalid."""
+    latest: dict[str, dict] = {}
+    for r in ffpaper.read_jsonl(jsonl):
+        latest[r["target"]] = r
+    bad = []
+    for _task, target, _tokens in targets():
+        if only and target not in only:
+            continue
+        r = latest.get(target)
+        if not (r and (r["status"] in ("ok", "timeout") or (r["status"] == "error" and r.get("oom")))):
+            bad.append(target)
+    print(f"F4 INCOMPLETE {len(bad)}: {bad}" if bad else "F4 COMPLETE", flush=True)
+    return 1 if bad else 0
 
 
 if __name__ == "__main__":
