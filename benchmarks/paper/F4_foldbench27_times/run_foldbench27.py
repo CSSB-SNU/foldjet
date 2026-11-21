@@ -218,7 +218,7 @@ def incomplete(jsonl: Path, only: set[str]) -> int:
     for r in ffpaper.read_jsonl(jsonl):
         latest[r["target"]] = r
     bad = []
-    for _task, target, _tokens in targets():
+    for target, _task, _tokens in targets():
         if only and target not in only:
             continue
         r = latest.get(target)
