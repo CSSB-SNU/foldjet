@@ -55,3 +55,21 @@ In the engine 3.0.1 runs the four fp32 conditioning transitions of the diffusion
 TF32 off) were refused by the engine's H100 cuda backend and served by Triton (48 calls with chunk 0, 72 with chunk 24). The rows carry
 `engine_cuda_only = no`; they are not re-measured (details: `~/foldforge-scratch/paper/engine_issues/h100_fp32_transition_triton.md`; engine fix: branch
 `h100-transition-fp32-train`).
+
+## H100 engine arm re-measured with the fp32 Transition fix (2026-11-21)
+
+Engine label for the paper table: **engine main d967378a2 (3.0.6 + H100 fp32 Transition fix, unreleased)**. Source: `git archive d967378a2 src/miniworld_engine`
+plus the 3.0.6 `_prebuilt` tree, put in front of the installed engine through `ENGINE_SRC` (the BENCH line says `engine_version 3.0.6` because the package
+metadata is the 3.0.6 one; the `engine_file` is the overlay). Same protocol as above (2 models x 3 repeats, 6 optimizer steps x 8 micro steps, 48 augmentations in
+one pass, step graph, activation checkpointing, the original H100 stand-in pools), FoldForge worktree `paper-f6-h100` (4209c51, clean). Slurm 64927 (Protenix v1),
+64928 (AF3), after a warm-up job (SMOKE=1) for the shared extension cache. The other arms (PyTorch, PyTorch+compile, cuEq(+compile)) are NOT re-run: their rows
+stay the engine-3.0.1 H100 values in `data/existing/`; the engine row is therefore from a different session than the other arms.
+
+| model | engine s/example (median of 3) | min | max | peak GiB | Triton calls | refused | 3.0.1 row (engine_cuda_only = no) |
+|---|---|---|---|---|---|---|---|
+| AF3 | 0.8121 | 0.8033 | 0.8127 | 63.0 | 0 | none | 0.8066 |
+| Protenix v1 | 0.7870 | 0.7794 | 0.7874 | 63.0 | 0 | none | 0.7843 |
+
+`engine_cuda_only = yes`: `ENGINE_AFTER_MICRO1` (data/engine_after_micro1_h100_d967.txt) shows every module class selected and served by cuda, `refused=-`; Transition
+`n=118 served=cuda:1716` (before: 4 fp32 diffusion-head transitions on Triton). Step-graph fallbacks 0. Files: `data/f6_runs_h100_engine_d967.csv`,
+`f6_summary_h100_engine_d967.csv`, `steps_h100_engine_d967.txt`. Run script of this session: `run_f6.sh` with `ARMS=miniworld`, `ENGINE_SRC=<overlay>`, `FFENV=<paper-306 env>`.
