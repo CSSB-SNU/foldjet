@@ -49,11 +49,21 @@ SIGMA_DATA = 16.0
 #:the transitions at once.
 MAX_TABLE_ROWS = 32768
 
-#: Banded pair conditioning (`DiffusionHead._fold_conditioning_banded`): a trunk pair whose fp32 copy would exceed
-#: ``PAIR_BAND_THRESHOLD_BYTES`` is conditioned ``PAIR_BAND_BYTES`` of fp32 rows at a time, so the whole-pair fp32 copy and the
-#: ``[S, S, 2 * pair_channel]`` concatenation are never materialized (22.5 GiB each at OpenDDE n=16). Every op of the chain is per token
-#: pair, so the bands equal the unbanded result bit for bit; below the threshold the unbanded code runs unchanged.
-PAIR_BAND_THRESHOLD_BYTES = 4 << 30
+#: Banded pair conditioning (`DiffusionHead._fold_conditioning_banded`): the pair part of a fold's conditioning is computed
+#: ``PAIR_BAND_BYTES`` of fp32 rows at a time, so the whole-pair fp32 copy and the ``[S, S, c_pair + c_relpe]`` concatenation are never
+#: materialized (22.5 GiB each at OpenDDE n=16). Every op of the chain is per token pair, so the bands equal the unbanded result bit
+#: for bit.
+#:
+#: The decision is made on the real peak of the unbanded chain (`DiffusionHead._unbanded_peak_bytes`: the fp32 pair copy, the relative
+#: features, the concatenation and the LayerNorm output are live together, 3.2 KB per token pair for AF3), not on the size of the pair
+#: copy alone (the copy is 1/6 of that peak). The chain runs banded when that peak exceeds the smaller of
+#:  - ``PAIR_BAND_THRESHOLD_BYTES`` (a fixed cap, also the rule on a CPU tensor; 24 GiB is where the old pair-copy rule of 4 GiB
+#:    switched on for the 128-channel AF3 pair), and
+#:  - ``PAIR_BAND_FREE_FRACTION`` of what the allocator can still hand out on the pair's device (free device memory + cached-but-unused
+#:    blocks), so a 32 GB card bands at AF3 n=13 and up, where the 24 GiB rule left n=19..22 to run out of memory in this very step.
+#: Below both the unbanded code runs unchanged.
+PAIR_BAND_THRESHOLD_BYTES = 24 << 30
+PAIR_BAND_FREE_FRACTION = 0.4
 PAIR_BAND_BYTES = 1 << 30
 
 
@@ -331,9 +341,38 @@ class DiffusionHead(nn.Module):
         """Rows per band when the fold's pair conditioning runs banded, else None (the unbanded path)."""
         f32 = self.single_cond_initial_projection.weight.dtype == torch.float32
         row_bytes = pair[0].numel() * (4 if f32 else pair.element_size())
-        if row_bytes * pair.shape[0] <= PAIR_BAND_THRESHOLD_BYTES:
+        if self._unbanded_peak_bytes(pair) <= self._band_limit_bytes(pair):
             return None
         return max(1, PAIR_BAND_BYTES // row_bytes)
+
+    def _unbanded_peak_bytes(self, pair: torch.Tensor) -> int:
+        """Bytes the unbanded pair conditioning holds at its peak (the working dtype is fp32 for an fp32 denoiser, else the pair's).
+
+        Stage 1, live together: the cast pair copy (+ the compressed pair and its LayerNorm output when the trunk pair is compressed),
+        the relative / init features, the concatenation and its LayerNorm output. Stage 2: the projected pair and the two transitions'
+        hidden activations (x, 2x up, 2x gated, out: 5 widths). The estimate is the larger stage.
+        """
+        f32 = self.single_cond_initial_projection.weight.dtype == torch.float32
+        element = 4 if f32 else pair.element_size()
+        c_trunk = pair.shape[-1]
+        c_cat = self.c_pair_cond_initial
+        c_first = self.pair_channel if self.compress_trunk_pair else c_trunk
+        stage1 = c_trunk + (2 * c_first if self.compress_trunk_pair else 0) + (c_cat - c_first) + 2 * c_cat
+        stage2 = 5 * self.pair_channel
+        return pair.shape[0] * pair.shape[1] * element * max(stage1, stage2)
+
+    @staticmethod
+    def _band_limit_bytes(pair: torch.Tensor) -> float:
+        """The peak above which the pair conditioning runs banded (see ``PAIR_BAND_FREE_FRACTION``)."""
+        limit = float(PAIR_BAND_THRESHOLD_BYTES)
+        if pair.is_cuda:
+            try:
+                free, _ = torch.cuda.mem_get_info(pair.device)
+                spare = free + torch.cuda.memory_reserved(pair.device) - torch.cuda.memory_allocated(pair.device)
+                limit = min(limit, PAIR_BAND_FREE_FRACTION * spare)
+            except RuntimeError:  # no query possible (e.g. during capture): the fixed cap alone
+                pass
+        return limit
 
     def _fold_conditioning_banded(self, batch, embeddings, use_conditioning):
         """`_fold_conditioning` with the pair part in row bands (same arithmetic per token pair, bit-identical; see ``PAIR_BAND_BYTES``)."""
