@@ -134,6 +134,9 @@ def task_members() -> dict[str, str]:
 def boot_ci(x: np.ndarray, n: int = 10000, seed: int = 0) -> tuple[float, float, float]:
     rng = np.random.default_rng(seed)
     x = np.asarray(x, float)
+    x = x[~np.isnan(x)]  # an interface the evaluator could not score in one of the runs (NaN DockQ for every sample) is left out
+    if len(x) == 0:
+        return float("nan"), float("nan"), float("nan")
     means = x[rng.integers(0, len(x), (n, len(x)))].mean(1)
     return float(x.mean()), float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))
 

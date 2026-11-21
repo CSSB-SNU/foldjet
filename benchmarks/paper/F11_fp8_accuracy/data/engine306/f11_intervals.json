@@ -1,0 +1,212 @@
+{
+ "interface_antibody_antigen|top1|fp8-bf16": [
+  -0.08139534883720931,
+  -0.13372093023255813,
+  -0.03488372093023256
+ ],
+ "interface_antibody_antigen|oracle|fp8-bf16": [
+  -0.046511627906976744,
+  -0.09302325581395349,
+  -0.005813953488372093
+ ],
+ "interface_antibody_antigen|meandq|fp8-bf16": [
+  -0.010612289156626507,
+  -0.021748246987951813,
+  -0.00030904216867470386
+ ],
+ "interface_antibody_antigen|top1|fp8b-fp8": [
+  0.046511627906976744,
+  0.005813953488372093,
+  0.0872093023255814
+ ],
+ "interface_antibody_antigen|oracle|fp8b-fp8": [
+  0.01744186046511628,
+  -0.029069767441860465,
+  0.06395348837209303
+ ],
+ "interface_antibody_antigen|meandq|fp8b-fp8": [
+  -0.008231084337349393,
+  -0.017833427710843366,
+  0.0007750000000000002
+ ],
+ "interface_antibody_antigen|top1|fp8b-bf16": [
+  -0.03488372093023256,
+  -0.08139534883720931,
+  0.011627906976744186
+ ],
+ "interface_antibody_antigen|oracle|fp8b-bf16": [
+  -0.029069767441860465,
+  -0.06976744186046512,
+  0.011627906976744186
+ ],
+ "interface_antibody_antigen|meandq|fp8b-bf16": [
+  -0.018843373493975905,
+  -0.029911837349397584,
+  -0.008973843373493974
+ ],
+ "interface_antibody_antigen|top1|bf16c-bf16": [
+  0.005813953488372093,
+  -0.011627906976744186,
+  0.029069767441860465
+ ],
+ "interface_antibody_antigen|oracle|bf16c-bf16": [
+  -0.005813953488372093,
+  -0.029069767441860465,
+  0.011627906976744186
+ ],
+ "interface_antibody_antigen|meandq|bf16c-bf16": [
+  0.0002761445783132531,
+  -0.000729174698795181,
+  0.0012494096385542144
+ ],
+ "interface_antibody_antigen|top1|fp8c-bf16c": [
+  -0.040697674418604654,
+  -0.0872093023255814,
+  0.0
+ ],
+ "interface_antibody_antigen|oracle|fp8c-bf16c": [
+  -0.06395348837209303,
+  -0.10465116279069768,
+  -0.029069767441860465
+ ],
+ "interface_antibody_antigen|meandq|fp8c-bf16c": [
+  -0.016673012048192774,
+  -0.025337855421686754,
+  -0.008498951807228922
+ ],
+ "interface_antibody_antigen|top1|fp8c-bf16": [
+  -0.03488372093023256,
+  -0.08139534883720931,
+  0.011627906976744186
+ ],
+ "interface_antibody_antigen|oracle|fp8c-bf16": [
+  -0.06976744186046512,
+  -0.11627906976744186,
+  -0.029069767441860465
+ ],
+ "interface_antibody_antigen|meandq|fp8c-bf16": [
+  -0.016396867469879516,
+  -0.024846716867469882,
+  -0.008503849397590366
+ ],
+ "interface_antibody_antigen|top1|fp8c-fp8b": [
+  0.0,
+  -0.040697674418604654,
+  0.040697674418604654
+ ],
+ "interface_antibody_antigen|oracle|fp8c-fp8b": [
+  -0.040697674418604654,
+  -0.0755813953488372,
+  -0.011627906976744186
+ ],
+ "interface_antibody_antigen|meandq|fp8c-fp8b": [
+  0.002446506024096384,
+  -0.005157596385542174,
+  0.010456957831325305
+ ],
+ "interface_protein_rna|top1|fp8-bf16": [
+  -0.04285714285714286,
+  -0.1,
+  0.0
+ ],
+ "interface_protein_rna|oracle|fp8-bf16": [
+  -0.014285714285714285,
+  -0.04285714285714286,
+  0.0
+ ],
+ "interface_protein_rna|meandq|fp8-bf16": [
+  0.0038680999610285808,
+  -0.005176746732415716,
+  0.01575007549156857
+ ],
+ "interface_protein_rna|top1|fp8b-fp8": [
+  0.0,
+  0.0,
+  0.0
+ ],
+ "interface_protein_rna|oracle|fp8b-fp8": [
+  0.0,
+  0.0,
+  0.0
+ ],
+ "interface_protein_rna|meandq|fp8b-fp8": [
+  -0.000594801741085719,
+  -0.007234381455395711,
+  0.005737903058864285
+ ],
+ "interface_protein_rna|top1|fp8b-bf16": [
+  -0.04285714285714286,
+  -0.1,
+  0.0
+ ],
+ "interface_protein_rna|oracle|fp8b-bf16": [
+  -0.014285714285714285,
+  -0.04285714285714286,
+  0.0
+ ],
+ "interface_protein_rna|meandq|fp8b-bf16": [
+  0.003273298219942862,
+  -0.0047948142269957136,
+  0.012702769722265712
+ ],
+ "interface_protein_rna|top1|bf16c-bf16": [
+  0.0,
+  0.0,
+  0.0
+ ],
+ "interface_protein_rna|oracle|bf16c-bf16": [
+  -0.014285714285714285,
+  -0.04285714285714286,
+  0.0
+ ],
+ "interface_protein_rna|meandq|bf16c-bf16": [
+  -0.0010435353091999954,
+  -0.0032609169594828586,
+  0.0009376311836128565
+ ],
+ "interface_protein_rna|top1|fp8c-bf16c": [
+  -0.02857142857142857,
+  -0.08571428571428572,
+  0.02857142857142857
+ ],
+ "interface_protein_rna|oracle|fp8c-bf16c": [
+  0.0,
+  -0.04285714285714286,
+  0.04285714285714286
+ ],
+ "interface_protein_rna|meandq|fp8c-bf16c": [
+  0.005679527245828569,
+  -0.003422299134861437,
+  0.018009521698108565
+ ],
+ "interface_protein_rna|top1|fp8c-bf16": [
+  -0.02857142857142857,
+  -0.08571428571428572,
+  0.02857142857142857
+ ],
+ "interface_protein_rna|oracle|fp8c-bf16": [
+  -0.014285714285714285,
+  -0.04285714285714286,
+  0.0
+ ],
+ "interface_protein_rna|meandq|fp8c-bf16": [
+  0.004635991936628573,
+  -0.004608496670028561,
+  0.017175440265532856
+ ],
+ "interface_protein_rna|top1|fp8c-fp8b": [
+  0.014285714285714285,
+  0.0,
+  0.04285714285714286
+ ],
+ "interface_protein_rna|oracle|fp8c-fp8b": [
+  0.0,
+  0.0,
+  0.0
+ ],
+ "interface_protein_rna|meandq|fp8c-fp8b": [
+  0.0013626937166857109,
+  -0.0034108053757485788,
+  0.0067294571561457095
+ ]
+}
