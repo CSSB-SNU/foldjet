@@ -14,7 +14,7 @@
 #SBATCH -o /home/psk6950/foldforge-scratch/paper/logs/%x_%A_%a.log
 set -uo pipefail
 : "${RUNS:?RUNS = the F4 output dir of the card}" "${CARD:?CARD of the predictions}"
-HERE=${FF_REPO:-$HOME/foldforge-scratch/paper-infer}/benchmarks/paper
+HERE=${FF_REPO:-$HOME/foldforge-scratch/paper-306}/benchmarks/paper
 source "$HERE/common/cards/h100.env"          # the CPU job runs on the H100 cluster whatever card made the predictions
 D=$HERE/F5_sample_comparison
 OUT=$PAPER_OUT/F5/$CARD

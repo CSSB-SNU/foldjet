@@ -14,7 +14,7 @@
 #SBATCH -o /home/psk6950/foldforge-scratch/paper/logs/%x_%j.log
 set -uo pipefail
 : "${MODEL:?MODEL}" "${ARM:?ARM engine|engine_fp8}"
-HERE=${FF_REPO:-$HOME/foldforge-scratch/paper-infer}/benchmarks/paper
+HERE=${FF_REPO:-$HOME/foldforge-scratch/paper-306}/benchmarks/paper
 source "$HERE/common/cards/h100.env"
 OUT=$PAPER_OUT/F3/$CARD/${ARM}_rep${REP:-1}/$MODEL
 mkdir -p "$OUT"

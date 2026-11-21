@@ -1,0 +1,44 @@
+#!/bin/bash
+#SBATCH -p h100 -A cssb --qos=cssb_h100 --gres=gpu:h100:1 -c 16 --mem=120G --time=06:00:00
+#SBATCH -o /home/psk6950/foldforge-scratch/paper/F11_investigation/logs/%x_%j.log
+# One FP8 route-ablation config (CFG) of AF3 on the 138 investigation targets (113 antibody-antigen + 25 protein-protein), trunk seed 42 x 5 samples,
+# --recycles 11 (as the F11 runs), fb_multi on ONE GPU, engine 3.0.6 (paper-306 env).
+set -u
+R=/home/psk6950/foldforge-scratch/paper-306; B=$R/benchmarks/foldbench; D=/home/psk6950/foldforge-scratch/paper/F11_investigation
+unset MINIWORLD_FP8 MINIWORLD_FP8_MODEL F11INV_TRIATTN F11INV_TR_HIDDEN F11INV_TR_DYNAMIC F11INV_TR_LOG; EAGER=
+SAFE="export MINIWORLD_FP8=safe MINIWORLD_FP8_MODEL=af3 MINIWORLD_TRIMUL_FP8_GUARD=lazy MINIWORLD_OPM_FP8_GUARD=lazy MINIWORLD_PWA_FP8_GUARD=lazy MINIWORLD_TRANSITION_FP8_GUARD=lazy"
+case "$CFG" in
+  bf16) ;;
+  safe|safe_rev) eval $SAFE ;;
+  no_triattn) eval $SAFE; export F11INV_TRIATTN=none ;;
+  no_qk) eval $SAFE; export F11INV_TRIATTN=pv ;;
+  no_trimul) eval $SAFE; export MINIWORLD_TRIMUL_FP8= ;;
+  no_opm) eval $SAFE; export MINIWORLD_OPM_FP8= ;;
+  no_pwa) eval $SAFE; export MINIWORLD_PWA_FP8= ;;
+  no_transition) eval $SAFE; export MINIWORLD_TRANSITION_FP8= ;;
+  no_tokendit) eval $SAFE; export MINIWORLD_TOKEN_DIT_FP8= ;;
+  no_atomdit) eval $SAFE; export MINIWORLD_ATOMDIT_FP8= ;;
+  only_triattn) eval $SAFE; export MINIWORLD_TRIMUL_FP8= MINIWORLD_OPM_FP8= MINIWORLD_PWA_FP8= MINIWORLD_TRANSITION_FP8= MINIWORLD_TOKEN_DIT_FP8= MINIWORLD_ATOMDIT_FP8= ;;
+  only_trunk_nontriattn) eval $SAFE; export F11INV_TRIATTN=none MINIWORLD_TOKEN_DIT_FP8= MINIWORLD_ATOMDIT_FP8= ;;
+  only_diffusion) eval $SAFE; export F11INV_TRIATTN=none MINIWORLD_TRIMUL_FP8= MINIWORLD_OPM_FP8= MINIWORLD_PWA_FP8= MINIWORLD_TRANSITION_FP8= ;;
+  only_trimul) eval $SAFE; export F11INV_TRIATTN=none MINIWORLD_OPM_FP8= MINIWORLD_PWA_FP8= MINIWORLD_TRANSITION_FP8= MINIWORLD_TOKEN_DIT_FP8= MINIWORLD_ATOMDIT_FP8= ;;
+  only_transition) eval $SAFE; export F11INV_TRIATTN=none MINIWORLD_TRIMUL_FP8= MINIWORLD_OPM_FP8= MINIWORLD_PWA_FP8= MINIWORLD_TOKEN_DIT_FP8= MINIWORLD_ATOMDIT_FP8= ;;
+  only_opm) eval $SAFE; export F11INV_TRIATTN=none MINIWORLD_TRIMUL_FP8= MINIWORLD_PWA_FP8= MINIWORLD_TRANSITION_FP8= MINIWORLD_TOKEN_DIT_FP8= MINIWORLD_ATOMDIT_FP8= ;;
+  only_pwa) eval $SAFE; export F11INV_TRIATTN=none MINIWORLD_TRIMUL_FP8= MINIWORLD_OPM_FP8= MINIWORLD_TRANSITION_FP8= MINIWORLD_TOKEN_DIT_FP8= MINIWORLD_ATOMDIT_FP8= ;;
+  tr_trunk) eval $SAFE; export F11INV_TRIATTN=none MINIWORLD_TRIMUL_FP8= MINIWORLD_OPM_FP8= MINIWORLD_PWA_FP8= MINIWORLD_TOKEN_DIT_FP8= MINIWORLD_ATOMDIT_FP8= F11INV_TR_HIDDEN=512 ;;
+  tr_diff) eval $SAFE; export F11INV_TRIATTN=none MINIWORLD_TRIMUL_FP8= MINIWORLD_OPM_FP8= MINIWORLD_PWA_FP8= MINIWORLD_TOKEN_DIT_FP8= MINIWORLD_ATOMDIT_FP8= F11INV_TR_HIDDEN=256 ;;
+  tr_g1off) eval $SAFE; export F11INV_TRIATTN=none MINIWORLD_TRIMUL_FP8= MINIWORLD_OPM_FP8= MINIWORLD_PWA_FP8= MINIWORLD_TOKEN_DIT_FP8= MINIWORLD_ATOMDIT_FP8= MINIWORLD_TRANSITION_FP8_G1=0 ;;
+  tr_g2off) eval $SAFE; export F11INV_TRIATTN=none MINIWORLD_TRIMUL_FP8= MINIWORLD_OPM_FP8= MINIWORLD_PWA_FP8= MINIWORLD_TOKEN_DIT_FP8= MINIWORLD_ATOMDIT_FP8= MINIWORLD_TRANSITION_FP8_G2=0 ;;
+  tr_head1) eval $SAFE; export F11INV_TRIATTN=none MINIWORLD_TRIMUL_FP8= MINIWORLD_OPM_FP8= MINIWORLD_PWA_FP8= MINIWORLD_TOKEN_DIT_FP8= MINIWORLD_ATOMDIT_FP8= MINIWORLD_TRANSITION_FP8_HEADROOM=1 ;;
+  tr_head256) eval $SAFE; export F11INV_TRIATTN=none MINIWORLD_TRIMUL_FP8= MINIWORLD_OPM_FP8= MINIWORLD_PWA_FP8= MINIWORLD_TOKEN_DIT_FP8= MINIWORLD_ATOMDIT_FP8= MINIWORLD_TRANSITION_FP8_HEADROOM=256 ;;
+  tr_dyn_eager) eval $SAFE; export F11INV_TRIATTN=none MINIWORLD_TRIMUL_FP8= MINIWORLD_OPM_FP8= MINIWORLD_PWA_FP8= MINIWORLD_TOKEN_DIT_FP8= MINIWORLD_ATOMDIT_FP8= F11INV_TR_DYNAMIC=1; EAGER=1 ;;
+  tr_static_eager) eval $SAFE; export F11INV_TRIATTN=none MINIWORLD_TRIMUL_FP8= MINIWORLD_OPM_FP8= MINIWORLD_PWA_FP8= MINIWORLD_TOKEN_DIT_FP8= MINIWORLD_ATOMDIT_FP8=; EAGER=1 ;;
+  bf16_eager) EAGER=1 ;;
+  *) echo "unknown CFG $CFG"; exit 2 ;;
+esac
+TG=$D/abl/targets.txt; [ "$CFG" = safe_rev ] && { tac $D/abl/targets.txt > $D/abl/targets_rev.txt; TG=$D/abl/targets_rev.txt; }
+O=$D/abl/$CFG/pred; mkdir -p $O
+{ echo "cfg=$CFG job=$SLURM_JOB_ID host=$(hostname) $(date -Is)"; env | grep -E "^MINIWORLD_|^F11INV" | sort; } > $D/abl/$CFG/config.txt
+export FFENV=$R/.pixi/envs/default ENGINE_OVERLAY=$D/overlay FF_ALLOW_SIZE_MISMATCH=1
+bash $B/run_py.sh $B/fb_multi.py af3 $TG /home/psk6950/foldforge-scratch/foldbench/specs_all $O --group-max-tokens 512 --small-concurrency 3 --recycles 11 --seeds 42 ${EAGER:+--eager}
+echo "END $(date -Is)" >> $D/abl/$CFG/config.txt

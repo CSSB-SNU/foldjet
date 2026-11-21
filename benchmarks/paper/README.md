@@ -1,7 +1,7 @@
 # Paper experiments (FoldForge side)
 
 Whole-predictor experiments of the {{ENGINE}} / {{FOLDFORGE}} Brief Communication. One folder per experiment with a `README.md` (what is measured, conditions, exact
-commands, output columns), its input lists, one script per card and a `collect.py` that turns the raw records into CSVs. Branch `paper-306` (engine 3.0.6) merges the inference (F3 F4 F5 F9), FoldBench (F1 F2 F8 F11) and training (F6 F7 F10) experiments. The engine's operator experiments
+commands, output columns), its input lists, one script per card and a `collect.py` that turns the raw records into CSVs. Engine 3.0.6 campaign: inference (F3 F4 F5 F9), FoldBench (F1 F2 F8 F11) and training (F6 F7; F10 removed from the paper) experiments. The engine's operator experiments
 (E1-E6) live in the miniworld-engine repository.
 
 ## Common rules
@@ -32,7 +32,7 @@ commands, output columns), its input lists, one script per card and a `collect.p
 | F1 | `F1_foldbench_af3/` | AF3 on the whole FoldBench (1,522): GPU-hours of the Anthropic kit vs FoldForge bf16 / FP8 | H100 | Fig 1b, Supp 8 | H100 results of engine 3.0.1 kept (inputs <= 2048 tokens unchanged in 3.0.6) |
 | F2 | `F2_foldbench_accuracy/` | per-task accuracy of the F1 runs, top-1 and oracle (upstream rules) | H100 | Fig 2d, Supp 16 | 3.0.1 runs scored, top-1 + oracle |
 | F8 | `F8_protenix_ft_foldbench/` | fine-tuned Protenix v1 (10 epochs) vs released, whole FoldBench, top-1 and oracle | H100 | Supp 17 | 2.5.14 runs scored |
-| F11 | `F11_fp8_accuracy/` | FP8 vs bf16 accuracy on antibody-antigen / protein-RNA: rounding or reordering | H100 | text | analysis of 58554 / 58867 / 58996 done; bf16 repeat (noise floor) on 3.0.6 |
+| F11 | `F11_fp8_accuracy/` | FP8 vs bf16 accuracy on antibody-antigen / protein-RNA; cause of the antibody-antigen loss | H100 | text | done on 3.0.6: seed-spread design + route ablation (`investigation/`): trunk pair Transition e4m3 rounding; antibody-antigen = trunk bf16, FP8 diffusion only |
 | F6 | `F6_training_speed/` | whole-model training speed, AF3 / Protenix v1, 4 backends | H100, A100, RTX 5090 | Fig 1d | H100 3.0.1 kept; A100 / 5090 on 3.0.6 |
 | F7 | `F7_finetune_loss/` | Protenix v1 fine-tune loss, engine vs PyTorch (torch.compile) | H100 | Fig 2a,b, Supp 11 | existing runs |
 | F10 | `F10_training_limit/` | training limit, Protenix v1 setup: longest crop; most Pairformer blocks without checkpointing | H100, A100, RTX 5090 | removed | **removed from the paper (user decision, 2026-11-21)**; code and the H100 3.0.6 results kept as a record, no further runs |

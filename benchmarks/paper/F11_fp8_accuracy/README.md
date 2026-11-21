@@ -59,3 +59,9 @@ sbatch -p h100 -A cssb --qos=cssb_h100 --gres=none -c 16 --mem=48G --time=02:00:
 - **Accuracy:** protein-RNA: every metric inside the between-seed spread (FP8 ~ another seed). Antibody-antigen: oracle (-4.0 pt [-6.3, -1.7] vs between-seed
   2.8 pt) and mean DockQ of the samples (-0.017 [-0.025, -0.008] vs 0.014) **outside** (a precision loss); top-1 (-2.4 pt [-4.8, -0.1] vs 4.1 pt) borderline.
   The 3.0.1 replicate: antibody-antigen top-1 / oracle inside, mean DockQ borderline (-0.011 [-0.022, -0.000]); protein-RNA inside.
+
+## Investigation: the antibody-antigen FP8 loss (2026-11-21)
+
+Route ablation and mechanism in [`investigation/README.md`](investigation/README.md). Cause: the trunk pair Transition in FP8 (e4m3 rounding, not the
+scales). **Recommendation used in the paper: for antibody-antigen targets run the trunk in bf16 and FP8 only in the diffusion module** (the antibody-antigen
+results then equal bf16; the other tasks lose nothing with every route on).

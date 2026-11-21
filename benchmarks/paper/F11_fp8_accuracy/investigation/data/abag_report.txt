@@ -1,0 +1,35 @@
+== where the FP8 deviation sits (antibody-antigen, 3.0.6, per sample, after superposing FP8 on bf16 by the ANTIGEN), median / mean A
+  dev_ab_if_on_ag          median   1.49  mean   8.59
+  dev_ab_nonif_on_ag       median   2.90  mean  15.89
+  dev_ag_if                median   0.30  mean   1.06
+  dev_ag_nonif             median   0.28  mean   1.08
+  ab_pose_shift            median   2.23  mean  13.76
+  rmsd_ab_internal         median   0.26  mean   0.55
+  dev_ab_if_internal       median   0.30  mean   0.63
+  dev_ab_nonif_internal    median   0.15  mean   0.36
+== by antibody format
+  Fab (>=2 antibody chains)        n_samples  1275 targets  51  pose_shift med  2.61  ab_internal med  0.25  mean dDockQ -0.0158  bf16 DockQ 0.279
+  single-chain (nanobody / scFv)   n_samples  1450 targets  58  pose_shift med  1.91  ab_internal med  0.29  mean dDockQ -0.0168  bf16 DockQ 0.354
+== Spearman correlation of per-sample dDockQ (FP8 - bf16) with
+  ab_pose_shift          rho -0.065
+  rmsd_ab_internal       rho -0.102
+  dev_ab_if_internal     rho -0.097
+  dev_ag_if              rho -0.019
+  d_plddt_ab_if          rho +0.180
+  d_plddt_ag             rho +0.154
+  d_rank                 rho +0.188
+  dq_b                   rho -0.166
+  n_res                  rho -0.046
+== per target (113): Spearman of mean dDockQ with
+  pose               rho -0.056
+  n_res              rho -0.142
+  n_ab               rho +0.031
+  ab_template_frac   rho -0.054
+  ag_template_frac   rho -0.054
+  dq_b               rho -0.147
+== dDockQ by bf16 DockQ bin (per sample): is the loss on near-threshold / docked samples?
+  bf16 DockQ (-0.01, 0.1]   n  1316  mean dDockQ +0.0223  pose shift med  5.20  success flips +47 / -0
+  bf16 DockQ (0.1, 0.23]    n   247  mean dDockQ -0.0044  pose shift med  3.30  success flips +24 / -0
+  bf16 DockQ (0.23, 0.49]   n   276  mean dDockQ -0.0324  pose shift med  2.58  success flips +0 / -50
+  bf16 DockQ (0.49, 0.8]    n   427  mean dDockQ -0.0807  pose shift med  0.97  success flips +0 / -56
+  bf16 DockQ (0.8, 1.01]    n   459  mean dDockQ -0.0640  pose shift med  0.28  success flips +0 / -34
