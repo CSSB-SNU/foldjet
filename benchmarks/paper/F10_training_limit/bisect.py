@@ -23,7 +23,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 LENGTH_LADDER = [384, 512, 640, 768, 1024, 1280, 1536, 2048, 2560, 3072, 4096, 5120, 6144, 8192]
-BLOCK_LADDER = [48, 64, 96, 128, 192, 256, 384]
+BLOCK_LADDER = [48, 64, 96, 100]  # capped at 100 (user, 2026-11-20: block counts above 100 are meaningless; reaching 100 = ">= 100")
 
 
 def atoms_for(tokens: int) -> int:

@@ -18,7 +18,7 @@ One **trial is one process** (`trial.sh`, via `../train_common/trial_main.py`, w
 Pairformer stack, extra blocks are copies of the native ones: a memory / speed probe, not a trained model). An out-of-memory trial is a **recorded result**: it is never
 retried with another shape. The search (`bisect.py`) per arm and part:
 
-1. Walk up a fixed ladder (length: 384, 512, 640, 768, 1024, ... 8192; blocks: 48, 64, 96, 128, 192, 256, 384) with the smallest-memory augmentation chunk (1) until the first
+1. Walk up a fixed ladder (length: 384, 512, 640, 768, 1024, ... 8192; blocks: 48, 64, 96, 100 -- capped at 100, reaching it reads ">= 100") with the smallest-memory augmentation chunk (1) until the first
    failure (first rung failing: the search runs down from it), then **bisect** between the last success and the first failure (length on a 64-token grid, blocks to 1).
 2. At the maximum found, the chunk ladder `0,24,12,6,3,1` (0 = all 48 augmentations in one pass) is run from large to small; the first chunk that trains is the setting
    "as needed", with its peak memory and step time.
