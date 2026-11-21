@@ -15,7 +15,8 @@
 set -uo pipefail
 : "${RUNS:?RUNS = the F4 output dir of the card}" "${CARD:?CARD of the predictions}"
 HERE=${FF_REPO:-$HOME/foldforge-scratch/paper-306}/benchmarks/paper
-source "$HERE/common/cards/h100.env"          # the CPU job runs on the H100 cluster whatever card made the predictions
+PRED_CARD=$CARD; source "$HERE/common/cards/h100.env"          # the CPU job runs on the H100 cluster whatever card made the predictions
+CARD=$PRED_CARD   # h100.env sets CARD=h100: keep the card that made the predictions (outputs go to F5/<that card>)
 D=$HERE/F5_sample_comparison
 OUT=$PAPER_OUT/F5/$CARD
 read -r M A < <(sed -n "$((SLURM_ARRAY_TASK_ID + ${TASK_OFFSET:-0} + 1))p" "${ITEMS:-$D/eval_items.txt}")
