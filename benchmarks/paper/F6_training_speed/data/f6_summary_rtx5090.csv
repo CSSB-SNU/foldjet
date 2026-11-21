@@ -1,0 +1,9 @@
+model,arm,status,aug_chunk,aug_passes,chunks_tried,repeats,per_example_s_median,per_example_s_min,per_example_s_max,peak_alloc_gib,first_step_s,engine_version,foldforge_commit,gpu,triton_calls
+af3,cueqC,ok,8,6,0 8 12 24,3,2.903,2.9016,2.9031,23.623812675476074,49.932,3.0.6,6a0593e0a8eb6c80c6dcf7a009ad52cd5692c9ca,NVIDIA GeForce RTX 5090,
+af3,miniworld,ok,8,6,0 8 12 24,3,1.7557,1.7532,1.7563,20.821369647979736,26.119,3.0.6,6a0593e0a8eb6c80c6dcf7a009ad52cd5692c9ca,NVIDIA GeForce RTX 5090,0
+af3,pytorch,no run fitted,,,0 2 3 4 6 8 12 24,,,,,,,,,,
+af3,pytorchC,ok,8,6,0 8 12 24,3,4.1821,4.1798,4.1826,23.34207820892334,61.914,3.0.6,6a0593e0a8eb6c80c6dcf7a009ad52cd5692c9ca,NVIDIA GeForce RTX 5090,
+protenix1,cueqC,ok,8,6,0 8 12 24,3,3.0257,3.0245,3.0286,22.906073093414307,51.146,3.0.6,6a0593e0a8eb6c80c6dcf7a009ad52cd5692c9ca,NVIDIA GeForce RTX 5090,
+protenix1,miniworld,ok,8,6,0 8 12 24,3,1.763,1.7594,1.7645,20.86956024169922,26.17,3.0.6,6a0593e0a8eb6c80c6dcf7a009ad52cd5692c9ca,NVIDIA GeForce RTX 5090,0
+protenix1,pytorch,no run fitted,,,0 2 3 4 6 8 12 24,,,,,,,,,,
+protenix1,pytorchC,ok,8,6,0 8 12 24,3,4.242,4.2405,4.2895,25.127063274383545,61.265,3.0.6,6a0593e0a8eb6c80c6dcf7a009ad52cd5692c9ca,NVIDIA GeForce RTX 5090,
