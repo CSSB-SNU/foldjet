@@ -1,5 +1,7 @@
 # F10: training limit (Protenix v1, MSA depth 1,024)
 
+> **Removed from the paper (user decision, 2026-11-21).** The code and the H100 engine 3.0.6 results (`data/engine306/`) are kept as a record; no further runs.
+
 Paper: new (limit of what one card can train). Arms: engine, PyTorch (+ `torch.compile`), cuEquivariance + `torch.compile`. Cards: H100, A100, RTX 5090.
 
 ## Questions
@@ -52,6 +54,6 @@ Smoke (one trial per card, plumbing only): `SMOKE=1 ENGINE_SRC=<engine source> s
 ## Status (engine 3.0.6 campaign, 2026-11-21)
 
 - **H100** (`data/engine306/f10_limits_h100.csv`, `f10_trials_h100.csv`; Slurm 62836 / 62837 / 62838; block ladder capped at 100 by the user's rule).
-- **Engine defect found:** in every engine-arm trial the fp32 `Transition` calls are refused by the engine's H100 cuda backend ("float32 activations run on
+- **Not engine-CUDA-only (rows `engine_cuda_only = no`; not re-measured). Engine defect:** in every engine-arm trial the fp32 `Transition` calls are refused by the engine's H100 cuda backend ("float32 activations run on
   TF32 tensor cores only (torch does not allow TF32 here)") and run its triton backend (588 of 2,280 Transition calls in the first micro step at 384 tokens).
   The engine arm is therefore not all-cuda on the H100; recorded, to be fixed in the engine (the 3.0.4 IEEE fp32 chain covers the sm_80 family only).

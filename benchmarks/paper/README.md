@@ -35,7 +35,7 @@ commands, output columns), its input lists, one script per card and a `collect.p
 | F11 | `F11_fp8_accuracy/` | FP8 vs bf16 accuracy on antibody-antigen / protein-RNA: rounding or reordering | H100 | text | analysis of 58554 / 58867 / 58996 done; bf16 repeat (noise floor) on 3.0.6 |
 | F6 | `F6_training_speed/` | whole-model training speed, AF3 / Protenix v1, 4 backends | H100, A100, RTX 5090 | Fig 1d | H100 3.0.1 kept; A100 / 5090 on 3.0.6 |
 | F7 | `F7_finetune_loss/` | Protenix v1 fine-tune loss, engine vs PyTorch (torch.compile) | H100 | Fig 2a,b, Supp 11 | existing runs |
-| F10 | `F10_training_limit/` | training limit, Protenix v1 setup: longest crop; most Pairformer blocks without checkpointing | H100, A100, RTX 5090 | new | on 3.0.6 |
+| F10 | `F10_training_limit/` | training limit, Protenix v1 setup: longest crop; most Pairformer blocks without checkpointing | H100, A100, RTX 5090 | removed | **removed from the paper (user decision, 2026-11-21)**; code and the H100 3.0.6 results kept as a record, no further runs |
 
 `common/pairband_check.py` is the check of FoldForge's banded pair conditioning (bit identity banded vs unbanded, and the decision per size) that goes with the pair-band
 fix (`DiffusionHead._pair_band_rows`, commit message has the numbers).

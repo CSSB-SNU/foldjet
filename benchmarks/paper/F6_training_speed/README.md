@@ -48,3 +48,10 @@ Smoke (plumbing only): `SMOKE=1 MODELS=protenix1 ARMS="miniworld pytorchC" ENGIN
 ## Output
 
 `~/foldforge-scratch/paper/F6_training_speed/<card>/` (logs, meta, CSVs). The repository gets only the final CSVs (`benchmarks/paper/F6_training_speed/results/` if wanted).
+
+## H100 engine rows are not engine-CUDA-only (2026-11-21)
+
+In the engine 3.0.1 runs the four fp32 conditioning transitions of the diffusion head (`diffusion_head.{pair,single}_transition_{0,1}`, af3_default precision,
+TF32 off) were refused by the engine's H100 cuda backend and served by Triton (48 calls with chunk 0, 72 with chunk 24). The rows carry
+`engine_cuda_only = no`; they are not re-measured (details: `~/foldforge-scratch/paper/engine_issues/h100_fp32_transition_triton.md`; engine fix: branch
+`h100-transition-fp32-train`).
