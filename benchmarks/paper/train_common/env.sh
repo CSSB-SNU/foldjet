@@ -19,7 +19,7 @@ export CARD
 export PAPER_OUT=${PAPER_OUT:-$HOME/foldforge-scratch/paper}
 case $CARD in
   h100)
-    export FFENV=${FFENV:-$HOME/foldforge-scratch/ff_301/.pixi/envs/default}
+    export FFENV=${FFENV:-$FF_REPO/.pixi/envs/default}   # the checkout's own env (paper-306: engine 3.0.6)
     export PAPER_CACHE=${PAPER_CACHE:-$HOME/foldforge-scratch/train_speed/cache}
     export XDG_CACHE_HOME=$PAPER_CACHE TORCHINDUCTOR_CACHE_DIR=$PAPER_CACHE/inductor
     ;;
