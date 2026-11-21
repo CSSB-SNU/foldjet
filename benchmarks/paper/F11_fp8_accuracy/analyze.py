@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from multiprocessing import Pool
 from pathlib import Path
@@ -32,7 +33,25 @@ sys.path.insert(0, str(HERE.parent / "F2_foldbench_accuracy"))
 import score_tasks  # noqa: E402
 
 FF_FULL = Path.home() / "foldforge-scratch/foldbench/ff_full"
-RUNS = {"bf16": "af3_301", "fp8": "af3_301_fp8", "fp8b": "af3_301_fp8chk"}  # label -> run directory name under ff_full
+P306 = Path.home() / "foldforge-scratch/paper/F11/h100"
+# label -> prediction dir (<dir>/<target>/...); the eval name is the run dir's name. Engine 3.0.1: bf16 / fp8 / fp8b (FP8 re-run with check()).
+# Engine 3.0.6 (2026-11-21): bf16c = a second bf16 run (the bf16 run-to-run noise floor against bf16), fp8c = FP8 with check() on 3.0.6.
+# F11_RUNS="label=/pred/dir,..." replaces the set (the comparisons below skip labels that are absent).
+_DEFAULT_RUNS = {
+    "bf16": FF_FULL / "af3_301" / "pred",
+    "fp8": FF_FULL / "af3_301_fp8" / "pred",
+    "fp8b": FF_FULL / "af3_301_fp8chk" / "pred",
+    "bf16c": P306 / "af3_306_bf16_abagrna" / "pred",
+    "fp8c": P306 / "af3_306_fp8_abagrna" / "pred",
+}
+if os.environ.get("F11_RUNS"):
+    RUNS = {k: Path(v) for k, v in (kv.split("=", 1) for kv in os.environ["F11_RUNS"].split(","))}
+else:
+    RUNS = {k: v for k, v in _DEFAULT_RUNS.items() if v.is_dir()}
+EVAL_NAME = {lab: d.parent.name for lab, d in RUNS.items()}
+# (a, b) comparisons: a vs b. bf16c-bf16 = two bf16 runs (noise floor); fp8b-fp8 = two FP8 runs; fp8c-bf16c = FP8 vs bf16 on engine 3.0.6.
+PAIRS = [p for p in (("fp8", "bf16"), ("fp8b", "fp8"), ("fp8b", "bf16"), ("bf16c", "bf16"), ("fp8c", "bf16c"), ("fp8c", "bf16"), ("fp8c", "fp8b"))
+         if p[0] in RUNS and p[1] in RUNS]
 SEEDS = [42, 66, 101, 2024, 8888]
 TASKS = ["interface_antibody_antigen", "interface_protein_rna"]  # the two tasks of the question; the other tasks of the 162 targets are in f11_task_scores.csv
 FB = Path.home() / "data/foldbench"
@@ -65,32 +84,31 @@ def kabsch_rmsd(p: np.ndarray, q: np.ndarray) -> float:
     return float(np.sqrt(np.mean(np.sum((p @ r - q) ** 2, axis=1))))
 
 
-def ranking(run: str, t: str) -> dict[tuple[int, int], float]:
-    f = FF_FULL / run / "pred" / t / "ranking.csv"
+def ranking(pred: Path, t: str) -> dict[tuple[int, int], float]:
+    f = pred / t / "ranking.csv"
     return {(int(s), int(k)): float(v) for s, k, v in (ln.split(",") for ln in f.read_text().splitlines()[1:])}
 
 
 def one_target(t: str) -> list[dict]:
     rows = []
-    rk = {lab: ranking(run, t) for lab, run in RUNS.items()}
+    rk = {lab: ranking(pred, t) for lab, pred in RUNS.items()}
     xyz: dict[tuple[str, int, int], np.ndarray] = {}
-    for lab, run in RUNS.items():
+    for lab, pred in RUNS.items():
         for s in SEEDS:
             for k in range(5):
-                xyz[(lab, s, k)] = read_rep(FF_FULL / run / "pred" / t / f"{t}_seed{s}_sample{k}_pred.cif")
+                xyz[(lab, s, k)] = read_rep(pred / t / f"{t}_seed{s}_sample{k}_pred.cif")
     for s in SEEDS:
         for k in range(5):
-            a, b, c = xyz[("bf16", s, k)], xyz[("fp8", s, k)], xyz[("fp8b", s, k)]
+            a = xyz[("bf16", s, k)]
             o = xyz[("bf16", s, (k + 1) % 5)]
-            ok = len(a) == len(b) == len(c) == len(o) >= 3
-            rows.append({
-                "target": t, "seed": s, "sample": k, "n_rep_atoms": len(a),
-                "rmsd_fp8_bf16": kabsch_rmsd(b, a) if ok else np.nan,
-                "rmsd_fp8b_fp8": kabsch_rmsd(c, b) if ok else np.nan,
-                "rmsd_fp8b_bf16": kabsch_rmsd(c, a) if ok else np.nan,
-                "rmsd_bf16_nextsample": kabsch_rmsd(o, a) if ok else np.nan,
-                "score_bf16": rk["bf16"][(s, k)], "score_fp8": rk["fp8"][(s, k)], "score_fp8b": rk["fp8b"][(s, k)],
-            })
+            row = {"target": t, "seed": s, "sample": k, "n_rep_atoms": len(a)}
+            for x, y in PAIRS:
+                p, q = xyz[(x, s, k)], xyz[(y, s, k)]
+                row[f"rmsd_{x}_{y}"] = kabsch_rmsd(p, q) if len(p) == len(q) >= 3 else np.nan
+            row["rmsd_bf16_nextsample"] = kabsch_rmsd(o, a) if len(o) == len(a) >= 3 else np.nan
+            for lab in RUNS:
+                row[f"score_{lab}"] = rk[lab][(s, k)]
+            rows.append(row)
     return rows
 
 
@@ -122,8 +140,8 @@ def boot_ci(x: np.ndarray, n: int = 10000, seed: int = 0) -> tuple[float, float,
 
 def stage_analyze(out: Path, evals: Path) -> None:
     s = pd.read_csv(out / "f11_sample_rmsd.csv")
-    raws = {lab: evals / run / run / "raw" for lab, run in RUNS.items()}
-    tdirs = {lab: evals / run / run / "targets" for lab, run in RUNS.items()}
+    raws = {lab: evals / EVAL_NAME[lab] / EVAL_NAME[lab] / "raw" for lab in RUNS}
+    tdirs = {lab: evals / EVAL_NAME[lab] / EVAL_NAME[lab] / "targets" for lab in RUNS}
     # --- task scores (top-1, oracle) per run, per task
     ts = []
     for lab in RUNS:
@@ -141,7 +159,10 @@ def stage_analyze(out: Path, evals: Path) -> None:
         col = "dockq_score"
         frames = {lab: per[lab][task][["pdb_id", "interface_chain_id_1", "interface_chain_id_2", "seed", "sample", "ranking_score", col]].rename(columns={col: f"dq_{lab}", "ranking_score": f"rs_{lab}"}) for lab in RUNS}
         key = ["pdb_id", "interface_chain_id_1", "interface_chain_id_2", "seed", "sample"]
-        m = frames["bf16"].merge(frames["fp8"], on=key).merge(frames["fp8b"], on=key)
+        labs = list(RUNS)
+        m = frames[labs[0]]
+        for lab in labs[1:]:
+            m = m.merge(frames[lab], on=key)
         m["task"] = task
         qual.append(m)
     q = pd.concat(qual, ignore_index=True)
@@ -167,11 +188,11 @@ def stage_analyze(out: Path, evals: Path) -> None:
             r[f"dq_top1_{lab}"] = float(d[f"dq_{lab}"][i])
             r[f"ok_top1_{lab}"] = bool(d[f"dq_{lab}"][i] >= 0.23)
             r[f"ok_oracle_{lab}"] = bool(d[f"dq_{lab}"].max() >= 0.23)
-        for a, b in (("fp8", "bf16"), ("fp8b", "fp8"), ("fp8b", "bf16")):
+        for a, b in PAIRS:
             r[f"flip_{a}_{b}"] = top[a] != top[b]
             r[f"outcome_changed_{a}_{b}"] = r[f"ok_top1_{a}"] != r[f"ok_top1_{b}"]
         # swaps: the structures of A picked with the ranking scores of B (same (seed, sample) index in both runs)
-        for sa, sb in (("fp8", "bf16"), ("bf16", "fp8"), ("fp8b", "bf16"), ("bf16", "fp8b"), ("fp8b", "fp8")):
+        for sa, sb in [p for pr in PAIRS for p in (pr, pr[::-1])]:
             i = top[sb]
             r[f"swap_struct_{sa}_rank_{sb}"] = bool(d[f"dq_{sa}"][i] >= 0.23)
         rows.append(r)
@@ -195,14 +216,17 @@ def stage_analyze(out: Path, evals: Path) -> None:
     lines = ["F11 verdict (generated by analyze.py; numbers in f11_*.csv)", ""]
     s = s.merge(pd.Series(members, name="task_of").rename_axis("target").reset_index(), on="target", how="left")
     lines.append("Per-sample distances (C-alpha / C1' RMSD after superposition, Angstrom; all samples of the 162 targets):")
-    for col, label in (("rmsd_fp8_bf16", "FP8 vs bf16, same seed and sample"), ("rmsd_fp8b_fp8", "FP8 re-run vs FP8 (noise floor)"), ("rmsd_fp8b_bf16", "FP8 re-run vs bf16"),
-                       ("rmsd_bf16_nextsample", "bf16 sample k vs k+1 of the same seed (a different draw)")):
+    names = {"bf16": "bf16 3.0.1", "fp8": "FP8 3.0.1", "fp8b": "FP8 3.0.1 re-run (check)", "bf16c": "bf16 3.0.6", "fp8c": "FP8 3.0.6 (check)"}
+    cols = [(f"rmsd_{a}_{b}", f"{names.get(a, a)} vs {names.get(b, b)}, same seed and sample") for a, b in PAIRS]
+    cols.append(("rmsd_bf16_nextsample", "bf16 sample k vs k+1 of the same seed (a different draw)"))
+    for col, label in cols:
         for tk in TASKS:
             x = s.loc[s.task_of == tk, col].dropna()
             lines.append(f"  {label:58s} {tk:28s} median {x.median():6.2f}  mean {x.mean():6.2f}  p90 {x.quantile(.9):6.2f}  n {len(x)}")
     lines.append("")
     lines.append("Ranking score of the same (seed, sample) in the two runs:")
-    for a, b, label in (("fp8", "bf16", "FP8 - bf16"), ("fp8b", "fp8", "FP8 re-run - FP8")):
+    for a, b in PAIRS:
+        label = f"{names.get(a, a)} - {names.get(b, b)}"
         dlt = (s[f"score_{a}"] - s[f"score_{b}"]).values
         lines.append(f"  {label}: mean {dlt.mean():+.4f}  sd {dlt.std():.4f}  median |d| {np.median(np.abs(dlt)):.4f}  (score range of a target ~ {s.groupby('target').score_bf16.apply(np.ptp).median():.3f} median)")
     lines.append("")
@@ -212,7 +236,7 @@ def stage_analyze(out: Path, evals: Path) -> None:
         lines.append(f"  {task} (n = {len(d)})")
         for lab in RUNS:
             lines.append(f"    {lab:5s} top-1 {100 * d[f'ok_top1_{lab}'].mean():6.2f}   oracle {100 * d[f'ok_oracle_{lab}'].mean():6.2f}   mean DockQ of all samples {sq.loc[sq.task == task, f'mean_dq_{lab}'].mean():.4f}")
-        for a, b in (("fp8", "bf16"), ("fp8b", "bf16"), ("fp8", "fp8b")):
+        for a, b in PAIRS:
             for what in ("top1", "oracle"):
                 x = d[f"ok_{what}_{a}"].astype(float).values - d[f"ok_{what}_{b}"].astype(float).values
                 m, lo, hi = boot_ci(x)
@@ -222,8 +246,8 @@ def stage_analyze(out: Path, evals: Path) -> None:
             m, lo, hi = boot_ci(x)
             lines.append(f"    mean DockQ of the 25 samples {a:4s} - {b:4s}: {m:+.4f}  [{lo:+.4f}, {hi:+.4f}]")
             verdict_rows[(task, "meandq", a, b)] = (m, lo, hi)
-        lines.append(f"    targets whose top-1 sample differs: FP8 vs bf16 {100 * d.flip_fp8_bf16.mean():.1f}%, FP8 re-run vs FP8 {100 * d.flip_fp8b_fp8.mean():.1f}%, FP8 re-run vs bf16 {100 * d.flip_fp8b_bf16.mean():.1f}%")
-        lines.append(f"    targets whose top-1 success changes: FP8 vs bf16 {100 * d.outcome_changed_fp8_bf16.mean():.1f}%, FP8 re-run vs FP8 {100 * d.outcome_changed_fp8b_fp8.mean():.1f}%")
+        lines.append("    targets whose top-1 sample differs: " + ", ".join(f"{a} vs {b} {100 * d[f'flip_{a}_{b}'].mean():.1f}%" for a, b in PAIRS))
+        lines.append("    targets whose top-1 success changes: " + ", ".join(f"{a} vs {b} {100 * d[f'outcome_changed_{a}_{b}'].mean():.1f}%" for a, b in PAIRS))
         near = d["gap12_bf16"] < 0.01
         lines.append(f"    near-tied top-1 in bf16 (gap to runner-up < 0.01): {100 * near.mean():.1f}% of groups; flips there {100 * d.loc[near, 'flip_fp8_bf16'].mean() if near.any() else float('nan'):.1f}%, elsewhere {100 * d.loc[~near, 'flip_fp8_bf16'].mean() if (~near).any() else float('nan'):.1f}%")
         lines.append(f"    swaps: FP8 structures ranked by bf16 {100 * d.swap_struct_fp8_rank_bf16.mean():.2f}%, bf16 structures ranked by FP8 {100 * d.swap_struct_bf16_rank_fp8.mean():.2f}%  (own-ranking: FP8 {100 * d.ok_top1_fp8.mean():.2f}%, bf16 {100 * d.ok_top1_bf16.mean():.2f}%)")
