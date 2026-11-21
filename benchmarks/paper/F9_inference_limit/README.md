@@ -42,3 +42,12 @@ H100 (an OOM probe is quick); the kit arm 1-5 h; A100 about 1.7x; 5090 fewer pro
 
 `~/foldforge-scratch/paper/F9/<card>/<arm>/<predictor>/{sizes.jsonl,limit.json,cells/n<N>.json,run.log}`; `data/F9_<card>.csv` (one row per predictor x arm: largest ok n and tokens,
 first not ok + status, non-monotonic flag, peak memory at the edge, stop reason, run information) and `data/F9_<card>_sizes.csv` (every probe).
+
+## Status (engine 3.0.6 campaign, 2026-11-21)
+
+- **H100** (`data/engine306/F9_h100.csv`, `F9_h100_sizes.csv`): engine bf16, engine FP8 and PyTorch operators for all 11 predictors, FoldForge `paper-306`
+  (pinned engine 3.0.6). AF3 engine bf16 was confirmed only at its known edge (n = 36 ok / 37 OOM, `STEPS="36 37"`). Every completed engine cell ran all its
+  engine classes on cuda (`all_cuda` true); every first failing size is an OOM. No non-monotonic edge on the H100.
+- **Anthropic kit arm: not measured (user decision, 2026-11-21).** The kit jobs were cancelled; the partial kit probes of that campaign were moved out of the
+  results (`~/foldforge-scratch/paper/F9/h100_kit_partial_user_decision/`, not a limit) and the collector ran without them.
+- `data/existing/`: the pre-3.0.6 AF3 limits (H100 3.0.5, A100 3.0.5, RTX 5090 3.0.5 with the n = 1 NaN), kept as the record.

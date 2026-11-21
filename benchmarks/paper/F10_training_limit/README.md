@@ -48,3 +48,10 @@ python3 benchmarks/paper/F10_training_limit/collect.py --out-dir ~/foldforge-scr
 
 Smoke (one trial per card, plumbing only): `SMOKE=1 ENGINE_SRC=<engine source> sbatch --time=00:10:00 --export=ALL h100.sbatch`. The job time of the full campaign is long
 (about 3 arms x 3 parts x ~12-20 trials); `results.jsonl` makes it resumable, so a deadline is continued by submitting the same job again.
+
+## Status (engine 3.0.6 campaign, 2026-11-21)
+
+- **H100** (`data/engine306/f10_limits_h100.csv`, `f10_trials_h100.csv`; Slurm 62836 / 62837 / 62838; block ladder capped at 100 by the user's rule).
+- **Engine defect found:** in every engine-arm trial the fp32 `Transition` calls are refused by the engine's H100 cuda backend ("float32 activations run on
+  TF32 tensor cores only (torch does not allow TF32 here)") and run its triton backend (588 of 2,280 Transition calls in the first micro step at 384 tokens).
+  The engine arm is therefore not all-cuda on the H100; recorded, to be fixed in the engine (the 3.0.4 IEEE fp32 chain covers the sm_80 family only).

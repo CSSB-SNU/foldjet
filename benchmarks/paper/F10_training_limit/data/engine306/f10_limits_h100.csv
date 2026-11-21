@@ -1,0 +1,10 @@
+card,part,arm,what,tokens,atoms,blocks,checkpointing,max,first_failing,note,chunk_of_search,chunk_at_max,peak_alloc_gib_at_max,peak_reserved_gib_at_max,median_step_s_at_max
+h100,a,cueqC,longest crop (tokens),1088,11616,48,on,1088,1152,bisect done,1,1,64.64528894424438,69.33984375,29.85503852367401
+h100,a,miniworld,longest crop (tokens),1152,12288,48,on,1152,1216,bisect done,1,1,67.82714033126831,74.091796875,14.94066047668457
+h100,a,pytorchC,longest crop (tokens),704,7520,48,on,704,768,bisect done,1,12,70.90261459350586,78.357421875,14.96321165561676
+h100,b384,cueqC,most trunk Pairformer blocks,384,4096,25,off,25,26,bisect done,1,1,71.58268356323242,75.65625,3.9757187366485596
+h100,b384,miniworld,most trunk Pairformer blocks,384,4096,54,off,54,55,bisect done,1,1,71.68270778656006,76.490234375,2.586516499519348
+h100,b384,pytorchC,most trunk Pairformer blocks,384,4096,5,off,5,6,bisect done,1,1,71.3633861541748,74.548828125,3.613014817237854
+h100,b768,cueqC,most trunk Pairformer blocks,768,8192,0,off,0,1,bisect done,1,,,,
+h100,b768,miniworld,most trunk Pairformer blocks,768,8192,0,off,0,1,bisect done,1,,,,
+h100,b768,pytorchC,most trunk Pairformer blocks,768,8192,0,off,0,1,bisect done,1,,,,
