@@ -8,10 +8,12 @@
 set -uo pipefail
 IFS=: read -r EXP MODEL ARG <<<"$1"
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-case "$1" in f3:*|f4:*:engine|f9:*:engine|f6:*:miniworld) export B200_ENGINE_FIX=${B200_ENGINE_FIX:-/NHNHOME/WORKSPACE/26mohw002_A/psk6950/paper-b200/diag-nan} ;; esac
+case "$1" in f3:*|f3s:*|f4:*:engine|f9:*:engine|f6:*:miniworld) export B200_ENGINE_FIX=${B200_ENGINE_FIX:-/NHNHOME/WORKSPACE/26mohw002_A/psk6950/paper-b200/diag-nan} ;; esac
 source "$HERE/common/cards/b200.env"
 case $EXP in
   f3) MODEL=$MODEL ARM=engine REP=$ARG exec bash "$HERE/F3_5i28_times/b200.sh" ;;
+  f3s)  # one process per size: on the B200 a warm CUDA-graph replay of a new size after an earlier size in the same process gives non-finite output
+    rc=0; for n in 1 2 4 8 12 16; do MODEL=$MODEL ARM=engine REP=$ARG SIZES=$n bash "$HERE/F3_5i28_times/b200.sh" || rc=$?; done; exit $rc ;;
   f4) MODEL=$MODEL ARM=$ARG exec bash "$HERE/F4_foldbench27_times/b200.sh" ;;
   f9) MODEL=$MODEL ARM=$ARG STEPS="${STEPS:-8 16 20 24 32 40 48 56 64 80 96 128}" exec bash "$HERE/F9_inference_limit/b200.sh" ;;
   f6)

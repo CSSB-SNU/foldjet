@@ -1,0 +1,12 @@
+model,arm,all_cuda,triton_calls,pytorch_calls,refused_reasons,classes_with_refusals,engine_cuda_only
+af3,engine,False,8,0,"{""B200: 65536 rows of width 64 (torch.bfloat16): the Triton LayerNorm is faster here (measured), the CUDA route refuses"": 8}",LayerNorm,no
+boltz2,engine,False,8,0,"{""B200: 65536 rows of width 64 (torch.bfloat16): the Triton LayerNorm is faster here (measured), the CUDA route refuses"": 8}",LayerNorm,no
+chai1,engine,False,8,0,"{""B200: 65536 rows of width 64 (torch.bfloat16): the Triton LayerNorm is faster here (measured), the CUDA route refuses"": 8}",LayerNorm,no
+esmfold2,engine,True,0,0,{},,yes
+intellifold2,engine,True,0,0,{},,yes
+opendde,engine,False,9608,0,"{""B200: 65536 rows of width 64 (torch.bfloat16): the Triton LayerNorm is faster here (measured), the CUDA route refuses"": 8, ""inference: outside the fused H100 inference block's range (bf16 / fp32, [A, 1, L, d] with L a multiple of 128 and heads x head width 16 x 48 / 24 x 32 / 12 x 64 (d 768) or 16 x 64 (d 1024), cond 384 or 768, pair 128 / 256 / 512, n = 2, eps 1e-5)"": 9600}",LayerNorm;TokenDiTProtenix,no
+openfold3-preview2,engine,False,8,0,"{""B200: 65536 rows of width 64 (torch.bfloat16): the Triton LayerNorm is faster here (measured), the CUDA route refuses"": 8}",LayerNorm,no
+openfold3,engine,False,8,0,"{""B200: 65536 rows of width 64 (torch.bfloat16): the Triton LayerNorm is faster here (measured), the CUDA route refuses"": 8}",LayerNorm,no
+protenix1,engine,False,8,0,"{""B200: 65536 rows of width 64 (torch.bfloat16): the Triton LayerNorm is faster here (measured), the CUDA route refuses"": 8}",LayerNorm,no
+protenix2,engine,False,8,0,"{""B200: 65536 rows of width 64 (torch.bfloat16): the Triton LayerNorm is faster here (measured), the CUDA route refuses"": 8}",LayerNorm,no
+rosettafold3,engine,True,0,0,{},,yes
