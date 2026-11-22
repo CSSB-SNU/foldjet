@@ -514,8 +514,15 @@ def compute_lm_hidden_states(
     mask_fraction: float = 0.0,
     pad_to_multiple: int | None = None,
     generator: torch.Generator | None = None,
+    allow_no_protein: bool = False,
 ) -> torch.Tensor:
     """Run the language model and return per-structure-token hidden states.
+
+    With ``allow_no_protein`` an input without any protein token (RNA, DNA or ligand only) is served instead of refused: no protein
+    residue exists for a protein language model to read, so every token gets what a non-protein token of a mixed input gets, zero
+    hidden states (:func:`scatter_lm_hidden_states`); a minimal BOS/EOS sequence supplies the layer count and width. It is off by
+    default because the refusal below caught a real defect (a class passed where the boolean ``is_protein`` was meant), and it
+    warns when taken. Only a caller that derives ``is_protein`` from the input's molecule types should turn it on.
 
     Parameters
     ----------
@@ -535,6 +542,23 @@ def compute_lm_hidden_states(
     Tensor
         ``[B, L, n_layers + 1, d_model]`` hidden states, detached.
     """
+    if allow_no_protein and not bool((is_protein.bool() & mask).any()):
+        import logging  # noqa: PLC0415
+
+        logging.getLogger(__name__).warning(
+            "No protein token in the input: the language model sees nothing; every token gets zero hidden states"
+        )
+        batch = input_ids.shape[0]
+        width = -(-2 // pad_to_multiple) * pad_to_multiple if pad_to_multiple else 2
+        minimal = torch.full((batch, width), PAD, device=input_ids.device, dtype=input_ids.dtype)
+        minimal[:, 0], minimal[:, 1] = BOS, EOS
+        minimal_sequence_id = ((minimal == BOS).cumsum(dim=1) - 1).masked_fill(minimal == PAD, -1)
+        output = language_model(minimal, sequence_id=minimal_sequence_id, output_hidden_states=True)
+        if output.hidden_states is None:
+            message = "Language model did not return requested hidden states"
+            raise ValueError(message)
+        hidden = torch.stack(list(output.hidden_states))
+        return scatter_lm_hidden_states(hidden, torch.full(input_ids.shape, -1, device=input_ids.device, dtype=torch.long)).detach()
     lm_input_ids, sequence_id, position_map = build_lm_inputs(
         input_ids, asym_id, residue_index, is_protein, mask, pad_to_multiple
     )

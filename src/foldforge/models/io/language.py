@@ -171,6 +171,7 @@ def pair_representation(
                 batched(residue_index),
                 batched(is_protein),
                 batched(mask),
+                allow_no_protein=True,  # an RNA / DNA / ligand-only input (is_protein comes from the molecule types)
             )
     finally:
         del model

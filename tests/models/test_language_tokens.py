@@ -53,7 +53,7 @@ def test_language_tower_and_shim_are_owned_by_the_predictor_cache(
     (tmp_path / "model.lm.npz").touch()
     load = Mock(return_value=object())
     shim = Mock(side_effect=lambda _: _Shim())
-    hidden = Mock(side_effect=lambda _model, ids, *_args: torch.ones(*ids.shape, 2, 4))
+    hidden = Mock(side_effect=lambda _model, ids, *_args, **_kwargs: torch.ones(*ids.shape, 2, 4))
     monkeypatch.setattr(tower, "load_esmc", load)
     monkeypatch.setattr(tower, "compute_lm_hidden_states", hidden)
     monkeypatch.setattr(tower, "load_pair_shim", shim)
