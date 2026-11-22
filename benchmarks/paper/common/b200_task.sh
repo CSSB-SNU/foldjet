@@ -8,7 +8,8 @@
 set -uo pipefail
 IFS=: read -r EXP MODEL ARG <<<"$1"
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-case "$1" in f3:*|f3s:*|f4:*:engine|f9:*:engine|f6:*:miniworld) export B200_ENGINE_FIX=${B200_ENGINE_FIX:-/NHNHOME/WORKSPACE/26mohw002_A/psk6950/paper-b200/diag-nan} ;; esac
+case "$1" in f6:*:miniworld|f4:opendde:engine) export B200_ENGINE_FIX3=${B200_ENGINE_FIX3:-/NHNHOME/WORKSPACE/26mohw002_A/psk6950/paper-b200/diag-nan2} ;;
+  f3:*|f3s:*|f4:*:engine|f9:*:engine) export B200_ENGINE_FIX=${B200_ENGINE_FIX:-/NHNHOME/WORKSPACE/26mohw002_A/psk6950/paper-b200/diag-nan} ;; esac
 source "$HERE/common/cards/b200.env"
 case $EXP in
   f3) MODEL=$MODEL ARM=engine REP=$ARG exec bash "$HERE/F3_5i28_times/b200.sh" ;;
