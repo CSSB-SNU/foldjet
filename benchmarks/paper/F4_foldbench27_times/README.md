@@ -68,9 +68,12 @@ Backend report, both cards: `all_cuda: true`; `TokenDiTProtenix` 24 modules, ser
 | 992-1188 (4) | 111.6-232.5 -> 40.1-70.9 | 2.78-3.28x | 82.9-168.4 -> 31.3-54.5 (7wvs: OOM) | 2.65-3.09x |
 | 1487, 2008 (2) | 371.8 / 672.1 -> 114.2 / 210.4 | 3.26 / 3.19x | OOM on both versions | |
 
-Peak memory is ~0.45 GiB higher on 3.0.8 at every size (A100 3.88 -> 4.33 GiB at 28 tokens, 63.30 -> 63.74 at 2,008). On the 32 GB RTX 5090 this pushes
-**7wvs (1,064 tokens) out of memory** (3.0.6: 30.08 GiB peak, 119.9 s); reproduced in a fresh process (a separate output dir), so not fragmentation. The 5090
-OpenDDE engine arm therefore has 24 / 27 cells on 3.0.8 (7wvs, 8xgu, 8j62 OOM; 3.0.6: 25 / 27). Reported to the engine session. F5 (sample comparison) still uses the
+Peak memory (`engine_peak_gib`) of the OpenDDE engine rows on 3.0.8 includes a resident +0.44 GiB at every size on both cards (A100 3.88 -> 4.33 GiB at 28
+tokens, 63.30 -> 63.74 at 2,008): the cuda `extra_pair_bias` path keeps per-module weight packs in its resident cache (18.6 MiB per TokenDiT block x 24 =
+0.436 GiB, independent of L; on 3.0.6 Triton served these calls without it; engine session's diagnosis). On the 32 GB RTX 5090 this pushes **7wvs (1,064
+tokens) out of memory on 3.0.8** (3.0.6: 30.08 GiB peak, 119.9 s; short by ~0.1 GiB); reproduced in a fresh process (separate output dir), and both runs
+already used `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` (as the whole campaign), so the cell stays OOM: cause = the resident weight packs. The 5090
+OpenDDE engine arm therefore has 24 / 27 cells on 3.0.8 (7wvs, 8xgu, 8j62 OOM; 3.0.6: 25 / 27). F5 (sample comparison) still uses the
 engine-3.0.6 OpenDDE predictions of these cards (not recomputed: not in the requested scope).
 
 ## H100: ESMFold2 on the 6 nucleic-acid-only targets (2026-11-22)
