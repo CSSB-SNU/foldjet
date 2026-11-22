@@ -41,3 +41,11 @@ Expected wall time (H100 cluster CPU): eval ~10-40 min per task (OpenStructure o
 | `F5_<card>_gt_summary.csv` | per arm and kind (monomer / interface / ligand / all): n, median \|diff\|, mean signed diff, fraction within PyTorch's 1 s.d., r |
 
 The per-sample-pair table (`pairs.csv`, the shape of the paper's `pair_compare.csv`) stays in `~/foldforge-scratch/paper/F5/<card>/`.
+
+## A100 / RTX 5090: OpenDDE engine arm on engine 3.0.8 (2026-11-22)
+
+The OpenDDE engine predictions of these two cards are the engine-3.0.8 F4 re-run (TokenDiTProtenix `extra_pair_bias` on cuda; see the F4 README); the
+pairs were recomputed (jobs 65196 A100, 65197 RTX 5090; every other predictor unchanged, `engine_version` column `3.0.6;3.0.8`). OpenDDE, engine vs PyTorch
+sample k vs sample k, median Cα/C1' RMSD: A100 0.135 -> 0.271 A (80 pairs), RTX 5090 0.152 -> 0.265 A (65 pairs; 7wvs has no pair on either version, the
+PyTorch arm is out of memory there); the PyTorch sample-to-sample baseline is 1.25 / 1.20 A. All predictors: A100 engine median 0.303 -> 0.316 A, RTX 5090
+0.287 -> 0.303 A. The engine-3.0.6 OpenDDE predictions and the previous pairs are kept next to the runs (`archive_306/`).
