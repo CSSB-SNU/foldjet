@@ -14,7 +14,9 @@ MSA up to 16,384 rows and templates as FoldBench gives them. Three arms:
 the split of every earlier kit run); for the kit that is one kit process per GPU. For a FoldForge run in multi mode it is the number of GPUs x the wall time.
 Failures and out-of-memory are results: they are listed in `f1_per_target.csv` (`status`), never dropped, and never drawn.
 
-## Launch mode (USER DECISION, open): "one process per shard like the kit" vs `fb_multi` (2 GPUs, MPS)
+## Launch mode: "one process per shard like the kit" vs `fb_multi` (2 GPUs, MPS)
+
+**Status (2026-11-22): default applied, a shard-mode re-run is not planned.** The paper table uses the numbers that were measured, in multi mode (GPU-h = 2 x wall), and states the mode next to every number; the kit arm is one process per GPU. A shard-mode re-run of the FoldForge arm would cost about 21 GPU-h and is done only if the authors decide so (the 2.5.12 shard-mode numbers below show the same direction).
 
 Both are implemented in `foldforge/run_ff.sbatch`; **the default is the kit-like one** (`LAUNCH=shard`). Every run records the mode it used in `<run>/launch.txt`,
 in `stamp.json` and in every row of `f1_shard_wall.csv` / `f1_summary.csv`; **the paper text must say which one a number comes from.**
