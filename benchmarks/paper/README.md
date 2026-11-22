@@ -34,7 +34,7 @@ commands, output columns), its input lists, one script per card and a `collect.p
 | F8 | `F8_protenix_ft_foldbench/` | fine-tuned Protenix v1 (10 epochs) vs released, whole FoldBench, top-1 and oracle | H100 | Supp 17 | 2.5.14 runs scored |
 | F11 | `F11_fp8_accuracy/` | FP8 vs bf16 accuracy on antibody-antigen / protein-RNA; cause of the antibody-antigen loss | H100 | text | done on 3.0.6: seed-spread design + route ablation (`investigation/`): trunk pair Transition e4m3 rounding; antibody-antigen = trunk bf16, FP8 diffusion only |
 | F6 | `F6_training_speed/` | whole-model training speed, AF3 / Protenix v1, 4 backends | H100, A100, RTX 5090 | Fig 1d | H100 3.0.1 kept; A100 / 5090 on 3.0.6 |
-| F7 | `F7_finetune_loss/` | Protenix v1 fine-tune loss, engine vs PyTorch (torch.compile) | H100 | Fig 2a,b, Supp 11 | existing runs |
+| F7 | `F7_finetune_loss/` | Protenix v1 fine-tune loss, engine vs PyTorch (torch.compile) | H100 | Fig 2a,b, Supp 11 | done: same wall-clock (~43 h: engine 1,424 steps, PyTorch 433), user decision |
 | F10 | `F10_training_limit/` | training limit, Protenix v1 setup: longest crop; most Pairformer blocks without checkpointing | H100, A100, RTX 5090 | removed | **removed from the paper (user decision, 2026-11-21)**; code and the H100 3.0.6 results kept as a record, no further runs |
 
 `common/pairband_check.py` is the check of FoldForge's banded pair conditioning (bit identity banded vs unbanded, and the decision per size) that goes with the pair-band

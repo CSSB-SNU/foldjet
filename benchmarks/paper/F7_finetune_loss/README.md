@@ -35,3 +35,9 @@ Smoke (2 GPUs, 2 optimizer steps of effective batch 2): `RUN_ROOT=<dir> EFFECTIV
 with FoldForge commit, engine source, GPUs, node, job id). `collect.py` writes `engine_steps.txt` / `pytorch_steps.txt` (the shape of paper `data/finetune/*_steps.txt`, read by
 `scripts/fig2_training_accuracy.py`), `finetune_steps.csv` (every step, every loss term, seconds and cumulative hours per run) and `finetune.json` (steps, median seconds per step, hours,
 common steps, per-term correlation and mean difference, `same_step_count`).
+
+## Decision (user, 2026-11-22): equal wall-clock comparison, no new run
+
+The paper reports F7 as **training for the same wall-clock time** on 2 x H100: in ~43-44 h the engine run reached 1,424 optimizer steps (108.0 s per
+step, 42.9 h) and the PyTorch (`torch.compile`) run 433 steps (369.1 s per step, 44.4 h); over their 433 common steps the loss curves agree (mean 0.3841
+vs 0.3840, Pearson r 0.979). The full-length PyTorch run above (same step count) is not run. Data: `data/existing/F7_h100_{steps,summary}.csv`.
