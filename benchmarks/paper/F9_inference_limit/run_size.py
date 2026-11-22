@@ -95,6 +95,12 @@ def main() -> int:
             cell["traceback"] = traceback.format_exc()[-900:]
     cell["process_peak_alloc_gib"] = torch.cuda.max_memory_allocated() / 2**30
     cell["process_peak_reserved_gib"] = torch.cuda.max_memory_reserved() / 2**30
+    # A non-OOM CUDA error (illegal memory access, reported asynchronously) with the allocator at >= 98 % of the card is the out-of-memory edge, not a failure:
+    # B200 chai1 n=40 (reserved 176.9 of 178.35 GiB); the same cell under CUDA_LAUNCH_BLOCKING gives a clean CUDA out of memory. The original error stays in `oom_classified_from`.
+    total = cell.get("gpu_total_gib")
+    if cell.get("status") == "failed" and "CUDA error" in str(cell.get("error", "")) and total and cell["process_peak_reserved_gib"] >= 0.98 * total:
+        cell["oom_classified_from"] = cell["error"]
+        cell["status"] = "oom"
     cell["wall_s"] = round(time.time() - t0, 1)
     (args.out / f"n{args.n}.json").write_text(json.dumps(cell, indent=1))
     print("CELL " + json.dumps(cell), flush=True)

@@ -11,6 +11,7 @@ export FF_REPO=${FF_REPO:-$(cd "$_here/../../.." && pwd)}
 if [ -z "${CARD:-}" ]; then
   case $(hostname) in
     cssb-rtx*) CARD=rtx5090 ;;
+    DCTN-*) CARD=b200 ;;
     cssb-master3*|gpu0*|gpu1*) CARD=a100 ;;
     *) CARD=h100 ;;
   esac
@@ -35,6 +36,14 @@ case $CARD in
     export XDG_CACHE_HOME=$PAPER_CACHE/xdg TORCHINDUCTOR_CACHE_DIR=$PAPER_CACHE/inductor
     export CUDA_HOME=/usr/local/cuda-12.8 PATH=/usr/local/cuda-12.8/bin:$PATH MINIWORLD_ENGINE_HEADER_CACHE=$HOME/.cache/miniworld_engine_headers
     export MINIWORLD_ENGINE_BUILD_ARCH=sm120 MAX_JOBS=4 TORCHINDUCTOR_COMPILE_THREADS=4 PAPER_OUT=${PAPER_OUT_5090:-$HOME/ff/paper}
+    ;;
+  b200)
+    # host `b200` (no Slurm, GPUs 0-3 only; the lane driver sets CUDA_VISIBLE_DEVICES): everything from common/cards/b200.env (engine 3.0.7 source ENGINE_ROOT,
+    # sm100a kernels from the prebuilt JIT cache under XDG_CACHE_HOME = $B200_P/cache, which must NOT be redirected to a per-card cache)
+    unset PAPER_OUT   # env.sh set the cluster default above; b200.env sets $B200_P/ff/paper
+    source "$_here/../common/cards/b200.env"
+    export FFENV=${FFENV:-$FF_ENV} ENGINE_SRC=${ENGINE_SRC:-$ENGINE_ROOT}
+    export PAPER_CACHE=${PAPER_CACHE:-$B200_P/cache/f6}
     ;;
   *) echo "unknown CARD=$CARD" >&2; return 1 ;;
 esac

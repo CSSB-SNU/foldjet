@@ -19,7 +19,7 @@ from pathlib import Path
 
 ARMS = ("torch", "engine", "engine_fp8", "anthropic")
 BACKEND = {"torch": "pytorch", "engine": "miniworld", "engine_fp8": "miniworld", "anthropic": "anthropic"}
-CARDS = {"h100": "H100", "a100": "A100", "rtx5090": "5090"}
+CARDS = {"h100": "H100", "a100": "A100", "rtx5090": "5090", "b200": "B200"}
 
 #: FoldForge predictors of F3 / F9 (the 5I28 benchmark's eleven) and of F4 / F5 (the FoldBench 27-target set's eleven; the two lists differ:
 #: F4 / F5 have openfold3-preview2 and no esmfold2-fast).
@@ -54,7 +54,7 @@ def apply_arm_env(arm: str, model: str) -> None:
 
 def card_of(gpu_name: str) -> str:
     low = gpu_name.lower()
-    for key, needle in (("h100", "h100"), ("a100", "a100"), ("rtx5090", "5090")):
+    for key, needle in (("h100", "h100"), ("a100", "a100"), ("rtx5090", "5090"), ("b200", "b200")):
         if needle in low:
             return key
     return low.replace(" ", "_")
