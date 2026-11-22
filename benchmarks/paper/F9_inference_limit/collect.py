@@ -19,7 +19,7 @@ from pathlib import Path
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--card", required=True, choices=["h100", "a100", "rtx5090"])
+    ap.add_argument("--card", required=True, choices=["h100", "a100", "rtx5090", "b200"])
     ap.add_argument("--root", type=Path, default=Path.home() / "foldforge-scratch/paper/F9")
     ap.add_argument("--out", type=Path, default=Path(__file__).resolve().parent / "data")
     a = ap.parse_args()

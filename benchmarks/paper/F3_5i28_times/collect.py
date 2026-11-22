@@ -109,7 +109,7 @@ def write(path: Path, rows: list[dict], head: list[str]) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--card", required=True, choices=["h100", "a100", "rtx5090"])
+    parser.add_argument("--card", required=True, choices=["h100", "a100", "rtx5090", "b200"])
     parser.add_argument("--root", type=Path, default=Path.home() / "foldforge-scratch/paper/F3")
     parser.add_argument("--out", type=Path, default=Path(__file__).resolve().parent / "data")
     args = parser.parse_args()
