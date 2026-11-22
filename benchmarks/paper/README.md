@@ -39,3 +39,13 @@ commands, output columns), its input lists, one script per card and a `collect.p
 
 `common/pairband_check.py` is the check of FoldForge's banded pair conditioning (bit identity banded vs unbanded, and the decision per size) that goes with the pair-band
 fix (`DiffusionHead._pair_band_rows`, commit message has the numbers).
+
+## Engine versions of the measured results (2026-11-22)
+
+FoldForge is pinned to engine **3.0.7**; the campaign rows were measured on **3.0.6** and were not re-measured, because 3.0.7 changes nothing these rows use
+(release notes 3.0.7): the H100 Transition change only serves fp32 calls with TF32 off (training, af3_default precision) and the inference runs are bf16; the
+bias-logits switch defaults to the 3.0.6 fp32 behaviour (bit-identical); the B200 kernels are not used on H100 / A100 / RTX 5090. Two notes: the
+`ParallelResidual` and `bias_only_dit_f32_rows` prebuilt artifacts were rebuilt in 3.0.7 from the same sources (accuracy checked, not compared bit for bit),
+so Chai-1 / RoseTTAFold3 times on 3.0.7 may differ within run-to-run noise; the H100 F6 engine row is labelled engine 3.0.7 (see F6 README: measured on
+engine main d967378a2 with the fp32 Transition fix). Older rows keep their own `engine_version` column (H100 F1 / F2 / F3 / F4 / F5 / F7 / F8: 3.0.1 - 3.0.2,
+unchanged on inputs <= 2,048 tokens).
