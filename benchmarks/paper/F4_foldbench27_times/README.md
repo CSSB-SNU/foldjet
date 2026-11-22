@@ -42,3 +42,12 @@ IntelliFold2 are the slow ones; the 2,008-token protein-RNA target dominates). `
 Run directory `~/foldforge-scratch/paper/F4/<card>/{rows,pred,specs,meta}/`; each row has FoldForge commit, engine version / source, GPU, host, Slurm job.
 `data/F4_times_<card>.csv`: `model,target,task,tokens,anthropic,engine,torch,engine_fp8` (seconds; = the shape of `tables/supp_foldbench_times.csv`) + `torch_over_engine`,
 `torch_over_engine_fp8`, peak memory and run information per arm. `data/F4_failures_<card>.csv`: every failed cell with status, OOM flag and reason.
+
+## A100 data (engine 3.0.6, cssb3, 2026-11-22)
+
+`data/F4_times_a100.csv` (297 rows = 11 predictors x 27 targets, arms torch / engine; FP8 is H100 only) and `data/F4_failures_a100.csv`. Column
+`engine_cuda_only`: `yes` when the run's `BACKEND_TABLE` has `all_cuda: true`; **`no` for OpenDDE**: every `TokenDiTProtenix` call of the refiner carries
+`extra_pair_bias`, which the sm_80 attention kernels do not take, so all 9,600 calls ran the Triton backend (job 97152; details in
+`~/foldforge-scratch/paper/engine_issues/a100_opendde_tokendit_extra_pair_bias.md`). The OpenDDE engine times on the A100 are therefore not pure-CUDA
+numbers (a CUDA hole to fix in the engine). Failures: engine = ESMFold2 on the 6 nucleic-acid-only targets (`No protein token reached the language model`);
+torch = 52 out-of-memory cells + the same 6.
