@@ -46,11 +46,32 @@ Run directory `~/foldforge-scratch/paper/F4/<card>/{rows,pred,specs,meta}/`; eac
 ## A100 data (engine 3.0.6, cssb3, 2026-11-22)
 
 `data/F4_times_a100.csv` (297 rows = 11 predictors x 27 targets, arms torch / engine; FP8 is H100 only) and `data/F4_failures_a100.csv`. Column
-`engine_cuda_only`: `yes` when the run's `BACKEND_TABLE` has `all_cuda: true`; **`no` for OpenDDE**: every `TokenDiTProtenix` call of the refiner carries
-`extra_pair_bias`, which the sm_80 attention kernels do not take, so all 9,600 calls ran the Triton backend (job 97152; details in
-`~/foldforge-scratch/paper/engine_issues/a100_opendde_tokendit_extra_pair_bias.md`). The OpenDDE engine times on the A100 are therefore not pure-CUDA
-numbers (a CUDA hole to fix in the engine). Failures: none for the engine since the ESMFold2 rerun of the 6 nucleic-acid-only targets (allow_no_protein, 22febf7);
-torch = 52 out-of-memory cells.
+`engine_cuda_only`: `yes` when the run's `BACKEND_TABLE` has `all_cuda: true`. On engine 3.0.6 OpenDDE was `no` (every `TokenDiTProtenix` call of the
+refiner carries `extra_pair_bias`, which the sm_80 kernels of 3.0.6 refused: 9,600 calls on Triton, job 97152); its engine rows are now engine 3.0.8 (next
+section). Failures: none for the engine since the ESMFold2 rerun of the 6 nucleic-acid-only targets (allow_no_protein, 22febf7); torch = 52 out-of-memory cells.
+
+## OpenDDE engine arm re-measured on engine 3.0.8: A100 and RTX 5090 (2026-11-22)
+
+Engine 3.0.8 serves `TokenDiTProtenix` / `TokenDiTMiniWorld` with `extra_pair_bias` on cuda on sm_80 and sm_120 (3.0.6 refused it -> Triton). Only the
+OpenDDE engine arm of these two cards was re-run; every other predictor and arm keeps its engine-3.0.6 rows. Same protocol, node and FoldForge checkout as
+the 3.0.6 run (A100: gpu05, Slurm 97288, checkout c129a81 = 6a0593e + allow_no_protein; 5090: cssb-rtx under the GPU lock, 6a0593e); the 3.0.8 package (the
+H100 pixi install of the pin) was put in front of each card's environment (`ENGINE_SRC`), the warm caches kept. Rows: label engine 3.0.8 (`engine_*_version`
+3.0.8), `engine_cuda_only = yes`, the 3.0.6 time in the new column `engine_3.0.6`.
+
+Backend report, both cards: `all_cuda: true`; `TokenDiTProtenix` 24 modules, served cuda 9,600, refused none; Triton 0.
+
+| tokens | A100 3.0.6 -> 3.0.8 (s) | ratio | RTX 5090 3.0.6 -> 3.0.8 (s) | ratio |
+|---|---|---|---|---|
+| 28-107 (6 targets) | 11.5-11.8 -> 8.6-8.7 | 1.32-1.36x | 3.8 -> 3.2-3.3 | 1.14-1.17x |
+| 138-268 (7) | 12.1-16.6 -> 9.3-11.1 | 1.30-1.61x | 6.3-10.0 -> 4.0-5.6 | 1.56-2.10x |
+| 358-658 (8) | 27.8-77.2 -> 11.2-25.3 | 2.26-3.29x | 19.3-53.4 -> 7.0-18.6 | 2.44-3.04x |
+| 992-1188 (4) | 111.6-232.5 -> 40.1-70.9 | 2.78-3.28x | 82.9-168.4 -> 31.3-54.5 (7wvs: OOM) | 2.65-3.09x |
+| 1487, 2008 (2) | 371.8 / 672.1 -> 114.2 / 210.4 | 3.26 / 3.19x | OOM on both versions | |
+
+Peak memory is ~0.45 GiB higher on 3.0.8 at every size (A100 3.88 -> 4.33 GiB at 28 tokens, 63.30 -> 63.74 at 2,008). On the 32 GB RTX 5090 this pushes
+**7wvs (1,064 tokens) out of memory** (3.0.6: 30.08 GiB peak, 119.9 s); reproduced in a fresh process (a separate output dir), so not fragmentation. The 5090
+OpenDDE engine arm therefore has 24 / 27 cells on 3.0.8 (7wvs, 8xgu, 8j62 OOM; 3.0.6: 25 / 27). Reported to the engine session. F5 (sample comparison) still uses the
+engine-3.0.6 OpenDDE predictions of these cards (not recomputed: not in the requested scope).
 
 ## H100: ESMFold2 on the 6 nucleic-acid-only targets (2026-11-22)
 
