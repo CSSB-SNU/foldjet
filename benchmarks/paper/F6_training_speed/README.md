@@ -58,7 +58,11 @@ TF32 off) were refused by the engine's H100 cuda backend and served by Triton (4
 
 ## H100 engine arm re-measured with the fp32 Transition fix (2026-11-21)
 
-Engine label for the paper table: **engine main d967378a2 (3.0.6 + H100 fp32 Transition fix, unreleased)**. Source: `git archive d967378a2 src/miniworld_engine`
+Engine label for the paper table: **engine 3.0.7** (released 2026-11-22, tag v3.0.7 = 09615f07e). Measured on engine main d967378a2, whose `src/` differs from
+v3.0.7 only by two lines in `modules/norm.py` (`_wants_grad` skips None tensors: the bias=None BiasOnlyAttention Triton path), which the Transition and the F6
+training paths (AF3 / Protenix v1) do not reach; the rest of the difference is the version, the kernels pin, notes and tests. The measurement used the 3.0.6
+`_prebuilt` tree, where `ieee_f32_sm90` (the fp32 Transition chain) was JIT-built; the 3.0.7 kernels wheel ships it prebuilt (the same source). Not re-measured
+on the installed 3.0.7. Source of the measurement: `git archive d967378a2 src/miniworld_engine`
 plus the 3.0.6 `_prebuilt` tree, put in front of the installed engine through `ENGINE_SRC` (the BENCH line says `engine_version 3.0.6` because the package
 metadata is the 3.0.6 one; the `engine_file` is the overlay). Same protocol as above (2 models x 3 repeats, 6 optimizer steps x 8 micro steps, 48 augmentations in
 one pass, step graph, activation checkpointing, the original H100 stand-in pools), FoldForge worktree `paper-f6-h100` (4209c51, clean). Slurm 64927 (Protenix v1),
