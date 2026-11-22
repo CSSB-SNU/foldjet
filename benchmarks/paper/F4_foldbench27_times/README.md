@@ -49,5 +49,15 @@ Run directory `~/foldforge-scratch/paper/F4/<card>/{rows,pred,specs,meta}/`; eac
 `engine_cuda_only`: `yes` when the run's `BACKEND_TABLE` has `all_cuda: true`; **`no` for OpenDDE**: every `TokenDiTProtenix` call of the refiner carries
 `extra_pair_bias`, which the sm_80 attention kernels do not take, so all 9,600 calls ran the Triton backend (job 97152; details in
 `~/foldforge-scratch/paper/engine_issues/a100_opendde_tokendit_extra_pair_bias.md`). The OpenDDE engine times on the A100 are therefore not pure-CUDA
-numbers (a CUDA hole to fix in the engine). Failures: engine = ESMFold2 on the 6 nucleic-acid-only targets (`No protein token reached the language model`);
-torch = 52 out-of-memory cells + the same 6.
+numbers (a CUDA hole to fix in the engine). Failures: none for the engine since the ESMFold2 rerun of the 6 nucleic-acid-only targets (allow_no_protein, 22febf7);
+torch = 52 out-of-memory cells.
+
+## H100: ESMFold2 on the 6 nucleic-acid-only targets (2026-11-22)
+
+The H100 rows in `data/existing/` (engine 3.0.1) have ESMFold2 failing on 8gzl, 7sxp, 8fi1, 8d79, 7wii, 9g7c (`No protein token reached the language
+model`). After the FoldForge fix (`allow_no_protein`, 22febf7: no protein token -> zero language-model hidden states) these 6 targets x 4 arms were re-run on
+engine 3.0.7 (node01, Slurm 65132-65135 and 65144-65163, one target per job): 24 / 24 ok. `data/F4_times_h100_esmfold2_np.csv` (seconds, warm median):
+engine 2.13-2.21, engine FP8 2.21-2.33, PyTorch 5.80-9.62, Anthropic kit 5.90-9.66. Engine arms: `all_cuda: true`. Anthropic arm: the kit refuses the
+fp32 `Transition` cells (800 calls served by the engine PyTorch backend) and has no `AtomDiTESMFold2Pair` (PyTorch); recorded, not gated (baseline).
+F5 pairs of these targets: `../F5_sample_comparison/data/F5_h100_esmfold2_np_pairs_summary.csv` (median RMSD to PyTorch: engine 0.99 A, FP8 1.03 A,
+Anthropic 0.91 A; PyTorch sample-to-sample baseline 3.12 A).
