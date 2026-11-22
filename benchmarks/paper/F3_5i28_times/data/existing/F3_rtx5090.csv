@@ -23,18 +23,18 @@ F3,rtx5090,chai1,foldforge,ff_bf16,4,512,,,not_measured,0,,,,,,,,,,
 F3,rtx5090,chai1,foldforge,ff_bf16,8,1024,,,not_measured,0,,,,,,,,,,
 F3,rtx5090,chai1,foldforge,ff_bf16,12,1536,,,not_measured,0,,,,,,,,,,
 F3,rtx5090,chai1,foldforge,ff_bf16,16,2048,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2,foldforge,ff_bf16,1,128,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2,foldforge,ff_bf16,2,256,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2,foldforge,ff_bf16,4,512,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2,foldforge,ff_bf16,8,1024,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2,foldforge,ff_bf16,12,1536,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2,foldforge,ff_bf16,16,2048,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2-fast,foldforge,ff_bf16,1,128,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2-fast,foldforge,ff_bf16,2,256,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2-fast,foldforge,ff_bf16,4,512,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2-fast,foldforge,ff_bf16,8,1024,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2-fast,foldforge,ff_bf16,12,1536,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2-fast,foldforge,ff_bf16,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2,foldforge,ff_bf16,1,128,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F3,rtx5090,esmfold2,foldforge,ff_bf16,2,256,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F3,rtx5090,esmfold2,foldforge,ff_bf16,4,512,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F3,rtx5090,esmfold2,foldforge,ff_bf16,8,1024,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F3,rtx5090,esmfold2,foldforge,ff_bf16,12,1536,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F3,rtx5090,esmfold2,foldforge,ff_bf16,16,2048,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F3,rtx5090,esmfold2-fast,foldforge,ff_bf16,1,128,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F3,rtx5090,esmfold2-fast,foldforge,ff_bf16,2,256,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F3,rtx5090,esmfold2-fast,foldforge,ff_bf16,4,512,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F3,rtx5090,esmfold2-fast,foldforge,ff_bf16,8,1024,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F3,rtx5090,esmfold2-fast,foldforge,ff_bf16,12,1536,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F3,rtx5090,esmfold2-fast,foldforge,ff_bf16,16,2048,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
 F3,rtx5090,boltz2,foldforge,ff_bf16,1,128,,,not_measured,0,,,,,,,,,,
 F3,rtx5090,boltz2,foldforge,ff_bf16,2,256,,,not_measured,0,,,,,,,,,,
 F3,rtx5090,boltz2,foldforge,ff_bf16,4,512,,,not_measured,0,,,,,,,,,,
@@ -89,18 +89,18 @@ F3,rtx5090,chai1,foldforge,ff_fp8,4,512,,,not_measured,0,,,,,,,,,,
 F3,rtx5090,chai1,foldforge,ff_fp8,8,1024,,,not_measured,0,,,,,,,,,,
 F3,rtx5090,chai1,foldforge,ff_fp8,12,1536,,,not_measured,0,,,,,,,,,,
 F3,rtx5090,chai1,foldforge,ff_fp8,16,2048,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2,foldforge,ff_fp8,1,128,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2,foldforge,ff_fp8,2,256,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2,foldforge,ff_fp8,4,512,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2,foldforge,ff_fp8,8,1024,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2,foldforge,ff_fp8,12,1536,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2,foldforge,ff_fp8,16,2048,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2-fast,foldforge,ff_fp8,1,128,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2-fast,foldforge,ff_fp8,2,256,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2-fast,foldforge,ff_fp8,4,512,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2-fast,foldforge,ff_fp8,8,1024,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2-fast,foldforge,ff_fp8,12,1536,,,not_measured,0,,,,,,,,,,
-F3,rtx5090,esmfold2-fast,foldforge,ff_fp8,16,2048,,,not_measured,0,,,,,,,,,,
+F3,rtx5090,esmfold2,foldforge,ff_fp8,1,128,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F3,rtx5090,esmfold2,foldforge,ff_fp8,2,256,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F3,rtx5090,esmfold2,foldforge,ff_fp8,4,512,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F3,rtx5090,esmfold2,foldforge,ff_fp8,8,1024,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F3,rtx5090,esmfold2,foldforge,ff_fp8,12,1536,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F3,rtx5090,esmfold2,foldforge,ff_fp8,16,2048,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F3,rtx5090,esmfold2-fast,foldforge,ff_fp8,1,128,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F3,rtx5090,esmfold2-fast,foldforge,ff_fp8,2,256,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F3,rtx5090,esmfold2-fast,foldforge,ff_fp8,4,512,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F3,rtx5090,esmfold2-fast,foldforge,ff_fp8,8,1024,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F3,rtx5090,esmfold2-fast,foldforge,ff_fp8,12,1536,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F3,rtx5090,esmfold2-fast,foldforge,ff_fp8,16,2048,,,not_feasible,0,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
 F3,rtx5090,boltz2,foldforge,ff_fp8,1,128,,,not_measured,0,,,,,,,,,,
 F3,rtx5090,boltz2,foldforge,ff_fp8,2,256,,,not_measured,0,,,,,,,,,,
 F3,rtx5090,boltz2,foldforge,ff_fp8,4,512,,,not_measured,0,,,,,,,,,,

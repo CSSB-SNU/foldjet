@@ -12,11 +12,11 @@ F9,rtx5090,rosettafold3,kit,rf3,not_measured,,,,,,,,,,,,,,,no run for this predi
 F9,rtx5090,chai1,engine,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
 F9,rtx5090,chai1,pytorch,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
 F9,rtx5090,chai1,kit,chai1,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
-F9,rtx5090,esmfold2,engine,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
-F9,rtx5090,esmfold2,pytorch,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,esmfold2,engine,,not_feasible,,,,,,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F9,rtx5090,esmfold2,pytorch,,not_feasible,,,,,,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
 F9,rtx5090,esmfold2,kit,esmfold2,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
-F9,rtx5090,esmfold2-fast,engine,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
-F9,rtx5090,esmfold2-fast,pytorch,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
+F9,rtx5090,esmfold2-fast,engine,,not_feasible,,,,,,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
+F9,rtx5090,esmfold2-fast,pytorch,,not_feasible,,,,,,,,,,,,,,,not feasible: loading ESM-C 6B (24 GB fp32 safetensors) exceeds the 5090 host's 16 GB RAM cap (killed by systemd-oomd)
 F9,rtx5090,esmfold2-fast,kit,esmfold2_fast,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
 F9,rtx5090,boltz2,engine,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card
 F9,rtx5090,boltz2,pytorch,,not_measured,,,,,,,,,,,,,,,no run for this predictor x arm on this card

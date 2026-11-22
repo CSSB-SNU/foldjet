@@ -49,3 +49,7 @@ bias-logits switch defaults to the 3.0.6 fp32 behaviour (bit-identical); the B20
 so Chai-1 / RoseTTAFold3 times on 3.0.7 may differ within run-to-run noise; the H100 F6 engine row is labelled engine 3.0.7 (see F6 README: measured on
 engine main d967378a2 with the fp32 Transition fix). Older rows keep their own `engine_version` column (H100 F1 / F2 / F3 / F4 / F5 / F7 / F8: 3.0.1 - 3.0.2,
 unchanged on inputs <= 2,048 tokens).
+
+FoldForge is pinned to engine **3.0.9** (3.0.9 changes only B200 code paths relative to 3.0.8; the A100 / RTX 5090 / H100 campaign rows keep their measured versions 3.0.1 / 3.0.2 / 3.0.6 / 3.0.8 and are not re-measured); the B200 rows were measured on source trees containing the 3.0.9 code (labels in the CSVs). The "pinned to 3.0.7" sentence above is the state of the earlier pin; the 3.0.8 results are kept as they are.
+
+**RTX 5090 coverage.** On the RTX 5090 only ESMFold2 and ESMFold2-Fast are **not feasible** (loading ESM-C 6B, 24 GB fp32 safetensors, exceeds the 5090 host's 16 GB RAM cap; killed by systemd-oomd). The other 9 predictors are measured on the 5090 in F3 / F4 / F5 / F9 (`NOTES_rtx5090_engine306.md`). The Anthropic-kit arms stay "not measured" (user decision), which is a different thing.
