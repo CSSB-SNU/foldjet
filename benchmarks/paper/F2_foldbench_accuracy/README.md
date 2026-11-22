@@ -52,3 +52,10 @@ $FFENV/bin/python $P/collect.py --arm af3kit=$PAPER_OUT/F2/h100/eval/af3kit --ar
 `f2_task_scores.csv`: `arm, task, metric, n, top1, oracle, foldforge_commit, engine_version, gpu, node, slurm_job_id, launch, precision` (percent; `n` = targets or interfaces after the NaN drop).
 `f2_top1_wide.csv`, `f2_oracle_wide.csv`: rows = the nine tasks (`interface_antibody_antigen`, `interface_protein_protein`, `interface_protein_peptide`, `interface_protein_ligand`,
 `interface_protein_dna`, `interface_protein_rna`, `monomer_protein`, `monomer_rna`, `monomer_dna`), columns = arms.
+
+## Decision (user, 2026-11-22): top-1 by the upstream rule
+
+Top-1 success uses FoldBench's upstream rule (`top1_upstream`: an interface the evaluator cannot score is left out). Six antibody-antigen interfaces
+(of 172) are unscored for every sample of every run, an evaluator failure on the reference / chain mapping, not a prediction failure:
+`8ts0` A-C, B-C and `8dtn` A-B (OpenStructure `IndexError: arrays used as indices must be of integer type`), `8c5h` A-B ("at least 3 points are required
+for superposition"), `8f60` A-C, B-C (OpenStructure groups chains B and C as one chemical entity and maps only A and B, so no A-C / B-C DockQ).

@@ -101,3 +101,8 @@ record `squeue -w <node>` of the neighbours in the notes if the node is shared).
 
 `sbatch --gres=gpu:h100:1 --time=00:10:00 -c 16 --mem=64G --export=ALL,NAME=smoke_bf16_shard,PRECISION=bf16,LAUNCH=shard,SHARDS=0,TARGETS=$P/smoke/targets.txt,EXTRA="--seeds 42",ENGINE_OVERLAY=<dir of the extracted engine wheels> $P/foldforge/run_ff.sbatch`
 (also `LAUNCH=multi`, `PRECISION=fp8`; the kit with `kit/run_kit.sbatch` and `SHARDS=0 SHARD_LIST_S0=$P/smoke/targets.txt KIT_INPUTS=<dir with 1-seed JSONs>`).
+
+## Decision (user, 2026-11-22)
+
+FoldForge's F1 row is the `fb_multi` run (2 GPUs in one job, MPS concurrency for small targets; GPU-hours = 2 x wall time), reported with that protocol
+stated. No per-shard re-run.
