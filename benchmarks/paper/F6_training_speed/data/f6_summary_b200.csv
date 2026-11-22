@@ -1,9 +1,9 @@
-model,arm,status,aug_chunk,aug_passes,chunks_tried,repeats,per_example_s_median,per_example_s_min,per_example_s_max,peak_alloc_gib,first_step_s,engine_version,foldforge_commit,gpu,triton_calls
-af3,cueqC,ok,0,1,0,3,1.837,1.8368,1.8375,81.19918298721313,92.989,2.5.11,1a75a1c17fc85bff02f7e1b8b0d22c0be7b05096,NVIDIA B200,
-af3,miniworld,ok,0,1,0,3,1.1652,1.1638,1.1727,64.51018905639648,94.383,2.5.11,886ca3e4fe553911b0ed9b7b488fd06fc8712b95,NVIDIA B200,60
-af3,pytorch,ok,0,1,0,3,3.2603,3.246,3.2763,86.29579973220825,48.907,2.5.11,c6ece13910e801a459f5f62903b35abf04b80459,NVIDIA B200,
-af3,pytorchC,ok,0,1,0,3,2.0054,2.0051,2.006,79.86138772964478,45.407,2.5.11,1a75a1c17fc85bff02f7e1b8b0d22c0be7b05096,NVIDIA B200,
-protenix1,cueqC,ok,0,1,0,3,1.6666,1.6649,1.6789,77.68583011627197,52.669,2.5.11,c6ece13910e801a459f5f62903b35abf04b80459,NVIDIA B200,
-protenix1,miniworld,ok,0,1,0,3,1.1547,1.1545,1.163,64.50464344024658,88.463,2.5.11,886ca3e4fe553911b0ed9b7b488fd06fc8712b95,NVIDIA B200,60
-protenix1,pytorch,ok,0,1,0,3,3.2675,3.2675,3.2945,86.11395835876465,44.834,2.5.11,c6ece13910e801a459f5f62903b35abf04b80459,NVIDIA B200,
-protenix1,pytorchC,ok,0,1,0,3,1.8148,1.8099,1.8339,76.13709878921509,43.542,2.5.11,1a75a1c17fc85bff02f7e1b8b0d22c0be7b05096,NVIDIA B200,
+model,arm,status,aug_chunk,aug_passes,chunks_tried,repeats,per_example_s_median,per_example_s_min,per_example_s_max,peak_alloc_gib,first_step_s,engine_version,foldforge_commit,gpu,triton_calls,engine_label,notes
+af3,cueqC,ok,0,1,0,3,1.837,1.8368,1.8375,81.19918298721313,92.989,2.5.11,1a75a1c17fc85bff02f7e1b8b0d22c0be7b05096,NVIDIA B200,,cuEquivariance + torch.compile,
+af3,miniworld,ok,0,1,0,3,1.15,1.1473,1.1506,64.91933631896973,23.003,2.5.11,5e5fa86a55fbf03ea9913f68295f14b09f4a2f25,NVIDIA B200,12,"engine main f06154bc7 (3.0.8 + b200 clamp fix + b200 holes fix, unreleased)",engine arm: LayerNorm w64 on Triton (designed exception); fp32 Transition on cuda after the holes fix (no Transition triton)
+af3,pytorch,ok,0,1,0,3,3.2603,3.246,3.2763,86.29579973220825,48.907,2.5.11,c6ece13910e801a459f5f62903b35abf04b80459,NVIDIA B200,,PyTorch operators,
+af3,pytorchC,ok,0,1,0,3,2.0054,2.0051,2.006,79.86138772964478,45.407,2.5.11,1a75a1c17fc85bff02f7e1b8b0d22c0be7b05096,NVIDIA B200,,PyTorch operators + torch.compile,
+protenix1,cueqC,ok,0,1,0,3,1.6666,1.6649,1.6789,77.68583011627197,52.669,2.5.11,c6ece13910e801a459f5f62903b35abf04b80459,NVIDIA B200,,cuEquivariance + torch.compile,
+protenix1,miniworld,ok,0,1,0,3,1.1399,1.1398,1.1402,64.89584636688232,22.666,2.5.11,5e5fa86a55fbf03ea9913f68295f14b09f4a2f25,NVIDIA B200,12,"engine main f06154bc7 (3.0.8 + b200 clamp fix + b200 holes fix, unreleased)",engine arm: LayerNorm w64 on Triton (designed exception); fp32 Transition on cuda after the holes fix (no Transition triton)
+protenix1,pytorch,ok,0,1,0,3,3.2675,3.2675,3.2945,86.11395835876465,44.834,2.5.11,c6ece13910e801a459f5f62903b35abf04b80459,NVIDIA B200,,PyTorch operators,
+protenix1,pytorchC,ok,0,1,0,3,1.8148,1.8099,1.8339,76.13709878921509,43.542,2.5.11,1a75a1c17fc85bff02f7e1b8b0d22c0be7b05096,NVIDIA B200,,PyTorch operators + torch.compile,
