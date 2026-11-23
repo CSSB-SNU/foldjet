@@ -30,7 +30,7 @@ import ffpaper  # noqa: E402
 
 _model = sys.argv[1] if len(sys.argv) > 1 else ""
 _arm = sys.argv[2] if len(sys.argv) > 2 else ""
-os.environ.setdefault("FFPAPER_FP8_GUARD", "sync")  # eager runs: the sync guards (no CUDA graph); fp8.check() then redoes a saturated forward
+os.environ.setdefault("FFPAPER_FP8_GUARD", "lazy")  # lazy guards (no host sync per call); fp8.check() below redoes a saturated forward -- the sync guard cost 0.1-0.35 s / forward (AF3, engine 2026-11-23)
 if _arm in ffpaper.ARMS:
     ffpaper.apply_arm_env(_arm, _model)
 
