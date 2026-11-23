@@ -153,7 +153,7 @@ GPU OOM in every mode) keeps its recorded reason. Steady = forwards 3..7 median 
 | esmfold2_fast | RAM cap | RAM cap | RAM cap | RAM cap | RAM cap | RAM cap | not feasible: killed by systemd-oomd while loading the 24.4 GiB checkpoint (probe n = 1, 2026-11-23) |
 | intellifold2 (+ notxla) | - | - | - | - | - | - | refused on sm_120 (af3-jax-opt core, FPF_TRIATT / FPF_TRIMUL no_tiles_cc120, 0/35 predictions; probes n = 1, 2026-11-23) |
 | opendde | - | - | - | - | - | - | refused on sm_120 (every mode) |
-| openfold3 | 2.011 (exact, 4 queries) | failed in rep. 2 | RAM cap | RAM cap | RAM cap | RAM cap | fast refused on sm_120 (pair_transition core); 7 queries exceed 16 GB RAM; `exact` with 4 queries (2 timed) at n = 1, 2; n = 2 repetition 2 killed by the RAM cap (rc 137; reps 1 / 3: 3.145 / 3.146 s) |
+| openfold3 | 2.011 (exact, 4 queries) | 3.146 (exact, 4 queries) | RAM cap | RAM cap | RAM cap | RAM cap | fast refused on sm_120 (pair_transition core); 7 queries exceed 16 GB RAM; `exact` with 4 queries (2 timed) at n = 1, 2; n = 2 repetition 2 was first killed by the RAM cap (rc 137) and re-run as its own process (reps 3.145 / 3.153 / 3.146 s) |
 | protenix_v1 | 1.699 | 2.571 | 5.439 | 15.029 | GPU OOM | GPU OOM | runs; n >= 12 out of GPU memory in every mode |
 | protenix_v2 | - | - | - | - | - | - | refused on sm_120 (fast / big / exact / off) |
 | rosettafold3 | 1.928 | 3.333 | 5.198 | RAM cap | RAM cap | RAM cap | runs; n >= 8 RAM cap (fast and big) |
