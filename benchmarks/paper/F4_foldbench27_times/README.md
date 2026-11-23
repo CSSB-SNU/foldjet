@@ -76,15 +76,24 @@ already used `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` (as the whole ca
 OpenDDE engine arm therefore has 24 / 27 cells on 3.0.8 (7wvs, 8xgu, 8j62 OOM; 3.0.6: 25 / 27). F5 (sample comparison) still uses the
 engine-3.0.6 OpenDDE predictions of these cards (not recomputed: not in the requested scope).
 
-## H100: ESMFold2 on the 6 nucleic-acid-only targets (2026-11-22)
+## H100: ESMFold2 re-measured with the release sampler (134 steps), engine 3.0.9 (2026-11-23)
 
-The H100 rows in `data/existing/` (engine 3.0.1) have ESMFold2 failing on 8gzl, 7sxp, 8fi1, 8d79, 7wii, 9g7c (`No protein token reached the language
-model`). After the FoldForge fix (`allow_no_protein`, 22febf7: no protein token -> zero language-model hidden states) these 6 targets x 4 arms were re-run on
-engine 3.0.7 (node01, Slurm 65132-65135 and 65144-65163, one target per job): 24 / 24 ok. `data/F4_times_h100_esmfold2_np.csv` (seconds, warm median):
-engine 2.13-2.21, engine FP8 2.21-2.33, PyTorch 5.80-9.62, Anthropic kit 5.90-9.66. Engine arms: `all_cuda: true`. Anthropic arm: the kit refuses the
-fp32 `Transition` cells (800 calls served by the engine PyTorch backend) and has no `AtomDiTESMFold2Pair` (PyTorch); recorded, not gated (baseline).
-F5 pairs of these targets: `../F5_sample_comparison/data/F5_h100_esmfold2_np_pairs_summary.csv` (median RMSD to PyTorch: engine 0.99 A, FP8 1.03 A,
-Anthropic 0.91 A; PyTorch sample-to-sample baseline 3.12 A).
+FoldForge ran ESMFold2 with all 200 diffusion steps; the release (and the kit) caps the noise schedule at max_inference_sigma = 256 A, i.e. 134
+steps (fix 5553d19). Every ESMFold2 cell of the H100 table was re-run on FoldForge main 49d41bb, engine 3.0.9, node02 (Slurm array 65821, one
+(arm, target) per task): 108 / 108 ok, including the 6 nucleic-acid-only targets (allow_no_protein). `data/F4_times_h100_esmfold2_134.csv` replaces
+the ESMFold2 rows of `data/existing/F4_h100_engine3.0.1.csv` (200 steps, engine 3.0.1). Engine arms `all_cuda: true` on all 27 targets; the Anthropic
+arm keeps its kit refusals (fp32 Transition -> engine PyTorch backend; recorded, not gated).
+
+| tokens | engine (s) 200 st. / 3.0.1 -> 134 st. / 3.0.9 | FP8 | PyTorch | Anthropic |
+|---|---|---|---|---|
+| 107 (9bks) | 2.08 -> 1.50 | 2.13 -> 1.53 | 6.00 -> 3.98 | 6.05 -> 4.24 |
+| 658 (8ts0) | 3.17 -> 2.61 | 3.21 -> 2.58 | 26.65 -> 21.69 | 15.19 -> 10.79 |
+| 2008 (8j62) | 13.54 -> 12.74 | 11.32 -> 10.44 | 166.81 -> 140.35 | 76.46 -> 56.11 |
+
+F5 pairs of the new runs: `../F5_sample_comparison/data/F5_h100_esmfold2_134_pairs_summary.csv` (median RMSD to PyTorch sample k: engine 0.74 A,
+FP8 0.96 A, Anthropic 0.65 A; PyTorch sample-to-sample baseline 2.65 A). The 200-step files of 2026-11-22 (`F4_times_h100_esmfold2_np.csv`,
+`F5_h100_esmfold2_np_pairs_summary.csv`) were removed. F9 (inference limit) is not re-run: the number of sampler steps does not change the peak memory.
+A100: the ESMFold2 cells are re-measured by another session (cssb3); RTX 5090: ESMFold2 not feasible (16 GB RAM).
 
 ## B200 data (DATA_STATUS, 2026-11-22)
 

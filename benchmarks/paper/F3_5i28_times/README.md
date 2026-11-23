@@ -116,3 +116,19 @@ Re-measured with the F3 protocol (3 repetitions, Slurm 97601-97606), engine labe
 | | 2,048 | 34.788 | 27.003 | kit OOM | | |
 
 Remaining: at 128 and 256 tokens the kit is still 4-14 % faster. The patched n = 1 forward is GPU bound (kernel time 734 ms of 700 ms wall): about 370 ms are cuBLAS bf16 GEMMs of the token DiT (M = 640 rows, 2,400 calls per GEMM shape; the kit fuses them in Triton with the conditioning), 12 ms the per-step windowed atom pair bias (`h_pair_bias_esm`, step-invariant, not yet hoisted on sm_80), 19 ms inductor cast kernels. Not closed.
+
+## H100: ESMFold2 / ESMFold2-Fast re-measured with the release sampler (134 steps), engine 3.0.9 (2026-11-23)
+
+FoldForge ran the ESMFold2 family with 200 diffusion steps; the release and the kits run 134 (noise schedule capped at max_inference_sigma = 256 A,
+fix 5553d19). Re-run on FoldForge main 49d41bb, engine 3.0.9, node02, engine and engine FP8, 3 repetitions each (Slurm 65809-65820), all sizes ok,
+`all_cuda: true` in every process: `data/F3_foldforge_h100_esmfold2_134.csv` replaces the ESMFold2 rows of `data/existing/F3_h100.csv`. Kits unchanged
+(they already ran 134 steps).
+
+| model, n | engine bf16 (s): 200 st. / 3.0.1 -> 134 st. / 3.0.9 | engine FP8 | kit (s) |
+|---|---|---|---|
+| ESMFold2, n=1 | 0.238 -> 0.186 | 0.228 -> 0.176 | 0.308 |
+| ESMFold2, n=8 | 3.171 -> 2.870 | 2.713 -> 2.438 | 3.944 |
+| ESMFold2, n=16 | 13.347 -> 12.322 | 11.128 -> 9.935 | OOM |
+| ESMFold2-Fast, n=1 | 0.217 -> 0.165 | 0.209 -> 0.156 | 0.284 |
+| ESMFold2-Fast, n=8 | 2.122 -> 1.825 | 1.871 -> 1.596 | 2.780 |
+| ESMFold2-Fast, n=16 | 8.609 -> 7.840 | 7.597 -> 6.510 | OOM |
