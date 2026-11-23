@@ -133,6 +133,43 @@ fix 5553d19). Re-run on FoldForge main 49d41bb, engine 3.0.9, node02, engine and
 | ESMFold2-Fast, n=8 | 2.122 -> 1.825 | 1.871 -> 1.596 | 2.780 |
 | ESMFold2-Fast, n=16 | 8.609 -> 7.840 | 7.597 -> 6.510 | OOM |
 
+
+## RTX 5090: all 9 predictors on the unreleased boltz2-5090 engine (DATA_STATUS, 2026-11-23)
+
+`data/F3_foldforge_rtx5090_boltz2fix_unreleased.csv` (54 rows). `data/F3_foldforge_rtx5090.csv` (released engine 3.0.6) is unchanged; the new CSV carries the 3.0.6 value next to each cell (`s_306`, `s306_over_s`) and the kit value (`kit_s`, `kit_over_s`, from `data/F3_kits_rtx5090.csv`).
+
+- **Why:** on the 5090 FoldForge Boltz-2 was slower than the Anthropic kit at n = 1 / 2 (1.416 / 2.132 s vs 1.123 / 2.047 s). Profile (n = 1 warm forward): no Triton / torch fallback, no host gap; the extra time was the diffusion token DiT: (1) the Boltz-2 up-gated transition ran as the module's own torch code on sm_120 (fp32 master -> bf16 weight casts per call + split-K GEMMs, ~0.55 s per forward); (2) the step-invariant token pair bias was recomputed every sampler step (4,800 `pair_bias_gen` launches) because the A100 hoist was gated to capability 8.0.
+- **Engine:** 3.0.9 release artifacts + engine branch `boltz2-5090` as source (`ENGINE_SRC`): a77511b5a (Boltz-2 up-gate transition on `conditioned_transition_sm80` at sm_120 inference) and aa52c4f1a (token pair-bias hoist for capability (12, 0); token DiT `cuda:5090_sm120` bumped, judge owed 0). **Unreleased.** Column `engine`.
+- **FoldForge:** `~/ff/FoldForge` 49d41bb on cssb-rtx, `rtx5090.sh` protocol unchanged (n 1, 2, 4, 8, 12, 16; 3 repetitions in separate processes; steady median), every run under the GPU lock, 2026-11-23 13:49-18:56 KST. Every cell `all_cuda`.
+- **Result:** every measured cell is faster than 3.0.6: Boltz-2 1.11-1.34x, OpenDDE 1.40-1.63x (the hoist), the other 7 predictors 1.06-1.11x. Repetitions agree within 0.6 %. The OOM cells are the same as on 3.0.6 (Chai-1 / IntelliFold2 n = 12, 16; OpenDDE n = 8, 12, 16; Protenix v2 n = 16); no new OOM. Peak allocated memory rises by 2-15 % (cached bf16 weight copies, hoisted pair bias; e.g. Boltz-2 n = 8 7.22 -> 8.31 GiB, RoseTTAFold3 n = 16 23.20 -> 26.24 GiB).
+
+3.0.6 time / new time:
+
+| model | n=1 | n=2 | n=4 | n=8 | n=12 | n=16 |
+|---|---|---|---|---|---|---|
+| AF3 | 1.07 | 1.06 | 1.09 | 1.11 | 1.10 | 1.09 |
+| Boltz-2 | 1.34 | 1.21 | 1.15 | 1.15 | 1.14 | 1.11 |
+| Chai-1 | 1.08 | 1.06 | 1.08 | 1.07 | OOM | OOM |
+| IntelliFold2 | 1.09 | 1.09 | 1.09 | 1.07 | OOM | OOM |
+| OpenDDE | 1.40 | 1.42 | 1.63 | OOM | OOM | OOM |
+| OpenFold3 | 1.06 | 1.06 | 1.09 | 1.11 | 1.10 | 1.09 |
+| Protenix v1 | 1.06 | 1.06 | 1.09 | 1.11 | 1.10 | 1.09 |
+| Protenix v2 | 1.09 | 1.08 | 1.11 | 1.11 | 1.09 | OOM |
+| RoseTTAFold3 | 1.06 | 1.06 | 1.09 | 1.11 | 1.10 | 1.09 |
+
+Kit time / new FoldForge time (> 1 = FoldForge faster; cells without a kit value: refused on sm_120, 16 GB host RAM cap or OOM on the kit side):
+
+| model | n=1 | n=2 | n=4 | n=8 | n=12 | n=16 |
+|---|---|---|---|---|---|---|
+| AF3 (af3_torch) | 1.29 | 1.18 | 1.37 | 1.39 | 1.29 | 1.26 |
+| Boltz-2 | 1.06 | 1.16 | 1.63 (kit big) | 1.49 (kit big) | – | – |
+| Chai-1 | 6.78 | 3.28 | 2.89 | – | – | – |
+| OpenFold3 (kit exact, 4 queries) | 2.37 | 2.20 | – | – | – | – |
+| Protenix v1 | 2.07 | 1.85 | 1.87 | 1.71 | – | – |
+| RoseTTAFold3 | 2.08 | 2.20 | 1.66 | – | – | – |
+
+Every comparable cell is faster than the kit (minimum 1.06, Boltz-2 n = 1; on 3.0.6 Boltz-2 n = 1 / 2 were 0.79 / 0.96). These rows replace `F3_foldforge_rtx5090.csv` only after the engine change is released.
+
 ## RTX 5090: Anthropic kit arm (DATA_STATUS, 2026-11-23)
 
 `data/F3_kits_rtx5090.csv` (78 rows = 13 kit runs x n 1, 2, 4, 8, 12, 16; `collect_kits_rtx5090.py`). Host cssb-rtx (RTX 5090 32 GB, sm_120; every process in `mwe.slice`,
