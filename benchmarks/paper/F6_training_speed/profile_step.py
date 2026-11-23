@@ -218,6 +218,33 @@ def gemm_probe() -> None:
     print("PROBE nvidia-smi", subprocess.run(["nvidia-smi", "--query-gpu=name,clocks.sm,clocks.max.sm,power.draw,power.limit", "--format=csv,noheader"], capture_output=True, text=True, check=False).stdout.strip(), flush=True)
 
 
+def _install_random_init() -> None:
+    """PROFILE-ONLY (F6PROF_RANDOM_INIT=1, rented third-party machine: no weights uploaded): replace the checkpoint load by a random initialisation.
+
+    Kernel times do not depend on the values (except data-dependent guard paths). Pass any existing file named *.miniworld.pt as --ckpt (it is never read).
+    """
+    import torch
+    from foldforge.models.checkpoints import miniworld
+
+    def load_into(model, path, *, family):  # noqa: ARG001
+        g = torch.Generator().manual_seed(0)
+        fourier = model.get_submodule("diffusion_head.fourier_embeddings")
+        for name, init in (("weight", torch.randn(256, generator=g)), ("bias", torch.rand(256, generator=g))):
+            fourier.register_buffer(name, init)
+        with torch.no_grad():
+            for pname, p in model.named_parameters():
+                if p.ndim >= 2:
+                    p.copy_(torch.randn(p.shape, generator=g, dtype=torch.float32).to(p.device, p.dtype) / (p.shape[-1] ** 0.5))
+                elif pname.endswith(("weight", "scale", "gamma")):
+                    p.fill_(1.0)
+                else:
+                    p.zero_()
+        print("F6PROF RANDOM_INIT: parameters randomly initialised (no checkpoint read)", flush=True)
+        return {"format": "random_init", "format_version": 0, "source": "random", "mapped_records": 0}
+
+    miniworld.load_into = load_into
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(add_help=True)
     ap.add_argument("--prof-step", type=int, default=1, help="optimizer step whose micro steps are profiled (0 = capture/warm-up step)")
@@ -297,8 +324,10 @@ def main() -> None:
             print("F6PROF micro wall by recycle count (all timed micro steps): " + "; ".join(f"passes={p}: n={len(v)} median {statistics.median(v):.4f} s" for p, v in sorted(by_passes.items())), flush=True)
         return res
 
+    if os.environ.get("F6PROF_RANDOM_INIT"):
+        _install_random_init()
     step_mod.micro_step = wrapped
-    script = args.train_script or str(Path(__file__).resolve().parents[3] / "scripts" / "train_protenix1.py")
+    script =args.train_script or str(Path(__file__).resolve().parents[3] / "scripts" / "train_protenix1.py")
     sys.argv = [script, *targs]
     runpy.run_path(script, run_name="__main__")
     if os.environ.get("F6PROF_PROBE_AFTER"):

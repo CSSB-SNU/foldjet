@@ -19,5 +19,5 @@ sg=(--step-graph); [ -n "${EAGER:-}" ] && sg=()
 python "$HERE/profile_step.py" --prof-step "$PROF_STEP" --out "$OUT" --tag "$TAG" --keep-trace -- \
   --bench --model "$MODEL" --backend "$backend" --recipe protenix --steps "$STEPS" --grad-accum "$ACCUM" \
   --warmup-steps 1 --augment-chunk 0 --bench-bucket --bench-pool "$POOL" --bench-pool-cache "$POOL_DIR/pool_$MODEL.pt" \
-  --run-dir "$OUT/runs/${MODEL}_${ARM}" "${sg[@]}" "${extra[@]}" 2>&1 | grep -a --line-buffered -v "Warning\|warn" | tee "$OUT/log${TAG}.txt" | grep -a "^BENCHSTEP\|^STEP_GRAPH\|^F6PROF\|^===\|^rc=\|^PRECISION\|^ENGINE_AFTER_MICRO1\|Error\|Traceback" | cut -c1-260
+  --run-dir "$OUT/runs/${MODEL}_${ARM}" ${CKPT:+--ckpt "$CKPT"} "${sg[@]}" "${extra[@]}" 2>&1 | grep -a --line-buffered -v "Warning\|warn" | tee "$OUT/log${TAG}.txt" | grep -a "^BENCHSTEP\|^STEP_GRAPH\|^F6PROF\|^===\|^rc=\|^PRECISION\|^ENGINE_AFTER_MICRO1\|Error\|Traceback" | cut -c1-260
 echo "profile finished $(date -Is)"
