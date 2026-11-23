@@ -510,6 +510,9 @@ class DenseSpec:
     sigma_min: float = 0.0004
     sigma_max: float = 160.0
     rho: float = 7.0
+    #: The released sampler drops the schedule levels above this noise level (A) and starts at it
+    #: (ESMFold2: max_inference_sigma = 256, so 200 steps run as 134). None keeps every level.
+    max_inference_sigma: float | None = None
 
     @property
     def target_feat_channel(self) -> int:
@@ -875,6 +878,7 @@ ESMFOLD2 = replace(
     # gather machinery takes.
     atom_keys_subset=192,
     realign_sampler=True,
+    max_inference_sigma=256.0,
     confidence_row_pool=True,
     affine_norms=frozenset(
         {

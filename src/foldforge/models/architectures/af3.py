@@ -956,6 +956,7 @@ class AlphaFold3(nn.Module):
                 rho=self.spec.rho,
                 terminal_zero=False,
                 include_minimum_before_zero=False,
+                max_sigma=self.spec.max_inference_sigma,
             )
         )(self.diffusion_steps, device=mask.device)
         sampler_config = EulerSampler.Config(
