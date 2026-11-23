@@ -78,7 +78,7 @@ Backend report (engine arms): LayerNorm of 65,536 (F4 / F3 / F9) or 589,824 (F6)
 
 ## A100 OpenDDE rows re-measured on engine 3.0.9 (DATA_STATUS, 2026-11-23)
 
-`data/F3_foldforge_a100.csv`: the six OpenDDE rows are now engine 3.0.9 (the 3.0.6 value stays in the new column `engine_3.0.6`; every other row is unchanged, 3.0.6). The 3.0.6 run sent `TokenDiTProtenix` `extra_pair_bias` to Triton; 3.0.8 / 3.0.9 serve it on cuda. Same protocol (6 sizes, 3 repetitions in 3 jobs, steady median), same FoldForge checkout as the F4 OpenDDE rerun (c129a81 = 6a0593e + allow_no_protein), the 3.0.9 release artifacts (`miniworld-engine` 3.0.9 + `kernels-sm80-cu129` 3.0.9, extracted, put in front of the 3.0.6 environment through `ENGINE_SRC`), warm caches kept; Slurm 97587 / 97588 / 97589 (gpu01, three jobs on one node as in the 3.0.6 campaign). Backend report: `all_cuda: true`, `TokenDiTProtenix` 24 modules set cuda, refused none.
+(Superseded by the full A100 re-measure below.) `data/F3_foldforge_a100.csv` at that time: the six OpenDDE rows are now engine 3.0.9 (the 3.0.6 value stays in the new column `engine_3.0.6`; every other row is unchanged, 3.0.6). The 3.0.6 run sent `TokenDiTProtenix` `extra_pair_bias` to Triton; 3.0.8 / 3.0.9 serve it on cuda. Same protocol (6 sizes, 3 repetitions in 3 jobs, steady median), same FoldForge checkout as the F4 OpenDDE rerun (c129a81 = 6a0593e + allow_no_protein), the 3.0.9 release artifacts (`miniworld-engine` 3.0.9 + `kernels-sm80-cu129` 3.0.9, extracted, put in front of the 3.0.6 environment through `ENGINE_SRC`), warm caches kept; Slurm 97587 / 97588 / 97589 (gpu01, three jobs on one node as in the 3.0.6 campaign). Backend report: `all_cuda: true`, `TokenDiTProtenix` 24 modules set cuda, refused none.
 
 | tokens | 3.0.6 (s) | 3.0.9 (s) | 3.0.6 / 3.0.9 | Anthropic kit (s) | kit / FoldForge 3.0.9 |
 |---|---|---|---|---|---|
@@ -91,31 +91,31 @@ Backend report (engine arms): LayerNorm of 65,536 (F4 / F3 / F9) or 589,824 (F6)
 
 The 3.0.6 ratios 0.9 (1,024) and 0.4 (1,536) against the kit are now 1.28 and 1.29. Repetition 1 ran about 5 % slower than 2 and 3 at every size (the median is used).
 
-## A100 ESMFold2 / ESMFold2-Fast slower than the Anthropic kit: cause and an unreleased engine patch (2026-11-23)
+## A100: all 11 predictors re-measured, ESMFold2 family on the release sampler (134 steps), engine main 10f06f87e (2026-11-23)
 
-**Not a data error; an engine-side cost.** On the 3.0.6 / 3.0.9 engine the A100 ESMFold2 forward spent about 13 % in `aa80::pair_bias_gen_kernel` (2,400 calls per forward = 12 token-DiT blocks x 200 sampler steps, 47 us each at 128 tokens: the pair LayerNorm + head projection of a pair that is identical at every step) and 3 % in per-call fp32 -> bf16 casts of the block weights (`aten::copy_` of Wo / Ws, 24 per step), plus 29 ms of per-step weight casts / concatenations in the ESMFold2 atom block. The kit hoists the step-invariant pair bias once per fold (its CHANGES.md: "the diffusion transformer's step-invariant pair bias per fold"). The engine hoisted it on H100 / B200 but the sm_80 attention (`augattn_sm80`) only had an opt-in cache for the atom width. Not the cause: the ESM-C language model (run once per predictor call, outside the timed forward; fallback PyTorch ESM-C without transformer-engine / flash-attn costs 0.10-0.22 s per call at n = 1, not in `steady_s`), the sampler glue (cuda `AlignEuler`), TriAttn / TriMul / Transition (all cuda, `all_cuda: true`).
-Evidence: torch profiler (CUDA activity only, CUDA-graph replay, 1 warm forward, n = 1): kernel time 890 ms of an 858 ms wall forward on 3.0.9 (GPU bound), `pair_bias_gen_kernel` 113 ms, bf16 copies 43 ms; after the patch 733 ms of 700 ms (pair bias 0, copies 20 ms).
+`data/F3_foldforge_a100.csv` now holds this run for all 66 cells (it replaces the 3.0.6 campaign and the 3.0.9 OpenDDE rows above; those values stay in git history). The separate `F3_foldforge_a100_esmfold2_hoist_unreleased.csv` (200 steps) is removed.
 
-Engine patch (branch `esm-a100` of the engine repository, **unreleased, not pushed**): `c7511f93e` = (1) `kernels/integrations/augattn_sm80.py`: token-width pair bias hoisted per (pair tensor, norm / bias weights, key mask) through `_capture.hoisted_table` (switch `MINIWORLD_TOKEN_BIAS_HOIST=0`; only when the bias is <= 192 MiB per block), out-projection casts of fp32 masters cached (`param_forms`); `TokenDiTProtenix` / `TokenDiTMiniWorld` `cuda:a100_sm80` 6 -> 7 / 7 -> 8; (2) `kernels/integrations/local_dit_esm.py`: an inference op for the A100 ESMFold2 atom block (no saved activations, casts / packs once per parameter version; switch `MINIWORLD_ESM_A100_INFER=0`); `AtomDiTESMFold2Pair` `cuda:a100_sm80` 1 -> 2. Output bits unchanged: same-process A-B (hoist off / on, ABAB) gives identical coordinates (max abs difference 0) at n = 1, 2, 4; accuracy records of `TokenDiTProtenix`, `TokenDiTMiniWorld`, `AtomDiTESMFold2Pair` on the A100 equal the 3.0.9 records (same errors, same colours); `tests/gpu/test_token_pair_bias_hoist_sm80.py` bitwise, 4 passed. Same-process A-B: n = 1 0.858 -> 0.745 s (hoist), 0.725 -> 0.700 s (atom op); n = 4 3.81 -> 3.36 s.
+- **Why the ESMFold2 family was slower than the kit on the A100:** FoldForge ran 200 diffusion steps; the release and the kit run 134 (the 200-level schedule capped at max_inference_sigma = 256 A, FoldForge 5553d19 / 7a43e26). Seen in the profiles as 200 sampler kernels per forward (FoldForge) vs 134 `_kabsch3` / sampler-graph replays per fold (kit). The engine side was connected correctly (token DiT, atom block, trunk all on cuda). The A100 engine patches (pair-bias hoist per fold, ESMFold2 atom-block inference op, token-DiT conditioning pack) add on top; they were not the main cause.
+- **Engine:** the 3.0.9 release artifacts with the A100 patches as source (`ENGINE_SRC`), the same code as engine `origin/main` 10f06f87e for every touched file (unreleased; judge owed 0 on a100_sm80 / h100_sm90 / 5090_sm120; the patches are gated to capability 8.0, the RTX 5090 is unchanged). Column `engine_label`.
+- **FoldForge:** c129a81 + 7a43e26 (= the 5553d19 fix on main). Protocol unchanged: n 1, 2, 4, 8, 12, 16, 3 repetitions in 3 jobs per model, steady median; Slurm 97631-97640, 97646-97669 (cssb3, A100 80GB PCIe). Every cell ok. Allocator "expandable_segments ... OOM" warnings near n = 16 for OpenDDE / IntelliFold2 are retries; the cells finished.
 
-Re-measured with the F3 protocol (3 repetitions, Slurm 97601-97606), engine label **3.0.9 release artifacts + esm-a100 c7511f93e (unreleased)**; `data/F3_foldforge_a100_esmfold2_hoist_unreleased.csv` (column `engine_3.0.6_s` = the 3.0.6 row, which stays untouched in `F3_foldforge_a100.csv`):
+Kit time / FoldForge engine time (> 1 = FoldForge faster; kit = the 2026-11-18 A100 kit baseline, best of af3_jax / af3_torch for AF3, best of the two IntelliFold-v2 runs):
 
-| model | tokens | 3.0.6 (s) | patched (s) | kit (s) | kit / FoldForge 3.0.6 | kit / FoldForge patched |
+| model | n=1 | n=2 | n=4 | n=8 | n=12 | n=16 |
 |---|---|---|---|---|---|---|
-| ESMFold2 | 128 | 0.855 | 0.699 | 0.620 | 0.73 | 0.89 |
-| | 256 | 1.629 | 1.387 | 1.332 | 0.82 | 0.96 |
-| | 512 | 3.827 | 3.264 | 3.362 | 0.88 | 1.03 |
-| | 1,024 | 12.496 | 10.586 | 11.473 | 0.92 | 1.08 |
-| | 1,536 | 28.800 | 24.509 | 26.710 | 0.93 | 1.09 |
-| | 2,048 | 50.838 | 43.715 | kit OOM | | |
-| ESMFold2-Fast | 128 | 0.787 | 0.632 | 0.542 | 0.69 | 0.86 |
-| | 256 | 1.401 | 1.157 | 1.081 | 0.77 | 0.93 |
-| | 512 | 2.973 | 2.417 | 2.440 | 0.82 | 1.01 |
-| | 1,024 | 8.952 | 6.992 | 7.607 | 0.85 | 1.09 |
-| | 1,536 | 20.177 | 15.697 | 17.368 | 0.86 | 1.11 |
-| | 2,048 | 34.788 | 27.003 | kit OOM | | |
+| AF3 | 1.53 | 1.25 | 1.24 | 1.30 | 1.23 | 1.25 |
+| Boltz-2 | 1.43 | 1.60 | 1.88 | 1.86 | 1.65 | 1.60 |
+| Chai-1 | 9.17 | 4.90 | 4.29 | 2.95 | 2.28 | 1.95 |
+| OpenFold3 | 1.29 | 1.23 | 1.25 | 1.27 | 1.23 | 1.23 |
+| Protenix v1 | 3.43 | 2.70 | 2.59 | 2.41 | 2.20 | 2.35 |
+| Protenix v2 | 2.40 | 2.16 | 1.83 | 1.58 | 1.43 | 1.48 |
+| OpenDDE | 3.98 | 1.91 | 1.49 | 1.44 | 1.27 | 5.12 |
+| RoseTTAFold3 | 2.85 | 2.74 | 1.82 | 1.58 | 1.40 | 1.38 |
+| ESMFold2 | 1.32 | 1.32 | 1.27 | 1.21 | 1.20 | kit failed (engine 41.04 s) |
+| ESMFold2-Fast | 1.33 | 1.39 | 1.38 | 1.33 | 1.35 | kit failed (engine 23.19 s) |
+| IntelliFold2 | kit OOM | kit OOM | kit OOM | kit OOM | 1.72 | 1.74 |
 
-Remaining: at 128 and 256 tokens the kit is still 4-14 % faster. The patched n = 1 forward is GPU bound (kernel time 734 ms of 700 ms wall): about 370 ms are cuBLAS bf16 GEMMs of the token DiT (M = 640 rows, 2,400 calls per GEMM shape; the kit fuses them in Triton with the conditioning), 12 ms the per-step windowed atom pair bias (`h_pair_bias_esm`, step-invariant, not yet hoisted on sm_80), 19 ms inductor cast kernels. Not closed.
+Every comparable cell is faster than the kit (minimum 1.20, ESMFold2 n = 12). Against the 3.0.6 campaign, AF3 n = 2 / 4 moved from 1.03 to 1.25 / 1.24 and OpenFold3 from 0.99-1.05 to 1.23-1.29.
 
 ## H100: ESMFold2 / ESMFold2-Fast re-measured with the release sampler (134 steps), engine 3.0.9 (2026-11-23)
 
