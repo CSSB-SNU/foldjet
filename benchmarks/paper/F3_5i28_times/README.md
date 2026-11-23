@@ -209,3 +209,30 @@ Kit time / FoldForge engine bf16 time on the same card (`data/F3_foldforge_rtx50
 Boltz-2 n = 1 / 2: the kit is faster on this card (its levers are not active on sm_120, so this is the kit's stock path). ESMFold2 / ESMFold2-Fast: no
 comparison on this card (kit and FoldForge both not feasible under the 16 GB host RAM cap); note that the FoldForge ESMFold2-family rows on every card
 measured before fix 7a43e26 ran 200 sampler steps (release / kit: 134) and must not be compared with kit rows as they are.
+
+## B200: engine arm re-measured on engine main a553001e1, Anthropic kit arm, ESMFold2 at the release sampler (DATA_STATUS, 2026-11-23)
+
+Shared B200 host (DCTN-0831174147-1, 8 x B200 sm_100), one task per GPU, each pinned to its GPU slot's 9 CPUs (72 / 8), no foreign process on a timed GPU.
+
+- **Engine arm** (`data/F3_foldforge_b200.csv`, replaces the 2026-11-22 label-B rows; the old value of every cell is kept in the column
+  `s_campaign_20261122_labelB_200steps_for_esmfold2`): engine main `a553001e1` (source, sm100a prebuilt JIT cache; contains the B200 atom-local
+  tail on the tensor cores, the CUDA-graph `record_stream` fix and the B200 LayerNorm D64 / D128 bf16 CUDA route), same protocol, 33 (model, rep)
+  processes all rc 0, 66 cells ok. Boltz-2 / Chai-1 / RoseTTAFold3 still one process per size: a multi-size check of Boltz-2 in one process is
+  still non-finite on the B200 (rc 3) after the `record_stream` fix. Backend: all classes cuda in every first-size table (Triton 0), except the
+  declared B200 LayerNorm exception (width 256 bf16, large row counts → Triton) in Chai-1 (n >= 4) and ESMFold2 / -Fast (n >= 4).
+  ESMFold2 / ESMFold2-Fast rows are the release sampler (134 steps; FoldForge ed6efa8b3 + 22febf7 + 5553d19 as a working-tree patch).
+  n = 16 (s): AF3 10.61 (10.89 before), Boltz-2 13.57 (13.36), Chai-1 17.15 (17.24), IntelliFold2 51.45 (49.53), OpenDDE 40.98 (65.63),
+  OpenFold3 10.98 (11.05), Protenix v1 10.05 (10.01), Protenix v2 19.71 (19.26), RoseTTAFold3 10.40 (10.36), ESMFold2 7.32 (7.71 at 200 steps),
+  ESMFold2-Fast 4.77 (5.18 at 200 steps).
+- **Anthropic kit arm** (`data/F3_kits_b200.csv`, report `data/F3_kits_b200_REPORT.md`): kit checkout f4f62fa6 installed fresh for sm_100 (Python
+  venv route), mode fast (big after a fast OOM), steady value = drop forwards 1-2, median of the rest; cell = median of 3 repetitions (separate
+  processes). **Random weights in process** (user order; loaders intercepted at run time, value-free checkpoint skeletons only; no kit file edited).
+  Only openfold3 / openfold3_ob0 / protenix_v2 ship a B200 config. n = 16 (s): Boltz-2 24.79, Protenix v1 33.39, Protenix v2 59.02,
+  af3_torch 21.74, af3_jax 36.04 (kit exit 5: dpa kernels refused, all forwards run), RF3 28.76, Chai-1 56.28 (exit 1 'PAIRTRACK GATE REFUSED',
+  as on the H100), IntelliFold2-notxla 106.37 (exit 3 partial), IntelliFold2 out of memory (fast + big). Not runnable on sm_100 (kit verdicts):
+  OpenDDE (cuEquivariance 0.10 without sm_100 code: KERNELS REFUSED), OpenFold3 (pair_transition 'arch-sm100-not-measured' with its own b200.env),
+  ESMFold2 / -Fast (Triton OutOfResources: tensor memory 528 > 512 in the kit's sm90-tuned kernel).
+  Deviations recorded per cell: CPU pinning from 07:35 UTC (earlier items unpinned on a loaded host; timed forwards agree across reps), RF3 n1-n8 with
+  the kit's own switch MODEL_OPT_LEVERS_OFF=prefetch (its niced prefetch helper starved; featurisation is outside the timed forward).
+- **Engine vs kit, same host:** the engine is faster in all 47 comparable cells (n = 1..16); the smallest margin is Boltz-2 n = 1 (1.70x; n = 16: 1.83x);
+  n = 16: AF3 2.05x (af3_torch) / 3.40x (af3_jax), Chai-1 3.28x, Protenix v1 3.32x, Protenix v2 3.00x, RF3 2.77x, IntelliFold2 2.07x (notxla).

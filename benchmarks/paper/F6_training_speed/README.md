@@ -88,3 +88,12 @@ Backend report (engine arms): LayerNorm of 65,536 (F4 / F3 / F9) or 589,824 (F6)
 
 **F6 (this folder):** `data/f6_runs_b200.csv` (24 runs), `data/f6_summary_b200.csv` (8 rows = AF3 / Protenix v1 x PyTorch, PyTorch+compile, cuEquivariance+compile, engine), `data/steps_b200.txt`. Every arm fits all 48 augmentations in one pass on the 178 GiB card (`aug_chunk 0`, no ladder), 3 repeats each, original H100 stand-in pools. Seconds per example (median of 3): AF3 engine 1.150 / cuEq+compile 1.837 / PyTorch+compile 2.005 / PyTorch 3.260; Protenix v1 engine 1.140 / cuEq+compile 1.667 / PyTorch+compile 1.815 / PyTorch 3.268. Engine arm = label A (engine main f06154bc7: the fp32 Transition chain `ieee_f32_sm100` is served by cuda, the 24 Transition Triton calls per micro step of the clamp-only tree are gone; the 9 LayerNorm w64 Triton calls per micro step remain, `triton_calls` column 12 counts the table of the run). The clamp-only engine rows are archived on the B200 (`invalid_archive/clamp_only_engine_before_holes_fix/`), not in the CSV.
 Note: the `engine_version` column says 2.5.11 (package metadata of the shared env); `commit` / `foldforge_commit` of the BENCH line is the checkout of that launch (a lane re-deploys the repository between tasks; the training script and its inputs are identical across the commits of this branch).
+
+## B200 engine arm re-measured on engine main a553001e1 (2026-11-23)
+
+The label-A engine rows (1.150 / 1.140 s per example) were slower than the H100 because the B200 atom-local attention ran the slid key
+window's TAIL (query windows of padding atoms; F6 pads to 4,096 atoms) on CUDA cores in one CTA per head (`local_attn_dkv_tf32` 77 ms a call).
+Engine commit 9760cfe4b moved it to the tensor cores. Re-measured on the campaign host with engine main a553001e1, same protocol (6 x 8, 48
+augmentations in one pass, step graph, H100 stand-in pools, real weights, 3 repeats): `data/f6_summary_b200_engine_a553001e1.csv`
+(+ runs, steps): **AF3 0.4375 s / example, Protenix v1 0.4291** (H100 engine 0.812 / 0.787: B200 1.86x / 1.83x faster); triton_calls 0 (the
+B200 LayerNorm D64 bf16 route is CUDA on this main). The PyTorch / compile / cuEq rows of `f6_summary_b200.csv` are not re-run.

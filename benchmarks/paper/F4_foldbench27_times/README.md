@@ -107,3 +107,11 @@ Backend report (engine arms): LayerNorm of 65,536 (F4 / F3 / F9) or 589,824 (F6)
 **OpenDDE TokenDiTProtenix `extra_pair_bias`:** the released 3.0.7 / clamp-only tree refused it on the B200 as on the A100 (9,600 Triton calls: 'inference: outside the fused H100 inference block's range ...'); with the B200 holes fix (A) the OpenDDE engine arm has Triton 8 calls = the LayerNorm w64 exception only. The clamp-only OpenDDE rows are not in the CSV (`invalid_archive`).
 ESMFold2 loads ESM-C on the B200 without the 16 GB host-RAM limit of the 5090 and runs (ESM-C 6B fp32); on the 5090 ESMFold2 / ESMFold2-Fast are not feasible (the 24 GB fp32 safetensors exceed the 16 GB RAM cap; killed by systemd-oomd).
 **Engine version (2026-11-22):** FoldForge is pinned to engine 3.0.9 (3.0.9 changes only B200 code paths relative to 3.0.8; the A100 / RTX 5090 / H100 campaign rows keep their measured versions 3.0.1 / 3.0.2 / 3.0.6 / 3.0.8 and are not re-measured); the B200 rows were measured on source trees containing the 3.0.9 code (labels in the CSVs: `engine_label`, `notes`).
+
+## B200: ESMFold2 re-measured with the release sampler (134 steps), engine a553001e1 (2026-11-23)
+
+`data/F4_times_b200_esmfold2_134.csv` replaces the ESMFold2 rows of `data/F4_times_b200.csv` (200 steps, engine label B). FoldForge ed6efa8b3 +
+22febf7 (allow_no_protein) + 5553d19 (max_inference_sigma 256) as a working-tree patch (verified: 134 steps, first sigma 256), engine main
+a553001e1 for the engine arm, arms engine / torch, 27 / 27 targets ok on both arms (the 6 nucleic-acid-only targets, failures in the campaign,
+now run; `data/F4_failures_b200_esmfold2_134.csv` is empty). Engine 1.20-7.31 s (8j62 2,008 tokens: 7.31 s, was 8.13 at 200 steps),
+PyTorch 2.87-95.3 s. Engine arm backend: all cuda except the declared B200 LayerNorm exception (width 256 bf16, >= 384^2 rows → Triton).

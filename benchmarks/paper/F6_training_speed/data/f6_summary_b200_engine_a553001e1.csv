@@ -1,0 +1,3 @@
+model,arm,status,aug_chunk,aug_passes,chunks_tried,repeats,per_example_s_median,per_example_s_min,per_example_s_max,peak_alloc_gib,first_step_s,engine_version,foldforge_commit,gpu,triton_calls
+af3,miniworld,ok,0,1,0,3,0.4375,0.4364,0.4381,64.91933631896973,15.716,3.0.9+ga553001e1,ed6efa8b3465dc44b89bd678498fb6cbfc092be2,NVIDIA B200,0
+protenix1,miniworld,ok,0,1,0,3,0.4291,0.4291,0.4303,64.89584636688232,14.419,3.0.9+ga553001e1,ed6efa8b3465dc44b89bd678498fb6cbfc092be2,NVIDIA B200,0

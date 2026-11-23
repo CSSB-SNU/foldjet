@@ -1,0 +1,5 @@
+id,card,engine_version,foldforge_commit,arm,model,n,rmsd_median,rmsd_p90,plddt_abs_median,pae_abs_median
+F5,b200,3.0.9+ga553001e1,ed6efa8b3+22febf7+5553d19,baseline,esmfold2,270,2.6625,28.9458,1.0916,0.6447
+F5,b200,3.0.9+ga553001e1,ed6efa8b3+22febf7+5553d19,engine,esmfold2,135,0.6579,2.6634,0.509,0.204
+F5,b200,3.0.9+ga553001e1,ed6efa8b3+22febf7+5553d19,baseline,ALL,270,2.6625,28.9458,1.0916,0.6447
+F5,b200,3.0.9+ga553001e1,ed6efa8b3+22febf7+5553d19,engine,ALL,135,0.6579,2.6634,0.509,0.204
