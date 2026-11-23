@@ -16,7 +16,7 @@ templates, 4 trunk passes, 200 steps, 5 samples, bf16; RoseTTAFold3 one template
   protenix_v2 opendde intellifold2(_notxla)` through the 2026-11-18 steady harness (`$KIT_BENCH`, outside the repository: the kit installs are large). Kit-native
   modes only: `fast`, and the kit's `big` mode for a cell that ran out of memory under `fast` (fresh process, `fb.sh`); no other retry. The kits are not modified
   (the one exception, the af3_torch featuriser `ref_max_modified_date` line, is already in the harness copy; original `featurise.py.orig_kit`).
-  AF3 is compared against both the JAX and the PyTorch kit. **No kit install exists on the RTX 5090**: that card has the FoldForge side only.
+  AF3 is compared against both the JAX and the PyTorch kit. RTX 5090: kit rows in `data/F3_kits_rtx5090.csv` (see the RTX 5090 kit section below; host RAM cap 16 GB, several kits refuse sm_120).
 - **Steady value:** forward 1 (cold) and forward 2 are dropped, then the median of the rest (kits: 7 forwards -> 5 timed; FoldForge: cold + 6 warm -> the first
   warm one dropped -> 5). Three repetitions, each in a different job; the cell = the median of the three. A cell with any failed repetition is not a number
   (`oom` / `failed` in the CSV, never drawn).
@@ -132,3 +132,43 @@ fix 5553d19). Re-run on FoldForge main 49d41bb, engine 3.0.9, node02, engine and
 | ESMFold2-Fast, n=1 | 0.217 -> 0.165 | 0.209 -> 0.156 | 0.284 |
 | ESMFold2-Fast, n=8 | 2.122 -> 1.825 | 1.871 -> 1.596 | 2.780 |
 | ESMFold2-Fast, n=16 | 8.609 -> 7.840 | 7.597 -> 6.510 | OOM |
+
+## RTX 5090: Anthropic kit arm (DATA_STATUS, 2026-11-23)
+
+`data/F3_kits_rtx5090.csv` (78 rows = 13 kit runs x n 1, 2, 4, 8, 12, 16; `collect_kits_rtx5090.py`). Host cssb-rtx (RTX 5090 32 GB, sm_120; every process in `mwe.slice`,
+**16 GB host RAM in total**, under the GPU lock `~/mwe/gpu.sh`; no Slurm). Kit installs and harness: `~/miniworld-engine-scratch/bench5i28_5090` +
+`~/foldforge-scratch/anthropic-kits` on cssb-rtx (outside the repository), kits not modified, kit-native modes (`fast`, `big` after a fast OOM; OpenFold3:
+see below). Three repetitions, each its own process per cell: repetition 1 = the 2026-11-18 serial campaign (`data/existing/kits_rtx5090_20261118.csv`),
+repetitions 2 and 3 = `run_rep.sh` on 2026-11-23 (10:03-11:24 and 11:24-13:37 KST, cooldown between cells; records `~/mwe/agents/f3_kit/reps/rep{2,3}`).
+Only the cells that produced a number in repetition 1 were repeated; a deterministic failure of repetition 1 (RAM cap at a smaller n / refused on sm_120 /
+GPU OOM in every mode) keeps its recorded reason. Steady = forwards 3..7 median per repetition; cell = median of the three; any failed repetition -> not a number.
+
+| kit | n = 1 | 2 | 4 | 8 | 12 | 16 | status on the RTX 5090 |
+|---|---|---|---|---|---|---|---|
+| af3_torch | 1.091 | 1.685 | 4.071 | 12.537 | 27.607 | 48.998 (big) | runs; kit partial (exit 3: fpf trimul_exact / opm / glu_proj levers not served on sm_120, stock fallback) |
+| af3_jax | - | - | - | - | - | - | refused on sm_120 (Pallas serve layer: no tile table for cc 12.0; fast / big exit 3) |
+| boltz2 | 1.123 | 2.047 | 6.231 (big) | 17.428 (big, 4 timed) | RAM cap | RAM cap | runs, kit levers not active on sm_120 (exit 3); n >= 12 killed by the 16 GB host RAM cap |
+| chai1 | 4.477 | 4.808 | 11.413 | RAM cap | RAM cap | RAM cap | runs (kit exit 1 after 7 finished forwards: PAIRTRACK gate refused, templates present); n >= 8 RAM cap |
+| esmfold2 | RAM cap | RAM cap | RAM cap | RAM cap | RAM cap | RAM cap | not feasible: 16 GB host RAM cap (weights) |
+| esmfold2_fast | RAM cap | RAM cap | RAM cap | RAM cap | RAM cap | RAM cap | not feasible: killed by systemd-oomd while loading the 24.4 GiB checkpoint (probe n = 1, 2026-11-23) |
+| intellifold2 (+ notxla) | - | - | - | - | - | - | refused on sm_120 (af3-jax-opt core, FPF_TRIATT / FPF_TRIMUL no_tiles_cc120, 0/35 predictions; probes n = 1, 2026-11-23) |
+| opendde | - | - | - | - | - | - | refused on sm_120 (every mode) |
+| openfold3 | 2.011 (exact, 4 queries) | failed in rep. 2 | RAM cap | RAM cap | RAM cap | RAM cap | fast refused on sm_120 (pair_transition core); 7 queries exceed 16 GB RAM; `exact` with 4 queries (2 timed) at n = 1, 2; n = 2 repetition 2 killed by the RAM cap (rc 137; reps 1 / 3: 3.145 / 3.146 s) |
+| protenix_v1 | 1.699 | 2.571 | 5.439 | 15.029 | GPU OOM | GPU OOM | runs; n >= 12 out of GPU memory in every mode |
+| protenix_v2 | - | - | - | - | - | - | refused on sm_120 (fast / big / exact / off) |
+| rosettafold3 | 1.928 | 3.333 | 5.198 | RAM cap | RAM cap | RAM cap | runs; n >= 8 RAM cap (fast and big) |
+
+Kit time / FoldForge engine bf16 time on the same card (`data/F3_foldforge_rtx5090.csv`; > 1 = FoldForge faster):
+
+| model | n=1 | n=2 | n=4 | n=8 | n=12 | n=16 |
+|---|---|---|---|---|---|---|
+| AF3 (af3_torch) | 1.21 | 1.12 | 1.25 | 1.26 | 1.18 | 1.16 |
+| Boltz-2 | 0.79 | 0.96 | 1.42 | 1.29 | kit RAM cap | kit RAM cap |
+| Chai-1 | 6.27 | 3.08 | 2.67 | kit RAM cap | both OOM / RAM cap | both OOM / RAM cap |
+| OpenFold3 | 2.23 (kit exact) | kit failed rep. | kit RAM cap | kit RAM cap | kit RAM cap | kit RAM cap |
+| Protenix v1 | 1.96 | 1.75 | 1.71 | 1.54 | kit GPU OOM | kit GPU OOM |
+| RoseTTAFold3 | 1.96 | 2.08 | 1.51 | kit RAM cap | kit RAM cap | kit RAM cap |
+
+Boltz-2 n = 1 / 2: the kit is faster on this card (its levers are not active on sm_120, so this is the kit's stock path). ESMFold2 / ESMFold2-Fast: no
+comparison on this card (kit and FoldForge both not feasible under the 16 GB host RAM cap); note that the FoldForge ESMFold2-family rows on every card
+measured before fix 7a43e26 ran 200 sampler steps (release / kit: 134) and must not be compared with kit rows as they are.

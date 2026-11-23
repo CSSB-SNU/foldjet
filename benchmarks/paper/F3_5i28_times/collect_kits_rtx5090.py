@@ -28,7 +28,7 @@ PROBE = {
                       "before the first forward; same as esmfold2 in repetition 1"),
     "intellifold2": ("refused_on_sm120", "fast", "probe n=1 2026-11-23: kit exit 3, 0/35 predictions: FPF_TRIATT / FPF_TRIMUL = fallback:no_tiles_cc120 (the kit core's "
                      "Pallas serve layer has no tile table for compute capability 12.0; a mode is all of its levers), same refusal as af3_jax"),
-    "intellifold2_notxla": ("refused_on_sm120", "fast", "probe n=1 2026-11-23 (KITTAG=notxla, MODEL_OPT_LEVERS_OFF=TRIATT_XLA): NOTXLA_REASON"),
+    "intellifold2_notxla": ("refused_on_sm120", "fast", "probe n=1 2026-11-23 (KITTAG=notxla, MODEL_OPT_LEVERS_OFF=TRIATT_XLA): kit exit 3, 0/35 predictions: the same FPF_TRIATT / FPF_TRIMUL = fallback:no_tiles_cc120 refusal (switching off TRIATT_XLA does not remove the Pallas cores)"),
 }
 KIT_OF_ITEM = {"openfold3c4": "openfold3", "rf3": "rosettafold3", "rf3c4": "rosettafold3", "af3_torchbig": "af3_torch"}
 
@@ -92,10 +92,13 @@ def main() -> None:
     for (kit, n), c in sorted(r1.items()):
         v1 = steady(c["fwd"]) if c["num"] else None
         per = {1: (v1, c["fwd"], c["mode"])}
+        rep_fail: list[str] = []
         for r, cells in later.items():
             x = cells.get((kit, n))
             if x is not None:
                 per[r] = (steady(x["fwd"]) if x["ok"] else None, x["fwd"], x["mode"])
+                if not x["ok"]:
+                    rep_fail.append(f"repetition {r}: " + ("rc=137 = killed by the 16 GB host RAM cap (systemd-oomd), no forward; " if "rc=137" in x["text"] else "") + x["text"])
         values = [v for v, _, _ in per.values() if v is not None]
         failed_reps = [r for r, (v, _, _) in per.items() if v is None]
         ok = bool(values) and not failed_reps
@@ -108,7 +111,7 @@ def main() -> None:
             "forwards_s": " | ".join(";".join(f"{x:.3f}" for x in f) for _, f, _ in per.values()),
             "templates": c["tpl"], "source": "F3 rtx5090 kits (rep1 = 2026-11-18 serial campaign; rep2/3 = run_rep.sh)",
             "job": "local (no Slurm)", "node": "cssb-rtx", "reps": len(values), "value_reps": ";".join(f"{v:.3f}" for v in values),
-            "kit_active": active, "reason": "" if ok else (c["notes"] or c["attempts"]).replace("\n", " ")})
+            "kit_active": active, "reason": "" if ok else ("; ".join(rep_fail) if values else (c["notes"] or c["attempts"])).replace("\n", " ")})
     have = {k for k, _ in r1}
     for kit, (status, mode, reason) in PROBE.items():
         if kit in have:
