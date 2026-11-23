@@ -21,7 +21,7 @@ set -uo pipefail
 REPO=${FOLDFORGE_REPO:-${SLURM_SUBMIT_DIR:-$PWD}}
 P=$REPO/benchmarks/paper
 . "$P/common/env.sh"
-EVAL_ENV=${EVAL_ENV:-$FF_SCRATCH/ff_2512/.pixi/envs/default}
+EVAL_ENV=${EVAL_ENV:-$HOME/FoldForge/.pixi/envs/default}
 export PATH=$EVAL_ENV/bin:$PATH LD_LIBRARY_PATH=$EVAL_ENV/lib:${LD_LIBRARY_PATH:-}
 export PYTHONPATH=${PARALLELBAR:-$HOME/miniworld-engine/paper/pylib}
 export MW_OST_WORKERS=${MW_OST_WORKERS:-30} MW_DOCKQ_WORKERS=${MW_DOCKQ_WORKERS:-30}
