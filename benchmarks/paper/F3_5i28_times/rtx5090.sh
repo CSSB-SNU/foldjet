@@ -8,7 +8,7 @@ set -uo pipefail
 : "${MODEL:?MODEL}"; ARM=${ARM:-engine}
 [ "$ARM" = engine_fp8 ] && { echo "FP8 is H100 only"; exit 2; }
 SECS=${1:-7200}
-HERE=${FF_REPO:-$HOME/ff/paper_infer}/benchmarks/paper
+HERE=${FF_REPO:-$HOME/ff/FoldForge}/benchmarks/paper
 source "$HERE/common/cards/rtx5090.env"
 OUT=$PAPER_OUT/F3/$CARD/${ARM}_rep${REP:-1}/$MODEL
 mkdir -p "$OUT" "$PAPER_OUT/logs"

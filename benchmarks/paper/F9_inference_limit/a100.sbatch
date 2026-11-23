@@ -11,7 +11,7 @@
 #SBATCH -o /home/psk6950/foldforge-scratch/paper/logs/%x_%j.log
 set -uo pipefail
 : "${ARM:?ARM engine|engine_fp8|torch|kit}"
-HERE=${FF_REPO:-$HOME/practice/paper_infer}/benchmarks/paper
+HERE=${FF_REPO:-$HOME/FoldForge}/benchmarks/paper
 source "$HERE/common/cards/a100.env"
 export OMP_NUM_THREADS=8
 echo "JOB $SLURM_JOB_ID host=$(hostname) $(date -Is)"; nvidia-smi --query-gpu=name,memory.used,driver_version --format=csv,noheader

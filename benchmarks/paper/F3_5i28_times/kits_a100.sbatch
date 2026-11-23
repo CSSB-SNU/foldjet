@@ -12,7 +12,7 @@
 #SBATCH -o /home/psk6950/foldforge-scratch/paper/logs/%x_%j.log
 set -uo pipefail
 : "${KIT:?KIT}"
-HERE=${FF_REPO:-$HOME/practice/paper_infer}/benchmarks/paper
+HERE=${FF_REPO:-$HOME/FoldForge}/benchmarks/paper
 source "$HERE/common/cards/a100.env"
 R=$PAPER_OUT/F3/$CARD/kits_rep${REP:-1}
 export DONE=$R/done_final BENCH_DIR=$KIT_BENCH B=$KIT_BENCH

@@ -4,4 +4,4 @@
 # F10 on one A100 (cssb3; no account / qos). Resumable (results.jsonl).
 export CARD=a100
 unset SLURM_ACCOUNT
-exec "${FF_REPO:-$HOME/practice/paper-train}/benchmarks/paper/F10_training_limit/run_f10.sh"
+exec "${FF_REPO:-$HOME/FoldForge}/benchmarks/paper/F10_training_limit/run_f10.sh"
