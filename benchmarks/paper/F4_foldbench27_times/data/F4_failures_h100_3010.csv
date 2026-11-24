@@ -1,0 +1,2 @@
+model,target,arm,status,oom,error
+af3,8gzl-assembly1,engine,error,False,AttributeError: 'NoneType' object has no attribute 'get'
