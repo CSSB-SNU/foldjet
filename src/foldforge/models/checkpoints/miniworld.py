@@ -256,7 +256,11 @@ def _converters(engine_model: nn.Module) -> list[tuple[str, Any, nn.Module]]:  #
     atom = blocks(released.atom_dit_blocks_from_released)
     found: list[tuple[str, Any, nn.Module]] = []
     taken: list[str] = []
-    for name, module in engine_model.named_modules():
+    # every path, not every module object: a module shared under several indices
+    # (RoseTTAFold3's one MSA block, ``spec.msa_shared_block``) is listed by
+    # ``state_dict`` under each of them, so each is converted (and checked equal in
+    # ``convert_state``); the de-duplicating default listed only ``msa_stack.0``
+    for name, module in engine_model.named_modules(remove_duplicate=False):
         if not name or any(name.startswith(f"{p}.") for p in taken):
             continue
         if isinstance(module, PairformerBlock):
@@ -280,6 +284,33 @@ def _converters(engine_model: nn.Module) -> list[tuple[str, Any, nn.Module]]:  #
     return found
 
 
+def _check_shared(
+    first: tuple[str, dict[str, torch.Tensor]],
+    prefix: str,
+    converted: dict[str, torch.Tensor],
+) -> None:
+    """Refuse a shared module whose released tensors differ between its paths.
+
+    One module under several paths (``first[0]`` converted first) holds one parameter
+    set, so the released tensors of every path must convert to the same values.
+    """
+    if first[0] == prefix:
+        return
+    unequal = sorted(
+        k
+        for k in set(first[1]) | set(converted)
+        if k not in first[1]
+        or k not in converted
+        or not torch.equal(first[1][k], converted[k])
+    )
+    if unequal:
+        message = (
+            f"{prefix} is the module of {first[0]} (shared), but the released "
+            f"tensors differ: {unequal[:_UNREAD_SHOWN]}"
+        )
+        raise ConversionError(message)
+
+
 def convert_state(
     released_state: Mapping[str, torch.Tensor], engine_model: nn.Module
 ) -> dict[str, torch.Tensor]:
@@ -298,10 +329,15 @@ def convert_state(
     tracked = released.Tracked(released_state)
     out: dict[str, torch.Tensor] = {}
     prefixes: list[str] = []
+    shared: dict[int, tuple[str, dict[str, torch.Tensor]]] = {}
     for prefix, convert, module in _converters(engine_model):
-        for key, value in convert(tracked, prefix, module).items():
+        converted = convert(tracked, prefix, module)
+        for key, value in converted.items():
             out[f"{prefix}.{key}"] = value
         prefixes.append(prefix)
+        _check_shared(
+            shared.setdefault(id(module), (prefix, converted)), prefix, converted
+        )
 
     unread = sorted(
         k

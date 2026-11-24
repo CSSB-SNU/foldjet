@@ -406,11 +406,32 @@ def assign(
             if len(targets) != len(transformed):
                 message = f"{key}: stacked parameter count mismatch"
                 raise ValueError(message)
-            for target, weight in zip(targets, transformed, strict=True):
-                if target.shape != weight.shape:
-                    message = f"{key}: {target.shape} != {weight.shape}"
-                    raise ValueError(message)
-                _copy_parameter(target, weight)
+            _copy_slots(key, targets, transformed)
+
+
+def _copy_slots(
+    key: str, targets: list[torch.Tensor], weights: list[torch.Tensor]
+) -> None:
+    """Copy each slot's weight into its target, shape-checked.
+
+    A module shared under several stack slots (``spec.msa_shared_block``) is one
+    target: its released slices must be equal, never last-wins.
+    """
+    seen: dict[int, torch.Tensor] = {}
+    for target, weight in zip(targets, weights, strict=True):
+        if target.shape != weight.shape:
+            message = f"{key}: {target.shape} != {weight.shape}"
+            raise ValueError(message)
+        if id(target) in seen:
+            if not torch.equal(seen[id(target)], weight):
+                message = (
+                    f"{key}: stack slots share one parameter, but the released "
+                    "slices differ"
+                )
+                raise ValueError(message)
+            continue
+        seen[id(target)] = weight
+        _copy_parameter(target, weight)
 
 
 # With Param, a poor man's enum with attributes (Rust-style)
