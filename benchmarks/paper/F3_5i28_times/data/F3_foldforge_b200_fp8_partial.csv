@@ -1,0 +1,21 @@
+card,model,n,tokens,bf16_s,fp8_s,fp8_over_bf16,status_fp8,engine,source
+b200,af3,1,128,0.342,0.345,1.006,ok,main 1ac962f49 / a553001e1 (B200 code = 3.0.10),rented B200; docs/b200/fp8.md End-to-end measurement on engine main (2026-11-23)
+b200,af3,4,512,0.899,0.853,0.948,ok,main 1ac962f49 / a553001e1 (B200 code = 3.0.10),rented B200; docs/b200/fp8.md
+b200,af3,8,1024,2.532,2.334,0.922,ok,main 1ac962f49 / a553001e1 (B200 code = 3.0.10),docs/b200/fp8.md
+b200,af3,16,2048,11.09,9.44,0.852,ok,main 1ac962f49 / a553001e1 (B200 code = 3.0.10),docs/b200/fp8.md
+b200,protenix1,1,128,0.330,0.328,0.99,ok,main 1ac962f49 / a553001e1 (B200 code = 3.0.10),rented B200; docs/b200/fp8.md
+b200,protenix1,4,512,0.862,0.819,0.95,ok,main 1ac962f49 / a553001e1 (B200 code = 3.0.10),rented B200; docs/b200/fp8.md
+b200,protenix1,8,1024,2.358,2.190,0.929,ok,main 1ac962f49 / a553001e1 (B200 code = 3.0.10),shared B200 paper-b200/fp8an/out/e2e_protenix1_*_8
+b200,protenix1,16,2048,10.10,8.78,0.869,ok,main 1ac962f49 / a553001e1 (B200 code = 3.0.10),shared B200 paper-b200/fp8an/out/e2e_protenix1_*_16
+b200,boltz2,1,128,0.354,0.354,1.00,ok,main 1ac962f49 / a553001e1 (B200 code = 3.0.10),shared B200 paper-b200/fp8an/out/e2e_boltz2_*_1
+b200,boltz2,4,512,1.008,0.965,0.957,ok,main 1ac962f49 / a553001e1 (B200 code = 3.0.10),shared B200 paper-b200/fp8an/out/e2e_boltz2_*_4
+b200,boltz2,8,1024,2.944,2.801,0.951,ok,main 1ac962f49 / a553001e1 (B200 code = 3.0.10),shared B200 paper-b200/fp8an/out/e2e_boltz2_*_8
+b200,boltz2,16,2048,13.83,12.78,0.924,ok,main 1ac962f49 / a553001e1 (B200 code = 3.0.10),shared B200 paper-b200/fp8an/out/e2e_boltz2_*_16
+b200,openfold3,1,128,0.340,0.342,1.006,ok,main 1ac962f49 / a553001e1 (B200 code = 3.0.10),shared B200 paper-b200/fp8an/out/e2e_openfold3_*_1
+b200,openfold3,4,512,0.906,0.871,0.961,ok,main 1ac962f49 / a553001e1 (B200 code = 3.0.10),shared B200 paper-b200/fp8an/out/e2e_openfold3_*_4
+b200,openfold3,8,1024,2.466,2.273,0.922,ok,main 1ac962f49 / a553001e1 (B200 code = 3.0.10),shared B200 paper-b200/fp8an/out/e2e_openfold3_*_8
+b200,openfold3,16,2048,10.78,9.16,0.850,ok,main 1ac962f49 / a553001e1 (B200 code = 3.0.10),shared B200 paper-b200/fp8an/out/e2e_openfold3_*_16
+b200,chai1,1,128,0.269,0.265,0.988,ok (FP8 blocked for Chai-1 on B200 since 4e94ca9e7),main 1ac962f49 / a553001e1,shared B200 paper-b200/fp8an/out/e2e_chai1_*_1
+b200,chai1,4,512,0.991,0.953,0.962,ok (FP8 blocked for Chai-1 on B200 since 4e94ca9e7),main 1ac962f49 / a553001e1,shared B200 paper-b200/fp8an/out/e2e_chai1_*_4
+b200,chai1,8,1024,3.428,,,non-finite (FP8 blocked for Chai-1 on B200 since 4e94ca9e7),main 1ac962f49 / a553001e1,shared B200 paper-b200/fp8an/out/e2e_chai1_*_8 + chai1_n8_recheck_a553001e1
+b200,chai1,16,2048,17.36,16.28,0.938,ok (FP8 blocked for Chai-1 on B200 since 4e94ca9e7),main 1ac962f49 / a553001e1,shared B200 paper-b200/fp8an/out/e2e_chai1_*_16
