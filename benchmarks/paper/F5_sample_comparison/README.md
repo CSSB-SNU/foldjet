@@ -66,3 +66,36 @@ Engine 3.0.9 (PyPI, tag v3.0.9, 2026-11-22) contains the code of both labels (B2
 `data/F5_b200_esmfold2_134_pairs_summary.csv` (part (a)) on the predictions of the F4 B200 ESMFold2 134-step runs: engine sample k vs PyTorch
 sample k median Ca/C1' RMSD 0.658 A (p90 2.66, 135 pairs, now including the nucleic-acid-only targets); PyTorch sample-to-sample baseline
 2.663 A (270 pairs); median |dpLDDT| 0.51 vs 1.09. Replaces the ESMFold2 rows of `data/F5_b200_pairs_summary.csv` (200 steps: 0.604 A, 105 pairs).
+
+## RTX 5090: engine bf16 on the unreleased 5090-int branch + engine FP8, sample pairs and FoldBench scores (DATA_STATUS, 2026-11-24)
+
+Predictions of the F4 runs of the same date (see the F4 README): engine bf16 on cssb-rtx (real weights, the old rows' box), engine FP8 on the rented
+4x RTX 5090 (`vast5090`, real weights; `MINIWORLD_FP8=safe` + `MINIWORLD_FP8_MODEL`), engine branch `5090-int` 07bf36ae4 (**unreleased**), FoldForge
+49d41bb. The PyTorch reference = the existing 5090 PyTorch-arm predictions of the 3.0.6 campaign (not re-run: same inputs and seeds, and FoldForge
+6a0593e -> 49d41bb changed only ESMFold2 code). `data/F5_rtx5090_pairs_summary.csv` (released engine) is unchanged.
+
+- `data/F5_rtx5090_5090int_unreleased_pairs_summary.csv`: part (a) for arms `engine` and `engine_fp8` + the PyTorch baseline, with the released rows
+  side by side (`*_prev`, `rmsd_median_new_over_prev`; there is no previous 5090 FP8 arm). Pairs: `pair.py` per predictor on the cluster CPU
+  (10-minute jobs) for bf16; for FP8 on the rented node's CPU (the 7 GB of PAE arrays were not copied back; the PyTorch predictions were copied there).
+- `data/F5_rtx5090_5090int_unreleased_gt.csv`, `..._gt_summary.csv`: part (b), **the first FoldBench-evaluator scoring of 5090 predictions** (PyTorch,
+  engine, FP8 arms), cluster CPU in 10-minute pieces (one (predictor, arm, FoldBench task) per job: `evaluate_ranked.py --targets <task>`, the
+  per-task raw tables merged afterwards; FP8 from a copy holding the CIFs and pLDDT only).
+
+| arm | pairs | median RMSD to PyTorch sample k (A) | p90 | median abs dpLDDT | previous (released) median RMSD |
+|---|---|---|---|---|---|
+| engine bf16 | 890 | 0.282 | 2.27 | 0.178 | 0.303 |
+| engine FP8 | 890 | 0.307 | 2.71 | 0.191 | (none) |
+| PyTorch vs PyTorch (baseline) | 1,780 | 1.313 | 15.10 | 0.260 | 1.313 |
+
+Same-sample agreement with PyTorch stays at the old level (bf16 median 0.282 vs 0.303 A on the released engine; per predictor 0.10-0.47 A, ratios
+new / old 0.84-1.09); FP8 0.31 A (per predictor 0.11-0.48 A), both far inside the PyTorch sample-to-sample spread (1.31 A).
+
+Scores against the experimental structures (mean of the 5 samples per target / interface; arm minus PyTorch):
+
+| arm | kind | n | median abs diff | mean signed diff | within PyTorch's 1 s.d. | r |
+|---|---|---|---|---|---|---|
+| engine bf16 | all | 197 | 0.0037 | +0.0027 | 90.4 % | 0.9971 |
+| engine FP8 | all | 197 | 0.0042 | +0.0018 | 86.3 % | 0.9885 |
+| engine FP8 | monomer | 80 | 0.0052 | -0.0057 | 81.3 % | 0.9932 |
+
+(H100 for reference, `data/existing/F5_h100_engine3.0.1_gt_summary.csv`: engine 0.0034 / 91.8 %, FP8 v2 0.0047 / 83.9 %.)

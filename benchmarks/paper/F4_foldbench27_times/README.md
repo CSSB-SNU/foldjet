@@ -115,3 +115,68 @@ ESMFold2 loads ESM-C on the B200 without the 16 GB host-RAM limit of the 5090 an
 a553001e1 for the engine arm, arms engine / torch, 27 / 27 targets ok on both arms (the 6 nucleic-acid-only targets, failures in the campaign,
 now run; `data/F4_failures_b200_esmfold2_134.csv` is empty). Engine 1.20-7.31 s (8j62 2,008 tokens: 7.31 s, was 8.13 at 200 steps),
 PyTorch 2.87-95.3 s. Engine arm backend: all cuda except the declared B200 LayerNorm exception (width 256 bf16, >= 384^2 rows → Triton).
+
+## RTX 5090: engine arm on the unreleased engine branch 5090-int + FP8 arm + Anthropic arm (DATA_STATUS, 2026-11-24)
+
+**Engine:** branch `5090-int` 07bf36ae4 as source (`ENGINE_SRC`): 3.0.9 + origin/main + Boltz-2 up-gate transition and token pair-bias hoist on sm_120
++ the RTX 5090 FP8 routes (off unless `MINIWORLD_FP8` is set). **Unreleased.** FoldForge 49d41bb (differs from the 3.0.6 campaign's 6a0593e only in
+ESMFold2 code). Protocol of `rtx5090.sh` unchanged (27 targets, seeds 0, 200 steps, 4 trunk passes, 5 samples, bf16, eager, one process per
+(predictor, arm), warm median of cold + warm). ESMFold2 / ESMFold2-Fast: not feasible on the 5090 (16 GB host RAM), as before. OpenFold3-preview2:
+not in the 5090 campaign (as before).
+
+**(1) engine bf16, cssb-rtx (the box of the old rows), real weights** — `data/F4_times_rtx5090_5090int_unreleased.csv` (243 rows; `s` new, `s_prev` the
+released row: 3.0.6, OpenDDE 3.0.8; `prev_over_s` = old / new, > 1 = faster; peak memory both; PyTorch time of the 3.0.6 campaign for reference).
+`data/F4_times_rtx5090.csv` is unchanged. Runs 2026-11-24 09:26-11:07 KST under the GPU lock; every run `all_cuda: true`; the out-of-memory cells are
+exactly the old ones (no new OOM, none recovered).
+
+| predictor | sum old -> new (s) | ratio | median per target | >= 539 tokens | peak (median, max) |
+|---|---|---|---|---|---|
+| AF3 | 202.2 -> 191.7 | 1.06 | 0.98 | 1.05-1.10 | +4 %, +17 % |
+| Boltz-2 | 257.2 -> 224.5 | 1.15 | 1.14 | 1.11-1.32 | +15 %, +17 % |
+| Chai-1 | 172.5 -> 166.4 | 1.04 | 0.99 | | +1 %, +10 % |
+| IntelliFold2 | 269.5 -> 256.7 | 1.05 | 1.00 | | +1 %, +4 % |
+| OpenDDE (old 3.0.8) | 279.9 -> 270.1 | 1.04 | 0.99 | | +4 %, +18 % |
+| OpenFold3 | 202.5 -> 192.9 | 1.05 | 0.97 | | +4 %, +17 % |
+| Protenix v1 | 194.9 -> 184.3 | 1.06 | 0.98 | | +4 %, +15 % |
+| Protenix v2 | 231.2 -> 217.1 | 1.07 | 0.99 | | +3 %, +9 % |
+| RoseTTAFold3 | 208.3 -> 198.5 | 1.05 | 0.97 | | +4 %, +13 % |
+
+**Small targets (<= 450 tokens, eager, host-bound): 0.96-1.00x of the 3.0.6 rows.** The campaign overlapped with CPU test jobs of another agent on
+cssb-rtx, so the 17 small targets were re-run for all 9 predictors on a CPU-quiet cssb-rtx (12:10 KST), interleaved per predictor with the released
+3.0.9 source as a same-session control, and then AF3 / OpenFold3 again against the v3.0.6 source (git tag) in the order 3.0.6 / new / 3.0.6:
+- re-run = campaign (median campaign / re-run 0.99-1.02): the campaign cells were not contaminated and are kept;
+- new / released 3.0.9, same session: 1.00 (0.99-1.01) for every predictor except Boltz-2 (1.10 faster) and OpenDDE (0.987);
+- new vs v3.0.6, same session: AF3 0.972 (0.965-0.998), OpenFold3 0.988 (0.973-1.016) (3.0.6 / 3.0.6 repeat 0.99).
+So the small-target loss of 1-3 % is between 3.0.6 and 3.0.9 (already in the released 3.0.9), not from this branch; it is open (engine side, not
+profiled yet). Large targets are 5-32 % faster.
+
+**(2) engine FP8 + same-machine engine bf16 control, rented 4x RTX 5090 (`vast5090`, 575 W, Xeon Gold 6530 host), real weights** — the FP8 arm
+(`MINIWORLD_FP8=safe` + `MINIWORLD_FP8_MODEL=<predictor>`, lazy guards, `fp8.check()` after each forward with up to 3 redo = the H100 protocol;
+on the 5090 `safe` = the `SM120_ROUTES` slots TriAttn, TriMul, OPM, PWA, token DiT, atom DiT; the Transition is excluded from the preset) and the bf16 control were run on the same rented node,
+4 jobs at a time (one per GPU) from one queue. `data/F4_times_rtx5090_fp8_5090int_unreleased.csv`. That host is ~2.7x slower than cssb-rtx on the
+host-bound small targets (AF3 8gzl 8.8 s vs 3.2 s) and equal on the GPU-bound ones (8j62 39.5 vs 40.0 s): **compare FP8 with the vast bf16 column, not
+with the cssb-rtx rows.**
+
+**(3) Anthropic arm: not runnable on sm_120.** The release tree (f4f62fa6) was put on the rented node and smoke-tested (one target per predictor,
+2026-11-24 12:50 KST): AF3, Boltz-2, OpenFold3, IntelliFold2, RoseTTAFold3 `OutOfResources: shared memory, Required 196,608-198,656, Hardware limit
+101,376` (the release's Triton kernels are sized for the H100's 228 KB); Protenix v2 `Required 108,544`; Protenix v1, OpenDDE, Chai-1 `BackendUnsupported:
+Transition backend 'anthropic': the provider served row 'pf' / 'lnl', its selection was 'v2'`. Recorded as the result (external backend: connected,
+not modified).
+
+FP8 vs bf16 on the rented node (`bf16 / FP8` > 1 = FP8 faster; sums over the targets both arms completed; >= 992 tokens = the GPU-bound targets):
+
+| predictor | targets | sum bf16 / FP8 (s) | median per target | >= 992 tokens | FP8 peak vs bf16 (median) | not ok bf16 / FP8 | FP8 redo |
+|---|---|---|---|---|---|---|---|
+| AF3 | 27 | 322.5 / 316.9 = 1.02 | 0.98 | 1.00-1.17 | -3.0 % | 0 / 0 | 0 |
+| Boltz-2 | 27 | 328.7 / 333.1 = 0.99 | 0.94 | 1.01-1.10 | -0.4 % | 0 / 0 | 0 |
+| Chai-1 | 25 | 256.4 / 239.4 = 1.07 | 1.04 | 1.08-1.14 | -7.5 % | 2 / 1 (8xgu runs on FP8) | 0 |
+| IntelliFold2 | 23 | 373.2 / 365.4 = 1.02 | 1.00 | 1.06-1.07 | -1.7 % | 4 / 4 | 0 |
+| OpenDDE | 24 | 374.9 / 371.8 = 1.01 | 0.97 | 1.05-1.15 | -1.9 % | 3 / 3 | 0 |
+| OpenFold3 | 27 | 319.8 / 306.5 = 1.04 | 1.01 | 1.06-1.18 | -3.0 % | 0 / 0 | 0 |
+| Protenix v1 | 27 | 310.2 / 295.4 = 1.05 | 1.01 | 1.06-1.19 | -3.2 % | 0 / 0 | 0 |
+| Protenix v2 | 26 | 334.1 / 325.2 = 1.03 | 1.00 | 1.03-1.10 | -2.8 % | 1 / 1 | 0 |
+| RoseTTAFold3 | 27 | 346.4 / 324.1 = 1.07 | 1.05 | 1.02-1.10 | -2.5 % | 0 / 0 | 0 |
+
+Every not-ok cell is out of memory. No FP8 forward saturated (`fp8_redo` 0 everywhere). On this host the small targets are host-bound (eager) and FP8
+gains nothing there (0.94-1.04); on the >= 992-token targets FP8 is 1.00-1.19x. Accuracy of the FP8 predictions: F5 README.
+Machines: engine bf16 F4 (part 1) and the small-target re-runs = cssb-rtx; FP8 + bf16 control (part 2) and the Anthropic smoke (part 3) = vast5090.
