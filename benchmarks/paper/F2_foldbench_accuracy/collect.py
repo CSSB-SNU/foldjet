@@ -43,7 +43,7 @@ def main() -> None:
         st = json.loads(Path(path).read_text())
         stamps[name] = {"foldforge_commit": st.get("foldforge_commit"), "engine_version": st.get("engine_version"), "gpu": "; ".join(g.split(",")[1].strip() for g in st.get("gpus", [])[:1]),
                         "node": st.get("node"), "slurm_job_id": st.get("slurm_job_id"), "launch": st.get("launch"), "precision": st.get("precision")}
-    frames = [load(*x.split("=", 1)) for x in a.arm]
+    frames = [load(n, Path(p)) for n, p in (x.split("=", 1) for x in a.arm)]
     long = pd.concat(frames, ignore_index=True)
     for k in ("foldforge_commit", "engine_version", "gpu", "node", "slurm_job_id", "launch", "precision"):
         long[k] = long.arm.map(lambda n, k=k: stamps.get(n, {}).get(k))
