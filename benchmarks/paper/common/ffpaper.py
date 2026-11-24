@@ -74,8 +74,20 @@ def install_random_init(seed: int = 0) -> None:
     skeletons = Path(tempfile.mkdtemp(prefix="ff_paper_random_init_"))
 
     def resolve_native(model: str) -> Path:
-        # an empty skeleton (the API checks that the path exists); its name is no pinned blob's, so the size check skips it; never read
-        path = skeletons / f"random_init_{model}{miniworld.SUFFIX}"
+        # an empty skeleton (the API checks that the path exists); its name is no pinned blob's, so the size check skips it; never read.
+        # Fixed input towers that live beside the weights (Chai-1's ESM2 `esm/`) are not model parameters: when the model's checkpoint
+        # directory exists, its other entries are linked into the skeleton directory (the weights file itself never is).
+        from foldforge.models.checkpoints import _roots
+
+        d = skeletons / model
+        d.mkdir(exist_ok=True)
+        for root in _roots(model):
+            if root.is_dir():
+                for entry in root.iterdir():
+                    if not entry.name.endswith(miniworld.SUFFIX) and not (d / entry.name).exists():
+                        (d / entry.name).symlink_to(entry.resolve())
+                break
+        path = d / f"random_init_{model}{miniworld.SUFFIX}"
         path.touch()
         return path
 

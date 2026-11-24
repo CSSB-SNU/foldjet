@@ -17,6 +17,7 @@ import argparse
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -31,7 +32,8 @@ DEFAULT_STEPS = [16, 20, 24, 32, 40, 48, 56, 64, 80, 96, 128]
 
 def ff_probe(a, n: int) -> dict:
     cell_dir = a.out / "cells"
-    cmd = [sys.executable, str(HERE / "run_size.py"), "--model", a.model, "--arm", a.arm, "--n", str(n), "--out", str(cell_dir)]
+    # FF_PAPER_PROBE_PREFIX: a command put in front of every probe (e.g. a per-probe GPU lock: the search itself holds no GPU between probes)
+    cmd = [*shlex.split(os.environ.get("FF_PAPER_PROBE_PREFIX", "")), sys.executable, str(HERE / "run_size.py"), "--model", a.model, "--arm", a.arm, "--n", str(n), "--out", str(cell_dir)]
     if a.exec_mode:
         cmd += ["--exec", a.exec_mode]
     cell_path = cell_dir / f"n{n}.json"
@@ -91,6 +93,7 @@ def main() -> None:
     ap.add_argument("--kit")
     ap.add_argument("--steps", type=int, nargs="+", default=DEFAULT_STEPS)
     ap.add_argument("--probe-after", type=int, default=2)
+    ap.add_argument("--down", action="store_true", help="start at a known limit (the first step = a previous run's edge): if it does not complete, walk DOWN one copy at a time to the first size that does")
     ap.add_argument("--out", type=Path, required=True)
     a = ap.parse_args()
     if bool(a.model) == bool(a.kit):
@@ -121,6 +124,18 @@ def main() -> None:
         if r["status"] != "oom":
             stop_reason = f"{r['status']}: {r.get('error', '')}"[:300]
         break
+    if a.down and first_bad == a.steps[0] and not last_ok and not stop_reason:
+        # --down: the start size failed -> one copy down at a time until a size completes (the edge is expected at or just below a previous limit)
+        n = first_bad - 1
+        while n >= 1:
+            r = run(n)
+            if r["status"] == "ok":
+                last_ok = n
+                break
+            if r["status"] != "oom":
+                stop_reason = f"{r['status']}: {r.get('error', '')}"[:300]
+                break
+            first_bad, n = n, n - 1
     if first_bad is not None and not stop_reason:
         lo, hi = last_ok, first_bad
         while hi - lo > 1:
