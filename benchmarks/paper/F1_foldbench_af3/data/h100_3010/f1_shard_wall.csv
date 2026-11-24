@@ -1,0 +1,3 @@
+arm,launch,shard,targets,done,failed,wall_s,wall_h,fast_wall_h,big_wall_h,n_big,gpus,foldforge_commit,engine_version,gpu,node,slurm_job_id,precision
+af3_bf16_multi,multi,all,1522,1522,0,17943.969324350357,4.984,,,,2,671be49a7a6c109476d90f2816adaa2c82399708,3.0.10,NVIDIA H100 80GB HBM3,node02,66879,bf16
+af3_fp8_multi,multi,all,1522,1522,0,14838.611870527267,4.122,,,,2,e71210c927267aea15d3f6ca1917b1a09a962494,3.0.10,NVIDIA H100 80GB HBM3,node02,66878,fp8

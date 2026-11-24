@@ -1,0 +1,10 @@
+,af3_bf16,af3_fp8
+interface_antibody_antigen,48.8,45.78
+interface_protein_protein,71.48,71.48
+interface_protein_peptide,85.11,82.98
+interface_protein_ligand,64.44,64.07
+interface_protein_dna,77.12,78.06
+interface_protein_rna,65.71,61.43
+monomer_protein,88.28,88.49
+monomer_rna,60.65,58.01
+monomer_dna,49.04,46.46

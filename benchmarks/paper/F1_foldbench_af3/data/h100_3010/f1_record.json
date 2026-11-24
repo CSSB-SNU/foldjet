@@ -1,0 +1,75 @@
+{
+ "what": "AlphaFold 3 (DeepMind weights) on the whole FoldBench (1,522 targets, seeds 42,66,101,2024,8888, 5 samples, 200 steps, 11 trunk passes); GPU-hours = sum of the shard wall times (kit and FoldForge shard mode) or GPUs x wall (FoldForge multi mode); see f1_summary.csv",
+ "summary": [
+  {
+   "arm": "af3_bf16_multi",
+   "launch": "multi",
+   "gpu_h": 9.969,
+   "slower_shard_wall_h": 4.984,
+   "targets": 1522,
+   "done": 1522,
+   "failed": 0,
+   "foldforge_commit": "671be49a7a6c109476d90f2816adaa2c82399708",
+   "engine_version": "3.0.10",
+   "gpu": "NVIDIA H100 80GB HBM3",
+   "node": "node02",
+   "slurm_job_id": "66879"
+  },
+  {
+   "arm": "af3_fp8_multi",
+   "launch": "multi",
+   "gpu_h": 8.244,
+   "slower_shard_wall_h": 4.122,
+   "targets": 1522,
+   "done": 1522,
+   "failed": 0,
+   "foldforge_commit": "e71210c927267aea15d3f6ca1917b1a09a962494",
+   "engine_version": "3.0.10",
+   "gpu": "NVIDIA H100 80GB HBM3",
+   "node": "node02",
+   "slurm_job_id": "66878"
+  }
+ ],
+ "shard_wall": [
+  {
+   "arm": "af3_bf16_multi",
+   "launch": "multi",
+   "shard": "all",
+   "targets": 1522,
+   "done": 1522,
+   "failed": 0,
+   "wall_s": 17943.969324350357,
+   "wall_h": 4.984,
+   "fast_wall_h": null,
+   "big_wall_h": null,
+   "n_big": null,
+   "gpus": 2,
+   "foldforge_commit": "671be49a7a6c109476d90f2816adaa2c82399708",
+   "engine_version": "3.0.10",
+   "gpu": "NVIDIA H100 80GB HBM3",
+   "node": "node02",
+   "slurm_job_id": "66879",
+   "precision": "bf16"
+  },
+  {
+   "arm": "af3_fp8_multi",
+   "launch": "multi",
+   "shard": "all",
+   "targets": 1522,
+   "done": 1522,
+   "failed": 0,
+   "wall_s": 14838.611870527267,
+   "wall_h": 4.122,
+   "fast_wall_h": null,
+   "big_wall_h": null,
+   "n_big": null,
+   "gpus": 2,
+   "foldforge_commit": "e71210c927267aea15d3f6ca1917b1a09a962494",
+   "engine_version": "3.0.10",
+   "gpu": "NVIDIA H100 80GB HBM3",
+   "node": "node02",
+   "slurm_job_id": "66878",
+   "precision": "fp8"
+  }
+ ]
+}
