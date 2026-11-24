@@ -62,3 +62,28 @@ Backend report (engine arms): LayerNorm of 65,536 (F4 / F3 / F9) or 589,824 (F6)
 
 **F9 (this folder):** `data/F9_b200.csv` (22 rows = 11 predictors x engine bf16 / PyTorch operators; no FP8 / kit arm) and `data/F9_b200_sizes.csv` (193 probes). Every limit is out-of-memory-bounded (`first_not_ok_status = oom`, none non-monotonic, no non-finite). Largest n (x128 tokens) that completes: engine AF3 56, OpenFold3 56, Boltz2 53, Protenix v1 53, RoseTTAFold3 52, Protenix v2 42, Chai-1 39, ESMFold2 39, ESMFold2-Fast 39, IntelliFold2 28, OpenDDE 21; PyTorch operators AF3 12, Boltz2 12, OpenFold3 12, Protenix v1 12, RoseTTAFold3 12, Chai-1 11, ESMFold2 27, ESMFold2-Fast 27, Protenix v2 10, IntelliFold2 9, OpenDDE 4. Engine label B.
 **Chai-1 engine, n = 40:** CUDA illegal memory access after near-full reserved memory (176.9 / 178.35 GiB), classified as OOM (`run_size.py`: a non-OOM `CUDA error` with the process peak reserved >= 98 % of the card is `oom`, the original error is kept in the sizes record field `oom_classified_from`); the same cell under `CUDA_LAUNCH_BLOCKING` gives a clean CUDA out of memory (diagnosis of the engine session). The only cell affected by this rule on this card. The first record (n = 40 `failed`, illegal memory access) is kept in `paper/invalid_archive/f9_chai1_engine_n40_ima/` on the B200. Chai-1 edge: 39 ok / 40 OOM.
+
+## RTX 5090: engine arm on the unreleased engine branch 5090-int, random weights on a rented 4x RTX 5090 (DATA_STATUS, 2026-11-24)
+
+`data/F9_rtx5090_5090int_unreleased.csv` (9 rows, engine bf16) and `data/F9_rtx5090_sizes_5090int_unreleased.csv` (every probe). `data/F9_rtx5090.csv`
+(released engine 3.0.6, real weights, cssb-rtx) is unchanged; the new CSVs carry the previous value per row (`largest_ok_prev`, `first_not_ok_prev`,
+`peak_alloc_gib_at_edge_prev`, `edge_change`) and per probe (`status_prev`, `model_peak_alloc_gib_prev`, `peak_ratio`).
+
+- **Engine:** branch `5090-int` 07bf36ae4 as source (`ENGINE_SRC`; 3.0.9 + origin/main + Boltz-2 up-gate transition / token pair-bias hoist on sm_120 +
+  FP8 routes, FP8 off). **Unreleased.**
+- **Machine and weights:** a rented 4x RTX 5090 node (`vast5090`, 32 GB each, 575 W, 503 GB host RAM, driver 595.99.02), FoldForge 49d41bb + the F9 helpers
+  of this commit range. **Random weights in process** (`FF_PAPER_RANDOM_INIT=1`, `ffpaper.install_random_init`): no checkpoint is read (no weights were
+  uploaded to the rented machine; Chai-1's ESM2 input tower, which is not a model parameter, is read from the checkpoint directory). Why this is valid: F9
+  measures whether one forward fits in GPU memory and its peak; parameter shapes, dtypes and the code path are those of the real model, the values are
+  not. Checked: every edge cell that both runs share has the same peak to the byte as the real-weight 3.0.6 run where the edge phase is unchanged
+  (AF3 / OpenFold3 n = 25, Protenix v1 n = 23, RF3 n = 19, OpenDDE n = 4 / 6 / 7). `ok` = the forward completed (`finite` and `random_init` recorded per
+  probe; outputs of random weights are not meaningful). The old 5090 F9 rows used the real weights on cssb-rtx.
+- **Protocol:** `run_size.py` / `limit_search.py` as before (compile + CUDA graphs + bucketing, one fresh process per probe), one GPU lock per probe
+  (`FF_PAPER_PROBE_PREFIX`), the search started AT the previous 5090 limit (`--down`: if it completes, the next size and then the protocol's 2 step
+  sizes past the edge; if not, one copy down until a size completes). Some smaller sizes were probed before the start-at-limit change; they are kept.
+- **Result:** the largest n is unchanged for 8 of 9 predictors (AF3 25, OpenFold3 25, Protenix v1 23, Boltz-2 20, Protenix v2 19, RoseTTAFold3 19,
+  Chai-1 11, OpenDDE 7); **IntelliFold2 10 -> 9** (n = 10, 1,280 tokens, is now out of memory; 3.0.6: 29.20 GiB at n = 10; the rented cards report 31.36 GiB, cssb-rtx 31.33 GiB, so the card is not
+  smaller). Every first
+  failing size is an OOM; no non-monotonic edge. Peak at the edge: same bytes for AF3 / OpenFold3 / Protenix v1 / RF3 / OpenDDE (the edge peak is in a
+  phase the branch did not change), Boltz-2 +1.2 % (29.03 GiB), Protenix v2 +0.03 %, Chai-1 +8.5 % (26.84 -> 29.13 GiB). Below the edge the peak rose
+  more where the diffusion phase dominates (AF3 n = 16 +19 %, Boltz-2 n = 8 / 16 +16 / +17 %), as in F3.
