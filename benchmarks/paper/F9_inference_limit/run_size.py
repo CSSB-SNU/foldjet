@@ -31,6 +31,7 @@ parser.add_argument("--out", type=Path, required=True)
 parser.add_argument("--exec", dest="exec_mode", choices=["benchmark", "eager"], default=None)
 args = parser.parse_args()
 ffpaper.apply_arm_env(args.arm, args.model)
+RANDOM_INIT = ffpaper.random_init_enabled()  # FF_PAPER_RANDOM_INIT=1: random weights in process (memory limit only; see ffpaper.install_random_init)
 
 import numpy as np  # noqa: E402
 import torch  # noqa: E402
@@ -41,6 +42,9 @@ sys.path.insert(0, str(REPO / "benchmarks/5i28_ff"))
 import run_5i28_ff as H  # noqa: E402
 
 import foldforge as ff  # noqa: E402
+
+if RANDOM_INIT:
+    ffpaper.install_random_init()
 
 
 def main() -> int:
@@ -73,7 +77,8 @@ def main() -> int:
         finite = bool(np.isfinite(coords).all() and (plddt is None or np.isfinite(plddt).all()))
         gib = 2**30
         cell |= {
-            "status": "ok" if finite else "nonfinite", "finite": finite,
+            # random weights: the measured quantity is whether the forward completes (memory); finiteness is recorded, not required
+            "status": "ok" if (finite or RANDOM_INIT) else "nonfinite", "finite": finite, "random_init": RANDOM_INIT,
             "model_s": report.get("model_seconds") or report.get("model_seconds_cold"),
             "model_peak_alloc_gib": (report.get("model_peak_allocated_bytes") or 0) / gib,
             "model_peak_reserved_gib": (report.get("model_peak_reserved_bytes") or 0) / gib,

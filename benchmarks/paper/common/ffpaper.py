@@ -52,6 +52,53 @@ def apply_arm_env(arm: str, model: str) -> None:
                 os.environ[f"MINIWORLD_{route}_FP8_GUARD"] = "lazy"
 
 
+def random_init_enabled() -> bool:
+    """``FF_PAPER_RANDOM_INIT=1``: memory-limit runs (F9) on a machine without the weights (rented 4x RTX 5090, 2026-11-24)."""
+    return os.environ.get("FF_PAPER_RANDOM_INIT") == "1"
+
+
+def install_random_init(seed: int = 0) -> None:
+    """Replace FoldForge's checkpoint load by a seeded random initialisation (opt-in, ``FF_PAPER_RANDOM_INIT=1``; no file is read).
+
+    Every predictor family loads through ``foldforge.models.checkpoints.miniworld.load_into`` (``ff.load_model`` -> ``models.loading``): the
+    checkpoint path is resolved without requiring the file (a missing file skips the size check), and ``load_into`` fills the parameters of the
+    built model instead of a strict load. Scale as F6's profiler (``F6PROF_RANDOM_INIT``): matrices randn / sqrt(fan_in), norm weights / scales 1,
+    biases and other vectors 0; the Fourier noise features (buffers the file normally supplies) randn / rand of the module's own ``dim``.
+    Peak memory and whether a size fits do not depend on the values; the outputs are meaningless (finiteness is recorded, not required).
+    """
+    import torch
+    from foldforge.models.checkpoints import miniworld
+
+    import tempfile
+
+    skeletons = Path(tempfile.mkdtemp(prefix="ff_paper_random_init_"))
+
+    def resolve_native(model: str) -> Path:
+        # an empty skeleton (the API checks that the path exists); its name is no pinned blob's, so the size check skips it; never read
+        path = skeletons / f"random_init_{model}{miniworld.SUFFIX}"
+        path.touch()
+        return path
+
+    def load_into(model, path, *, family):  # noqa: ARG001 - the signature of the replaced loader
+        g = torch.Generator().manual_seed(seed)
+        fourier = model.get_submodule("diffusion_head.fourier_embeddings")
+        fourier.register_buffer("weight", torch.randn(fourier.dim, generator=g))
+        fourier.register_buffer("bias", torch.rand(fourier.dim, generator=g))
+        with torch.no_grad():
+            for pname, p in model.named_parameters():
+                if p.ndim >= 2:
+                    p.copy_((torch.randn(p.shape, generator=g, dtype=torch.float32) / (p.shape[-1] ** 0.5)).to(p.device, p.dtype))
+                elif pname.endswith(("weight", "scale", "gamma")):
+                    p.fill_(1.0)
+                else:
+                    p.zero_()
+        print(f"FF_PAPER_RANDOM_INIT: {family} parameters randomly initialised (seed {seed}; no checkpoint read)", flush=True)
+        return {"format": "random_init", "format_version": 0, "source": "random", "mapped_records": 0}
+
+    miniworld.resolve_native = resolve_native
+    miniworld.load_into = load_into
+
+
 def card_of(gpu_name: str) -> str:
     low = gpu_name.lower()
     for key, needle in (("h100", "h100"), ("a100", "a100"), ("rtx5090", "5090"), ("b200", "b200")):
