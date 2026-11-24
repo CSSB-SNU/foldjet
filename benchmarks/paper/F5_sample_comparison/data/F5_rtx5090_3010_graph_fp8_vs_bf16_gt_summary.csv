@@ -1,0 +1,5 @@
+id,card,engine_version,foldforge_commit,arm,kind,n,median_abs_diff,mean_signed_diff,within_ref_sd,r
+F5,rtx5090,3.0.10,,engine_fp8,all,230,0.0032,-0.0,0.9087,0.9923
+F5,rtx5090,3.0.10,,engine_fp8,interface,111,0.0026,0.0051,0.9279,0.989
+F5,rtx5090,3.0.10,,engine_fp8,ligand,32,0.0021,-0.0026,0.9375,0.9987
+F5,rtx5090,3.0.10,,engine_fp8,monomer,87,0.0046,-0.0056,0.8736,0.9947
