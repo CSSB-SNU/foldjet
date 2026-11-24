@@ -4,8 +4,8 @@
     ARM: torch (backend pytorch) | engine (miniworld, bf16 kernels) | engine_fp8 (miniworld + FP8, H100 only) | anthropic (the engine's connection to Anthropic's kernels)
 
 Same inputs and seeds for every arm: FoldBench's own inputs (`$FB_ROOT/inputs/<target>/data.yaml`: real MSA, templates where the checkpoint takes them),
-trunk_seed = diffusion_seed = 0, 200 steps, the 5I28 benchmark's 4 trunk passes, 5 samples (the input spec), bf16, mode exact. Eager (no torch.compile, no CUDA
-graph) on every arm, so the arms differ only in the backend; `benchmark_repeats: 1` = one cold and one warm forward; the number is the warm model time
+trunk_seed = diffusion_seed = 0, 200 steps, the 5I28 benchmark's 4 trunk passes, 5 samples (the input spec), bf16, mode exact. compile + CUDA graphs (scope trunk,
+as F1 / F3) on every arm since 2026-11-24 (FFPAPER_F4_EXEC=eager: the earlier eager protocol), so the arms differ only in the backend; `benchmark_repeats: 1` = one cold and one warm forward; the number is the warm model time
 (`model_seconds_warm_median`, CUDA-synchronized, no featurization / loading / writing). The structures of the (last) forward are saved for F5.
 
 Output  <out>/rows/<arm>__<model>.jsonl     one row per target: status ok | error | timeout, seconds, run information
@@ -31,6 +31,9 @@ import ffpaper  # noqa: E402
 _model = sys.argv[1] if len(sys.argv) > 1 else ""
 _arm = sys.argv[2] if len(sys.argv) > 2 else ""
 os.environ.setdefault("FFPAPER_FP8_GUARD", "lazy")  # lazy guards (no host sync per call); fp8.check() below redoes a saturated forward -- the sync guard cost 0.1-0.35 s / forward (AF3, engine 2026-11-23)
+# 2026-11-24: compile + CUDA graphs by default (the way the predictors run; eager made the FP8 arms host-bound, B200 FP8 / bf16 1.10-1.27);
+# FFPAPER_F4_EXEC=eager restores the earlier eager protocol
+GRAPH = os.environ.get("FFPAPER_F4_EXEC", "graph") != "eager"
 if _arm in ffpaper.ARMS:
     ffpaper.apply_arm_env(_arm, _model)
 
@@ -150,7 +153,7 @@ def main() -> None:
     config = {
         "backend": ffpaper.BACKEND[args.arm], "precision": "bf16", "mode": "exact", "trunk_seed": 0, "diffusion_seed": 0,
         "trunk": {"recycles": recycles}, "diffusion": {"steps": 200},
-        "execution": {"benchmark_repeats": 1, "compile": False, "cuda_graph": False, "bucketing": True},
+        "execution": {"benchmark_repeats": 1, "compile": GRAPH, "cuda_graph": GRAPH, "bucketing": True, **({"scope": "trunk"} if GRAPH else {})},
     }
     for key, value in extra.items():
         config.setdefault(key, {}).update(value)
