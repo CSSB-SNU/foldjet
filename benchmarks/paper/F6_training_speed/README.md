@@ -97,3 +97,42 @@ Engine commit 9760cfe4b moved it to the tensor cores. Re-measured on the campaig
 augmentations in one pass, step graph, H100 stand-in pools, real weights, 3 repeats): `data/f6_summary_b200_engine_a553001e1.csv`
 (+ runs, steps): **AF3 0.4375 s / example, Protenix v1 0.4291** (H100 engine 0.812 / 0.787: B200 1.86x / 1.83x faster); triton_calls 0 (the
 B200 LayerNorm D64 bf16 route is CUDA on this main). The PyTorch / compile / cuEq rows of `f6_summary_b200.csv` are not re-run.
+
+## Data-parallel training on 4x RTX 5090 (PCIe, no NVLink): 1 GPU vs 4 GPUs step time (DATA_STATUS, 2026-11-24)
+
+Measured on a rented 4x RTX 5090 node, to back the multi-GPU statement with a measured step time instead of "should".
+
+### Setup
+- **Host:** 4x GeForce RTX 5090 32 GB, PCIe 5.0, no NVLink, GPU peer-to-peer disabled, 2 CPU sockets (128 cores, 503 GB).
+  NCCL all-reduce ~20 GB/s bus bandwidth.
+- **Software:** PyTorch 2.13.0+cu129 (MiniWorld pixi env `cu128`), miniworld-engine 3.0.10 source tree, `torchrun` + DDP (NCCL).
+- **Trainer:** the MiniWorld phase-1 training code unchanged; only the data are synthetic batches (`scripts_ddp_rtx5090/synth_graph_train.py`).
+  Model = MiniWorld config `phase1a_distogram_medium_v240_nr_nt_pf16` (9.49 M parameters, gradients 36 MiB).
+- **Step:** crop L = 384, 1 sample per GPU per micro-step, bf16 autocast, torch.compile + CUDA graph, no activation checkpointing,
+  random weights (no checkpoint copied to the rented host). Median of 23 timed steps after warm-up.
+
+### Result (`data/ddp_rtx5090_4x/summary.csv`)
+
+| GPUs | grad. accum. | step (ms) | samples/s | scaling efficiency | all-reduce share | peak alloc / GPU |
+|---|---|---|---|---|---|---|
+| 1 | 1 | 112.5 | 8.89 | 100 % | - | 10.4 GiB |
+| 2 | 1 | 115.0 | 17.39 | 97.8 % | 1.4 % | 10.4 GiB |
+| **4** | **1** | **116.7** | **34.27** | **96.4 %** | **3.0 %** | 10.4 GiB |
+| 4 | 4 | 445.0 | 35.95 | 97.9 % | 1.7 % | 10.4 GiB |
+| 4 | 16 | 1758.1 | 36.40 | 98.7 % | 1.7 % | 10.4 GiB |
+
+Scaling efficiency = samples/s(N GPUs) / (N x samples/s(1 GPU, same grad. accum.)).
+- 4 GPUs give 3.86x the throughput of 1 GPU at grad. accum. 1 (3.94x at 16).
+- Correctness: loss finite and decreasing on every rank (58-step run 4.56 -> 2.0-2.8); max |param_rank - param_0| = 0 after training.
+- CPU pinning per NUMA socket made no difference (`n4_ga1_nopin` 116.9 ms vs 116.7 ms).
+- Fits 32 GB without checkpointing up to crop L = 512; L >= 768 needs activation checkpointing (crop sweep, not in the table).
+
+### Scope (state it when quoting)
+- The model is the small MiniWorld phase-1 network. All-reduce time grows with the gradient size: a model with ~10x the gradients
+  spends ~10x the all-reduce time per optimizer step, and gradient accumulation divides its share by the accumulation factor.
+  This run does not measure AF3-size data parallelism.
+- Synthetic data: data loading is not measured.
+
+### Files
+`data/ddp_rtx5090_4x/summary.csv` (every configuration; tag nXgY_gaZ = world size, GPU ids, grad. accum.); scripts in
+`scripts_ddp_rtx5090/` (`synth_graph_train.py`, `campaign.sh`, `run_one.sh`, `collect.py`). Raw logs: cluster `~/miniworld-engine-scratch/vast_ddp/logs/`.
