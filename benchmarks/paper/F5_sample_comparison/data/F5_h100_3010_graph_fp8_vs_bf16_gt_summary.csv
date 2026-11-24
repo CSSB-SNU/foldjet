@@ -1,0 +1,5 @@
+id,card,engine_version,foldforge_commit,arm,kind,n,median_abs_diff,mean_signed_diff,within_ref_sd,r
+F5,h100,3.0.10,,engine_fp8,all,337,0.0044,-0.003,0.8783,0.9908
+F5,h100,3.0.10,,engine_fp8,interface,194,0.0044,-0.0006,0.9227,0.9856
+F5,h100,3.0.10,,engine_fp8,ligand,44,0.0024,-0.0007,0.8864,0.9985
+F5,h100,3.0.10,,engine_fp8,monomer,99,0.007,-0.0087,0.7879,0.9951
