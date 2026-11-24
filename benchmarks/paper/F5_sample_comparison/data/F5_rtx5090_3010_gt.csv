@@ -1,262 +1,262 @@
 id,card,engine_version,foldforge_commit,model,task,kind,key,engine,engine_fp8,torch,torch_sd,engine_minus_torch,engine_fp8_minus_torch
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,interface_antibody_antigen,interface,8b7h-assembly1|A|C,0.1588,0.2336,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,interface_antibody_antigen,interface,8b7h-assembly1|B|C,0.3162,0.4018,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,interface_antibody_antigen,interface,8hxq-assembly1|A|B,0.0386,0.0178,0.0716,0.0804,-0.033,-0.0538
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_dna,interface,8e4h-assembly1|A|C,0.8266,0.8283,0.8302,0.0155,-0.0036,-0.0019
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_dna,interface,8e4h-assembly1|B|C,0.8848,0.8864,0.8785,0.0176,0.0064,0.0079
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_dna,interface,8vfj-assembly1|A|B,0.9366,0.9412,0.938,0.0047,-0.0014,0.0032
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_dna,interface,8vfj-assembly1|A|C,0.9403,0.9397,0.9401,0.0039,0.0001,-0.0004
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_ligand,ligand,7fxw-assembly1|A|B|(UB8),0.7963,0.7948,0.8043,0.0108,-0.008,-0.0094
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_ligand,ligand,7wvs-assembly1|A|C|(SAM),0.8524,0.8566,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_ligand,ligand,8avq-assembly1|A|H|(UDX),0.8733,0.8688,0.8788,0.0262,-0.0054,-0.01
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_ligand,ligand,8upi-assembly1|A|D|(SET),0.5452,0.5403,0.5249,0.0281,0.0202,0.0154
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_peptide,interface,8i89-assembly1|B|C,0.265,0.2688,0.2502,0.2179,0.0148,0.0186
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_peptide,interface,8xgu-assembly1|A|F,0.3056,0.3582,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_protein,interface,8b3w-assembly1|A|A-2,0.6208,0.6168,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_protein,interface,8gjg-assembly1|A|B,0.6024,0.5948,0.5878,0.0319,0.0146,0.007
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_protein,interface,9gsq-assembly1|A|B,0.0248,0.0194,0.0244,0.016,0.0004,-0.005
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_rna,interface,7yew-assembly1|A|B,0.1089,0.1102,0.1144,0.0139,-0.0055,-0.0042
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_rna,interface,8j62-assembly1|A|F,0.059,0.0527,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_rna,interface,8j62-assembly1|B|F,0.0546,0.0577,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_rna,interface,8j62-assembly1|C|F,0.0263,0.0274,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_rna,interface,8vm8-assembly1|A|B,0.1243,0.4972,0.0235,0.0057,0.1008,0.4737
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_rna,interface,8vm8-assembly1|A|C,0.1151,0.3846,0.0235,0.006,0.0916,0.3612
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,monomer_dna,monomer,8d79-assembly1,0.7856,0.805,0.8116,0.0697,-0.026,-0.0066
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,monomer_dna,monomer,8fi1-assembly1,0.3814,0.3614,0.3424,0.033,0.039,0.019
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,monomer_dna,monomer,8gzl-assembly1,0.5868,0.5972,0.5906,0.0504,-0.0038,0.0066
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,monomer_protein,monomer,8dhj-assembly1,0.9004,0.9026,0.898,0.0025,0.0024,0.0046
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,monomer_protein,monomer,8upi-assembly1,0.8704,0.8704,0.8708,0.002,-0.0004,-0.0004
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,monomer_protein,monomer,9bks-assembly1,0.928,0.9268,0.9262,0.0078,0.0018,0.0006
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,monomer_rna,monomer,7sxp-assembly1,0.7144,0.7354,0.7476,0.044,-0.0332,-0.0122
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,monomer_rna,monomer,7wii-assembly1,0.8024,0.794,0.8018,0.0228,0.0006,-0.0078
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,af3,monomer_rna,monomer,9g7c-assembly1,0.4972,0.5028,0.4844,0.0186,0.0128,0.0184
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_antibody_antigen,interface,8b7h-assembly1|A|C,0.0418,0.049,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_antibody_antigen,interface,8b7h-assembly1|B|C,0.0892,0.0938,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_antibody_antigen,interface,8hxq-assembly1|A|B,0.1554,0.1424,0.1014,0.0864,0.054,0.041
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_dna,interface,8e4h-assembly1|A|C,0.8847,0.8835,0.887,0.0097,-0.0023,-0.0035
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_dna,interface,8e4h-assembly1|B|C,0.9075,0.9073,0.9074,0.0024,0.0002,-0.0001
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_dna,interface,8vfj-assembly1|A|B,0.9032,0.9007,0.8971,0.0119,0.0061,0.0036
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_dna,interface,8vfj-assembly1|A|C,0.9387,0.9384,0.9387,0.0048,0.0,-0.0002
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_ligand,ligand,7fxw-assembly1|A|B|(UB8),0.7994,0.796,0.7989,0.005,0.0006,-0.0029
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_ligand,ligand,7wvs-assembly1|A|C|(SAM),0.9494,0.9467,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_ligand,ligand,8avq-assembly1|A|H|(UDX),0.8079,0.8166,0.811,0.0086,-0.003,0.0057
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_ligand,ligand,8upi-assembly1|A|D|(SET),0.5179,0.5202,0.5108,0.0117,0.0071,0.0094
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_peptide,interface,8i89-assembly1|B|C,0.286,0.2846,0.2928,0.0466,-0.0068,-0.0082
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_peptide,interface,8xgu-assembly1|A|F,0.0028,0.0022,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_protein,interface,8b3w-assembly1|A|A-2,0.7288,0.7286,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_protein,interface,8gjg-assembly1|A|B,0.7336,0.7216,0.7284,0.0744,0.0052,-0.0068
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_protein,interface,9gsq-assembly1|A|B,0.0196,0.02,0.0198,0.0016,-0.0002,0.0002
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_rna,interface,7yew-assembly1|A|B,0.0721,0.075,0.0774,0.0136,-0.0053,-0.0024
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_rna,interface,8j62-assembly1|A|F,0.0108,0.0234,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_rna,interface,8j62-assembly1|B|F,0.0719,0.0501,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_rna,interface,8j62-assembly1|C|F,0.0154,0.0099,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_rna,interface,8vm8-assembly1|A|B,0.5248,0.5155,0.5269,0.0098,-0.0021,-0.0113
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_rna,interface,8vm8-assembly1|A|C,0.3812,0.3811,0.3834,0.0126,-0.0022,-0.0023
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,monomer_dna,monomer,8d79-assembly1,0.5378,0.4206,0.5008,0.2066,0.037,-0.0802
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,monomer_dna,monomer,8fi1-assembly1,0.9546,0.9518,0.9614,0.0223,-0.0068,-0.0096
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,monomer_dna,monomer,8gzl-assembly1,0.5184,0.5248,0.5252,0.0125,-0.0068,-0.0004
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,monomer_protein,monomer,8dhj-assembly1,0.8904,0.8922,0.8856,0.0047,0.0048,0.0066
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,monomer_protein,monomer,8upi-assembly1,0.8516,0.8508,0.8492,0.0035,0.0024,0.0016
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,monomer_protein,monomer,9bks-assembly1,0.912,0.9134,0.9126,0.0064,-0.0006,0.0008
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,monomer_rna,monomer,7sxp-assembly1,0.7706,0.7072,0.8232,0.1362,-0.0526,-0.116
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,monomer_rna,monomer,7wii-assembly1,0.9512,0.9462,0.9392,0.0288,0.012,0.007
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,boltz2,monomer_rna,monomer,9g7c-assembly1,0.423,0.4172,0.4166,0.0299,0.0064,0.0006
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,interface_antibody_antigen,interface,8b7h-assembly1|A|C,0.211,0.1716,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,interface_antibody_antigen,interface,8b7h-assembly1|B|C,0.1494,0.1168,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,interface_antibody_antigen,interface,8hxq-assembly1|A|B,0.1526,0.0128,0.052,0.0889,0.1006,-0.0392
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_dna,interface,8e4h-assembly1|A|C,0.8986,0.8963,0.898,0.0122,0.0006,-0.0017
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_dna,interface,8e4h-assembly1|B|C,0.9095,0.9068,0.9079,0.0031,0.0017,-0.001
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_dna,interface,8vfj-assembly1|A|B,0.9132,0.9174,0.9165,0.0207,-0.0033,0.0009
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_dna,interface,8vfj-assembly1|A|C,0.9262,0.9255,0.9264,0.0051,-0.0002,-0.0009
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_ligand,ligand,7fxw-assembly1|A|B|(UB8),0.8028,0.8031,0.7979,0.0108,0.0049,0.0053
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_ligand,ligand,7wvs-assembly1|A|C|(SAM),0.8695,0.8688,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_ligand,ligand,8avq-assembly1|A|H|(UDX),0.8153,0.8014,0.7943,0.0326,0.021,0.0071
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_ligand,ligand,8upi-assembly1|A|D|(SET),0.7345,0.6858,0.703,0.0865,0.0315,-0.0172
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_peptide,interface,8i89-assembly1|B|C,0.2488,0.238,0.2932,0.0406,-0.0444,-0.0552
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_peptide,interface,8xgu-assembly1|A|F,,0.0776,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_protein,interface,8b3w-assembly1|A|A-2,0.4348,0.4302,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_protein,interface,8gjg-assembly1|A|B,0.5702,0.5646,0.546,0.026,0.0242,0.0186
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_protein,interface,9gsq-assembly1|A|B,0.0084,0.0078,0.0082,0.0022,0.0002,-0.0004
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_rna,interface,7yew-assembly1|A|B,0.6014,0.6225,0.6071,0.008,-0.0057,0.0154
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_rna,interface,8vm8-assembly1|A|B,0.0097,0.0097,0.0097,0.0014,0.0,0.0001
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_rna,interface,8vm8-assembly1|A|C,0.0102,0.0103,0.0102,0.0028,-0.0,0.0
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,monomer_dna,monomer,8d79-assembly1,0.7262,0.7364,0.7338,0.0687,-0.0076,0.0026
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,monomer_dna,monomer,8fi1-assembly1,0.2452,0.2332,0.2478,0.0213,-0.0026,-0.0146
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,monomer_dna,monomer,8gzl-assembly1,0.5296,0.5262,0.5274,0.0053,0.0022,-0.0012
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,monomer_protein,monomer,8dhj-assembly1,0.9014,0.9024,0.9006,0.0117,0.0008,0.0018
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,monomer_protein,monomer,8upi-assembly1,0.885,0.877,0.879,0.0241,0.006,-0.002
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,monomer_protein,monomer,9bks-assembly1,0.9234,0.9238,0.923,0.0032,0.0004,0.0008
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,monomer_rna,monomer,7sxp-assembly1,0.4704,0.4536,0.4696,0.1286,0.0008,-0.016
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,monomer_rna,monomer,7wii-assembly1,0.7026,0.685,0.7014,0.0205,0.0012,-0.0164
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,chai1,monomer_rna,monomer,9g7c-assembly1,0.3204,0.3136,0.327,0.0222,-0.0066,-0.0134
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_antibody_antigen,interface,8hxq-assembly1|A|B,0.0134,0.1074,0.1334,0.0156,-0.12,-0.026
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_dna,interface,8e4h-assembly1|A|C,0.8423,0.8423,0.8409,0.0122,0.0013,0.0013
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_dna,interface,8e4h-assembly1|B|C,0.8859,0.8852,0.8849,0.0161,0.001,0.0002
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_dna,interface,8vfj-assembly1|A|B,0.9393,0.9371,0.9468,0.018,-0.0075,-0.0097
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_dna,interface,8vfj-assembly1|A|C,0.9417,0.942,0.9416,0.0013,0.0001,0.0004
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_ligand,ligand,7fxw-assembly1|A|B|(UB8),0.0247,0.0268,0.022,0.0268,0.0027,0.0048
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_ligand,ligand,7wvs-assembly1|A|C|(SAM),0.8859,0.8824,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_ligand,ligand,8avq-assembly1|A|H|(UDX),0.859,0.8591,0.8533,0.0096,0.0058,0.0058
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_ligand,ligand,8upi-assembly1|A|D|(SET),0.0,0.0,0.0,0.0,0.0,0.0
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_peptide,interface,8i89-assembly1|B|C,0.2266,0.2294,0.2336,0.0325,-0.007,-0.0042
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_protein,interface,8gjg-assembly1|A|B,0.6362,0.6392,0.6326,0.0237,0.0036,0.0066
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_protein,interface,9gsq-assembly1|A|B,0.009,0.009,0.009,0.0,0.0,0.0
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_rna,interface,7yew-assembly1|A|B,0.1534,0.1533,0.1545,0.0088,-0.001,-0.0012
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_rna,interface,8vm8-assembly1|A|B,0.5145,0.5133,0.5114,0.0141,0.0032,0.002
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_rna,interface,8vm8-assembly1|A|C,0.3959,0.3957,0.3925,0.0405,0.0034,0.0032
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,monomer_dna,monomer,8d79-assembly1,0.7994,0.7214,0.7666,0.0654,0.0328,-0.0452
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,monomer_dna,monomer,8fi1-assembly1,0.3468,0.3472,0.3494,0.023,-0.0026,-0.0022
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,monomer_dna,monomer,8gzl-assembly1,0.5604,0.5378,0.5652,0.0359,-0.0048,-0.0274
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,monomer_protein,monomer,8dhj-assembly1,0.8496,0.851,0.8494,0.0032,0.0002,0.0016
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,monomer_protein,monomer,8upi-assembly1,0.9078,0.905,0.9128,0.007,-0.005,-0.0078
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,monomer_protein,monomer,9bks-assembly1,0.8988,0.8984,0.8974,0.004,0.0014,0.001
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,monomer_rna,monomer,7sxp-assembly1,0.5114,0.4864,0.412,0.1828,0.0994,0.0744
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,monomer_rna,monomer,7wii-assembly1,0.636,0.6448,0.6492,0.0213,-0.0132,-0.0044
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,intellifold2,monomer_rna,monomer,9g7c-assembly1,0.3384,0.3402,0.3372,0.0135,0.0012,0.003
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,interface_antibody_antigen,interface,8b7h-assembly1|A|C,0.8402,0.846,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,interface_antibody_antigen,interface,8b7h-assembly1|B|C,0.7772,0.7508,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,interface_antibody_antigen,interface,8hxq-assembly1|A|B,0.4608,0.4058,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_dna,interface,8e4h-assembly1|A|C,0.8127,0.8117,0.809,0.0133,0.0037,0.0027
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_dna,interface,8e4h-assembly1|B|C,0.8881,0.8873,0.8857,0.0148,0.0024,0.0016
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_dna,interface,8vfj-assembly1|A|B,0.8177,0.8193,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_dna,interface,8vfj-assembly1|A|C,0.8903,0.891,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_ligand,ligand,7fxw-assembly1|A|B|(UB8),0.823,0.8243,0.8251,0.007,-0.0021,-0.0008
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_ligand,ligand,8avq-assembly1|A|H|(UDX),0.8048,0.8056,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_ligand,ligand,8upi-assembly1|A|D|(SET),0.6765,0.6873,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_peptide,interface,8i89-assembly1|B|C,0.1646,0.1584,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_protein,interface,8b3w-assembly1|A|A-2,0.6358,0.6334,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_protein,interface,8gjg-assembly1|A|B,0.6832,0.6872,0.6876,0.3567,-0.0044,-0.0004
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_protein,interface,9gsq-assembly1|A|B,0.0096,0.0096,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_rna,interface,7yew-assembly1|A|B,0.2157,0.216,0.2108,0.0119,0.0049,0.0052
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_rna,interface,8vm8-assembly1|A|B,0.5316,0.5268,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_rna,interface,8vm8-assembly1|A|C,0.4092,0.3943,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,monomer_dna,monomer,8d79-assembly1,0.8376,0.7872,0.8174,0.0489,0.0202,-0.0302
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,monomer_dna,monomer,8fi1-assembly1,0.3768,0.3754,0.3924,0.0289,-0.0156,-0.017
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,monomer_dna,monomer,8gzl-assembly1,0.6578,0.6456,0.6494,0.0584,0.0084,-0.0038
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,monomer_protein,monomer,8dhj-assembly1,0.8974,0.8884,0.9,0.006,-0.0026,-0.0116
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,monomer_protein,monomer,8upi-assembly1,0.875,0.863,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,monomer_protein,monomer,9bks-assembly1,0.9266,0.8982,0.9238,0.0052,0.0028,-0.0256
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,monomer_rna,monomer,7sxp-assembly1,0.76,0.7248,0.7726,0.0054,-0.0126,-0.0478
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,monomer_rna,monomer,7wii-assembly1,0.7438,0.717,0.7366,0.0129,0.0072,-0.0196
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,opendde,monomer_rna,monomer,9g7c-assembly1,0.4482,0.4002,0.4488,0.0206,-0.0006,-0.0486
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_antibody_antigen,interface,8b7h-assembly1|A|C,0.3006,0.4006,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_antibody_antigen,interface,8b7h-assembly1|B|C,0.396,0.4468,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_antibody_antigen,interface,8hxq-assembly1|A|B,0.1084,0.1124,0.1152,0.0961,-0.0068,-0.0028
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_dna,interface,8e4h-assembly1|A|C,0.8487,0.8522,0.8485,0.0226,0.0002,0.0037
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_dna,interface,8e4h-assembly1|B|C,0.891,0.8917,0.8889,0.0165,0.0021,0.0028
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_dna,interface,8vfj-assembly1|A|B,0.9314,0.9315,0.9371,0.0081,-0.0057,-0.0056
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_dna,interface,8vfj-assembly1|A|C,0.9459,0.9456,0.9452,0.0054,0.0007,0.0004
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_ligand,ligand,7fxw-assembly1|A|B|(UB8),0.8685,0.8695,0.8658,0.0697,0.0027,0.0037
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_ligand,ligand,7wvs-assembly1|A|C|(SAM),0.8724,0.876,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_ligand,ligand,8avq-assembly1|A|H|(UDX),0.9396,0.941,0.9441,0.0122,-0.0045,-0.003
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_ligand,ligand,8upi-assembly1|A|D|(SET),0.5983,0.605,0.6165,0.1185,-0.0182,-0.0115
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_peptide,interface,8i89-assembly1|B|C,0.2172,0.2332,0.1968,0.0473,0.0204,0.0364
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_peptide,interface,8xgu-assembly1|A|F,0.6098,0.7536,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_protein,interface,8b3w-assembly1|A|A-2,0.6748,0.679,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_protein,interface,8gjg-assembly1|A|B,0.6376,0.6254,0.631,0.3188,0.0066,-0.0056
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_protein,interface,9gsq-assembly1|A|B,0.0336,0.0312,0.0342,0.0077,-0.0006,-0.003
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_rna,interface,7yew-assembly1|A|B,0.2115,0.2099,0.2128,0.0276,-0.0014,-0.003
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_rna,interface,8j62-assembly1|A|F,0.1462,0.0977,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_rna,interface,8j62-assembly1|B|F,0.1639,0.0814,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_rna,interface,8j62-assembly1|C|F,0.0358,0.0282,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_rna,interface,8vm8-assembly1|A|B,0.597,0.604,0.5971,0.0448,-0.0001,0.0069
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_rna,interface,8vm8-assembly1|A|C,0.4717,0.4798,0.4738,0.0672,-0.0021,0.006
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,monomer_dna,monomer,8d79-assembly1,0.7866,0.7832,0.7834,0.1039,0.0032,-0.0002
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,monomer_dna,monomer,8fi1-assembly1,0.9784,0.973,0.979,0.0036,-0.0006,-0.006
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,monomer_dna,monomer,8gzl-assembly1,0.964,0.963,0.9634,0.0052,0.0006,-0.0004
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,monomer_protein,monomer,8dhj-assembly1,0.8962,0.8966,0.897,0.001,-0.0008,-0.0004
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,monomer_protein,monomer,8upi-assembly1,0.8612,0.8644,0.865,0.0191,-0.0038,-0.0006
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,monomer_protein,monomer,9bks-assembly1,0.941,0.9408,0.9396,0.0041,0.0014,0.0012
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,monomer_rna,monomer,7sxp-assembly1,0.8086,0.7664,0.7986,0.0186,0.01,-0.0322
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,monomer_rna,monomer,7wii-assembly1,0.9874,0.9872,0.9878,0.0028,-0.0004,-0.0006
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,openfold3,monomer_rna,monomer,9g7c-assembly1,0.533,0.5232,0.5312,0.0417,0.0018,-0.008
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_antibody_antigen,interface,8b7h-assembly1|A|C,0.3774,0.327,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_antibody_antigen,interface,8b7h-assembly1|B|C,0.4258,0.3508,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_antibody_antigen,interface,8hxq-assembly1|A|B,0.1522,0.1556,0.1618,0.007,-0.0096,-0.0062
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_dna,interface,8e4h-assembly1|A|C,0.8452,0.8474,0.8446,0.0165,0.0006,0.0027
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_dna,interface,8e4h-assembly1|B|C,0.888,0.8896,0.8835,0.0093,0.0044,0.006
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_dna,interface,8vfj-assembly1|A|B,0.9399,0.9404,0.9287,0.0107,0.0112,0.0118
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_dna,interface,8vfj-assembly1|A|C,0.9425,0.9428,0.9403,0.0034,0.0023,0.0026
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_ligand,ligand,7fxw-assembly1|A|B|(UB8),0.988,0.9902,0.9791,0.0087,0.0089,0.0111
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_ligand,ligand,7wvs-assembly1|A|C|(SAM),0.8781,0.8761,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_ligand,ligand,8avq-assembly1|A|H|(UDX),0.8733,0.8678,0.852,0.0096,0.0213,0.0158
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_ligand,ligand,8upi-assembly1|A|D|(SET),0.8359,0.833,0.8262,0.009,0.0097,0.0068
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_peptide,interface,8i89-assembly1|B|C,0.2526,0.2546,0.2486,0.0271,0.004,0.006
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_peptide,interface,8xgu-assembly1|A|F,0.7598,0.762,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_protein,interface,8b3w-assembly1|A|A-2,0.586,0.5804,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_protein,interface,8gjg-assembly1|A|B,0.6116,0.6006,0.592,0.0248,0.0196,0.0086
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_protein,interface,9gsq-assembly1|A|B,0.0344,0.0304,0.0302,0.0102,0.0042,0.0002
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_rna,interface,7yew-assembly1|A|B,0.1247,0.1268,0.1536,0.0537,-0.0289,-0.0268
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_rna,interface,8j62-assembly1|A|F,0.0388,0.0735,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_rna,interface,8j62-assembly1|B|F,0.0415,0.0371,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_rna,interface,8j62-assembly1|C|F,0.0307,0.0394,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_rna,interface,8vm8-assembly1|A|B,0.5326,0.5354,0.5393,0.0237,-0.0067,-0.0039
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_rna,interface,8vm8-assembly1|A|C,0.4232,0.4182,0.4227,0.0416,0.0005,-0.0045
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,monomer_dna,monomer,8d79-assembly1,0.8484,0.849,0.806,0.0788,0.0424,0.043
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,monomer_dna,monomer,8fi1-assembly1,0.347,0.3848,0.4006,0.04,-0.0536,-0.0158
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,monomer_dna,monomer,8gzl-assembly1,0.6848,0.6836,0.687,0.006,-0.0022,-0.0034
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,monomer_protein,monomer,8dhj-assembly1,0.918,0.9182,0.92,0.0014,-0.002,-0.0018
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,monomer_protein,monomer,8upi-assembly1,0.8996,0.913,0.892,0.0046,0.0076,0.021
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,monomer_protein,monomer,9bks-assembly1,0.9176,0.919,0.9188,0.0035,-0.0012,0.0002
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,monomer_rna,monomer,7sxp-assembly1,0.7134,0.7662,0.7642,0.0088,-0.0508,0.002
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,monomer_rna,monomer,7wii-assembly1,0.767,0.7794,0.731,0.0396,0.036,0.0484
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix1,monomer_rna,monomer,9g7c-assembly1,0.4976,0.5066,0.4842,0.0149,0.0134,0.0224
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_antibody_antigen,interface,8b7h-assembly1|A|C,0.2138,0.1994,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_antibody_antigen,interface,8b7h-assembly1|B|C,0.4356,0.4122,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_antibody_antigen,interface,8hxq-assembly1|A|B,0.0506,0.0448,0.026,0.0248,0.0246,0.0188
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_dna,interface,8e4h-assembly1|A|C,0.7869,0.7861,0.7817,0.0084,0.0051,0.0044
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_dna,interface,8e4h-assembly1|B|C,0.8349,0.8331,0.8323,0.0147,0.0026,0.0008
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_dna,interface,8vfj-assembly1|A|B,0.8959,0.8987,0.909,0.0069,-0.0131,-0.0103
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_dna,interface,8vfj-assembly1|A|C,0.9131,0.9126,0.9133,0.0007,-0.0002,-0.0006
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_ligand,ligand,7fxw-assembly1|A|B|(UB8),0.8859,0.8876,0.8151,0.0627,0.0707,0.0724
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_ligand,ligand,7wvs-assembly1|A|C|(SAM),0.8843,0.8847,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_ligand,ligand,8avq-assembly1|A|H|(UDX),0.8164,0.816,0.8173,0.001,-0.0009,-0.0013
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_ligand,ligand,8upi-assembly1|A|D|(SET),0.7,0.7083,0.69,0.0989,0.01,0.0182
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_peptide,interface,8i89-assembly1|B|C,0.471,0.4666,0.5646,0.1701,-0.0936,-0.098
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_peptide,interface,8xgu-assembly1|A|F,0.7008,0.7,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_protein,interface,8b3w-assembly1|A|A-2,0.6386,0.6366,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_protein,interface,8gjg-assembly1|A|B,0.2276,0.1388,0.1398,0.2053,0.0878,-0.001
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_protein,interface,9gsq-assembly1|A|B,0.014,0.014,0.014,0.0041,0.0,0.0
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_rna,interface,7yew-assembly1|A|B,0.1543,0.1545,0.1558,0.0107,-0.0015,-0.0012
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_rna,interface,8vm8-assembly1|A|B,0.5222,0.5232,0.5212,0.029,0.0011,0.002
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_rna,interface,8vm8-assembly1|A|C,0.4916,0.478,0.4764,0.0509,0.0153,0.0016
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,monomer_dna,monomer,8d79-assembly1,0.8444,0.784,0.797,0.0935,0.0474,-0.013
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,monomer_dna,monomer,8fi1-assembly1,0.4026,0.38,0.3774,0.069,0.0252,0.0026
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,monomer_dna,monomer,8gzl-assembly1,0.5444,0.557,0.5572,0.0246,-0.0128,-0.0002
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,monomer_protein,monomer,8dhj-assembly1,0.8948,0.8982,0.8984,0.0061,-0.0036,-0.0002
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,monomer_protein,monomer,8upi-assembly1,0.8828,0.8862,0.8804,0.0145,0.0024,0.0058
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,monomer_protein,monomer,9bks-assembly1,0.941,0.9416,0.9398,0.0072,0.0012,0.0018
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,monomer_rna,monomer,7sxp-assembly1,0.658,0.6502,0.674,0.1334,-0.016,-0.0238
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,monomer_rna,monomer,7wii-assembly1,0.7844,0.78,0.7818,0.0065,0.0026,-0.0018
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,protenix2,monomer_rna,monomer,9g7c-assembly1,0.549,0.5426,0.5442,0.0206,0.0048,-0.0016
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_antibody_antigen,interface,8b7h-assembly1|A|C,0.5046,0.4918,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_antibody_antigen,interface,8b7h-assembly1|B|C,0.5888,0.5766,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_antibody_antigen,interface,8hxq-assembly1|A|B,0.2028,0.2024,0.2044,0.0141,-0.0016,-0.002
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_dna,interface,8e4h-assembly1|A|C,0.9682,0.9657,0.9712,0.0058,-0.003,-0.0055
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_dna,interface,8e4h-assembly1|B|C,0.9865,0.9865,0.9865,0.001,-0.0001,-0.0001
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_dna,interface,8vfj-assembly1|A|B,0.9238,0.9272,0.9252,0.0133,-0.0014,0.002
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_dna,interface,8vfj-assembly1|A|C,0.9382,0.9373,0.9354,0.0046,0.0028,0.0019
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_ligand,ligand,7fxw-assembly1|A|B|(UB8),0.9979,0.9974,0.9979,0.0024,0.0,-0.0004
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_ligand,ligand,7wvs-assembly1|A|C|(SAM),0.9865,0.9865,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_ligand,ligand,8avq-assembly1|A|H|(UDX),0.9873,0.9875,0.9866,0.001,0.0007,0.0009
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_ligand,ligand,8upi-assembly1|A|D|(SET),0.8707,0.8681,0.8709,0.1065,-0.0003,-0.0028
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_peptide,interface,8i89-assembly1|B|C,0.1596,0.1484,0.163,0.017,-0.0034,-0.0146
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_peptide,interface,8xgu-assembly1|A|F,0.6248,0.621,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_protein,interface,8b3w-assembly1|A|A-2,0.7448,0.7438,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_protein,interface,8gjg-assembly1|A|B,0.6902,0.6896,0.6942,0.0277,-0.004,-0.0046
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_protein,interface,9gsq-assembly1|A|B,0.0246,0.0284,0.0244,0.0143,0.0002,0.004
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_rna,interface,7yew-assembly1|A|B,0.0989,0.0999,0.1001,0.0385,-0.0012,-0.0002
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_rna,interface,8j62-assembly1|A|F,0.4058,0.3655,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_rna,interface,8j62-assembly1|B|F,0.1894,0.2488,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_rna,interface,8j62-assembly1|C|F,0.1544,0.2519,,,,
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_rna,interface,8vm8-assembly1|A|B,0.4859,0.4829,0.4737,0.0453,0.0122,0.0092
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_rna,interface,8vm8-assembly1|A|C,0.3589,0.3532,0.3493,0.0338,0.0096,0.0038
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,monomer_dna,monomer,8d79-assembly1,0.903,0.9234,0.9038,0.0426,-0.0008,0.0196
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,monomer_dna,monomer,8fi1-assembly1,0.9842,0.9802,0.9802,0.0082,0.004,0.0
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,monomer_dna,monomer,8gzl-assembly1,0.8606,0.8326,0.892,0.084,-0.0314,-0.0594
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,monomer_protein,monomer,8dhj-assembly1,0.8974,0.8968,0.897,0.0053,0.0004,-0.0002
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,monomer_protein,monomer,8upi-assembly1,0.9306,0.9324,0.93,0.0058,0.0006,0.0024
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,monomer_protein,monomer,9bks-assembly1,0.9198,0.9212,0.9208,0.004,-0.001,0.0004
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,monomer_rna,monomer,7sxp-assembly1,0.909,0.9176,0.918,0.0864,-0.009,-0.0004
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,monomer_rna,monomer,7wii-assembly1,0.9876,0.987,0.9874,0.0017,0.0002,-0.0004
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,rosettafold3,monomer_rna,monomer,9g7c-assembly1,0.4514,0.435,0.4544,0.0062,-0.003,-0.0194
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,interface_antibody_antigen,interface,8b7h-assembly1|A|C,0.1588,0.2336,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,interface_antibody_antigen,interface,8b7h-assembly1|B|C,0.3162,0.4018,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,interface_antibody_antigen,interface,8hxq-assembly1|A|B,0.0386,0.0178,0.0716,0.0804,-0.033,-0.0538
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_dna,interface,8e4h-assembly1|A|C,0.8266,0.8283,0.8302,0.0155,-0.0036,-0.0019
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_dna,interface,8e4h-assembly1|B|C,0.8848,0.8864,0.8785,0.0176,0.0064,0.0079
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_dna,interface,8vfj-assembly1|A|B,0.9366,0.9412,0.938,0.0047,-0.0014,0.0032
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_dna,interface,8vfj-assembly1|A|C,0.9403,0.9397,0.9401,0.0039,0.0001,-0.0004
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_ligand,ligand,7fxw-assembly1|A|B|(UB8),0.7963,0.7948,0.8043,0.0108,-0.008,-0.0094
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_ligand,ligand,7wvs-assembly1|A|C|(SAM),0.8524,0.8566,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_ligand,ligand,8avq-assembly1|A|H|(UDX),0.8733,0.8688,0.8788,0.0262,-0.0054,-0.01
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_ligand,ligand,8upi-assembly1|A|D|(SET),0.5452,0.5403,0.5249,0.0281,0.0202,0.0154
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_peptide,interface,8i89-assembly1|B|C,0.265,0.2688,0.2502,0.2179,0.0148,0.0186
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_peptide,interface,8xgu-assembly1|A|F,0.3056,0.3582,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_protein,interface,8b3w-assembly1|A|A-2,0.6208,0.6168,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_protein,interface,8gjg-assembly1|A|B,0.6024,0.5948,0.5878,0.0319,0.0146,0.007
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_protein,interface,9gsq-assembly1|A|B,0.0248,0.0194,0.0244,0.016,0.0004,-0.005
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_rna,interface,7yew-assembly1|A|B,0.1089,0.1102,0.1144,0.0139,-0.0055,-0.0042
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_rna,interface,8j62-assembly1|A|F,0.059,0.0527,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_rna,interface,8j62-assembly1|B|F,0.0546,0.0577,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_rna,interface,8j62-assembly1|C|F,0.0263,0.0274,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_rna,interface,8vm8-assembly1|A|B,0.1243,0.4972,0.0235,0.0057,0.1008,0.4737
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,interface_protein_rna,interface,8vm8-assembly1|A|C,0.1151,0.3846,0.0235,0.006,0.0916,0.3612
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,monomer_dna,monomer,8d79-assembly1,0.7856,0.805,0.8116,0.0697,-0.026,-0.0066
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,monomer_dna,monomer,8fi1-assembly1,0.3814,0.3614,0.3424,0.033,0.039,0.019
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,monomer_dna,monomer,8gzl-assembly1,0.5868,0.5972,0.5906,0.0504,-0.0038,0.0066
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,monomer_protein,monomer,8dhj-assembly1,0.9004,0.9026,0.898,0.0025,0.0024,0.0046
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,monomer_protein,monomer,8upi-assembly1,0.8704,0.8704,0.8708,0.002,-0.0004,-0.0004
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,monomer_protein,monomer,9bks-assembly1,0.928,0.9268,0.9262,0.0078,0.0018,0.0006
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,monomer_rna,monomer,7sxp-assembly1,0.7144,0.7354,0.7476,0.044,-0.0332,-0.0122
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,monomer_rna,monomer,7wii-assembly1,0.8024,0.794,0.8018,0.0228,0.0006,-0.0078
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,af3,monomer_rna,monomer,9g7c-assembly1,0.4972,0.5028,0.4844,0.0186,0.0128,0.0184
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_antibody_antigen,interface,8b7h-assembly1|A|C,0.0418,0.049,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_antibody_antigen,interface,8b7h-assembly1|B|C,0.0892,0.0938,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_antibody_antigen,interface,8hxq-assembly1|A|B,0.1554,0.1424,0.1014,0.0864,0.054,0.041
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_dna,interface,8e4h-assembly1|A|C,0.8847,0.8835,0.887,0.0097,-0.0023,-0.0035
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_dna,interface,8e4h-assembly1|B|C,0.9075,0.9073,0.9074,0.0024,0.0002,-0.0001
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_dna,interface,8vfj-assembly1|A|B,0.9032,0.9007,0.8971,0.0119,0.0061,0.0036
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_dna,interface,8vfj-assembly1|A|C,0.9387,0.9384,0.9387,0.0048,0.0,-0.0002
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_ligand,ligand,7fxw-assembly1|A|B|(UB8),0.7994,0.796,0.7989,0.005,0.0006,-0.0029
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_ligand,ligand,7wvs-assembly1|A|C|(SAM),0.9494,0.9467,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_ligand,ligand,8avq-assembly1|A|H|(UDX),0.8079,0.8166,0.811,0.0086,-0.003,0.0057
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_ligand,ligand,8upi-assembly1|A|D|(SET),0.5179,0.5202,0.5108,0.0117,0.0071,0.0094
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_peptide,interface,8i89-assembly1|B|C,0.286,0.2846,0.2928,0.0466,-0.0068,-0.0082
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_peptide,interface,8xgu-assembly1|A|F,0.0028,0.0022,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_protein,interface,8b3w-assembly1|A|A-2,0.7288,0.7286,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_protein,interface,8gjg-assembly1|A|B,0.7336,0.7216,0.7284,0.0744,0.0052,-0.0068
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_protein,interface,9gsq-assembly1|A|B,0.0196,0.02,0.0198,0.0016,-0.0002,0.0002
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_rna,interface,7yew-assembly1|A|B,0.0721,0.075,0.0774,0.0136,-0.0053,-0.0024
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_rna,interface,8j62-assembly1|A|F,0.0108,0.0234,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_rna,interface,8j62-assembly1|B|F,0.0719,0.0501,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_rna,interface,8j62-assembly1|C|F,0.0154,0.0099,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_rna,interface,8vm8-assembly1|A|B,0.5248,0.5155,0.5269,0.0098,-0.0021,-0.0113
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,interface_protein_rna,interface,8vm8-assembly1|A|C,0.3812,0.3811,0.3834,0.0126,-0.0022,-0.0023
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,monomer_dna,monomer,8d79-assembly1,0.5378,0.4206,0.5008,0.2066,0.037,-0.0802
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,monomer_dna,monomer,8fi1-assembly1,0.9546,0.9518,0.9614,0.0223,-0.0068,-0.0096
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,monomer_dna,monomer,8gzl-assembly1,0.5184,0.5248,0.5252,0.0125,-0.0068,-0.0004
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,monomer_protein,monomer,8dhj-assembly1,0.8904,0.8922,0.8856,0.0047,0.0048,0.0066
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,monomer_protein,monomer,8upi-assembly1,0.8516,0.8508,0.8492,0.0035,0.0024,0.0016
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,monomer_protein,monomer,9bks-assembly1,0.912,0.9134,0.9126,0.0064,-0.0006,0.0008
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,monomer_rna,monomer,7sxp-assembly1,0.7706,0.7072,0.8232,0.1362,-0.0526,-0.116
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,monomer_rna,monomer,7wii-assembly1,0.9512,0.9462,0.9392,0.0288,0.012,0.007
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,boltz2,monomer_rna,monomer,9g7c-assembly1,0.423,0.4172,0.4166,0.0299,0.0064,0.0006
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,interface_antibody_antigen,interface,8b7h-assembly1|A|C,0.211,0.1716,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,interface_antibody_antigen,interface,8b7h-assembly1|B|C,0.1494,0.1168,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,interface_antibody_antigen,interface,8hxq-assembly1|A|B,0.1526,0.0128,0.052,0.0889,0.1006,-0.0392
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_dna,interface,8e4h-assembly1|A|C,0.8986,0.8963,0.898,0.0122,0.0006,-0.0017
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_dna,interface,8e4h-assembly1|B|C,0.9095,0.9068,0.9079,0.0031,0.0017,-0.001
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_dna,interface,8vfj-assembly1|A|B,0.9132,0.9174,0.9165,0.0207,-0.0033,0.0009
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_dna,interface,8vfj-assembly1|A|C,0.9262,0.9255,0.9264,0.0051,-0.0002,-0.0009
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_ligand,ligand,7fxw-assembly1|A|B|(UB8),0.8028,0.8031,0.7979,0.0108,0.0049,0.0053
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_ligand,ligand,7wvs-assembly1|A|C|(SAM),0.8695,0.8688,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_ligand,ligand,8avq-assembly1|A|H|(UDX),0.8153,0.8014,0.7943,0.0326,0.021,0.0071
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_ligand,ligand,8upi-assembly1|A|D|(SET),0.7345,0.6858,0.703,0.0865,0.0315,-0.0172
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_peptide,interface,8i89-assembly1|B|C,0.2488,0.238,0.2932,0.0406,-0.0444,-0.0552
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_peptide,interface,8xgu-assembly1|A|F,,0.0776,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_protein,interface,8b3w-assembly1|A|A-2,0.4348,0.4302,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_protein,interface,8gjg-assembly1|A|B,0.5702,0.5646,0.546,0.026,0.0242,0.0186
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_protein,interface,9gsq-assembly1|A|B,0.0084,0.0078,0.0082,0.0022,0.0002,-0.0004
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_rna,interface,7yew-assembly1|A|B,0.6014,0.6225,0.6071,0.008,-0.0057,0.0154
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_rna,interface,8vm8-assembly1|A|B,0.0097,0.0097,0.0097,0.0014,0.0,0.0001
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,interface_protein_rna,interface,8vm8-assembly1|A|C,0.0102,0.0103,0.0102,0.0028,-0.0,0.0
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,monomer_dna,monomer,8d79-assembly1,0.7262,0.7364,0.7338,0.0687,-0.0076,0.0026
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,monomer_dna,monomer,8fi1-assembly1,0.2452,0.2332,0.2478,0.0213,-0.0026,-0.0146
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,monomer_dna,monomer,8gzl-assembly1,0.5296,0.5262,0.5274,0.0053,0.0022,-0.0012
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,monomer_protein,monomer,8dhj-assembly1,0.9014,0.9024,0.9006,0.0117,0.0008,0.0018
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,monomer_protein,monomer,8upi-assembly1,0.885,0.877,0.879,0.0241,0.006,-0.002
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,monomer_protein,monomer,9bks-assembly1,0.9234,0.9238,0.923,0.0032,0.0004,0.0008
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,monomer_rna,monomer,7sxp-assembly1,0.4704,0.4536,0.4696,0.1286,0.0008,-0.016
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,monomer_rna,monomer,7wii-assembly1,0.7026,0.685,0.7014,0.0205,0.0012,-0.0164
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,chai1,monomer_rna,monomer,9g7c-assembly1,0.3204,0.3136,0.327,0.0222,-0.0066,-0.0134
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_antibody_antigen,interface,8hxq-assembly1|A|B,0.0134,0.1074,0.1334,0.0156,-0.12,-0.026
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_dna,interface,8e4h-assembly1|A|C,0.8423,0.8423,0.8409,0.0122,0.0013,0.0013
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_dna,interface,8e4h-assembly1|B|C,0.8859,0.8852,0.8849,0.0161,0.001,0.0002
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_dna,interface,8vfj-assembly1|A|B,0.9393,0.9371,0.9468,0.018,-0.0075,-0.0097
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_dna,interface,8vfj-assembly1|A|C,0.9417,0.942,0.9416,0.0013,0.0001,0.0004
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_ligand,ligand,7fxw-assembly1|A|B|(UB8),0.0247,0.0268,0.022,0.0268,0.0027,0.0048
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_ligand,ligand,7wvs-assembly1|A|C|(SAM),0.8859,0.8824,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_ligand,ligand,8avq-assembly1|A|H|(UDX),0.859,0.8591,0.8533,0.0096,0.0058,0.0058
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_ligand,ligand,8upi-assembly1|A|D|(SET),0.0,0.0,0.0,0.0,0.0,0.0
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_peptide,interface,8i89-assembly1|B|C,0.2266,0.2294,0.2336,0.0325,-0.007,-0.0042
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_protein,interface,8gjg-assembly1|A|B,0.6362,0.6392,0.6326,0.0237,0.0036,0.0066
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_protein,interface,9gsq-assembly1|A|B,0.009,0.009,0.009,0.0,0.0,0.0
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_rna,interface,7yew-assembly1|A|B,0.1534,0.1533,0.1545,0.0088,-0.001,-0.0012
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_rna,interface,8vm8-assembly1|A|B,0.5145,0.5133,0.5114,0.0141,0.0032,0.002
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,interface_protein_rna,interface,8vm8-assembly1|A|C,0.3959,0.3957,0.3925,0.0405,0.0034,0.0032
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,monomer_dna,monomer,8d79-assembly1,0.7994,0.7214,0.7666,0.0654,0.0328,-0.0452
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,monomer_dna,monomer,8fi1-assembly1,0.3468,0.3472,0.3494,0.023,-0.0026,-0.0022
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,monomer_dna,monomer,8gzl-assembly1,0.5604,0.5378,0.5652,0.0359,-0.0048,-0.0274
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,monomer_protein,monomer,8dhj-assembly1,0.8496,0.851,0.8494,0.0032,0.0002,0.0016
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,monomer_protein,monomer,8upi-assembly1,0.9078,0.905,0.9128,0.007,-0.005,-0.0078
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,monomer_protein,monomer,9bks-assembly1,0.8988,0.8984,0.8974,0.004,0.0014,0.001
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,monomer_rna,monomer,7sxp-assembly1,0.5114,0.4864,0.412,0.1828,0.0994,0.0744
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,monomer_rna,monomer,7wii-assembly1,0.636,0.6448,0.6492,0.0213,-0.0132,-0.0044
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,intellifold2,monomer_rna,monomer,9g7c-assembly1,0.3384,0.3402,0.3372,0.0135,0.0012,0.003
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,interface_antibody_antigen,interface,8b7h-assembly1|A|C,0.8402,0.846,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,interface_antibody_antigen,interface,8b7h-assembly1|B|C,0.7772,0.7508,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,interface_antibody_antigen,interface,8hxq-assembly1|A|B,0.4608,0.4058,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_dna,interface,8e4h-assembly1|A|C,0.8127,0.8117,0.809,0.0133,0.0037,0.0027
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_dna,interface,8e4h-assembly1|B|C,0.8881,0.8873,0.8857,0.0148,0.0024,0.0016
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_dna,interface,8vfj-assembly1|A|B,0.8177,0.8193,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_dna,interface,8vfj-assembly1|A|C,0.8903,0.891,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_ligand,ligand,7fxw-assembly1|A|B|(UB8),0.823,0.8243,0.8251,0.007,-0.0021,-0.0008
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_ligand,ligand,8avq-assembly1|A|H|(UDX),0.8048,0.8056,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_ligand,ligand,8upi-assembly1|A|D|(SET),0.6765,0.6873,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_peptide,interface,8i89-assembly1|B|C,0.1646,0.1584,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_protein,interface,8b3w-assembly1|A|A-2,0.6358,0.6334,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_protein,interface,8gjg-assembly1|A|B,0.6832,0.6872,0.6876,0.3567,-0.0044,-0.0004
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_protein,interface,9gsq-assembly1|A|B,0.0096,0.0096,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_rna,interface,7yew-assembly1|A|B,0.2157,0.216,0.2108,0.0119,0.0049,0.0052
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_rna,interface,8vm8-assembly1|A|B,0.5316,0.5268,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,interface_protein_rna,interface,8vm8-assembly1|A|C,0.4092,0.3943,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,monomer_dna,monomer,8d79-assembly1,0.8376,0.7872,0.8174,0.0489,0.0202,-0.0302
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,monomer_dna,monomer,8fi1-assembly1,0.3768,0.3754,0.3924,0.0289,-0.0156,-0.017
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,monomer_dna,monomer,8gzl-assembly1,0.6578,0.6456,0.6494,0.0584,0.0084,-0.0038
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,monomer_protein,monomer,8dhj-assembly1,0.8974,0.8884,0.9,0.006,-0.0026,-0.0116
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,monomer_protein,monomer,8upi-assembly1,0.875,0.863,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,monomer_protein,monomer,9bks-assembly1,0.9266,0.8982,0.9238,0.0052,0.0028,-0.0256
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,monomer_rna,monomer,7sxp-assembly1,0.76,0.7248,0.7726,0.0054,-0.0126,-0.0478
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,monomer_rna,monomer,7wii-assembly1,0.7438,0.717,0.7366,0.0129,0.0072,-0.0196
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,opendde,monomer_rna,monomer,9g7c-assembly1,0.4482,0.4002,0.4488,0.0206,-0.0006,-0.0486
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_antibody_antigen,interface,8b7h-assembly1|A|C,0.3006,0.4006,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_antibody_antigen,interface,8b7h-assembly1|B|C,0.396,0.4468,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_antibody_antigen,interface,8hxq-assembly1|A|B,0.1084,0.1124,0.1152,0.0961,-0.0068,-0.0028
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_dna,interface,8e4h-assembly1|A|C,0.8487,0.8522,0.8485,0.0226,0.0002,0.0037
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_dna,interface,8e4h-assembly1|B|C,0.891,0.8917,0.8889,0.0165,0.0021,0.0028
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_dna,interface,8vfj-assembly1|A|B,0.9314,0.9315,0.9371,0.0081,-0.0057,-0.0056
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_dna,interface,8vfj-assembly1|A|C,0.9459,0.9456,0.9452,0.0054,0.0007,0.0004
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_ligand,ligand,7fxw-assembly1|A|B|(UB8),0.8685,0.8695,0.8658,0.0697,0.0027,0.0037
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_ligand,ligand,7wvs-assembly1|A|C|(SAM),0.8724,0.876,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_ligand,ligand,8avq-assembly1|A|H|(UDX),0.9396,0.941,0.9441,0.0122,-0.0045,-0.003
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_ligand,ligand,8upi-assembly1|A|D|(SET),0.5983,0.605,0.6165,0.1185,-0.0182,-0.0115
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_peptide,interface,8i89-assembly1|B|C,0.2172,0.2332,0.1968,0.0473,0.0204,0.0364
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_peptide,interface,8xgu-assembly1|A|F,0.6098,0.7536,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_protein,interface,8b3w-assembly1|A|A-2,0.6748,0.679,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_protein,interface,8gjg-assembly1|A|B,0.6376,0.6254,0.631,0.3188,0.0066,-0.0056
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_protein,interface,9gsq-assembly1|A|B,0.0336,0.0312,0.0342,0.0077,-0.0006,-0.003
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_rna,interface,7yew-assembly1|A|B,0.2115,0.2099,0.2128,0.0276,-0.0014,-0.003
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_rna,interface,8j62-assembly1|A|F,0.1462,0.0977,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_rna,interface,8j62-assembly1|B|F,0.1639,0.0814,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_rna,interface,8j62-assembly1|C|F,0.0358,0.0282,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_rna,interface,8vm8-assembly1|A|B,0.597,0.604,0.5971,0.0448,-0.0001,0.0069
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,interface_protein_rna,interface,8vm8-assembly1|A|C,0.4717,0.4798,0.4738,0.0672,-0.0021,0.006
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,monomer_dna,monomer,8d79-assembly1,0.7866,0.7832,0.7834,0.1039,0.0032,-0.0002
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,monomer_dna,monomer,8fi1-assembly1,0.9784,0.973,0.979,0.0036,-0.0006,-0.006
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,monomer_dna,monomer,8gzl-assembly1,0.964,0.963,0.9634,0.0052,0.0006,-0.0004
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,monomer_protein,monomer,8dhj-assembly1,0.8962,0.8966,0.897,0.001,-0.0008,-0.0004
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,monomer_protein,monomer,8upi-assembly1,0.8612,0.8644,0.865,0.0191,-0.0038,-0.0006
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,monomer_protein,monomer,9bks-assembly1,0.941,0.9408,0.9396,0.0041,0.0014,0.0012
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,monomer_rna,monomer,7sxp-assembly1,0.8086,0.7664,0.7986,0.0186,0.01,-0.0322
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,monomer_rna,monomer,7wii-assembly1,0.9874,0.9872,0.9878,0.0028,-0.0004,-0.0006
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,openfold3,monomer_rna,monomer,9g7c-assembly1,0.533,0.5232,0.5312,0.0417,0.0018,-0.008
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_antibody_antigen,interface,8b7h-assembly1|A|C,0.3774,0.327,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_antibody_antigen,interface,8b7h-assembly1|B|C,0.4258,0.3508,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_antibody_antigen,interface,8hxq-assembly1|A|B,0.1522,0.1556,0.1618,0.007,-0.0096,-0.0062
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_dna,interface,8e4h-assembly1|A|C,0.8452,0.8474,0.8446,0.0165,0.0006,0.0027
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_dna,interface,8e4h-assembly1|B|C,0.888,0.8896,0.8835,0.0093,0.0044,0.006
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_dna,interface,8vfj-assembly1|A|B,0.9399,0.9404,0.9287,0.0107,0.0112,0.0118
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_dna,interface,8vfj-assembly1|A|C,0.9425,0.9428,0.9403,0.0034,0.0023,0.0026
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_ligand,ligand,7fxw-assembly1|A|B|(UB8),0.988,0.9902,0.9791,0.0087,0.0089,0.0111
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_ligand,ligand,7wvs-assembly1|A|C|(SAM),0.8781,0.8761,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_ligand,ligand,8avq-assembly1|A|H|(UDX),0.8733,0.8678,0.852,0.0096,0.0213,0.0158
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_ligand,ligand,8upi-assembly1|A|D|(SET),0.8359,0.833,0.8262,0.009,0.0097,0.0068
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_peptide,interface,8i89-assembly1|B|C,0.2526,0.2546,0.2486,0.0271,0.004,0.006
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_peptide,interface,8xgu-assembly1|A|F,0.7598,0.762,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_protein,interface,8b3w-assembly1|A|A-2,0.586,0.5804,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_protein,interface,8gjg-assembly1|A|B,0.6116,0.6006,0.592,0.0248,0.0196,0.0086
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_protein,interface,9gsq-assembly1|A|B,0.0344,0.0304,0.0302,0.0102,0.0042,0.0002
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_rna,interface,7yew-assembly1|A|B,0.1247,0.1268,0.1536,0.0537,-0.0289,-0.0268
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_rna,interface,8j62-assembly1|A|F,0.0388,0.0735,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_rna,interface,8j62-assembly1|B|F,0.0415,0.0371,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_rna,interface,8j62-assembly1|C|F,0.0307,0.0394,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_rna,interface,8vm8-assembly1|A|B,0.5326,0.5354,0.5393,0.0237,-0.0067,-0.0039
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,interface_protein_rna,interface,8vm8-assembly1|A|C,0.4232,0.4182,0.4227,0.0416,0.0005,-0.0045
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,monomer_dna,monomer,8d79-assembly1,0.8484,0.849,0.806,0.0788,0.0424,0.043
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,monomer_dna,monomer,8fi1-assembly1,0.347,0.3848,0.4006,0.04,-0.0536,-0.0158
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,monomer_dna,monomer,8gzl-assembly1,0.6848,0.6836,0.687,0.006,-0.0022,-0.0034
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,monomer_protein,monomer,8dhj-assembly1,0.918,0.9182,0.92,0.0014,-0.002,-0.0018
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,monomer_protein,monomer,8upi-assembly1,0.8996,0.913,0.892,0.0046,0.0076,0.021
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,monomer_protein,monomer,9bks-assembly1,0.9176,0.919,0.9188,0.0035,-0.0012,0.0002
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,monomer_rna,monomer,7sxp-assembly1,0.7134,0.7662,0.7642,0.0088,-0.0508,0.002
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,monomer_rna,monomer,7wii-assembly1,0.767,0.7794,0.731,0.0396,0.036,0.0484
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix1,monomer_rna,monomer,9g7c-assembly1,0.4976,0.5066,0.4842,0.0149,0.0134,0.0224
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_antibody_antigen,interface,8b7h-assembly1|A|C,0.2138,0.1994,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_antibody_antigen,interface,8b7h-assembly1|B|C,0.4356,0.4122,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_antibody_antigen,interface,8hxq-assembly1|A|B,0.0506,0.0448,0.026,0.0248,0.0246,0.0188
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_dna,interface,8e4h-assembly1|A|C,0.7869,0.7861,0.7817,0.0084,0.0051,0.0044
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_dna,interface,8e4h-assembly1|B|C,0.8349,0.8331,0.8323,0.0147,0.0026,0.0008
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_dna,interface,8vfj-assembly1|A|B,0.8959,0.8987,0.909,0.0069,-0.0131,-0.0103
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_dna,interface,8vfj-assembly1|A|C,0.9131,0.9126,0.9133,0.0007,-0.0002,-0.0006
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_ligand,ligand,7fxw-assembly1|A|B|(UB8),0.8859,0.8876,0.8151,0.0627,0.0707,0.0724
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_ligand,ligand,7wvs-assembly1|A|C|(SAM),0.8843,0.8847,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_ligand,ligand,8avq-assembly1|A|H|(UDX),0.8164,0.816,0.8173,0.001,-0.0009,-0.0013
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_ligand,ligand,8upi-assembly1|A|D|(SET),0.7,0.7083,0.69,0.0989,0.01,0.0182
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_peptide,interface,8i89-assembly1|B|C,0.471,0.4666,0.5646,0.1701,-0.0936,-0.098
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_peptide,interface,8xgu-assembly1|A|F,0.7008,0.7,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_protein,interface,8b3w-assembly1|A|A-2,0.6386,0.6366,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_protein,interface,8gjg-assembly1|A|B,0.2276,0.1388,0.1398,0.2053,0.0878,-0.001
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_protein,interface,9gsq-assembly1|A|B,0.014,0.014,0.014,0.0041,0.0,0.0
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_rna,interface,7yew-assembly1|A|B,0.1543,0.1545,0.1558,0.0107,-0.0015,-0.0012
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_rna,interface,8vm8-assembly1|A|B,0.5222,0.5232,0.5212,0.029,0.0011,0.002
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,interface_protein_rna,interface,8vm8-assembly1|A|C,0.4916,0.478,0.4764,0.0509,0.0153,0.0016
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,monomer_dna,monomer,8d79-assembly1,0.8444,0.784,0.797,0.0935,0.0474,-0.013
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,monomer_dna,monomer,8fi1-assembly1,0.4026,0.38,0.3774,0.069,0.0252,0.0026
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,monomer_dna,monomer,8gzl-assembly1,0.5444,0.557,0.5572,0.0246,-0.0128,-0.0002
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,monomer_protein,monomer,8dhj-assembly1,0.8948,0.8982,0.8984,0.0061,-0.0036,-0.0002
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,monomer_protein,monomer,8upi-assembly1,0.8828,0.8862,0.8804,0.0145,0.0024,0.0058
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,monomer_protein,monomer,9bks-assembly1,0.941,0.9416,0.9398,0.0072,0.0012,0.0018
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,monomer_rna,monomer,7sxp-assembly1,0.658,0.6502,0.674,0.1334,-0.016,-0.0238
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,monomer_rna,monomer,7wii-assembly1,0.7844,0.78,0.7818,0.0065,0.0026,-0.0018
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,protenix2,monomer_rna,monomer,9g7c-assembly1,0.549,0.5426,0.5442,0.0206,0.0048,-0.0016
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_antibody_antigen,interface,8b7h-assembly1|A|C,0.5046,0.4918,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_antibody_antigen,interface,8b7h-assembly1|B|C,0.5888,0.5766,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_antibody_antigen,interface,8hxq-assembly1|A|B,0.2028,0.2024,0.2044,0.0141,-0.0016,-0.002
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_dna,interface,8e4h-assembly1|A|C,0.9682,0.9657,0.9712,0.0058,-0.003,-0.0055
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_dna,interface,8e4h-assembly1|B|C,0.9865,0.9865,0.9865,0.001,-0.0001,-0.0001
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_dna,interface,8vfj-assembly1|A|B,0.9238,0.9272,0.9252,0.0133,-0.0014,0.002
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_dna,interface,8vfj-assembly1|A|C,0.9382,0.9373,0.9354,0.0046,0.0028,0.0019
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_ligand,ligand,7fxw-assembly1|A|B|(UB8),0.9979,0.9974,0.9979,0.0024,0.0,-0.0004
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_ligand,ligand,7wvs-assembly1|A|C|(SAM),0.9865,0.9865,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_ligand,ligand,8avq-assembly1|A|H|(UDX),0.9873,0.9875,0.9866,0.001,0.0007,0.0009
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_ligand,ligand,8upi-assembly1|A|D|(SET),0.8707,0.8681,0.8709,0.1065,-0.0003,-0.0028
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_peptide,interface,8i89-assembly1|B|C,0.1596,0.1484,0.163,0.017,-0.0034,-0.0146
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_peptide,interface,8xgu-assembly1|A|F,0.6248,0.621,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_protein,interface,8b3w-assembly1|A|A-2,0.7448,0.7438,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_protein,interface,8gjg-assembly1|A|B,0.6902,0.6896,0.6942,0.0277,-0.004,-0.0046
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_protein,interface,9gsq-assembly1|A|B,0.0246,0.0284,0.0244,0.0143,0.0002,0.004
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_rna,interface,7yew-assembly1|A|B,0.0989,0.0999,0.1001,0.0385,-0.0012,-0.0002
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_rna,interface,8j62-assembly1|A|F,0.4058,0.3655,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_rna,interface,8j62-assembly1|B|F,0.1894,0.2488,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_rna,interface,8j62-assembly1|C|F,0.1544,0.2519,,,,
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_rna,interface,8vm8-assembly1|A|B,0.4859,0.4829,0.4737,0.0453,0.0122,0.0092
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,interface_protein_rna,interface,8vm8-assembly1|A|C,0.3589,0.3532,0.3493,0.0338,0.0096,0.0038
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,monomer_dna,monomer,8d79-assembly1,0.903,0.9234,0.9038,0.0426,-0.0008,0.0196
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,monomer_dna,monomer,8fi1-assembly1,0.9842,0.9802,0.9802,0.0082,0.004,0.0
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,monomer_dna,monomer,8gzl-assembly1,0.8606,0.8326,0.892,0.084,-0.0314,-0.0594
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,monomer_protein,monomer,8dhj-assembly1,0.8974,0.8968,0.897,0.0053,0.0004,-0.0002
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,monomer_protein,monomer,8upi-assembly1,0.9306,0.9324,0.93,0.0058,0.0006,0.0024
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,monomer_protein,monomer,9bks-assembly1,0.9198,0.9212,0.9208,0.004,-0.001,0.0004
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,monomer_rna,monomer,7sxp-assembly1,0.909,0.9176,0.918,0.0864,-0.009,-0.0004
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,monomer_rna,monomer,7wii-assembly1,0.9876,0.987,0.9874,0.0017,0.0002,-0.0004
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,rosettafold3,monomer_rna,monomer,9g7c-assembly1,0.4514,0.435,0.4544,0.0062,-0.003,-0.0194

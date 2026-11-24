@@ -63,9 +63,11 @@ Backend report (engine arms): LayerNorm of 65,536 (F4 / F3 / F9) or 589,824 (F6)
 **F9 (this folder):** `data/F9_b200.csv` (22 rows = 11 predictors x engine bf16 / PyTorch operators; no FP8 / kit arm) and `data/F9_b200_sizes.csv` (193 probes). Every limit is out-of-memory-bounded (`first_not_ok_status = oom`, none non-monotonic, no non-finite). Largest n (x128 tokens) that completes: engine AF3 56, OpenFold3 56, Boltz2 53, Protenix v1 53, RoseTTAFold3 52, Protenix v2 42, Chai-1 39, ESMFold2 39, ESMFold2-Fast 39, IntelliFold2 28, OpenDDE 21; PyTorch operators AF3 12, Boltz2 12, OpenFold3 12, Protenix v1 12, RoseTTAFold3 12, Chai-1 11, ESMFold2 27, ESMFold2-Fast 27, Protenix v2 10, IntelliFold2 9, OpenDDE 4. Engine label B.
 **Chai-1 engine, n = 40:** CUDA illegal memory access after near-full reserved memory (176.9 / 178.35 GiB), classified as OOM (`run_size.py`: a non-OOM `CUDA error` with the process peak reserved >= 98 % of the card is `oom`, the original error is kept in the sizes record field `oom_classified_from`); the same cell under `CUDA_LAUNCH_BLOCKING` gives a clean CUDA out of memory (diagnosis of the engine session). The only cell affected by this rule on this card. The first record (n = 40 `failed`, illegal memory access) is kept in `paper/invalid_archive/f9_chai1_engine_n40_ima/` on the B200. Chai-1 edge: 39 ok / 40 OOM.
 
-## RTX 5090: engine arm on the unreleased engine branch 5090-int, random weights on a rented 4x RTX 5090 (DATA_STATUS, 2026-11-24)
+## RTX 5090: engine 3.0.10 arm (measured on branch 5090-int), random weights on a rented 4x RTX 5090 (DATA_STATUS, 2026-11-24)
 
-`data/F9_rtx5090_5090int_unreleased.csv` (9 rows, engine bf16) and `data/F9_rtx5090_sizes_5090int_unreleased.csv` (every probe). `data/F9_rtx5090.csv`
+**Released as 3.0.10 (2026-11-24):** engine `5090-int` 07bf36ae4 -> v3.0.10 changes no code the RTX 5090 runs (TokenDiTMiniWorldBiasOnly `backend_versions` number, the GPU-less prebuild plan, an A100-only `MWE_SM120` guard in `wide_ops.cu`), so these rows are the 3.0.10 rows; the CSV `engine` columns say so and keep the measured commit.
+
+`data/F9_rtx5090_3010.csv` (9 rows, engine bf16) and `data/F9_rtx5090_sizes_3010.csv` (every probe). `data/F9_rtx5090.csv`
 (released engine 3.0.6, real weights, cssb-rtx) is unchanged; the new CSVs carry the previous value per row (`largest_ok_prev`, `first_not_ok_prev`,
 `peak_alloc_gib_at_edge_prev`, `edge_change`) and per probe (`status_prev`, `model_peak_alloc_gib_prev`, `peak_ratio`).
 

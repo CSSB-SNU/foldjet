@@ -67,17 +67,19 @@ Engine 3.0.9 (PyPI, tag v3.0.9, 2026-11-22) contains the code of both labels (B2
 sample k median Ca/C1' RMSD 0.658 A (p90 2.66, 135 pairs, now including the nucleic-acid-only targets); PyTorch sample-to-sample baseline
 2.663 A (270 pairs); median |dpLDDT| 0.51 vs 1.09. Replaces the ESMFold2 rows of `data/F5_b200_pairs_summary.csv` (200 steps: 0.604 A, 105 pairs).
 
-## RTX 5090: engine bf16 on the unreleased 5090-int branch + engine FP8, sample pairs and FoldBench scores (DATA_STATUS, 2026-11-24)
+## RTX 5090: engine 3.0.10 bf16 (measured on branch 5090-int) + engine FP8, sample pairs and FoldBench scores (DATA_STATUS, 2026-11-24)
+
+**Released as 3.0.10 (2026-11-24):** engine `5090-int` 07bf36ae4 -> v3.0.10 changes no code the RTX 5090 runs (TokenDiTMiniWorldBiasOnly `backend_versions` number, the GPU-less prebuild plan, an A100-only `MWE_SM120` guard in `wide_ops.cu`), so these rows are the 3.0.10 rows; the CSV `engine` columns say so and keep the measured commit.
 
 Predictions of the F4 runs of the same date (see the F4 README): engine bf16 on cssb-rtx (real weights, the old rows' box), engine FP8 on the rented
-4x RTX 5090 (`vast5090`, real weights; `MINIWORLD_FP8=safe` + `MINIWORLD_FP8_MODEL`), engine branch `5090-int` 07bf36ae4 (**unreleased**), FoldForge
+4x RTX 5090 (`vast5090`, real weights; `MINIWORLD_FP8=safe` + `MINIWORLD_FP8_MODEL`), engine branch `5090-int` 07bf36ae4 (= 3.0.10 on sm_120), FoldForge
 49d41bb. The PyTorch reference = the existing 5090 PyTorch-arm predictions of the 3.0.6 campaign (not re-run: same inputs and seeds, and FoldForge
 6a0593e -> 49d41bb changed only ESMFold2 code). `data/F5_rtx5090_pairs_summary.csv` (released engine) is unchanged.
 
-- `data/F5_rtx5090_5090int_unreleased_pairs_summary.csv`: part (a) for arms `engine` and `engine_fp8` + the PyTorch baseline, with the released rows
+- `data/F5_rtx5090_3010_pairs_summary.csv`: part (a) for arms `engine` and `engine_fp8` + the PyTorch baseline, with the released rows
   side by side (`*_prev`, `rmsd_median_new_over_prev`; there is no previous 5090 FP8 arm). Pairs: `pair.py` per predictor on the cluster CPU
   (10-minute jobs) for bf16; for FP8 on the rented node's CPU (the 7 GB of PAE arrays were not copied back; the PyTorch predictions were copied there).
-- `data/F5_rtx5090_5090int_unreleased_gt.csv`, `..._gt_summary.csv`: part (b), **the first FoldBench-evaluator scoring of 5090 predictions** (PyTorch,
+- `data/F5_rtx5090_3010_gt.csv`, `..._gt_summary.csv`: part (b), **the first FoldBench-evaluator scoring of 5090 predictions** (PyTorch,
   engine, FP8 arms), cluster CPU in 10-minute pieces (one (predictor, arm, FoldBench task) per job: `evaluate_ranked.py --targets <task>`, the
   per-task raw tables merged afterwards; FP8 from a copy holding the CIFs and pLDDT only).
 

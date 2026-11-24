@@ -116,7 +116,9 @@ a553001e1 for the engine arm, arms engine / torch, 27 / 27 targets ok on both ar
 now run; `data/F4_failures_b200_esmfold2_134.csv` is empty). Engine 1.20-7.31 s (8j62 2,008 tokens: 7.31 s, was 8.13 at 200 steps),
 PyTorch 2.87-95.3 s. Engine arm backend: all cuda except the declared B200 LayerNorm exception (width 256 bf16, >= 384^2 rows → Triton).
 
-## RTX 5090: engine arm on the unreleased engine branch 5090-int + FP8 arm + Anthropic arm (DATA_STATUS, 2026-11-24)
+## RTX 5090: engine 3.0.10 arm (measured on branch 5090-int) + FP8 arm + Anthropic arm (DATA_STATUS, 2026-11-24)
+
+**Released as 3.0.10 (2026-11-24):** engine `5090-int` 07bf36ae4 -> v3.0.10 changes no code the RTX 5090 runs (TokenDiTMiniWorldBiasOnly `backend_versions` number, the GPU-less prebuild plan, an A100-only `MWE_SM120` guard in `wide_ops.cu`), so these rows are the 3.0.10 rows; the CSV `engine` columns say so and keep the measured commit.
 
 **Engine:** branch `5090-int` 07bf36ae4 as source (`ENGINE_SRC`): 3.0.9 + origin/main + Boltz-2 up-gate transition and token pair-bias hoist on sm_120
 + the RTX 5090 FP8 routes (off unless `MINIWORLD_FP8` is set). **Unreleased.** FoldForge 49d41bb (differs from the 3.0.6 campaign's 6a0593e only in
@@ -124,7 +126,7 @@ ESMFold2 code). Protocol of `rtx5090.sh` unchanged (27 targets, seeds 0, 200 ste
 (predictor, arm), warm median of cold + warm). ESMFold2 / ESMFold2-Fast: not feasible on the 5090 (16 GB host RAM), as before. OpenFold3-preview2:
 not in the 5090 campaign (as before).
 
-**(1) engine bf16, cssb-rtx (the box of the old rows), real weights** — `data/F4_times_rtx5090_5090int_unreleased.csv` (243 rows; `s` new, `s_prev` the
+**(1) engine bf16, cssb-rtx (the box of the old rows), real weights** — `data/F4_times_rtx5090_3010.csv` (243 rows; `s` new, `s_prev` the
 released row: 3.0.6, OpenDDE 3.0.8; `prev_over_s` = old / new, > 1 = faster; peak memory both; PyTorch time of the 3.0.6 campaign for reference).
 `data/F4_times_rtx5090.csv` is unchanged. Runs 2026-11-24 09:26-11:07 KST under the GPU lock; every run `all_cuda: true`; the out-of-memory cells are
 exactly the old ones (no new OOM, none recovered).
@@ -153,7 +155,7 @@ profiled yet). Large targets are 5-32 % faster.
 **(2) engine FP8 + same-machine engine bf16 control, rented 4x RTX 5090 (`vast5090`, 575 W, Xeon Gold 6530 host), real weights** — the FP8 arm
 (`MINIWORLD_FP8=safe` + `MINIWORLD_FP8_MODEL=<predictor>`, lazy guards, `fp8.check()` after each forward with up to 3 redo = the H100 protocol;
 on the 5090 `safe` = the `SM120_ROUTES` slots TriAttn, TriMul, OPM, PWA, token DiT, atom DiT; the Transition is excluded from the preset) and the bf16 control were run on the same rented node,
-4 jobs at a time (one per GPU) from one queue. `data/F4_times_rtx5090_fp8_5090int_unreleased.csv`. That host is ~2.7x slower than cssb-rtx on the
+4 jobs at a time (one per GPU) from one queue. `data/F4_times_rtx5090_fp8_3010.csv`. That host is ~2.7x slower than cssb-rtx on the
 host-bound small targets (AF3 8gzl 8.8 s vs 3.2 s) and equal on the GPU-bound ones (8j62 39.5 vs 40.0 s): **compare FP8 with the vast bf16 column, not
 with the cssb-rtx rows.**
 

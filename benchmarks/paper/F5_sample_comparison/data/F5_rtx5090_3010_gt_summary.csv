@@ -1,9 +1,9 @@
 id,card,engine_version,foldforge_commit,arm,kind,n,median_abs_diff,mean_signed_diff,within_ref_sd,r
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,engine,all,197,0.0037,0.0027,0.9036,0.9971
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,engine,interface,92,0.0034,0.0026,0.913,0.997
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,engine,ligand,25,0.0054,0.007,0.84,0.9978
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,engine,monomer,80,0.0038,0.0014,0.9125,0.995
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,engine_fp8,all,197,0.0042,0.0018,0.8629,0.9885
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,engine_fp8,interface,92,0.0035,0.0074,0.913,0.9835
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,engine_fp8,ligand,25,0.0058,0.0049,0.84,0.9979
-F5,rtx5090,5090-int 07bf36ae4 (unreleased); engine_fp8 on vast5090,49d41bbf6,engine_fp8,monomer,80,0.0052,-0.0057,0.8125,0.9932
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,engine,all,197,0.0037,0.0027,0.9036,0.9971
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,engine,interface,92,0.0034,0.0026,0.913,0.997
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,engine,ligand,25,0.0054,0.007,0.84,0.9978
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,engine,monomer,80,0.0038,0.0014,0.9125,0.995
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,engine_fp8,all,197,0.0042,0.0018,0.8629,0.9885
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,engine_fp8,interface,92,0.0035,0.0074,0.913,0.9835
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,engine_fp8,ligand,25,0.0058,0.0049,0.84,0.9979
+F5,rtx5090,3.0.10 (measured on engine 5090-int 07bf36ae4: same sm_120 runtime code as v3.0.10); engine_fp8 on vast5090,49d41bbf6,engine_fp8,monomer,80,0.0052,-0.0057,0.8125,0.9932
