@@ -98,6 +98,8 @@ augmentations in one pass, step graph, H100 stand-in pools, real weights, 3 repe
 (+ runs, steps): **AF3 0.4375 s / example, Protenix v1 0.4291** (H100 engine 0.812 / 0.787: B200 1.86x / 1.83x faster); triton_calls 0 (the
 B200 LayerNorm D64 bf16 route is CUDA on this main). The PyTorch / compile / cuEq rows of `f6_summary_b200.csv` are not re-run.
 
+The profile run that was prepared for this question but never launched (superseded by the fix above) is kept in [B200_PROFILE_RUN.md](B200_PROFILE_RUN.md).
+
 ## Data-parallel training on 4x RTX 5090 (PCIe, no NVLink): 1 GPU vs 4 GPUs step time (DATA_STATUS, 2026-11-24)
 
 Measured on a rented 4x RTX 5090 node, to back the multi-GPU statement with a measured step time instead of "should".

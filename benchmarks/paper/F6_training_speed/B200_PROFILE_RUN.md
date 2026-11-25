@@ -1,5 +1,9 @@
 # B200 profile run of the F6 engine arm (prepared 2026-11-23, NOT launched: all 8 GPUs were in use by a colleague)
 
+> **Status (2026-11-25, repository tidy-up):** moved here from the repository root. This was a prepared, never-launched run plan. The cause it was
+> meant to find (the B200 atom-local attention tail on CUDA cores) was found and fixed separately; see "B200 engine arm re-measured on engine main
+> a553001e1" in [README.md](README.md). Kept as a record; paths in it refer to the B200 host and the `f6prof` scratch branch.
+
 Purpose: find why the engine arm of F6 is slower on the B200 (AF3 1.150 s, Protenix v1 1.140 s per example) than on the H100 (0.812 / 0.787 s) although
 the E1 operators are faster. The H100 profile of the same step (`~/foldforge-scratch/f6prof_out/h100/`) is the reference.
 
