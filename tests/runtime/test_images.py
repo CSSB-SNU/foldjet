@@ -7,12 +7,12 @@ import pytest
 import torch
 from conftest import cli
 
-from foldforge.models.config import Config, OutputConfig
-from foldforge.models.io import images, paths
-from foldforge.models.io.cli import parse
-from foldforge.models.io.confidence import from_af3, from_atom_confidence
-from foldforge.models.io.output import Decoded, write_output
-from foldforge.prediction import Prediction
+from foldjet.models.config import Config, OutputConfig
+from foldjet.models.io import images, paths
+from foldjet.models.io.cli import parse
+from foldjet.models.io.confidence import from_af3, from_atom_confidence
+from foldjet.models.io.output import Decoded, write_output
+from foldjet.prediction import Prediction
 
 
 def test_selection_defaults_validation_and_cli():
@@ -202,7 +202,7 @@ def test_each_kind_renders_real_png(kind, tmp_path):
 def test_dense_distogram_retention_preserves_existing_contact_output():
     from types import SimpleNamespace
 
-    from foldforge.modules.dense.head import DistogramHead
+    from foldjet.modules.dense.head import DistogramHead
 
     head = DistogramHead(c_pair=4, num_bins=4)
     embeddings = {"pair": torch.ones(2, 2, 4)}

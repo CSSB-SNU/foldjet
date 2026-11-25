@@ -1,15 +1,15 @@
-digraph FoldForge {
+digraph FoldJet {
   graph [rankdir=TB, compound=true, newrank=true, bgcolor="#f6f8fc", pad="0.5", nodesep="0.32", ranksep="0.62", splines=polyline, fontname="Noto Sans CJK KR", fontsize=24,
-    label="FoldForge · 모델별 코드 분기 지도\n2026-11-10 · 장치 고정·독립 입력·트렁크 재사용·확산 샘플링", labelloc=t, fontcolor="#12223b"];
+    label="FoldJet · 모델별 코드 분기 지도\n2026-11-10 · 장치 고정·독립 입력·트렁크 재사용·확산 샘플링", labelloc=t, fontcolor="#12223b"];
   node [shape=box, style="rounded,filled", fillcolor="white", color="#c5cfdf", penwidth=1.4, margin="0.18,0.13", fontname="Noto Sans CJK KR", fontsize=14, fontcolor="#172b47"];
   edge [color="#72829c", arrowsize=0.8, penwidth=1.4, fontname="Noto Sans CJK KR", fontsize=11, fontcolor="#52637c"];
 
   subgraph cluster_public {
     label="00  사용자가 호출하는 API"; fontsize=19; color="#b9cae4"; style="rounded,filled"; fillcolor="#edf3fd";
-    cli [label="foldforge fold MODEL", URL="../../src/foldforge/cli.py"];
-    one_shot [label="predict(inputs, config)\n한 번 실행하는 편의 함수", URL="../../src/foldforge/api.py"];
-    input_api [label="ff.load_inputs(source) → Inputs\n입력·리소스 검증과 원점 보관\n여러 모델에 같은 입력 재사용", fillcolor="#e1f4ed", URL="../../src/foldforge/inputs.py"];
-    model_api [label="ff.load_model(name, config, device) → Predictor\nGPU 고정 · 가중치·실행 래퍼 1회 구성\n호출 보호 · 전역 설정/RNG 복원", fillcolor="#e1f4ed", URL="../../src/foldforge/api.py"];
+    cli [label="foldjet fold MODEL", URL="../../src/foldjet/cli.py"];
+    one_shot [label="predict(inputs, config)\n한 번 실행하는 편의 함수", URL="../../src/foldjet/api.py"];
+    input_api [label="ff.load_inputs(source) → Inputs\n입력·리소스 검증과 원점 보관\n여러 모델에 같은 입력 재사용", fillcolor="#e1f4ed", URL="../../src/foldjet/inputs.py"];
+    model_api [label="ff.load_model(name, config, device) → Predictor\nGPU 고정 · 가중치·실행 래퍼 1회 구성\n호출 보호 · 전역 설정/RNG 복원", fillcolor="#e1f4ed", URL="../../src/foldjet/api.py"];
     cli -> one_shot;
     one_shot -> input_api; one_shot -> model_api;
     {rank=same; input_api; model_api;}
@@ -18,35 +18,35 @@ digraph FoldForge {
   subgraph cluster_load {
     label="01  공통 진입 · 모델 구성"; fontsize=19; color="#b9cae4"; style="rounded,filled"; fillcolor="#edf3fd";
     cfg [label="모델 + Config\nmodel / mode / precision\nbackend / execution"];
-    registry [label="모델 레지스트리\n모든 모델 → AlphaFold3\n같은 dense_atoms 입력 경로", URL="../../src/foldforge/models/__init__.py", tooltip="models/__init__.py: _REGISTRY"];
-    spec [label="DenseSpec 선택\nfamily별 구조·폭·규칙\nexact면 EXACT_CONVENTIONS 덮어쓰기", fillcolor="#e2e8ff", color="#929fd9", URL="../../src/foldforge/modules/dense/spec.py", tooltip="DenseSpec, SPECS, spec_for, EXACT_CONVENTIONS"];
-    load [label="공통 체크포인트 로더\n정밀도 구성 + resolved_spec 기록\nmodel_default → af3_default 별칭", URL="../../src/foldforge/models/loading.py"];
-    install [label="공통 엔진 설치 (install.py)\napply_plan: 모듈별 backend + guard\nskip / unsupported 정책", fillcolor="#e1f4ed", color="#7eb6a0", URL="../../src/foldforge/modules/engine/install.py"];
+    registry [label="모델 레지스트리\n모든 모델 → AlphaFold3\n같은 dense_atoms 입력 경로", URL="../../src/foldjet/models/__init__.py", tooltip="models/__init__.py: _REGISTRY"];
+    spec [label="DenseSpec 선택\nfamily별 구조·폭·규칙\nexact면 EXACT_CONVENTIONS 덮어쓰기", fillcolor="#e2e8ff", color="#929fd9", URL="../../src/foldjet/modules/dense/spec.py", tooltip="DenseSpec, SPECS, spec_for, EXACT_CONVENTIONS"];
+    load [label="공통 체크포인트 로더\n정밀도 구성 + resolved_spec 기록\nmodel_default → af3_default 별칭", URL="../../src/foldjet/models/loading.py"];
+    install [label="공통 엔진 설치 (install.py)\napply_plan: 모듈별 backend + guard\nskip / unsupported 정책", fillcolor="#e1f4ed", color="#7eb6a0", URL="../../src/foldjet/modules/engine/install.py"];
     {rank=same; cfg; registry; spec; load; install;}
     cfg -> registry -> spec -> load -> install;
   }
 
   subgraph cluster_forward {
     label="02  같은 forward 안에서 달라지는 계산"; fontsize=19; color="#b9cae4"; style="rounded,filled"; fillcolor="#ffffff";
-    call_api [label="model(inputs) 또는 model.run_trunk(inputs)\n같은 특징 준비와 트렁크 계산\n원본 입력 보존 · 독립 트렁크 시드/pass", fillcolor="#e1f4ed", URL="../../src/foldforge/api.py"];
-    feature [label="모델별 입력 규칙 적용\nMSA 중복·비단백질 열 / 원자 목록·순서\nconformer·template 규칙", URL="../../src/foldforge/data/features/dense_conventions.py"];
+    call_api [label="model(inputs) 또는 model.run_trunk(inputs)\n같은 특징 준비와 트렁크 계산\n원본 입력 보존 · 독립 트렁크 시드/pass", fillcolor="#e1f4ed", URL="../../src/foldjet/api.py"];
+    feature [label="모델별 입력 규칙 적용\nMSA 중복·비단백질 열 / 원자 목록·순서\nconformer·template 규칙", URL="../../src/foldjet/data/features/dense_conventions.py"];
     lm [shape=diamond, style=filled, label="language_model", fillcolor="#eeeaff", color="#aa9dd9"];
     no_lm [label="추가 LM 없음\nAF3 / OpenFold3 / IntelliFold\nBoltz / Protenix / RF3 / OpenDDE"];
-    esm2 [label="Chai-1\nESM2-3B → token embedding\nPredictor가 tower 가중치 보관", fillcolor="#eeeaff", color="#aa9dd9", URL="../../src/foldforge/models/io/language.py"];
-    esmc [label="ESMFold2 / Fast\nESM-C-6B → pair 표현\nPredictor가 tower·shim 가중치 보관", fillcolor="#eeeaff", color="#aa9dd9", URL="../../src/foldforge/models/io/language.py"];
-    init [label="_prepare_batch → _run_trunk\ntarget / pair / single 상태 초기화\nMC dropout 추첨: fold당 1회\n공통 총 pass 반복", fillcolor="#eaf1fc", URL="../../src/foldforge/models/architectures/af3.py"];
+    esm2 [label="Chai-1\nESM2-3B → token embedding\nPredictor가 tower 가중치 보관", fillcolor="#eeeaff", color="#aa9dd9", URL="../../src/foldjet/models/io/language.py"];
+    esmc [label="ESMFold2 / Fast\nESM-C-6B → pair 표현\nPredictor가 tower·shim 가중치 보관", fillcolor="#eeeaff", color="#aa9dd9", URL="../../src/foldjet/models/io/language.py"];
+    init [label="_prepare_batch → _run_trunk\ntarget / pair / single 상태 초기화\nMC dropout 추첨: fold당 1회\n공통 총 pass 반복", fillcolor="#eaf1fc", URL="../../src/foldjet/models/architectures/af3.py"];
     trunk_kind [shape=diamond, style=filled, label="트렁크 구조\nDenseSpec flags", fillcolor="#e2e8ff", color="#929fd9"];
     full [label="_single_pair_trunk · single + pair\nAF3 / OpenFold3: 기본 계열\nIntelliFold: pair 폭 512\nBoltz: 64층·자체 template\nProtenix: v1/v2 폭·template 차이 + MC dropout\nRF3: 자체 template\nOpenDDE: pair 폭 384", fillcolor="#eaf1fc", color="#93afd5"];
-    chai [label="Chai-1 · 같은 _single_pair_trunk\nparallel Pairformer + parallel MSA\n같은 입력에서 계산한 갱신값을 합산\nGPU 동시 실행을 뜻하지 않음\ngrouped OPM / pair 폭 256", fillcolor="#eeeaff", color="#aa9dd9", URL="../../src/foldforge/modules/engine/pairformer.py"];
-    pair_only [label="ESMFold2 · pair-only 트렁크\n_pair_only_injection: 매 pass LM/MSA 입력\n_pair_only_trunk: SSM·pre-coda carry\n_finalize_pair_only: 마지막 pass readout/coda\nFast: 24층·MSA 스택 없음", fillcolor="#eeeaff", color="#aa9dd9", URL="../../src/foldforge/models/architectures/af3.py", tooltip="Evoformer: injection / recurrence / finalization"];
+    chai [label="Chai-1 · 같은 _single_pair_trunk\nparallel Pairformer + parallel MSA\n같은 입력에서 계산한 갱신값을 합산\nGPU 동시 실행을 뜻하지 않음\ngrouped OPM / pair 폭 256", fillcolor="#eeeaff", color="#aa9dd9", URL="../../src/foldjet/modules/engine/pairformer.py"];
+    pair_only [label="ESMFold2 · pair-only 트렁크\n_pair_only_injection: 매 pass LM/MSA 입력\n_pair_only_trunk: SSM·pre-coda carry\n_finalize_pair_only: 마지막 pass readout/coda\nFast: 24층·MSA 스택 없음", fillcolor="#eeeaff", color="#aa9dd9", URL="../../src/foldjet/models/architectures/af3.py", tooltip="Evoformer: injection / recurrence / finalization"];
     carry [label="트렁크 출력\nfirst_pass / last_pass 플래그로 제어\n모든 모델: 총 passes = num_recycles", fillcolor="#eaf1fc", tooltip="1, 2, 10회에 대한 전 family 반복문 검증"];
     structural [shape=diamond, style=filled, label="_prepare_diffusion_inputs\nstructural_tokens?", fillcolor="#fff0da", color="#d3ad6f"];
-    diffusion_context [label="TrunkOutput → TrunkState로 보관\n잔기 trunk + diffusion 입력·복원 정보\n같은 Predictor·GPU에 묶음 / close로 해제", fillcolor="#eaf1fc", URL="../../src/foldforge/models/architectures/af3.py"];
-    expand [label="OpenDDE만 실행\n잔기 → structural tokens 확장\n전용 refiner / pair 384 → diffusion 128", fillcolor="#fff0da", color="#d3ad6f", URL="../../src/foldforge/modules/dense/structural_tokens.py"];
-    sample_api [label="model.sample_diffusion(trunk, ...)\nseed / samples / steps 독립 지정\n특징 준비·LM·트렁크 재실행 없음", fillcolor="#dff1e9", URL="../../src/foldforge/api.py"];
-    sampling [label="공통 diffusion sampler + denoiser\n모델별 conditioning / token·atom DiT\nChai: churn·AdaLN·mask 규칙\nRF3: K/Q norm·parallel attention/transition\nESM: RoPE atom attention + rigid alignment\nBoltz: gated transition·sigma_min", fillcolor="#eaf1fc", URL="../../src/foldforge/models/architectures/af3.py", tooltip="AlphaFold3._sample_diffusion; modules/dense/diffusion_head.py"];
+    diffusion_context [label="TrunkOutput → TrunkState로 보관\n잔기 trunk + diffusion 입력·복원 정보\n같은 Predictor·GPU에 묶음 / close로 해제", fillcolor="#eaf1fc", URL="../../src/foldjet/models/architectures/af3.py"];
+    expand [label="OpenDDE만 실행\n잔기 → structural tokens 확장\n전용 refiner / pair 384 → diffusion 128", fillcolor="#fff0da", color="#d3ad6f", URL="../../src/foldjet/modules/dense/structural_tokens.py"];
+    sample_api [label="model.sample_diffusion(trunk, ...)\nseed / samples / steps 독립 지정\n특징 준비·LM·트렁크 재실행 없음", fillcolor="#dff1e9", URL="../../src/foldjet/api.py"];
+    sampling [label="공통 diffusion sampler + denoiser\n모델별 conditioning / token·atom DiT\nChai: churn·AdaLN·mask 규칙\nRF3: K/Q norm·parallel attention/transition\nESM: RoPE atom attention + rigid alignment\nBoltz: gated transition·sigma_min", fillcolor="#eaf1fc", URL="../../src/foldjet/models/architectures/af3.py", tooltip="AlphaFold3._sample_diffusion; modules/dense/diffusion_head.py"];
     restore [label="diffusion.restore(samples)\nOpenDDE: 잔기 레이아웃으로 복원\n다른 모델: 같은 샘플 객체 반환", fillcolor="#fff0da", color="#d3ad6f"];
-    heads [label="_predict_heads → 공통 출력\nconfidence + distogram은 잔기 표현 사용\n모델별 head 구조·bin·정규화·sample chunk", fillcolor="#eaf1fc", URL="../../src/foldforge/modules/dense/confidence.py"];
+    heads [label="_predict_heads → 공통 출력\nconfidence + distogram은 잔기 표현 사용\n모델별 head 구조·bin·정규화·sample chunk", fillcolor="#eaf1fc", URL="../../src/foldjet/modules/dense/confidence.py"];
     feature -> lm;
     lm -> no_lm [label="없음"];
     lm -> esm2 [label="esm2"];
@@ -69,15 +69,15 @@ digraph FoldForge {
   }
 
   subgraph cluster_engine {
-    label="03  엔진 모듈 · FoldForge는 backend 정책만 담당"; fontsize=19; color="#90baa8"; style="rounded,filled"; fillcolor="#f0f9f5";
-    module_kind [label="그래프는 엔진 클래스를 그대로 보유\nmodules.py: 모델 키 · 정밀도(master/fp32) 선택\npairformer.py: family별 PairformerBlock\ntransformers.py: TokenDiT / AtomDiT 스택\ngraph.py: 배치 축 어댑터 · EvoformerBlock", fillcolor="#dff1e9", URL="../../src/foldforge/modules/engine/modules.py"];
-    plan [label="apply_plan (policy.py)\n클래스별 backend 선택: backends.choose_backend\n요청 backend + 장치 capability → backend 또는 거부 사유\nPairformerBlock/Pairformer는 자식 모듈별로 설정", fillcolor="#dff1e9", URL="../../src/foldforge/modules/engine/policy.py"];
-    gate [shape=diamond, style=filled, label="guard: module.unsupported(*args)\n호출마다 엔진에 지원 여부를 묻는다", fillcolor="#dff1e9", color="#7eb6a0", URL="../../src/foldforge/modules/engine/policy.py"];
+    label="03  엔진 모듈 · FoldJet는 backend 정책만 담당"; fontsize=19; color="#90baa8"; style="rounded,filled"; fillcolor="#f0f9f5";
+    module_kind [label="그래프는 엔진 클래스를 그대로 보유\nmodules.py: 모델 키 · 정밀도(master/fp32) 선택\npairformer.py: family별 PairformerBlock\ntransformers.py: TokenDiT / AtomDiT 스택\ngraph.py: 배치 축 어댑터 · EvoformerBlock", fillcolor="#dff1e9", URL="../../src/foldjet/modules/engine/modules.py"];
+    plan [label="apply_plan (policy.py)\n클래스별 backend 선택: backends.choose_backend\n요청 backend + 장치 capability → backend 또는 거부 사유\nPairformerBlock/Pairformer는 자식 모듈별로 설정", fillcolor="#dff1e9", URL="../../src/foldjet/modules/engine/policy.py"];
+    gate [shape=diamond, style=filled, label="guard: module.unsupported(*args)\n호출마다 엔진에 지원 여부를 묻는다", fillcolor="#dff1e9", color="#7eb6a0", URL="../../src/foldjet/modules/engine/policy.py"];
     engine_call [label="선택된 backend의 엔진 forward\npytorch / cuda / triton / anthropic / cueq", fillcolor="#d4ece0", color="#7eb6a0"];
     dense [label="engine.unsupported = fallback\n그 호출만 엔진 pytorch backend 실행\n사유당 로그 1회", fillcolor="#fff0e9", color="#d89980"];
     error [label="engine.unsupported = error\nBackendUnsupportedError", fillcolor="#fff0e9", color="#d89980"];
-    result [label="serving.observe_call → 호출자\nserved / refused 호스트 집계\n집계는 kernel trace가 아님", fillcolor="#dff1e9", URL="../../src/foldforge/modules/engine/serving.py"];
-    capture [label="capture.py: 엔진 private API의 유일한 접점\nstatic_weights / static_inputs / 가중치 캐시 비우기\n(공개 API 요청: docs/ENGINE-REQUESTS.md)", fillcolor="#e7f4ec", URL="../../src/foldforge/modules/engine/capture.py"];
+    result [label="serving.observe_call → 호출자\nserved / refused 호스트 집계\n집계는 kernel trace가 아님", fillcolor="#dff1e9", URL="../../src/foldjet/modules/engine/serving.py"];
+    capture [label="capture.py: 엔진 private API의 유일한 접점\nstatic_weights / static_inputs / 가중치 캐시 비우기\n(공개 API 요청: docs/ENGINE-REQUESTS.md)", fillcolor="#e7f4ec", URL="../../src/foldjet/modules/engine/capture.py"];
     module_kind -> plan [label="load 시 1회"];
     plan -> gate [label="매 호출마다"];
     gate -> engine_call [label="None (지원)"];
@@ -90,8 +90,8 @@ digraph FoldForge {
 
   subgraph cluster_exec {
     label="04  공통 실행 정책 · 위 계산/dispatch를 감싸는 별도 층"; fontsize=19; color="#d0b67c"; style="rounded,filled"; fillcolor="#fff9ed";
-    scope [label="execution.scope\nmodel / denoiser / trunk\n모든 family: trunk 그래프", URL="../../src/foldforge/models/execution.py"];
-    report [label="공통 실행 보고서\nresolved_spec / trunk_passes\nengine_backends: 모듈별 backend · 거부 사유\nexecution_scope: module / composition / checks\n미관측은 fallback 증거가 아님\ncompiled 영역·graph replay는 집계 제외", URL="../../src/foldforge/models/execution.py"];
+    scope [label="execution.scope\nmodel / denoiser / trunk\n모든 family: trunk 그래프", URL="../../src/foldjet/models/execution.py"];
+    report [label="공통 실행 보고서\nresolved_spec / trunk_passes\nengine_backends: 모듈별 backend · 거부 사유\nexecution_scope: module / composition / checks\n미관측은 fallback 증거가 아님\ncompiled 영역·graph replay는 집계 제외", URL="../../src/foldjet/models/execution.py"];
     graph_gate [shape=diamond, style=filled, label="CUDA Graph 사용 가능?\n설정 ON + capture 가능\ntrunk/head 토큰 상한 이내", fillcolor="#fff0da", color="#d3ad6f"];
     graph_yes [label="CUDA Graph capture / replay\n크기 제한 LRU / 입력 수명에 맞춰 재구성\ndenoiser는 compile 설정 적용\ntrunk/head는 graph-only"];
     graph_no [label="Graph 없이 callable 실행\n기본 trunk/head 상한: 512 tokens\n상한 초과 시 trunk graph 건너뜀"];

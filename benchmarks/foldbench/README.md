@@ -1,11 +1,11 @@
 # FoldBench end to end
 
-The walltime of the whole FoldBench set (1,522 targets) through FoldForge AF3 on the engine, from the spec files to the written CIFs, in one
+The walltime of the whole FoldBench set (1,522 targets) through FoldJet AF3 on the engine, from the spec files to the written CIFs, in one
 Slurm job on 1..N GPUs: the number to compare with af3kit (the Anthropic AF3 kit) on the same set. Science per target: DeepMind AF3 weights,
 bf16, `compile` + CUDA graphs (`scope: trunk`), 5 trunk_seeds (42, 66, 101, 2024, 8888) x 5 samples, 200 steps, `--recycles 11`
 (11 trunk passes; the kit's 10 recycles), MSA up to 16,384 rows, templates as FoldBench gives them. Accuracy is scored separately from the CIFs.
 
-Result of record: [docs/records/foldbench_e2e_20261117.md](../../docs/records/foldbench_e2e_20261117.md) — FoldForge on engine 2.5.12
+Result of record: [docs/records/foldbench_e2e_20261117.md](../../docs/records/foldbench_e2e_20261117.md) — FoldJet on engine 2.5.12
 **5.27 / 5.31 h** per shard vs af3kit **6.36 / 6.27 h** (2 H100s, one shard per GPU), 1,522 / 1,522 targets done vs the kit's 1,506
 (16 out-of-memory failures on the largest): 1.20x end to end. That run used the earlier one-process-per-shard runner; `fb_multi.py` here
 replaces it (bucket sort, one scheduler for all GPUs, no OOM-with-graphs tail, small-target concurrency).
@@ -14,14 +14,14 @@ replaces it (bucket sort, one scheduler for all GPUs, no OOM-with-graphs tail, s
 
 | file | what |
 |---|---|
-| `build_specs.py` | FoldBench `inputs/<t>/data.yaml` -> FoldForge spec `<t>.yaml` + `<t>.chains.json` (FoldBench chain ids for the output CIFs) |
+| `build_specs.py` | FoldBench `inputs/<t>/data.yaml` -> FoldJet spec `<t>.yaml` + `<t>.chains.json` (FoldBench chain ids for the output CIFs) |
 | `fb_multi.py` | the parent: list, bucket sort, cost estimate, scheduler, worker processes, MPS, summary (no CUDA) |
 | `fb_multi_worker.py` | one worker: loads the model once, prefetches inputs / featurisations of its assigned targets, runs them, writes the outputs |
 | `fb_sched.py` | the scheduler and cost model (pure logic; also `fb_multi.py --simulate`) |
 | `fast_sort.py` | size + bucket of every target (`BucketShape.select(tokens, atoms, 1)`); `fast_sort.py build CCD_LMDB OUT_TSV` makes the CCD table |
 | `fb_data.py`, `fb_io.py` | featurisation of one (target, trunk_seed); CIF chain renaming + writing |
 | `foldbench_targets.txt` | the 1,522 targets |
-| `foldbench_af3_sizes.tsv` | AF3 tokens / atoms of every target (FoldForge featurisation, computed once) |
+| `foldbench_af3_sizes.tsv` | AF3 tokens / atoms of every target (FoldJet featurisation, computed once) |
 | `ccd_heavy_atoms.tsv` | CCD code -> heavy atoms, to count a target missing from the size table from its spec files |
 | `foldbench_cost_s.tsv` | measured seconds per target (1,492 targets, the 2026-11-16/17 runs): the cost estimate of the scheduler |
 | `run_py.sh` | the env's python directly (`FFENV`, never `pixi run`), this checkout's `src`, caches under `CACHE_ROOT` |
@@ -33,7 +33,7 @@ replaces it (bucket sort, one scheduler for all GPUs, no OOM-with-graphs tail, s
 # FOLDBENCH_ROOT: the FoldBench release (inputs/, meta/chain_seqid_map.tsv, ground_truth/)
 # FOLDBENCH_RESOURCES: BioMolDB_20261014/lmdb (foldbench/msa/a3m.lmdb, foldbench/msa/a3m_rna.lmdb, foldbench/template/template.lmdb)
 benchmarks/foldbench/run_py.sh build_specs.py benchmarks/foldbench/foldbench_targets.txt <spec dir> \
-    --foldbench $FOLDBENCH_ROOT --resources $FOLDBENCH_RESOURCES      # --ccd-db: default foldforge.paths.ccd_db()
+    --foldbench $FOLDBENCH_ROOT --resources $FOLDBENCH_RESOURCES      # --ccd-db: default foldjet.paths.ccd_db()
 ```
 
 CPU only, ~10 s for the 1,522 targets. The specs hold absolute paths (FASTA, databases). Per spec: `n_trunk_samples 1` (the worker runs its own
@@ -44,7 +44,7 @@ non-zero `template_offset` are dropped and logged (docstring of `build_specs.py`
 ## Run
 
 ```bash
-sbatch --export=ALL,SPECS=<spec dir>,OUT=<run dir>,FFENV=<FoldForge pixi env> benchmarks/foldbench/run_multi.sbatch
+sbatch --export=ALL,SPECS=<spec dir>,OUT=<run dir>,FFENV=<FoldJet pixi env> benchmarks/foldbench/run_multi.sbatch
 # directly, on the GPUs of an allocation (CUDA_VISIBLE_DEVICES, or --gpus 0,1):
 benchmarks/foldbench/run_py.sh fb_multi.py af3 benchmarks/foldbench/foldbench_targets.txt <spec dir> <run dir> \
     --recycles 11 --group-max-tokens 512 --small-concurrency 3
@@ -55,13 +55,13 @@ benchmarks/foldbench/run_py.sh fb_multi.py af3 benchmarks/foldbench/foldbench_ta
 One job, any number of GPUs (`--gres=gpu:h100:N`; the example uses 2 with `-c 32 --mem=120G`). A walltime run is one continuous job: do
 not split it into time chunks. Resumable: a target with `<run dir>/<t>/done` (or `failed/marker`) is skipped on a resubmit. Arguments that
 `fb_multi.py` does not know go to the workers (`--recycles`, `--group-max-tokens`, `--seeds`, `--nd`, `--steps`, `--scope`, `--eager`, ...;
-see the top of `fb_multi_worker.py`). `PYTORCH_CUDA_ALLOC_CONF`: FoldForge's default `expandable_segments:True` unless you set it
+see the top of `fb_multi_worker.py`). `PYTORCH_CUDA_ALLOC_CONF`: FoldJet's default `expandable_segments:True` unless you set it
 ([CONFIG.md](../../docs/guides/CONFIG.md)). `FF_ALLOW_SIZE_MISMATCH=1` skips the checkpoint blob size check in the workers (a local blob of
 another converter version; off by default).
 
 ## Scheduler
 
-- **Bucket sort.** Every target gets its exact FoldForge size bucket (token bucket, atom bucket) from `foldbench_af3_sizes.tsv` (targets not
+- **Bucket sort.** Every target gets its exact FoldJet size bucket (token bucket, atom bucket) from `foldbench_af3_sizes.tsv` (targets not
   listed are counted from their spec files with `ccd_heavy_atoms.tsv`, < 1 s). Targets of one bucket share their compiled graphs.
 - **Cost.** Measured seconds from `foldbench_cost_s.tsv` (and `--calib-runs <earlier run dirs>`, whose `run.json` `total_s` override it);
   others `a * tokens^b` fitted on the measured targets >= 256 tokens.

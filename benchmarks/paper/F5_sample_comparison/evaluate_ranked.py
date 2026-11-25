@@ -1,4 +1,4 @@
-"""[FoldForge paper F5: the paper's foldbench_evaluate_ranked.py wrapper around the upstream FoldBench evaluator; data roots from FOLDBENCH_ROOT / FB_UPSTREAM.]
+"""[FoldJet paper F5: the paper's foldbench_evaluate_ranked.py wrapper around the upstream FoldBench evaluator; data roots from FOLDBENCH_ROOT / FB_UPSTREAM.]
 
 Score a FoldBench prediction directory with the upstream FoldBench evaluator.
 
@@ -105,7 +105,7 @@ def build_reference(
             tid, seed, sample = m["tid"], 0, int(m["sample"])
         targets.add(tid)
         # PAPER COPY: the ranking score is the sample's mean pLDDT, written by foldbench_collect.py as ranking.json beside the CIFs
-        # (FoldForge writes no AF3-style ranking_score). Without that file the constant 1 of the original is kept.
+        # (FoldJet writes no AF3-style ranking_score). Without that file the constant 1 of the original is kept.
         ranking_file = cif.parent / "ranking.json"
         score = json.loads(ranking_file.read_text()).get(str(sample), 1) if ranking_file.exists() else 1
         rows.append((tid, seed, sample, score, str(cif.resolve())))

@@ -6,13 +6,13 @@ import numpy as np
 import pytest
 import torch
 
-from foldforge.data.features.dense_conventions import centre_conformers
-from foldforge.models import entry, is_dense, registered_models
-from foldforge.modules.dense.spec import ALPHAFOLD3, SPECS
+from foldjet.data.features.dense_conventions import centre_conformers
+from foldjet.models import entry, is_dense, registered_models
+from foldjet.modules.dense.spec import ALPHAFOLD3, SPECS
 
 
 def _meta_model(family: str) -> torch.nn.Module:
-    from foldforge.models.checkpoints.legacy import dense_model
+    from foldjet.models.checkpoints.legacy import dense_model
 
     with torch.device("meta"):
         return dense_model(SPECS[family])
@@ -23,7 +23,7 @@ def test_every_dense_registry_row_names_a_spec_and_the_one_architecture():
     assert {"af3", "intellifold2", "openfold3", "openfold3-preview2"} <= set(dense)
     for name in dense:
         row = entry(name)
-        assert row.architecture == "foldforge.models.architectures.af3.AlphaFold3"
+        assert row.architecture == "foldjet.models.architectures.af3.AlphaFold3"
         assert (row.family or "alphafold3") in SPECS
 
 
@@ -89,7 +89,7 @@ def test_per_block_pair_norm_has_one_norm_and_projection_per_block():
 def test_transposed_column_bias_only_touches_the_column_direction():
     from dataclasses import replace
 
-    from foldforge.models.checkpoints.legacy.attention import GridSelfAttention
+    from foldjet.models.checkpoints.legacy.attention import GridSelfAttention
 
     flagged = replace(ALPHAFOLD3, transposed_column_pair_bias=True)
     assert not GridSelfAttention(
@@ -134,7 +134,7 @@ def test_rosettafold3_declares_its_attention_and_template_conventions():
 
 
 def test_masked_global_norm_ignores_padding_and_counts_missing_columns():
-    from foldforge.modules.dense.head import masked_global_norm
+    from foldjet.modules.dense.head import masked_global_norm
 
     torch.manual_seed(0)
     real = torch.randn(5, 7)
@@ -156,7 +156,7 @@ def test_openfold3_lineage_writes_each_bond_both_ways():
     """
     from types import SimpleNamespace
 
-    from foldforge.modules.dense.pair_init import BOND_SINGLE, token_bond_types
+    from foldjet.modules.dense.pair_init import BOND_SINGLE, token_bond_types
 
     def gather(pairs: list[list[int]]) -> SimpleNamespace:
         return SimpleNamespace(
@@ -177,7 +177,7 @@ def test_openfold3_lineage_writes_each_bond_both_ways():
     assert one_way[2, 3] == both[2, 3] == both[3, 2] == BOND_SINGLE + 1
     assert one_way[3, 2] == 0
 
-    from foldforge.data.features.bond_orders import AROMATIC
+    from foldjet.data.features.bond_orders import AROMATIC
 
     ordered = SimpleNamespace(
         **{
@@ -220,7 +220,7 @@ def test_protenix_recycles_under_the_release_s_mc_dropout():
 
 def test_protenix_reads_a_ligand_s_msa_column_as_its_residue_type():
     """AF3 writes a ligand's MSA column as the gap; the Protenix lineage, UNK."""
-    from foldforge.data.features.dense_conventions import nonprotein_msa_as_query
+    from foldjet.data.features.dense_conventions import nonprotein_msa_as_query
 
     gap, unk = 21, 20
     # A protein token, two DNA tokens, a zinc; two identical query rows and an
@@ -254,7 +254,7 @@ def test_protenix_reads_a_ligand_s_msa_column_as_its_residue_type():
 
 def test_rosettafold3_names_ligand_atoms_by_element():
     """RF3 trained on element symbols as an atomised token's atom names."""
-    from foldforge.data.features.dense_conventions import element_names_for_ligands
+    from foldjet.data.features.dense_conventions import element_names_for_ligands
 
     def chars(name: str) -> list[int]:
         return [ord(c) - 32 for c in name.ljust(4)[:4].rstrip()] + [0] * (4 - len(name))
@@ -277,7 +277,7 @@ def test_rosettafold3_names_ligand_atoms_by_element():
 
 def test_chiral_gradient_is_the_dihedral_error_s_derivative():
     """RoseTTAFold3's closed-form chirality input equals autograd's derivative."""
-    from foldforge.modules.dense.chirality import dihedral_error_gradient
+    from foldjet.modules.dense.chirality import dihedral_error_gradient
 
     torch.manual_seed(0)
     xyz = torch.randn(2, 12, 3, dtype=torch.float64)
@@ -308,8 +308,8 @@ def test_confidence_head_sample_chunk_rule():
     """
     import torch
 
-    from foldforge.modules.dense.head import ConfidenceHead
-    from foldforge.modules.dense.spec import SPECS
+    from foldjet.modules.dense.head import ConfidenceHead
+    from foldjet.modules.dense.spec import SPECS
 
     head = ConfidenceHead(n_pairformer_layers=1).to(torch.bfloat16)
     assert [head.sample_chunk(5, n) for n in (128, 512, 768, 1024, 2048)] == [

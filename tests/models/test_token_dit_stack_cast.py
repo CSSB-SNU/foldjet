@@ -10,7 +10,7 @@ from __future__ import annotations
 import torch
 from torch import nn
 
-from foldforge.modules.engine.transformers import TokenDiTStack
+from foldjet.modules.engine.transformers import TokenDiTStack
 
 
 class _Recorder(nn.Module):

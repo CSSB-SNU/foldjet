@@ -5,7 +5,7 @@
 # fresh kit process (the kit's route for OOM). No other retry: a target that fails stays failed (it is a result).
 # Changes to the kit: none in its run path, except (1) the AF3 weight layout of the copy (xfold.of3.OF3 = False, two lines) with DeepMind's weights,
 # (2) opt/af3_torch_opt/featurise.py passes ref_max_modified_date (upstream run_alphafold.py does; original kept as featurise.py.orig_kit).
-# The kit takes FoldForge's AF3 JSON (MSAs + templates inside, hence --norun_data_pipeline): build them with build_inputs.py.
+# The kit takes FoldJet's AF3 JSON (MSAs + templates inside, hence --norun_data_pipeline): build them with build_inputs.py.
 # Kit defaults kept: 10 recycles (11 trunk passes), 200 steps, 5 samples per seed; the seeds are the JSON's modelSeeds.
 SH=$1
 KIT_ROOT=${KIT_ROOT:?KIT_ROOT=<dir of the kit installs, as in benchmarks/5i28_kits>}

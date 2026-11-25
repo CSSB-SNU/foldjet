@@ -1,4 +1,4 @@
-"""``foldforge.train.fused_opt`` against the per-tensor path of ``train/optim.py``.
+"""``foldjet.train.fused_opt`` against the per-tensor path of ``train/optim.py``.
 
 CPU, tiny model: clip, Adam, EMA, lr schedule, frozen / None-grad parameters, groups.
 """
@@ -10,8 +10,8 @@ import pytest
 import torch
 from torch import nn
 
-from foldforge.train import fused_opt, optim
-from foldforge.train.config import TrainConfig
+from foldjet.train import fused_opt, optim
+from foldjet.train.config import TrainConfig
 
 
 class Tiny(nn.Module):

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import torch
 
-from foldforge.data.features.dense import Templates
-from foldforge.data.features.dense_conventions import _GAP_RESTYPE
-from foldforge.modules.dense.fused_template import FusedTemplateEmbedding
-from foldforge.modules.dense.spec import SPECS
+from foldjet.data.features.dense import Templates
+from foldjet.data.features.dense_conventions import _GAP_RESTYPE
+from foldjet.modules.dense.fused_template import FusedTemplateEmbedding
+from foldjet.modules.dense.spec import SPECS
 
 
 def _empty(slots: int, tokens: int) -> Templates:

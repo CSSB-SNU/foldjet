@@ -10,7 +10,7 @@ from pathlib import Path
 
 def inventory(root: Path) -> list[dict]:
     rows = []
-    for path in sorted((root / "src/foldforge").rglob("*.py")):
+    for path in sorted((root / "src/foldjet").rglob("*.py")):
         relative = path.relative_to(root).as_posix()
         if not any(f"/{part}/" in relative for part in ("models", "modules")):
             continue

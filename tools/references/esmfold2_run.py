@@ -22,7 +22,7 @@ from esm.utils.structure.input_builder import (
 )
 from transformers.models.esmfold2.modeling_esmfold2 import ESMFold2Model
 
-from foldforge import paths
+from foldjet import paths
 
 ROOT = Path(__file__).resolve().parents[2]
 spec_path, out, seed = Path(sys.argv[1]), Path(sys.argv[2]), int(sys.argv[3])

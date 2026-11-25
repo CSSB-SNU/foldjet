@@ -7,7 +7,7 @@
 # usage: run.sh N        env: MODE=fast|exact|off (default fast = the kit mode compared so far), COPIES (default 4 at n=1, else 3)
 # Full log: logs/x<N>.log. Stdout: ONE line
 #   KIT rosettafold3 n=<N> exit=<rc> fwd=[<s>,...] warm_median=<s> templates_real=<k>/1 msa_rows=<r>
-# fwd = `FWDTIME` of fwdtimer.py: RF3WithConfidence.forward between torch.cuda.synchronize() calls (audit: same span as FoldForge), item order.
+# fwd = `FWDTIME` of fwdtimer.py: RF3WithConfidence.forward between torch.cuda.synchronize() calls (audit: same span as FoldJet), item order.
 # templates_real = 1/1 when EVERY forward's input (REALINPUT) has templated_tokens = 88*N and template_pairs = N*88*88 (5syd_A on every
 #   chain, intra-chain pairs only), else 0/1.
 # msa_rows = the full MSA depth handed to atomworks' FeaturizeMSALikeAF3 (MSAFULL line); RF3 then feeds n_msa rows per recycle (msa_stack).

@@ -15,7 +15,7 @@ import traceback
 
 import torch
 
-import foldforge as ff
+import foldjet as ff
 
 N = int(os.environ["PF_BLOCKS"]) if os.environ.get("PF_BLOCKS") else None
 _REF: dict = {}

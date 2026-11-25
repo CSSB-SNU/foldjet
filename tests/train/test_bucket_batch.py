@@ -1,4 +1,4 @@
-"""CPU tests of ``foldforge.train.bucket_batch``.
+"""CPU tests of ``foldjet.train.bucket_batch``.
 
 Padding / mask logic on small fake examples, the signature function, and the
 atom-attention gather tables against AF3's own ``AtomCrossAtt.compute_features`` (the
@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 import torch
 
-from foldforge.train.bucket_batch import (
+from foldjet.train.bucket_batch import (
     BucketOverflow,
     BucketSpec,
     bucket_example,
@@ -19,7 +19,7 @@ from foldforge.train.bucket_batch import (
     shape_signature,
     signature_diff,
 )
-from foldforge.train.data import TrainBatch
+from foldjet.train.data import TrainBatch
 
 features = pytest.importorskip("alphafold3.model.features")
 atom_layout = pytest.importorskip("alphafold3.model.atom_layout.atom_layout")

@@ -13,10 +13,10 @@ import pytest
 import torch
 from torch import nn
 
-import foldforge
-from foldforge import paths
-from foldforge.models import get_model, load, loading
-from foldforge.modules.dense.spec import SPECS, spec_for
+import foldjet
+from foldjet import paths
+from foldjet.models import get_model, load, loading
+from foldjet.modules.dense.spec import SPECS, spec_for
 
 
 class TinyModel(nn.Module):
@@ -44,7 +44,7 @@ def test_every_backend_spelling_reaches_one_loading_lifecycle(
     the CLI and the report call ``miniworld``; the loader normalises it once
     so a benchmark row never carries two spellings of one backend.
     """
-    from foldforge.models.checkpoints import miniworld
+    from foldjet.models.checkpoints import miniworld
 
     class DenseModel(TinyModel):
         def __init__(self, **kwargs: Any) -> None:
@@ -68,7 +68,7 @@ def test_every_backend_spelling_reaches_one_loading_lifecycle(
     model = load(
         "boltz2", tmp_path / "boltz2.miniworld.pt", backend=requested, device="cpu"
     )
-    report = model.foldforge_load_report
+    report = model.foldjet_load_report
     assert [path for path, _ in seen] == [tmp_path / "boltz2.miniworld.pt"]
     assert report["backend"] == recorded
     assert report["strict"] is True
@@ -76,12 +76,12 @@ def test_every_backend_spelling_reaches_one_loading_lifecycle(
     # Parameters stay fp32 (master precision): the split is the loader's, not the
     # backend's.
     assert model.projection.weight.dtype == torch.float32
-    assert model.foldforge_precision == "master"
+    assert model.foldjet_precision == "master"
     assert model.norm.weight.dtype == torch.float32
 
 
 def test_registry_returns_one_loader_and_retired_packages_are_absent():
-    root = Path(foldforge.__file__).parent
+    root = Path(foldjet.__file__).parent
     for name in ("af3", "protenix1", "protenix2", "opendde", "esmfold2"):
         bound = get_model(name)
         assert bound.func is load
@@ -97,7 +97,7 @@ def test_registry_returns_one_loader_and_retired_packages_are_absent():
 
 
 def test_miniworld_checkpoint_is_loaded_before_precision(tmp_path, monkeypatch):
-    from foldforge.models.checkpoints import miniworld
+    from foldjet.models.checkpoints import miniworld
 
     class DenseModel(TinyModel):
         def __init__(self, **kwargs: Any) -> None:
@@ -123,21 +123,21 @@ def test_miniworld_checkpoint_is_loaded_before_precision(tmp_path, monkeypatch):
         "boltz2", tmp_path / "boltz2.miniworld.pt", backend="pytorch", device="cpu"
     )
     assert model.projection.weight.dtype == torch.float32
-    assert model.foldforge_precision == "master"
+    assert model.foldjet_precision == "master"
     assert model.norm.weight.dtype == torch.float32
     assert model.diffusion_head.fourier_embeddings.weight.dtype == torch.float32
     torch.testing.assert_close(
         model.norm.weight, torch.full((4,), 1.000123), atol=0, rtol=0
     )
-    assert model.foldforge_load_report["strict"] is True
-    assert model.foldforge_load_report["precision"] == "master"
-    assert model.foldforge_load_report["parameter_dtype"] == str(torch.float32)
+    assert model.foldjet_load_report["strict"] is True
+    assert model.foldjet_load_report["precision"] == "master"
+    assert model.foldjet_load_report["parameter_dtype"] == str(torch.float32)
 
 
 def test_af3_default_keeps_released_values_in_fp32_master_parameters(
     tmp_path, monkeypatch
 ):
-    from foldforge.models.checkpoints import miniworld
+    from foldjet.models.checkpoints import miniworld
 
     class DenseModel(TinyModel):
         def __init__(self, **kwargs: Any) -> None:
@@ -171,7 +171,7 @@ def test_af3_default_keeps_released_values_in_fp32_master_parameters(
     )
     assert model.projection.weight.dtype == torch.float32
     assert model.diffusion_head.projection.weight.dtype == torch.float32
-    assert model.foldforge_precision == "master"
+    assert model.foldjet_precision == "master"
     torch.testing.assert_close(
         model.diffusion_head.projection.weight,
         torch.full((4, 4), 1.000123),
@@ -190,7 +190,7 @@ def test_haiku_assign_loads_released_values_exactly_into_fp32(dtype):
 
     The loader copies, it does not round to a storage dtype.
     """
-    from foldforge.models.checkpoints.legacy.haiku import Param, ParamType, assign
+    from foldjet.models.checkpoints.legacy.haiku import Param, ParamType, assign
 
     source = torch.full((3, 4), 1.000123, dtype=dtype)
     target = nn.Parameter(torch.zeros((4, 3), dtype=torch.float32))
@@ -205,7 +205,7 @@ def test_haiku_assign_loads_released_values_exactly_into_fp32(dtype):
 def test_every_family_counts_total_trunk_passes(
     monkeypatch, family, recycles, reference_precision
 ):
-    from foldforge.models.architectures import af3
+    from foldjet.models.architectures import af3
 
     batch = SimpleNamespace(
         num_res=2,
@@ -267,7 +267,7 @@ def test_every_family_counts_total_trunk_passes(
 
 @pytest.mark.parametrize("recycles", [0, -1])
 def test_direct_model_construction_rejects_nonpositive_total_passes(recycles):
-    from foldforge.models.architectures.af3 import AlphaFold3
+    from foldjet.models.architectures.af3 import AlphaFold3
 
     with pytest.raises(ValueError, match="total trunk passes"):
         AlphaFold3(num_recycles=recycles)
@@ -293,8 +293,8 @@ def test_every_registered_family_names_a_distinct_default_checkpoint():
     pointing it at ESMFold2's would make the strict load fail at the first
     missing trunk block instead of at the table that lied.
     """
-    from foldforge.models import registered_models
-    from foldforge.models.checkpoints import DEFAULT_FILES
+    from foldjet.models import registered_models
+    from foldjet.models.checkpoints import DEFAULT_FILES
 
     named = set(registered_models())
     assert named <= set(DEFAULT_FILES)
@@ -315,8 +315,8 @@ def test_every_registered_family_resolves_its_checkpoint():
     file in a directory that does not exist. Naming the file was checked;
     finding it was not, and the gap only showed up as a failed Slurm job.
     """
-    from foldforge.models import registered_models
-    from foldforge.models.checkpoints import DEFAULT_FILES, resolve
+    from foldjet.models import registered_models
+    from foldjet.models.checkpoints import DEFAULT_FILES, resolve
 
     missing = []
     for name in sorted(registered_models()):

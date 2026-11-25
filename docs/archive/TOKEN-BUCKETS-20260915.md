@@ -26,9 +26,9 @@ channel/dtype/config cache coverage remains a separate task.
 Implementation:
 - `libs/team-gm/src/team_gm/modules/bucketing.py`: common token rule and atom/MSA policy.
 - `libs/team-gm/src/team_gm/modules/checkpoints/padding.py`: trunk, pair stack and denoiser.
-- `src/foldforge/models/bucketing.py` and `models/io/dense_atoms.py`: ESMFold2/AF3 adapters.
+- `src/foldjet/models/bucketing.py` and `models/io/dense_atoms.py`: ESMFold2/AF3 adapters.
 
-Applied to the local and cssb3 FoldForge worktrees and both connected team-gm
+Applied to the local and cssb3 FoldJet worktrees and both connected team-gm
 copies. Existing uncommitted work was preserved using pre-edit hash checks.
 
 Validation: cssb3 Slurm job 43897, allocated A100 on gpu04; **90 tests passed**

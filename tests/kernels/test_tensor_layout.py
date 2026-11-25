@@ -5,7 +5,7 @@ import dataclasses
 import pytest
 import torch
 
-from foldforge.utils.atom_layout import AtomLayout, Residues
+from foldjet.utils.atom_layout import AtomLayout, Residues
 
 
 @pytest.mark.parametrize("dtype", [torch.int32, torch.int64])

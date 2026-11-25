@@ -14,9 +14,9 @@ import pytest
 import torch
 from torch import nn
 
-from foldforge.train import freeze, optim, recipes
-from foldforge.train.config import LossWeights, TrainConfig
-from foldforge.train.loss import confidence as conf
+from foldjet.train import freeze, optim, recipes
+from foldjet.train.config import LossWeights, TrainConfig
+from foldjet.train.loss import confidence as conf
 
 
 class Stand(nn.Module):
@@ -27,7 +27,7 @@ class Stand(nn.Module):
 
     def __init__(self, family: str, names: dict[str, float]) -> None:
         super().__init__()
-        from foldforge.modules.dense.spec import SPECS
+        from foldjet.modules.dense.spec import SPECS
 
         self.spec = SPECS[family]
         for name, fill in names.items():
@@ -192,7 +192,7 @@ def test_the_targets_and_the_loss_carry_the_resolved_term_and_skip_a_zero_weight
     head.num_plddt_bins = 50
     head.register_buffer("distance_breaks", torch.linspace(0.0, 31.0, 63))
     head.register_buffer("pae_breaks", torch.linspace(0.0, 31.0, 63))
-    from foldforge.utils.atom_layout import GatherInfo
+    from foldjet.utils.atom_layout import GatherInfo
 
     gather = GatherInfo(
         gather_idxs=torch.arange(res) * atoms,

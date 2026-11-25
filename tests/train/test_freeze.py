@@ -14,10 +14,10 @@ import pytest
 import torch
 from torch import nn
 
-from foldforge.models.architectures.af3 import AlphaFold3
-from foldforge.modules.dense.spec import SPECS, spec_for
-from foldforge.train import freeze, optim, prepare
-from foldforge.train.config import TrainConfig
+from foldjet.models.architectures.af3 import AlphaFold3
+from foldjet.modules.dense.spec import SPECS, spec_for
+from foldjet.train import freeze, optim, prepare
+from foldjet.train.config import TrainConfig
 
 
 class Stand(nn.Module):

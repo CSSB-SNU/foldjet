@@ -22,7 +22,7 @@ rules, plus `libs/team-gm/docs/ARCHITECTURE.md`, are the reference here.
 
 MiniWorld's existing CCD store is a preprocessed BioMol LMDB. This change does
 not modify MiniWorld or claim that its LMDB contains all raw AF3 CCD categories.
-FoldForge has one model-independent CCD database and explicit views; it does
+FoldJet has one model-independent CCD database and explicit views; it does
 not reconstruct missing CCD metadata or replace learned reference conventions.
 
 ## Changes made
@@ -30,7 +30,7 @@ not reconstruct missing CCD metadata or replace learned reference conventions.
 | Concern | Before | Now |
 | --- | --- | --- |
 | CCD selection | Protenix globals, OpenDDE globals, AF3 assets, ESM download/cache | One `CCDDatabase`, `--ccd-db`, source manifest and shared file ownership |
-| CCD operations | Two copies of atom lookup, conformer, permutation and bond helpers | Same function objects from `foldforge.data.ccd.components` |
+| CCD operations | Two copies of atom lookup, conformer, permutation and bond helpers | Same function objects from `foldjet.data.ccd.components` |
 | Cache lifetime | Global caches could survive path changes | Instance-owned caches selected by a nested, context-local activation |
 | AF3 CCD sets | Import-time global glycan sets | Explicit scoped set source; nested databases restore their prior view |
 | ESMFold2 CCD | Independent Biohub CCD/download | Lazy atom-property view of the same prepared RDKit references and raw CCD |
@@ -57,17 +57,17 @@ On an allocated compute node:
 
 ```bash
 source scripts/activate_env.sh
-foldforge ccd prepare \
+foldjet ccd prepare \
   --components model_checkpoints/opendde/common/components.cif \
   --rdkit model_checkpoints/opendde/common/components.cif.rdkit_mol.pkl \
   --out data/ccd
-foldforge ccd verify --ccd-db data/ccd
+foldjet ccd verify --ccd-db data/ccd
 export FOLDFORGE_CCD_DB="$PWD/data/ccd"
 ```
 
 The preparation inputs shown above are the existing verified assets; the output
 is independent of OpenDDE and of every model checkpoint. `data/ccd` is ignored by
-git. Every `foldforge fold <model>` and the FoldForge profiling/cache scripts use
+git. Every `foldjet fold <model>` and the FoldJet profiling/cache scripts use
 `--ccd-db`, defaulting to that environment variable or `data/ccd`.
 
 ```
@@ -173,7 +173,7 @@ copies have `.before-unit-fix` suffixes. Existing structure coordinates and
 original summary pLDDT were correct. Tests now use both models' actual decoder
 configuration rather than an assumed synthetic unit convention.
 
-Final verification: **56 FoldForge tests passed**, plus the root team-gm
+Final verification: **56 FoldJet tests passed**, plus the root team-gm
 backend regression (**1 passed**). Five expected missing-shape autotune warnings
 remain. New common code passes Ruff; `uv lock --check`, `uv pip check` and
 `git diff --check` pass. Environment pins remain Torch 2.10.0+cu128, Quack 0.5.0,
@@ -185,5 +185,5 @@ Artifacts: `validation/results/unify-20260913/`, including `comparison.json` and
 copies and failed probes are retained. This is an input/composition correctness
 check, not a performance or complete cache-coverage benchmark.
 
-Root team-gm remains `exp/miniworld-integrated`; FoldForge remains `main`; its
+Root team-gm remains `exp/miniworld-integrated`; FoldJet remains `main`; its
 team-gm member remains `exp/miniworld`. Changes are local and uncommitted.

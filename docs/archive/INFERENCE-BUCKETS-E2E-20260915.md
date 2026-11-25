@@ -184,8 +184,8 @@ cases and archives failed attempts before retrying. Use a fresh `--root` directo
 and detailed logs are in cssb3 `validation/bucket-e2e-20260915/` and the referenced
 qualification-input directories.
 
-The source is installed in local and cssb3 FoldForge `main`, root team-gm
-`exp/miniworld`, and FoldForge's team-gm checkout `exp/miniworld`. Existing changes
+The source is installed in local and cssb3 FoldJet `main`, root team-gm
+`exp/miniworld`, and FoldJet's team-gm checkout `exp/miniworld`. Existing changes
 were preserved through source-hash checks and backups. No commit or push was made.
 The unrelated engine cache job 43215 and its shards were not modified.
 

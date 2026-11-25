@@ -15,13 +15,13 @@ from pathlib import Path
 import pytest
 import torch
 
-from foldforge.models.checkpoints.legacy import _DenseBlocks
-from foldforge.models.checkpoints.legacy.reference.attention import (
+from foldjet.models.checkpoints.legacy import _DenseBlocks
+from foldjet.models.checkpoints.legacy.reference.attention import (
     dot_product_attention,
 )
-from foldforge.models.checkpoints.legacy.reference.composition import msa_row_update
-from foldforge.modules.engine import graph as engine_graph
-from foldforge.modules.engine.configure import activation_autocast, configure_model
+from foldjet.models.checkpoints.legacy.reference.composition import msa_row_update
+from foldjet.modules.engine import graph as engine_graph
+from foldjet.modules.engine.configure import activation_autocast, configure_model
 
 GPU_PARITY = pytest.mark.skipif(
     not torch.cuda.is_available(), reason="AF-family GPU parity"
@@ -55,7 +55,7 @@ def original_module(family, path):
     assert replacements
     for start, end, body in sorted(replacements, reverse=True):
         lines[start:end] = body.splitlines(keepends=True)
-    module = types.ModuleType(f"foldforge._reference_{family}_{source_path.stem}")
+    module = types.ModuleType(f"foldjet._reference_{family}_{source_path.stem}")
     module.__file__ = str(source_path)
     module.__package__ = production_module(family, path).__package__
     # Dataclasses resolve postponed annotations through the registered module.
@@ -167,7 +167,7 @@ def test_msa_chunking_preserves_batch_axes_and_gradients():
 @pytest.mark.parametrize("count", [0, 1, 2])
 @GPU_PARITY
 def test_template_aggregation_and_masked_pair_stack(count):
-    from foldforge.data.features.dense import Templates
+    from foldjet.data.features.dense import Templates
 
     torch.manual_seed(57)
     oldmod = original_module("af3", "nn/template.py")

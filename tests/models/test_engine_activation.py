@@ -2,7 +2,7 @@
 
 An fp32 activation enters the engine's master modules as the autocast dtype, never as
 fp32. The engine's ``MasterWeights`` contract is fp32 masters with bf16 activations.
-FoldForge handed fp32 tensors to TriMul / TriAttn / Transition / AttentionPairBias /
+FoldJet handed fp32 tensors to TriMul / TriAttn / Transition / AttentionPairBias /
 AtomDiT in a bf16 run; their cuda backends refuse fp32 and the unchunked pytorch
 fallback allocated N^3 fp32 triangle-attention logits (the 5I28 out-of-memory cells at
 1024+ tokens).
@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import torch
 
-from foldforge.modules.dense import fused_template
-from foldforge.modules.engine.configure import engine_activation
+from foldjet.modules.dense import fused_template
+from foldjet.modules.engine.configure import engine_activation
 
 
 def test_fp32_becomes_the_autocast_dtype_inside_autocast():

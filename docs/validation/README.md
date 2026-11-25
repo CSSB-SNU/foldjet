@@ -1,6 +1,6 @@
 # Validation against the released implementations
 
-`fast.md` and `exact.md` are `foldforge validate` verdicts for the two modes
+`fast.md` and `exact.md` are `foldjet validate` verdicts for the two modes
 against `tests/release_references/`: every family's structures from its **own released code**
 on 5I28 (protein), 3PTB (protein + ligand + ion) and 1A1K (DNA + protein +
 ions) with no MSA, and on 5I28 again with one shared MSA (`5i28-msa`: the same
@@ -8,7 +8,7 @@ ions) with no MSA, and on 5I28 again with one shared MSA (`5i28-msa`: the same
 three seeds of five samples each, no template.
 
 Regenerate with `tools/references/validate.sh fast` (or `exact`), then
-`foldforge validate $FOLDFORGE_HOME/runs/validate-<mode> --report docs/validation/<mode>.md`.
+`foldjet validate $FOLDFORGE_HOME/runs/validate-<mode> --report docs/validation/<mode>.md`.
 
 ## How a row is judged
 
@@ -31,7 +31,7 @@ condition. The exception is known:
 
 - **OpenDDE 5I28 pLDDT, 68.4 against 71.1.** Structure passes (1.81 A against
   a 2.21 A bound). The gap is the reference conformer source: OpenDDE takes its
-  residues' conformers from its own RDKit CCD pickle, and FoldForge keeps AF3's
+  residues' conformers from its own RDKit CCD pickle, and FoldJet keeps AF3's
   rule for every family (decided 2026-09-25). Swapping in the release's
   conformer, with our random pose on top, reads 70.9 against 71.1. Every stage
   otherwise matches the release when fed the same input: the trunk to 4e-3

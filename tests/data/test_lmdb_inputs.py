@@ -12,14 +12,14 @@ import yaml
 from biomol.core import FeatureContainer, IndexTable, NodeFeature
 from biomol.core.utils import to_bytes
 
-from foldforge import paths
-from foldforge.data.inputs.build import limit_msa, load
-from foldforge.data.inputs.lmdb import (
+from foldjet import paths
+from foldjet.data.inputs.build import limit_msa, load
+from foldjet.data.inputs.lmdb import (
     Alignment,
     load_templates,
     species_aliases,
 )
-from foldforge.data.inputs.template_mol import TemplateMol
+from foldjet.data.inputs.template_mol import TemplateMol
 
 CCD_DATABASE = Path(
     os.environ.get(
@@ -38,7 +38,7 @@ def write_db(path, key, value, *, subdir=True):
 
 
 def msa_record(sequence="ARNDCQEG", kind="protein"):
-    from foldforge.data.inputs.lmdb import ALPHABETS
+    from foldjet.data.inputs.lmdb import ALPHABETS
 
     mapping = {v: k for k, v in ALPHABETS[kind].items()}
     query = np.array([mapping[x] for x in sequence], dtype=np.uint8)
@@ -144,7 +144,7 @@ def test_common_adapters(target_files, tmp_path):
     )
     # A checkpoint with no template stack refuses a templated input. Asked of
     # the family ROW, so the rule holds for whichever families lack the stack.
-    from foldforge.models.inference import _validate_input
+    from foldjet.models.inference import _validate_input
 
     with pytest.raises(ValueError, match="no template conditioning"):
         _validate_input("esmfold2", target)

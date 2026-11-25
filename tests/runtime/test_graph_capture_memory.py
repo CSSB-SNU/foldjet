@@ -9,8 +9,8 @@ from typing import Any, NoReturn
 import pytest
 import torch
 
-from foldforge.models import execution
-from foldforge.models.execution import ExecutedCallable
+from foldjet.models import execution
+from foldjet.models.execution import ExecutedCallable
 
 
 def _callable(max_graphs: int = 2) -> ExecutedCallable:

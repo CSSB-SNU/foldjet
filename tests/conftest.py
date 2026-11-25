@@ -2,7 +2,7 @@
 
 import pytest
 
-from foldforge.models.io import paths
+from foldjet.models.io import paths
 
 
 @pytest.fixture(autouse=True)
@@ -25,7 +25,7 @@ def cli(*extra: str) -> list[str]:
 def fresh_engine_weight_caches():
     """Weights built by a test may reuse a freed address: no stale re-layout."""
     try:
-        from foldforge.modules.engine.capture import clear_weight_caches
+        from foldjet.modules.engine.capture import clear_weight_caches
 
         clear_weight_caches()
     except ImportError:

@@ -7,8 +7,8 @@ snapshot) are config keys; the engine sampler ops are built in one place.
 import pytest
 import torch
 
-from foldforge.models.config import Config
-from foldforge.modules.engine import sampler_ops
+from foldjet.models.config import Config
+from foldjet.modules.engine import sampler_ops
 
 
 def test_dead_module_skip_is_on_by_default_and_a_config_key():

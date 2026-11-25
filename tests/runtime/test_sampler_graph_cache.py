@@ -14,9 +14,9 @@ from typing import Any, NoReturn
 import pytest
 import torch
 
-from foldforge.models import sampler_graph
-from foldforge.models.sampler_graph import SamplerGraphCache, _Entry, _LayoutMismatch
-from foldforge.modules.engine import capture as engine_capture
+from foldjet.models import sampler_graph
+from foldjet.models.sampler_graph import SamplerGraphCache, _Entry, _LayoutMismatch
+from foldjet.modules.engine import capture as engine_capture
 
 
 class Stale(RuntimeError):  # noqa: N818 - named after the engine's StaleStaticInputs
@@ -375,7 +375,7 @@ def _fake_engine_capture(monkeypatch, **attributes: Any) -> None:
 
 
 def test_an_engine_without_the_refresh_api_gets_no_cache(monkeypatch) -> None:
-    from foldforge.models.execution import SamplerScope
+    from foldjet.models.execution import SamplerScope
 
     # the 2.5.4 module: static_inputs is there, the refresh API is not
     _fake_engine_capture(
@@ -398,7 +398,7 @@ def test_an_engine_without_the_refresh_api_gets_no_cache(monkeypatch) -> None:
 def test_an_engine_with_the_refresh_api_gets_one_and_the_config_can_turn_it_off(
     monkeypatch,
 ) -> None:
-    from foldforge.models.execution import SamplerScope
+    from foldjet.models.execution import SamplerScope
 
     api = dict.fromkeys(
         ("refresh_static_inputs", "StaticTables", "signature", "StaleStaticInputs"),
@@ -420,7 +420,7 @@ def test_an_engine_with_the_refresh_api_gets_one_and_the_config_can_turn_it_off(
 
 
 def test_scope_counters_reset_and_report_names() -> None:
-    from foldforge.models.execution import SamplerScope
+    from foldjet.models.execution import SamplerScope
 
     scope = SamplerScope(SimpleNamespace(bypass=0))
     scope.captures = scope.refreshes = scope.cache_hits = 5
@@ -442,7 +442,7 @@ def test_scope_counters_reset_and_report_names() -> None:
 
 
 def test_grouped_fold_tree_drops_the_epochs_and_bind_restores_the_state() -> None:
-    from foldforge.models.grouped import GroupedSampler
+    from foldjet.models.grouped import GroupedSampler
 
     sampler = object.__new__(GroupedSampler)
     sampler.state = {
@@ -466,7 +466,7 @@ def test_grouped_fold_tree_drops_the_epochs_and_bind_restores_the_state() -> Non
 
 
 def test_head_adopts_a_fold_under_the_key_of_its_batch_and_embeddings() -> None:
-    from foldforge.modules.dense.diffusion_head import DiffusionHead
+    from foldjet.modules.dense.diffusion_head import DiffusionHead
 
     head = object.__new__(DiffusionHead)
     torch.nn.Module.__init__(head)
@@ -492,7 +492,7 @@ def test_head_adopts_a_fold_under_the_key_of_its_batch_and_embeddings() -> None:
 
 
 def test_token_dit_stack_reports_the_pair_cast_it_made() -> None:
-    from foldforge.modules.engine.transformers import TokenDiTStack
+    from foldjet.modules.engine.transformers import TokenDiTStack
 
     stack = TokenDiTStack([])
     assert stack.engine_pair_cast() is None

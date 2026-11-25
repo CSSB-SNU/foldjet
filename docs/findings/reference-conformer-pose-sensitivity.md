@@ -17,7 +17,7 @@ several angstroms and pLDDT by several points, with everything else fixed.
 
 Setup: 5I28, one protein chain, 127 residues, no MSA, no template, 4 trunk
 passes, 200 steps, fp32. The released OpenDDE was run with every sampler draw
-recorded (initial noise, per-step rotation/translation, churn noise); FoldForge,
+recorded (initial noise, per-step rotation/translation, churn noise); FoldJet,
 which reproduces the release sample for sample when given the same inputs
 (CA 0.00-0.16 A on 13 of 15 samples, pLDDT within 0.1), replayed the identical
 draws. 3 seeds x 5 samples. Across settings only `ref_pos` differs: all 127
@@ -26,10 +26,10 @@ model input tensors were compared, the other 125 are bit-identical.
 2x2 of conformer shape x per-residue pose (mean over 15 samples; pLDDT
 difference to the release sample / CA RMSD to it):
 
-| | pose = release | pose = FoldForge's draw |
+| | pose = release | pose = FoldJet's draw |
 |---|---|---|
 | conformer = release (Protenix pickle) | -0.05 / 0.22 A | -0.23 / 2.16 A |
-| conformer = FoldForge (AF3 ETKDGv3) | -1.99 / 1.27 A | -2.86 / 1.64 A |
+| conformer = FoldJet (AF3 ETKDGv3) | -1.99 / 1.27 A | -2.86 / 1.64 A |
 
 - **Pose alone** (a random rotation plus a shift of at most 1 A per residue,
   chemically meaningless) moves the structure 2.16 A on average.
@@ -54,7 +54,7 @@ same amplification measured for a 2% MSA-module difference).
 
 - One protein-only target with low confidence (pLDDT ~71). On high-confidence
   targets (3PTB 98, 1A1K 94) every family validated within its release's spread
-  with FoldForge's conformers, which suggests the effect is confined to
+  with FoldJet's conformers, which suggests the effect is confined to
   uncertain regions; not yet measured directly.
 - OpenDDE only (its release cannot featurise ligands or ions).
 
@@ -63,7 +63,7 @@ same amplification measured for a 2% MSA-module difference).
 Not in git (`$FOLDFORGE_HOME/runs/` is ignored):
 
 - `$FOLDFORGE_HOME/runs/plddt_test/`: per-pair folders with the release and the four
-  FoldForge variants, superposed, pLDDT in B-factors; `pairs.md`, `README.md`.
+  FoldJet variants, superposed, pLDDT in B-factors; `pairs.md`, `README.md`.
 - `$FOLDFORGE_HOME/runs/archive/release-compare-20260924/odde-noise/`: the recorded release draws.
 - Tools: `$FOLDFORGE_HOME/runs/archive/release-compare-20260924/tools/odde_noisecap.py` (record),
   `ours_noise_replay.py` (replay; conformer/pose settings), `dump_inputs.py`

@@ -12,19 +12,19 @@ from unittest.mock import Mock
 import pytest
 import torch
 
-import foldforge
-from foldforge.models.config import ExecutionConfig
-from foldforge.models.io.cli import parse
-from foldforge.models.io.output import Decoded, write_output
-from foldforge.models.io.request import Request
-from foldforge.prediction import Prediction
+import foldjet
+from foldjet.models.config import ExecutionConfig
+from foldjet.models.io.cli import parse
+from foldjet.models.io.output import Decoded, write_output
+from foldjet.models.io.request import Request
+from foldjet.prediction import Prediction
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
 
 def test_feature_transfer_preserves_source_and_nested_container_types():
-    from foldforge.models.io.runtime import to_device
+    from foldjet.models.io.runtime import to_device
 
     source = {"nested": [torch.ones(2), (torch.zeros(3), None)], "name": "ligand"}
     result = to_device(source, "meta")
@@ -129,11 +129,11 @@ def test_legacy_flags_have_one_execution_contract(model, tmp_path):
 def test_resolved_input_and_msa_limit_reach_runtime_without_reparse(
     tmp_path, monkeypatch
 ):
-    from foldforge import api
-    from foldforge.data import ccd
-    from foldforge.data.inputs import build
-    from foldforge.models import execution, inference, loading
-    from foldforge.models.io import runtime
+    from foldjet import api
+    from foldjet.data import ccd
+    from foldjet.data.inputs import build
+    from foldjet.models import execution, inference, loading
+    from foldjet.models.io import runtime
 
     spec = SimpleNamespace(
         template={},
@@ -187,7 +187,7 @@ def test_resolved_input_and_msa_limit_reach_runtime_without_reparse(
 
 
 def test_runtime_owns_forward_count_and_every_target_output(tmp_path, monkeypatch):
-    from foldforge.models.io import runtime
+    from foldjet.models.io import runtime
 
     request = Request(
         model="esmfold2",
@@ -244,11 +244,11 @@ def test_runtime_owns_forward_count_and_every_target_output(tmp_path, monkeypatc
 
 
 def test_model_cli_shims_cannot_own_execution_or_persistence():
-    root = Path(foldforge.__file__).parent
+    root = Path(foldjet.__file__).parent
     for model in ("af3", "esmfold2", "protenix1", "protenix2", "opendde"):
         assert not (root / f"models/{model}/inference.py").exists()
     cli = (root / "cli.py").read_text()
-    assert "foldforge.models.io.options" in cli
+    assert "foldjet.models.io.options" in cli
     assert "app.add_command(fold_command)" in cli
     for path in (root / "models/io").glob("*_atoms.py"):
         source = path.read_text()
@@ -264,7 +264,7 @@ def test_artifact_comparison_detects_absent_head_regressions(tmp_path):
     import importlib.util
 
     script = (
-        Path(foldforge.__file__).resolve().parents[2]
+        Path(foldjet.__file__).resolve().parents[2]
         / "tools/verify_prediction_artifacts.py"
     )
     spec = importlib.util.spec_from_file_location("artifact_check", script)

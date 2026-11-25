@@ -1,4 +1,4 @@
-"""Verify a built FoldForge wheel's public imports, types and dependency metadata."""
+"""Verify a built FoldJet wheel's public imports, types and dependency metadata."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ def main() -> int:
         requires = metadata.get_all("Requires-Dist", [])
         assert any(r.startswith("miniworld-engine==2.5.0") for r in requires)
         assert any(r.startswith("foldforge-af3-data==3.0.2") for r in requires)
-        assert "foldforge/py.typed" in wheel.namelist()
+        assert "foldjet/py.typed" in wheel.namelist()
         assert "weights" in metadata.get_all("Provides-Extra", [])
         for name in (
             "sources.json",
@@ -35,12 +35,12 @@ def main() -> int:
             "commands.py",
             "miniworld.py",
         ):
-            assert f"foldforge/models/checkpoints/{name}" in wheel.namelist()
+            assert f"foldjet/models/checkpoints/{name}" in wheel.namelist()
         assert (
-            "foldforge/models/checkpoints/legacy/haiku.py" in wheel.namelist()
+            "foldjet/models/checkpoints/legacy/haiku.py" in wheel.namelist()
         )  # the offline converter's graph ships with the wheel
     if args.installed:
-        import foldforge as ff
+        import foldjet as ff
 
         assert Path(ff.__file__).resolve().is_relative_to(Path(sys.prefix).resolve())
         for function in (

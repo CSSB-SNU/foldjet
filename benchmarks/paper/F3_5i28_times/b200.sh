@@ -1,11 +1,11 @@
 #!/bin/bash
-# F3 FoldForge side on the B200 (host b200, GPUs 0-3, no Slurm): ONE (model, arm=engine, repetition) per call, on the GPU the lane gave us (CUDA_VISIBLE_DEVICES).
+# F3 FoldJet side on the B200 (host b200, GPUs 0-3, no Slurm): ONE (model, arm=engine, repetition) per call, on the GPU the lane gave us (CUDA_VISIBLE_DEVICES).
 #   MODEL=af3 ARM=engine REP=1 [SIZES="1 2"] [REPEATS=3] benchmarks/paper/F3_5i28_times/b200.sh
 # Exit code 0 ONLY when every size has a final cell (ok or oom) in cells.jsonl: run_ff.py itself returns 0 after a `failed` cell.
 set -uo pipefail
 : "${MODEL:?MODEL}"; ARM=${ARM:-engine}
 [ "$ARM" = engine_fp8 ] && { echo "FP8 arm: not on the B200 in this campaign"; exit 2; }
-HERE=${FF_REPO:-/NHNHOME/WORKSPACE/26mohw002_A/psk6950/paper-b200/ff/foldforge}/benchmarks/paper
+HERE=${FF_REPO:-/NHNHOME/WORKSPACE/26mohw002_A/psk6950/paper-b200/ff/foldjet}/benchmarks/paper
 source "$HERE/common/cards/b200.env"
 OUT=$PAPER_OUT/F3/$CARD/${ARM}_rep${REP:-1}/$MODEL
 mkdir -p "$OUT"; cd "$FF_REPO"

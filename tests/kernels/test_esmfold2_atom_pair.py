@@ -1,10 +1,10 @@
 """ESMFold2's atom stack on the engine's ``AtomDiT("esmfold2_pair")`` block.
 
-It equals FoldForge's own ``DiffusionCrossAttTransformer``.
+It equals FoldJet's own ``DiffusionCrossAttTransformer``.
 
 The released-layout weights convert to the block layout
 (``released.esmfold2_atom_blocks_from_released``), the stack passes the per-atom
-rotary tables, and a native file written while the stack was FoldForge's own loads
+rotary tables, and a native file written while the stack was FoldJet's own loads
 into the engine layout. Skipped on an engine without the class (2.5.1): there
 ``model_keys("esmfold2").atom_dit`` is ``None`` and the family keeps its own stack.
 """
@@ -17,14 +17,14 @@ import pytest
 import torch
 from torch import nn
 
-from foldforge.models.checkpoints import miniworld
-from foldforge.models.checkpoints.legacy import released
-from foldforge.modules.dense import atom_cross_attention as aca
-from foldforge.modules.dense.diffusion_transformer import DiffusionCrossAttTransformer
-from foldforge.modules.dense.spec import ESMFOLD2
-from foldforge.modules.engine.modules import engine_has_atom_dit, model_keys
-from foldforge.modules.engine.transformers import AtomDiTStack, atom_dit_stack
-from foldforge.utils import atom_layout
+from foldjet.models.checkpoints import miniworld
+from foldjet.models.checkpoints.legacy import released
+from foldjet.modules.dense import atom_cross_attention as aca
+from foldjet.modules.dense.diffusion_transformer import DiffusionCrossAttTransformer
+from foldjet.modules.dense.spec import ESMFOLD2
+from foldjet.modules.engine.modules import engine_has_atom_dit, model_keys
+from foldjet.modules.engine.transformers import AtomDiTStack, atom_dit_stack
+from foldjet.utils import atom_layout
 
 pytestmark = pytest.mark.skipif(
     not engine_has_atom_dit("esmfold2_pair"),

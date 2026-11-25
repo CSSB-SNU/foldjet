@@ -53,7 +53,7 @@ events; these include tracing/warmup and are not total GPU launch counts.
 CUDA graph replay internals do not reappear individually as CPU operators;
 the audited initial forward includes the graph's warmup and capture path.
 No forbidden direct Triton launch was attempted. The modules' recorded
-`implementation`, `_backend`, and `foldforge_implementation` values are PyTorch.
+`implementation`, `_backend`, and `foldjet_implementation` values are PyTorch.
 
 Full operator counts, settings, job IDs and observed execution counters:
 [BACKEND-PURITY-20260915.json](BACKEND-PURITY-20260915.json).
@@ -78,9 +78,9 @@ are not evidence of a fused-kernel launch.
 Relevant source:
 - `libs/team-gm/src/team_gm/modules/checkpoints/af_family.py`: native norms and TriMul/Transition backend guards.
 - `libs/team-gm/src/team_gm/modules/checkpoints/conditioning.py`: reference backend selection.
-- `src/foldforge/models/af3/ported/fastnn/config.py`: legacy fastnn paths explicitly set to torch.
-- `src/foldforge/models/af3/ported/nn/attention.py`: shared AF3 triangle attention core.
-- `src/foldforge/models/af3/ported/nn/primitives.py`: shared OPM core.
+- `src/foldjet/models/af3/ported/fastnn/config.py`: legacy fastnn paths explicitly set to torch.
+- `src/foldjet/models/af3/ported/nn/attention.py`: shared AF3 triangle attention core.
+- `src/foldjet/models/af3/ported/nn/primitives.py`: shared OPM core.
 - `libs/team-gm/src/team_gm/modules/execution.py`: actual Inductor/manual graph boundary.
 
 The three main adapter files above match the prior benchmark's staged source.

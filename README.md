@@ -1,4 +1,6 @@
-# FoldForge
+# FoldJet
+
+Renamed from FoldForge (`import foldforge` and the `foldforge` command still work; `import foldjet` is the name now). Runs from before the rename keep their recorded `foldforge_commit` columns and the home directory stays `~/.cache/foldforge` (`$FOLDFORGE_HOME`).
 
 **Many structure predictors, one environment, one set of kernels.**
 
@@ -19,10 +21,10 @@ actual compilation/CUDA graph boundaries and remaining deployment requirements.
 [The follow-up](docs/archive/CLOSEOUT-20260914.md) records operational DB reads, A5000
 execution and the large-input AF3 compiler numerical regression that did not pass.
 
-Weight setup: `foldforge weights download --all-public`; see the
+Weight setup: `foldjet weights download --all-public`; see the
 [weight download guide](docs/guides/WEIGHTS.md) for all models, language-model
 weights and offline installation. Inference uses PyTorch and CPU input preparation
-uses NumPy. FoldForge does not use JAX, Haiku or Chex in inference,
+uses NumPy. FoldJet does not use JAX, Haiku or Chex in inference,
 input preparation or weight conversion.
 
 ## Code and loading
@@ -31,7 +33,7 @@ Use the [Python prediction API](docs/guides/PYTHON-API.md) from notebooks,
 services or another package:
 
 ```python
-import foldforge as ff
+import foldjet as ff
 
 inputs = ff.load_inputs("input.yaml")
 with ff.load_model("boltz2", config="config.yaml", device="cuda:0") as model:
@@ -42,7 +44,7 @@ result.save("./results/my-run")
 For test-time scaling, retain the trunk and sample diffusion repeatedly:
 
 ```python
-import foldforge as ff
+import foldjet as ff
 
 inputs = ff.load_inputs("input.yaml")
 with ff.load_model("boltz2", config="config.yaml") as model:
@@ -53,17 +55,17 @@ with ff.load_model("boltz2", config="config.yaml") as model:
 ```
 
 The CLI calls this same API:
-`foldforge fold boltz2 --spec input.yaml --config config.yaml --out my-run`.
+`foldjet fold boltz2 --spec input.yaml --config config.yaml --out my-run`.
 
 Start with [the directory guide](docs/guides/CODE-STRUCTURE.md).
-`foldforge.load(model, checkpoint, backend=..., dtype=..., device=...)` is the
+`foldjet.load(model, checkpoint, backend=..., dtype=..., device=...)` is the
 lower-level network loading API. Model directories and `ported/` packages have been removed;
 architecture assembly, configuration, weight mapping and feature processing each
 have their own owner.
 
 ```python
 import torch
-import foldforge as ff
+import foldjet as ff
 
 model = ff.load("protenix2", backend="miniworld", dtype=torch.bfloat16, device="cuda")
 ```
@@ -73,22 +75,22 @@ model = ff.load("protenix2", backend="miniworld", dtype=torch.bfloat16, device="
 pinned to another one with `engine.ops`, and `engine.unsupported: fallback | error` decides what a call a backend cannot take does. Precision is
 `master` (fp32 parameters, bf16 activations; config `precision: bf16`) or `fp32`. What each backend serves and how to compare them:
 [docs/guides/BACKENDS.md](docs/guides/BACKENDS.md). The weights are read from the **miniworld checkpoint format** (`<model>.miniworld.pt`,
-converted once from the released blob with `foldforge weights convert <model>`; [docs/guides/CHECKPOINT-FORMAT.md](docs/guides/CHECKPOINT-FORMAT.md)).
+converted once from the released blob with `foldjet weights convert <model>`; [docs/guides/CHECKPOINT-FORMAT.md](docs/guides/CHECKPOINT-FORMAT.md)).
 
 ## Where this sits
 
-FoldForge is a **terminal** repo on top of one dependency, miniworld-engine
-(team-gm was absorbed into the engine and into MiniWorld; FoldForge no longer
+FoldJet is a **terminal** repo on top of one dependency, miniworld-engine
+(team-gm was absorbed into the engine and into MiniWorld; FoldJet no longer
 depends on it). The boundary rule decides whether a piece of code belongs here or
 a layer down:
 
 | layer | repo | holds |
 |---|---|---|
 | engine | miniworld-engine | fused kernels, the modules that wrap them (`miniworld_engine.modules`) and the single-op kernel entry points (`miniworld_engine.kernels`); since 2.4.2 no model architecture, diffusion process or checkpoint adapter |
-| terminal | **FoldForge** | the **full models**, the checkpoint installers, data pipeline, eval, CLI |
+| terminal | **FoldJet** | the **full models**, the checkpoint installers, data pipeline, eval, CLI |
 
 Nothing here defines an op or a general-purpose block. If you are writing one,
-it goes in the engine. What the engine has no class for — the FoldForge-own pieces of the graph (`modules/dense`: featurization, atom cross attention, templates, heads),
+it goes in the engine. What the engine has no class for — the FoldJet-own pieces of the graph (`modules/dense`: featurization, atom cross attention, templates, heads),
 the backend plan and its guard (`modules/engine`), compile/graph execution and bucketing
 (`models/`), TFG guidance, the ESM-C model — lives here (what the engine lacks is listed in [docs/ENGINE-UNSUPPORTED.md](docs/ENGINE-UNSUPPORTED.md),
 requests in [docs/ENGINE-REQUESTS.md](docs/ENGINE-REQUESTS.md)); see [the directory guide](docs/guides/CODE-STRUCTURE.md).
@@ -101,8 +103,8 @@ No GPU is needed to install, and nothing is run on a login node: use a CPU
 allocation of the cluster.
 
 ```bash
-git clone git@github.com:SanggeunParrk/FoldForge.git
-cd FoldForge
+git clone git@github.com:SanggeunParrk/foldjet.git
+cd FoldJet
 srun -p h100 -A cssb --qos=normal_h100 --gres=none -c 8 --mem=32G pixi install
 pixi run --frozen python -m pytest tests -q        # on a GPU allocation
 ```
@@ -114,7 +116,7 @@ Before running Python directly: `source tools/activate_env.sh`.
 ### Standard Python installation
 
 The package declares its runtime engine dependency. The native AF3 data component
-is built as a separate wheel; it must be installed alongside FoldForge. From a
+is built as a separate wheel; it must be installed alongside FoldJet. From a
 source checkout with Python 3.12 and a C++20 build toolchain:
 
 ```bash
@@ -124,11 +126,11 @@ python -m pip install '.[language]'
 
 The `language` extra supplies Transformers for the vendored ESM-C tower; models
 without that tower do not require it. The Biohub `esm` fork is a Pixi-only reference
-validation dependency and is not required to run FoldForge's inference API.
+validation dependency and is not required to run FoldJet's inference API.
 
 To build distributable artifacts, run `python -m build --wheel --outdir wheelhouse`
 for both the root project and `third_party/af3-data`. Install the resulting wheels
-with `python -m pip install --find-links wheelhouse 'foldforge[language]'`.
+with `python -m pip install --find-links wheelhouse 'foldjet[language]'`.
 Checkpoints and CCD/MSA/template databases remain separate resources. Inference
 requires a supported CUDA runtime; installing the Python package does not qualify
 all model/backend combinations on a new GPU.
@@ -147,12 +149,12 @@ returns the residual itself — use `.delta` for the bare update).
 ## Layout
 
 ```
-src/foldforge/        the package
-  cli.py              foldforge models / ccd / checkpoints / validate / fold <model>
+src/foldjet/        the package
+  cli.py              foldjet models / ccd / checkpoints / validate / fold <model>
   paths.py            where weights, databases, release envs and runs live
   models/             registry, the one AF3 architecture, checkpoints, loading,
                       execution, sampling, precision, io
-  modules/            the FoldForge-own graph pieces (dense/), the engine adapter: backend plan,
+  modules/            the FoldJet-own graph pieces (dense/), the engine adapter: backend plan,
                       guard, converter rules (engine/), shared equations (reference/), ESM-C (esmc/)
   guidance/           TFG guidance (not wired into the AF3 sampler yet)
   data/               CCD database, chemical constants, dense features and
@@ -170,7 +172,7 @@ third_party/          the AF3 feature package
 Nothing machine-specific lives in the checkout. Weights, the CCD database, the
 release environments, runs and benchmark inputs sit under `$FOLDFORGE_HOME`
 (default `~/.cache/foldforge`), each overridable on its own
-(`src/foldforge/paths.py`):
+(`src/foldjet/paths.py`):
 
 ```
 $FOLDFORGE_HOME/
@@ -201,7 +203,7 @@ $FOLDFORGE_HOME/
 | the unit | lives in |
 |---|---|
 | wraps a kernel, one PyTorch reference | miniworld-engine |
-| diffusion process (EDM, decoupled x-prediction, augmentation, schedules, samplers) | `foldforge.diffusion` (self-contained: movable into its own package) |
+| diffusion process (EDM, decoupled x-prediction, augmentation, schedules, samplers) | `foldjet.diffusion` (self-contained: movable into its own package) |
 | specific to one predictor | `models/architectures/<name>.py` |
 | needed by two or more predictors, no reason for the engine to carry it | `modules/` |
 
@@ -224,7 +226,7 @@ is what actually loads; they are now the same set.
 | ESMFold2-Fast | the same row at 24 trunk blocks and no MSA stack |
 | Boltz-2, Chai-1, IntelliFold-v2, OpenFold3 (v0.5.0 / preview-2), RoseTTAFold3 | the AF3 graph with that release's conventions |
 
-`foldforge models` lists them with their sources. Per-family checkpoint
+`foldjet models` lists them with their sources. Per-family checkpoint
 evidence and validation scope are in
 [the integration record](docs/guides/MODEL-INTEGRATION.md).
 
@@ -235,15 +237,15 @@ same flags — there is one CLI, not one per predictor:
 
 ```bash
 source tools/activate_env.sh
-foldforge models
-foldforge fold af3      --spec docs/examples/inference/1ubq.yaml --out $FOLDFORGE_HOME/runs/af3
-foldforge fold protenix2 --spec docs/examples/inference/1ubq.yaml --out $FOLDFORGE_HOME/runs/protenix2
-foldforge fold opendde  --spec docs/examples/inference/1ubq.yaml --out $FOLDFORGE_HOME/runs/opendde
-foldforge fold esmfold2 --spec docs/examples/inference/1ubq.yaml --out $FOLDFORGE_HOME/runs/esmfold2
+foldjet models
+foldjet fold af3      --spec docs/examples/inference/1ubq.yaml --out $FOLDFORGE_HOME/runs/af3
+foldjet fold protenix2 --spec docs/examples/inference/1ubq.yaml --out $FOLDFORGE_HOME/runs/protenix2
+foldjet fold opendde  --spec docs/examples/inference/1ubq.yaml --out $FOLDFORGE_HOME/runs/opendde
+foldjet fold esmfold2 --spec docs/examples/inference/1ubq.yaml --out $FOLDFORGE_HOME/runs/esmfold2
 ```
 
 `--checkpoint` is optional when the release's converted file (`<model>.miniworld.pt`) is in
-`$FOLDFORGE_HOME/checkpoints/<model>/`; if it is missing the command stops and prints the exact `foldforge weights convert <model>` to run
+`$FOLDFORGE_HOME/checkpoints/<model>/`; if it is missing the command stops and prints the exact `foldjet weights convert <model>` to run
 (the loader never converts at run time). The command writes CIF and JSON recording the
 actual precision, sampling, compile and CUDA-graph settings. Every family
 reads the MiniWorld BioMol LMDB at `$FOLDFORGE_HOME/ccd/preprocessed_CCD.lmdb`.
@@ -268,7 +270,7 @@ dropout, its ligand atom names and so on -- are in both modes.
 
 `tests/release_references/` holds, for three reference targets (protein; protein + ligand +
 ion; DNA + protein + ions), every family's structures from its **own released
-code**, three seeds of five samples. `foldforge validate` judges a FoldForge
+code**, three seeds of five samples. `foldjet validate` judges a FoldJet
 run against them -- structure, pLDDT, ligand bond geometry and ligand/ion
 placement, each relative to the release's own seed-to-seed spread -- and the
 current verdicts are in [docs/validation/](docs/validation/). See
@@ -283,13 +285,13 @@ each check and the defects the comparison found.
 
 ### Checkpoints
 
-Two steps: `foldforge weights download <model>` produces the released blob (`<model>.bin.zst`, below), and `foldforge weights convert <model>` converts it
+Two steps: `foldjet weights download <model>` produces the released blob (`<model>.bin.zst`, below), and `foldjet weights convert <model>` converts it
 once, offline, to the miniworld checkpoint format that `load_model` reads ([CHECKPOINT-FORMAT.md](docs/guides/CHECKPOINT-FORMAT.md)).
 
 Converted blobs are pinned by SHA-256 in
-`src/foldforge/models/checkpoints/checkpoints.lock`. Loading refuses a blob
+`src/foldjet/models/checkpoints/checkpoints.lock`. Loading refuses a blob
 whose size does not match (a blob from another converter version);
-`foldforge checkpoints verify` checks the hashes. How to produce each blob from
+`foldjet checkpoints verify` checks the hashes. How to produce each blob from
 its release file, and which conversions reproduce the lock bit for bit, is in
 [the checkpoint guide](docs/guides/CHECKPOINTS.md).
 

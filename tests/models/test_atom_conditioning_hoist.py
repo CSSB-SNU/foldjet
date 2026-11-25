@@ -1,7 +1,7 @@
 # ruff: noqa: E501, FBT001, FBT003
 """The atom stack's conditioning projections made once per fold (``project_cond`` / ``hoisted``) equal the ones made at every call.
 
-ESMFold2's atom stack is FoldForge-own; its AdaLN scales / shifts and output gates read only the atoms' single conditioning, which is the same
+ESMFold2's atom stack is FoldJet-own; its AdaLN scales / shifts and output gates read only the atoms' single conditioning, which is the same
 at every sampler step, so ``hoist_conditioning`` makes them once and the step takes them back. The hoisted call must compute the same values.
 """
 
@@ -12,14 +12,14 @@ from dataclasses import replace
 import pytest
 import torch
 
-from foldforge.modules.dense.diffusion_transformer import (
+from foldjet.modules.dense.diffusion_transformer import (
     AdaLNZero,
     AdaptiveLayerNorm,
     CrossAttention,
     DiffusionCrossAttTransformer,
     conditioned_transition,
 )
-from foldforge.modules.dense.spec import spec_for
+from foldjet.modules.dense.spec import spec_for
 
 
 def randomise(module: torch.nn.Module, seed: int) -> None:

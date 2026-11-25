@@ -1,7 +1,7 @@
 # Configuration
 
 Every option that changes what a fold computes or how it runs is a key of the nested Pydantic `Config`
-(`src/foldforge/models/config/runtime.py`), given with `foldforge fold <model> --spec input.yaml --config runtime.yaml`.
+(`src/foldjet/models/config/runtime.py`), given with `foldjet fold <model> --spec input.yaml --config runtime.yaml`.
 A key left out has its default, and the defaults are the behaviour without any override. The config written next to a
 run (`model.config.json`) records every key.
 
@@ -77,7 +77,7 @@ be ruled out at once. An unknown value is a config error. From Python: `load(...
 Default `true`. A residual engine module whose every parameter is below 1e-30 (Protenix v1 carries 76 of them: the confidence head's triangle
 attentions / multiplications and pair transition, 34 attention-pair-bias and 31 transition modules of the trunk) returns its input at inference
 (`modules/dense/dead.py` sets the engine's `dead` flag once the weights are final; the output is bit-identical, only the work is skipped).
-`false` runs every module: use it for a bit-exact A/B and for training (dead modules have parameters that train; `foldforge.train` clears the
+`false` runs every module: use it for a bit-exact A/B and for training (dead modules have parameters that train; `foldjet.train` clears the
 flags itself). The load report lists what was flagged under `dead_modules`.
 
 ## `execution.graph_pool_snapshot`
@@ -97,11 +97,11 @@ measure it. A field that changes a parameter shape makes the strict weight load 
 
 ## CUDA allocator: expandable segments by default
 
-`import foldforge` sets `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` when neither `PYTORCH_CUDA_ALLOC_CONF` nor
-`PYTORCH_ALLOC_CONF` (torch's newer name) is in the environment (`src/foldforge/allocator.py`). A variable that is present is kept as it
+`import foldjet` sets `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` when neither `PYTORCH_CUDA_ALLOC_CONF` nor
+`PYTORCH_ALLOC_CONF` (torch's newer name) is in the environment (`src/foldjet/allocator.py`). A variable that is present is kept as it
 is, whatever its value: `PYTORCH_CUDA_ALLOC_CONF=` (empty) runs with torch's own defaults, any other value is yours. torch reads the
 variable when its CUDA caching allocator initialises (the first CUDA allocation), so the default takes effect also when `torch` was
-imported first; if CUDA is already initialised when `foldforge` is imported, the same setting is applied to the live allocator and the
+imported first; if CUDA is already initialised when `foldjet` is imported, the same setting is applied to the live allocator and the
 segments allocated from then on are expandable. Child processes inherit the variable.
 
 Why: on H100 (AF3, engine 2.5.12, bf16, compile + CUDA graphs, 2026-11-17; 3 targets of ~1,160 tokens) the same speed or 1-2 % faster

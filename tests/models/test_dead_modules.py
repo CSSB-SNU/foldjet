@@ -7,7 +7,7 @@ are final.
 import torch
 from torch import nn
 
-from foldforge.modules.dense.dead import THRESHOLD, clear_dead, is_dead, mark_dead
+from foldjet.modules.dense.dead import THRESHOLD, clear_dead, is_dead, mark_dead
 
 
 class Residual(nn.Module):
@@ -91,7 +91,7 @@ def test_the_flag_is_a_plain_attribute_so_compile_guards_on_it():
 
 
 # --- the engine contract `mark_dead` relies on --------------------------------------
-# (the engine declined to ship its own loader: FoldForge owns this)
+# (the engine declined to ship its own loader: FoldJet owns this)
 
 
 def test_the_engine_residual_classes_still_declare_the_dead_flag_false_by_default():

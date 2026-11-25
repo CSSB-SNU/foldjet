@@ -1,7 +1,7 @@
 # Execution scopes: what compile and CUDA graphs cover
 
 `execution.scope` selects the part of the forward that `compile` and `cuda_graph` wrap
-(`src/foldforge/models/execution.py`). Each wrapped callable keeps one CUDA graph per input
+(`src/foldjet/models/execution.py`). Each wrapped callable keeps one CUDA graph per input
 signature (tensor shapes, dtypes, strides and Python scalars/bools); replay copies the inputs into
 static buffers.
 
@@ -62,14 +62,14 @@ capture nothing may synchronise with the host or copy from pageable host memory:
 - No `torch.tensor(...)`, `new_tensor(...)`, `torch.as_tensor(...)` or `table.to(device)` of a host
   value per call, and no `tensor[idx] = 1.0` with a Python scalar (the scalar is a CPU tensor).
   Use a device scalar (`torch.ones((), device=...)`, `torch.full_like`), `x.zero_()`, or a constant
-  table placed once by `foldforge.utils.device_constants.on_device` / `built_on_device`. The warmup
+  table placed once by `foldjet.utils.device_constants.on_device` / `built_on_device`. The warmup
   calls fill that cache before the capture starts.
 - Host randomness (the MC-dropout coin in `AlphaFold3.forward`, the sampler's noise) stays outside
   the wrapped callables.
 
 ## Out of scope: the ESM-C language model
 
-FoldForge does not optimise ESM-C (the language model of ESMFold2). Its speed work is taken from
+FoldJet does not optimise ESM-C (the language model of ESMFold2). Its speed work is taken from
 Anthropic's ESMFold2 optimisation kit as shipped: CUDA-graph capture of the language model and MSA
 encoders (lever `eg`), ESM-C MLP through TransformerEngine (`esmc_mlp=te`), and the LM block
 streaming above 1,500 tokens (`x4`). Nothing in `scope: trunk` wraps the language model.

@@ -33,7 +33,7 @@ KIT boltz2 n=<N> exit=<rc> fwd=[<per forward, cold first>] warm_median=<s> templ
 
 ## What the summary fields are
 
-- `fwd`: the kit's `PHASE item=aK ... fwd_s=` per input = `Boltz2.forward`, CUDA-synchronized (the span FoldForge times; audit
+- `fwd`: the kit's `PHASE item=aK ... fwd_s=` per input = `Boltz2.forward`, CUDA-synchronized (the span FoldJet times; audit
   `docs/records/anthropic_kits_fwd_definition_audit_20261029.md`). `warm_median` = median of all forwards after the first.
 - `templates_real`: min over inputs of min(names, live_slots) from the kit's model-entry census `[boltz2-opt] TEMPLATES record=aK declared=..
   names=.. slots=.. live_slots=.. real=j/T`, capped by how many of the 4 expected names appear in the featurizer census
@@ -47,7 +47,7 @@ KIT boltz2 n=<N> exit=<rc> fwd=[<per forward, cold first>] warm_median=<s> templ
 per chain (4N records) and `parse_a3m` gives 6789 sequences. Boltz aligns a template to the query with an UNGAPPED local alignment
 (`schema.get_local_alignments`: blastp scoring, gap open/extend -1000), so per query chain the templates cover:
 5syd_A query [42,128) (86 res), 6kol_A [48,97) (49), 5yt7_A [0,114) (114), 6tfd_A [106,117) (11). That is stock Boltz-2's template form, not
-FoldForge's alignment (88 / 120 / 114 / 101 residues); the kit still counts each as a live slot when it carries coordinates.
+FoldJet's alignment (88 / 120 / 114 / 101 residues); the kit still counts each as a live slot when it carries coordinates.
 
 ## Notes
 

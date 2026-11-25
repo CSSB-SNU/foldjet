@@ -10,8 +10,8 @@ import sys
 
 import pytest
 
-from foldforge.models import checkpoints
-from foldforge.models.checkpoints import miniworld
+from foldjet.models import checkpoints
+from foldjet.models.checkpoints import miniworld
 
 
 @pytest.fixture
@@ -32,8 +32,8 @@ def test_missing_file_without_blob_says_download_then_convert(empty_root):
     with pytest.raises(FileNotFoundError) as error:
         miniworld.resolve_native("af3")
     text = str(error.value)
-    assert "foldforge weights download af3" in text
-    assert "foldforge weights convert af3" in text
+    assert "foldjet weights download af3" in text
+    assert "foldjet weights convert af3" in text
     assert "never converts" in text
 
 
@@ -42,7 +42,7 @@ def test_missing_file_with_blob_names_the_exact_convert_command(empty_root):
     blob.parent.mkdir()
     blob.write_bytes(b"x")
     with pytest.raises(
-        FileNotFoundError, match=r"convert it once: foldforge weights convert boltz2"
+        FileNotFoundError, match=r"convert it once: foldjet weights convert boltz2"
     ):
         miniworld.resolve_native("boltz2")
     assert not (
@@ -55,20 +55,20 @@ def test_every_registered_model_has_a_native_file_name():
 
 
 def test_load_model_without_a_converted_file_fails_with_the_command(empty_root):
-    import foldforge
+    import foldjet
 
-    with pytest.raises(FileNotFoundError, match="foldforge weights convert af3"):
-        foldforge.load_model("af3", device="cpu")
+    with pytest.raises(FileNotFoundError, match="foldjet weights convert af3"):
+        foldjet.load_model("af3", device="cpu")
 
 
 def test_the_loader_refuses_a_released_blob(tmp_path):
-    from foldforge.models.loading import load_checkpoint
+    from foldjet.models.loading import load_checkpoint
 
     blob = (
         tmp_path / "weights.bin.zst"
     )  # not a locked blob name: the size gate is not the subject
     blob.write_bytes(b"x")
-    with pytest.raises(ValueError, match="foldforge weights convert af3"):
+    with pytest.raises(ValueError, match="foldjet weights convert af3"):
         load_checkpoint("af3", blob, device="cpu")
 
 
@@ -80,15 +80,15 @@ def test_runtime_imports_nothing_of_the_legacy_released_graph():
     """
     code = (
         "import sys\n"
-        "import foldforge, foldforge.api, foldforge.models.loading, "
-        "foldforge.models.execution\n"
-        "import foldforge.models.architectures.af3, "
-        "foldforge.models.checkpoints.miniworld\n"
+        "import foldjet, foldjet.api, foldjet.models.loading, "
+        "foldjet.models.execution\n"
+        "import foldjet.models.architectures.af3, "
+        "foldjet.models.checkpoints.miniworld\n"
         "bad = sorted(m for m in sys.modules if "
-        "m.startswith('foldforge.models.checkpoints.legacy') or "
+        "m.startswith('foldjet.models.checkpoints.legacy') or "
         "m.endswith('checkpoints.haiku'))\n"
         "assert not bad, bad\n"
-        "assert 'foldforge.modules.dense.pairformer' not in sys.modules\n"
+        "assert 'foldjet.modules.dense.pairformer' not in sys.modules\n"
     )
     done = subprocess.run(  # noqa: S603 - fixed argv, literal code
         [sys.executable, "-c", code], capture_output=True, text=True, check=False
@@ -99,7 +99,7 @@ def test_runtime_imports_nothing_of_the_legacy_released_graph():
 def test_weights_convert_command_arguments(empty_root):
     from click.testing import CliRunner
 
-    from foldforge.models.checkpoints.commands import weights
+    from foldjet.models.checkpoints.commands import weights
 
     runner = CliRunner()
     assert runner.invoke(weights, ["convert"]).exit_code != 0  # models or --all
@@ -113,4 +113,4 @@ def test_weights_convert_command_arguments(empty_root):
     )  # no blob installed anywhere: every model is skipped, nothing converted
     assert skipped.exit_code == 0, skipped.output
     assert skipped.output.count("SKIP") == len(miniworld.NATIVE_FILES)
-    assert "foldforge weights download af3" in skipped.output
+    assert "foldjet weights download af3" in skipped.output

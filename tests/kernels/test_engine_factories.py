@@ -1,4 +1,4 @@
-"""The factories build engine classes with FoldForge's choices.
+"""The factories build engine classes with FoldJet's choices.
 
 Model keys, master / fp32 parameters, the RoseTTAFold3 fast block.
 """
@@ -27,11 +27,11 @@ from miniworld_engine.modules import (
 )
 from miniworld_engine.modules.primitives import MasterWeights
 
-from foldforge.modules.dense.spec import SPECS
-from foldforge.modules.engine import modules as factory
-from foldforge.modules.engine.configure import configure_model, precision_of
-from foldforge.modules.engine.pairformer import pairformer_block
-from foldforge.modules.engine.transformers import (
+from foldjet.modules.dense.spec import SPECS
+from foldjet.modules.engine import modules as factory
+from foldjet.modules.engine.configure import configure_model, precision_of
+from foldjet.modules.engine.pairformer import pairformer_block
+from foldjet.modules.engine.transformers import (
     atom_dit_stack,
     engine_key_window,
     token_dit_stack,
@@ -200,8 +200,8 @@ def test_key_window_words():
 def test_configure_model_keeps_fp32_parameters_and_records_precision():
     model = torch.nn.Sequential(factory.transition(16, 2), torch.nn.Linear(16, 4))
     out = configure_model(model, "miniworld", torch.bfloat16, "cpu")
-    assert out.foldforge_precision == "master"
-    assert out.foldforge_activation_dtype == torch.bfloat16
+    assert out.foldjet_precision == "master"
+    assert out.foldjet_activation_dtype == torch.bfloat16
     assert {p.dtype for p in out.parameters()} == {torch.float32}
     assert precision_of(torch.float32) == "fp32"
     with pytest.raises(ValueError, match="no parameter precision"):

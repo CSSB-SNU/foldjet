@@ -13,8 +13,8 @@ import pytest
 import torch
 from safetensors.torch import save_file
 
-from foldforge.modules import language_model as tower
-from foldforge.modules.esmc import ESMCConfig, ESMCModel
+from foldjet.modules import language_model as tower
+from foldjet.modules.esmc import ESMCConfig, ESMCModel
 
 D_MODEL, HEADS, LAYERS, FFN = 64, 4, 2, 96
 

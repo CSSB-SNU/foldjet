@@ -1,4 +1,4 @@
-"""The two FoldForge-side sources of run-to-run differences (2026-11-13).
+"""The two FoldJet-side sources of run-to-run differences (2026-11-13).
 
 The chirality gradient's float-atomic sum and the post-atom-cond LayerNorm that
 inductor compiled with a timing-picked block size inside the sampler step.
@@ -9,8 +9,8 @@ from __future__ import annotations
 import pytest
 import torch
 
-from foldforge.modules.dense import atom_cross_attention as aca
-from foldforge.modules.dense.chirality import _segment_sum, dihedral_error_gradient
+from foldjet.modules.dense import atom_cross_attention as aca
+from foldjet.modules.dense.chirality import _segment_sum, dihedral_error_gradient
 
 
 def _overlapping(

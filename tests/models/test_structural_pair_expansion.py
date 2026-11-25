@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 import torch
 
-from foldforge.modules.dense import structural_tokens as st
+from foldjet.modules.dense import structural_tokens as st
 
 C_PAIR, RESIDUES = 8, 7
 PARENT = torch.tensor([0, 0, 1, 1, 2, 3, 3, 4, 5, 5, 6, 6, 6])

@@ -9,13 +9,13 @@ import pytest
 import torch
 from torch import nn
 
-from foldforge.models import execution
-from foldforge.models.architectures.af3 import AlphaFold3
-from foldforge.models.execution import ExecutedCallable, Execution
-from foldforge.modules.dense import diffusion_head as dh
-from foldforge.modules.dense import spec as specs
-from foldforge.modules.dense.diffusion_head import DiffusionHead
-from foldforge.modules.engine.transformers import TokenDiTStack
+from foldjet.models import execution
+from foldjet.models.architectures.af3 import AlphaFold3
+from foldjet.models.execution import ExecutedCallable, Execution
+from foldjet.modules.dense import diffusion_head as dh
+from foldjet.modules.dense import spec as specs
+from foldjet.modules.dense.diffusion_head import DiffusionHead
+from foldjet.modules.engine.transformers import TokenDiTStack
 
 LENGTH = 21  # not a multiple of the band rows below
 
@@ -96,7 +96,7 @@ def test_threshold_is_in_bytes_and_default_is_a_no_op_for_small_pairs():
 
 
 def test_relative_encoding_rows_are_rows_of_the_whole():
-    from foldforge.modules.dense import featurization
+    from foldjet.modules.dense import featurization
 
     tokens = _tokens(LENGTH)
     whole = featurization.create_relative_encoding(tokens, 32, 2, dtype=torch.float32)
@@ -212,7 +212,7 @@ def test_run_trunk_releases_the_previous_fold_first():
         raise Stop
 
     fake = SimpleNamespace(
-        foldforge_release_fold_state=lambda: order.append("release"),
+        foldjet_release_fold_state=lambda: order.append("release"),
         _prepare_batch=prepare,
     )
     with pytest.raises(Stop):
@@ -235,7 +235,7 @@ def test_sample_diffusion_releases_the_fold_state_before_the_heads():
         return {}
 
     fake = SimpleNamespace(
-        foldforge_release_fold_state=lambda: order.append("release"),
+        foldjet_release_fold_state=lambda: order.append("release"),
         _sample_diffusion=lambda batch, embeddings: order.append("sample") or {},
         _predict_heads=predict_heads,
     )

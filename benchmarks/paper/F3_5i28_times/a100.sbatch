@@ -1,5 +1,5 @@
 #!/bin/bash
-# F3 FoldForge side on the A100 (cssb3, own Slurm): ONE (model, arm=engine, repetition) per job. FP8 is H100 only.
+# F3 FoldJet side on the A100 (cssb3, own Slurm): ONE (model, arm=engine, repetition) per job. FP8 is H100 only.
 #   sbatch -J f3-af3 --export=ALL,MODEL=af3,ARM=engine,REP=1 benchmarks/paper/F3_5i28_times/a100.sbatch      (run on cssb3, from the checkout there)
 # Smoke: `--time=00:10:00`, SIZES="1 2" REPEATS=3.
 #SBATCH -p A100

@@ -5,7 +5,7 @@ It raised AttributeError before (`weight.shape` read before the None branch).
 
 import torch
 
-from foldforge.diffusion.geometry.alignment import weighted_align
+from foldjet.diffusion.geometry.alignment import weighted_align
 
 
 def test_weighted_align_none_weight_is_unit_weight():

@@ -1,10 +1,10 @@
 # Protenix v1 파인튜닝 (학습 스크립트, phase 0/1)
 
-`scripts/train_protenix1.py`와 `src/foldforge/train/`는 FoldForge 모델(protenix1)을 **MiniWorld의 학습 레시피**로 파인튜닝한다.
+`scripts/train_protenix1.py`와 `src/foldjet/train/`는 FoldJet 모델(protenix1)을 **MiniWorld의 학습 레시피**로 파인튜닝한다.
 현재 구현 범위는 phase 0(기울기·엔진 backward 확인)과 phase 1(eager 스텝, 단일 GPU, gradient accumulation)이다. 데이터 로더(phase 2)와
 스텝 전체 CUDA 그래프(phase 3)는 아직 없다.
 
-## 레시피 (`foldforge.train.config.TrainConfig`)
+## 레시피 (`foldjet.train.config.TrainConfig`)
 
 출처는 MiniWorld의 `configs/miniworld/phase2a_diffusion_medium_v200_b200_joint.yaml` 계열, `loss/diffusion_v102_ft.yaml`, `train/default.yaml`이다
 (Protenix의 `finetune_demo.sh`가 아니다).
@@ -21,7 +21,7 @@
 
 ## Protenix 레시피 (`--recipe protenix`)
 
-기본은 위의 MiniWorld 레시피이고, `--recipe protenix`는 Protenix v1 자체의 파인튜닝 레시피로 바꾼다(`src/foldforge/train/recipes.py`, 값마다 Protenix 파일·줄 번호가
+기본은 위의 MiniWorld 레시피이고, `--recipe protenix`는 Protenix v1 자체의 파인튜닝 레시피로 바꾼다(`src/foldjet/train/recipes.py`, 값마다 Protenix 파일·줄 번호가
 `PROTENIX_REFERENCES`에 있다). 명령줄 플래그(`--max-lr`, `--warmup-steps`, `--grad-clip`, `--weight-decay` ...)는 레시피 값을 덮어쓴다. 데이터와 샘플러는 그대로다.
 
 | 항목 | Protenix | MiniWorld(기본) |
@@ -49,7 +49,7 @@ Protenix v1에는 모든 파라미터가 1e-37 수준인 모듈이 있다(추론
 
 ## 동결되는 파라미터와 기울기 점검
 
-`src/foldforge/train/freeze.py`의 표 하나(`RULES`)가 학습에서 갱신하지 않는 파라미터를 정한다. `prepare.enable_training`이 `requires_grad`를 끄고, 옵티마이저는
+`src/foldjet/train/freeze.py`의 표 하나(`RULES`)가 학습에서 갱신하지 않는 파라미터를 정한다. `prepare.enable_training`이 `requires_grad`를 끄고, 옵티마이저는
 그 파라미터를 받지 않는다. 체크포인트 키는 바뀌지 않는다(저장·읽기 형식 그대로). 규칙마다 이유가 있다.
 
 | 규칙 | 대상 | 이유 |
@@ -58,7 +58,7 @@ Protenix v1에는 모든 파라미터가 1e-37 수준인 모듈이 있다(추론
 | `last_msa_block` | 마지막 MSA 블록의 `msa_attention1`, `msa_transition` (OPM이 먼저인 모델: Protenix, AF3 계열, ESMFold2) | 마지막 블록이 갱신한 MSA는 버려져 손실에 닿지 않는다. Protenix·ESMFold2 체크포인트는 여기가 0으로 채워져 있다. Boltz 순서(MSA 갱신이 OPM보다 먼저)는 해당 없음 |
 | `experimentally_resolved` | confidence 헤드의 `experimentally_resolved_ln/logits` | MiniWorld 레시피에는 이 손실이 없다(가중치 0). 가중치가 0이 아니면(`--recipe protenix`) 동결하지 않는다 |
 | `pae_zero_weight` | confidence 헤드의 `pae_logits_ln`, `pae_logits`, `pae_inter_logits` | PAE 가중치가 정확히 0이면(`--recipe protenix`) 이 파라미터는 손실에 닿지 않는다 |
-| `boltz2_contact_fourier` | Boltz-2의 `contact_fourier` (입력·confidence 재임베딩, 가중치와 편향) | 원본에서 고정(고정 푸리에 특징)인데 FoldForge에서는 학습되고 있었다 |
+| `boltz2_contact_fourier` | Boltz-2의 `contact_fourier` (입력·confidence 재임베딩, 가중치와 편향) | 원본에서 고정(고정 푸리에 특징)인데 FoldJet에서는 학습되고 있었다 |
 | `esmfold2_*` | ESMFold2의 단일 트랙(confidence pairformer의 `single_*`, `single_activations`, `prev_single_embedding*`), atom pair 슬롯(`pair_mlp_*`, `*_1`, `embed_trunk_*_cond`, `pair_logits_projection`), confidence의 contact·bond 재임베딩 | 원본에 없어서 변환기가 0으로 채운 자리. 학습하면 원본에 없는 용량이 생긴다. **값이 정확히 0일 때만** 동결한다(나중 체크포인트가 이 자리를 채우면 동결되지 않는다) |
 
 기울기 점검(`GRAD_COVERAGE`, `scripts/train_protenix1.py`)은 한 스텝 뒤 파라미터를 분류한다. 결함으로 세는 것은 `none`(기울기 없음), `zero_live`(살아 있는 가중치의 0 기울기),
@@ -84,8 +84,8 @@ Protenix v1에는 모든 파라미터가 1e-37 수준인 모듈이 있다(추론
 
 ## 데이터
 
-FoldForge는 MiniWorld를 import하지 않는다. 데이터 소스는 `--batch-source module:callable`이다. callable은 `(cfg, device)`를 받아 `TrainBatch`의
-이터레이터를 돌려준다(`foldforge.train.data`). 어댑터는 MiniWorld 쪽에서 제공한다(BioMolDB 카탈로그와 LMDB 경로는 MiniWorld의
+FoldJet는 MiniWorld를 import하지 않는다. 데이터 소스는 `--batch-source module:callable`이다. callable은 `(cfg, device)`를 받아 `TrainBatch`의
+이터레이터를 돌려준다(`foldjet.train.data`). 어댑터는 MiniWorld 쪽에서 제공한다(BioMolDB 카탈로그와 LMDB 경로는 MiniWorld의
 `configs/miniworld/data/H100_default.yaml`).
 
 ## 실행
@@ -138,7 +138,7 @@ Output (rank 0 only):
   `selected` = the backend each module of the class is set to, `served` = host calls that ran on each backend (a refused call is served by `pytorch`), `refused` = calls the
   selected backend refused, with the reason (for example a backward the cuEquivariance op does not take). Counts are Python calls in the eager training step; nothing here
   is a kernel trace. The comparison is only honest when this table is read with the times: a class listed as `selected=cueq ... refused=...` ran `pytorch` for those calls.
-- `POOL targets=... tokens=[...]`: the examples (tokens after FoldForge's featurisation).
+- `POOL targets=... tokens=[...]`: the examples (tokens after FoldJet's featurisation).
 - `BENCHSTEP it=.. wall_s=.. loss=.. lr=.. peak_gib=.. micro_steps=.. gnorm=..`: CUDA-synchronized wall time of the whole optimizer step (micro steps, all-reduce, clip, Adam, EMA).
   `micro_steps` is per optimizer step over all ranks (the effective batch); `peak_gib` is rank 0's peak allocated memory of the step. With `--profile-phases` the per-phase
   `PHASES` lines are printed too (they add synchronizations).
@@ -146,9 +146,9 @@ Output (rank 0 only):
   `total_wall_s`, `micro_steps_per_s` (all ranks), `seconds_per_micro_step_per_gpu`, `tokens_per_s`, `nonfinite_steps` (counted, the run goes on), peak allocated / reserved GiB, the
   engine table, git commit, engine version and `miniworld_engine.__file__`, GPU name, and `ranks_identical` (the parameter checksum equals on every rank).
 
-Data are STAND-INS: FoldForge's featurisation of FoldBench targets (`--bench-pool default` = 8 targets with 0.7 x N .. N tokens (size table of the featurisation, <= 4096 atoms), N = `--bench-tokens`; an example that featurises above N tokens is dropped, default 384 = MiniWorld's recipe crop
+Data are STAND-INS: FoldJet's featurisation of FoldBench targets (`--bench-pool default` = 8 targets with 0.7 x N .. N tokens (size table of the featurisation, <= 4096 atoms), N = `--bench-tokens`; an example that featurises above N tokens is dropped, default 384 = MiniWorld's recipe crop
 `crop.max_tokens: 384`, bucket 384; or `--bench-pool a,b,c`), the ground truth is the model's own pre-training prediction. Step time depends on the shapes, not on the label values,
-but the featurisation is FoldForge's inference one (MSA bucket 1024 rows, 4 templates where the target has them, no recipe crop / sampling): the recipe uses `bucket_msa_size: 128`,
+but the featurisation is FoldJet's inference one (MSA bucket 1024 rows, 4 templates where the target has them, no recipe crop / sampling): the recipe uses `bucket_msa_size: 128`,
 so the MSA part of a measured step is heavier than in the real run. Without `--bench-pool-cache` every process builds its own pool and the labels come from the backend being measured.
 
 Memory (80 GB H100, 384 tokens, 48 augmentations): the 48 augmentations run in ONE diffusion forward / backward (`--augment-chunk 0`, the recipe; `--bench` has no chunk default:

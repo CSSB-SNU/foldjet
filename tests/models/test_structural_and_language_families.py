@@ -11,7 +11,7 @@ from __future__ import annotations
 import pytest
 import torch
 
-from foldforge.modules.dense.spec import SPECS
+from foldjet.modules.dense.spec import SPECS
 
 #: Both releases of the family that folds from a language model. Membership is
 #: stated per FAMILY, not per release: a convention named on one release is a
@@ -27,7 +27,7 @@ def test_esm_class_widening_is_a_permutation_not_a_shift():
     nucleic class and shifts every nucleic class down one -- invisible to any
     single-sequence protein fold, because both are then identically zero.
     """
-    from foldforge.modules.dense.featurization import widen_to_esm_classes
+    from foldjet.modules.dense.featurization import widen_to_esm_classes
 
     features = torch.arange(2 * 447, dtype=torch.float32).reshape(2, 447)
     wide = widen_to_esm_classes(features)
@@ -52,7 +52,7 @@ def test_esm_class_widening_is_a_permutation_not_a_shift():
 
 def test_rotary_tables_fill_half_the_atom_head_exactly():
     """3 axes x 2 spatial pairs + 10 uid pairs = 16 = head_dim / 2."""
-    from foldforge.modules.dense.atom_cross_attention import build_atom_rope
+    from foldjet.modules.dense.atom_cross_attention import build_atom_rope
 
     spec = SPECS["esmfold2"]
     assert spec.atom_rope is not None
@@ -71,7 +71,7 @@ def test_rotary_is_tiled_not_interleaved():
     Interleaving instead reads correlation 0.88 on the atom encoder: high
     enough to look like noise, low enough to ruin the fold.
     """
-    from foldforge.modules.dense.diffusion_transformer import apply_rope
+    from foldjet.modules.dense.diffusion_transformer import apply_rope
 
     x = torch.randn(2, 3, 1, 8)
     cos, sin = torch.ones(2, 3, 4), torch.zeros(2, 3, 4)
@@ -86,8 +86,8 @@ def test_rotary_is_tiled_not_interleaved():
 
 def test_sliding_window_counts_valid_atoms_not_slots():
     """The window is +/-N by RANK among valid atoms, not by position."""
-    from foldforge.modules.dense.atom_cross_attention import sliding_window_mask
-    from foldforge.utils import atom_layout
+    from foldjet.modules.dense.atom_cross_attention import sliding_window_mask
+    from foldjet.utils import atom_layout
 
     queries_mask = torch.tensor([[1.0, 0.0, 1.0, 1.0]])
     identity = atom_layout.GatherInfo(
@@ -107,7 +107,7 @@ def test_sliding_window_counts_valid_atoms_not_slots():
 
 
 def test_rigid_align_recovers_a_known_rotation_and_translation():
-    from foldforge.models.architectures.af3 import weighted_rigid_align
+    from foldjet.models.architectures.af3 import weighted_rigid_align
 
     torch.manual_seed(0)
     reference = torch.randn(4, 5, 3)
@@ -128,7 +128,7 @@ def test_rigid_align_gives_every_sample_its_own_rotation():
     the crash was the lucky outcome. Had the shapes broadcast it would have
     solved one Kabsch problem across every sample at once, silently.
     """
-    from foldforge.models.architectures.af3 import weighted_rigid_align
+    from foldjet.models.architectures.af3 import weighted_rigid_align
 
     torch.manual_seed(11)
     reference = torch.randn(4, 5, 3)
@@ -159,7 +159,7 @@ def test_rigid_align_gives_every_sample_its_own_rotation():
 
 def test_structural_diffusion_output_returns_to_the_residue_layout():
     """Exact, not a choice: every residue atom sits in one structural slot."""
-    from foldforge.models.architectures.af3 import _to_residue_layout
+    from foldjet.models.architectures.af3 import _to_residue_layout
 
     max_atoms = 4
     # Residue 0 splits into structural tokens 0 and 1; residue 1 does not.
@@ -188,7 +188,7 @@ def test_a_family_that_folds_from_a_language_model_refuses_to_fold_without_one()
     plausible; the reference ran four models that way for weeks, and what gave
     it away was that supplying the tower changed the answer by nothing at all.
     """
-    from foldforge.models.architectures.af3 import Evoformer
+    from foldjet.models.architectures.af3 import Evoformer
 
     spec = SPECS["esmfold2"]
     assert spec.language_model is not None
@@ -210,13 +210,13 @@ def test_nucleic_base_centre_follows_the_ring_system(residue, expected):
     picks N1 for every purine -- the wrong representative atom on about half of
     all nucleotides, and invisible to protein.
     """
-    from foldforge.data.features.structural_tokens import _base_centre
+    from foldjet.data.features.structural_tokens import _base_centre
 
     assert _base_centre(residue)[0] == expected
 
 
 def test_structural_roles_split_every_standard_residue_but_glycine():
-    from foldforge.data.features import structural_tokens as st
+    from foldjet.data.features import structural_tokens as st
 
     assert st._BACKBONE["protein"] == frozenset(["N", "CA", "C", "O", "OXT"])
     # Glycine is standard and splits to one token because its sidechain set is
@@ -226,8 +226,8 @@ def test_structural_roles_split_every_standard_residue_but_glycine():
 
 def test_the_language_model_shim_mixes_the_tower_s_last_layers():
     """The mix peaks on the LAST states, so the tower cannot be truncated."""
-    from foldforge.models.checkpoints import DEFAULT_DIR
-    from foldforge.modules.language_model import load_pair_shim
+    from foldjet.models.checkpoints import DEFAULT_DIR
+    from foldjet.modules.language_model import load_pair_shim
 
     path = DEFAULT_DIR / "esmfold2" / "esmfold2.lm.npz"
     if not path.is_file():
@@ -251,7 +251,7 @@ def test_the_language_model_packs_the_protein_tokens_it_is_given():
     positions. Every ESMFold2 fold ran without its language model and still
     produced a structure, which is why nothing caught it.
     """
-    from foldforge.modules.language_model import build_lm_inputs
+    from foldjet.modules.language_model import build_lm_inputs
 
     protein = torch.tensor([[True, True, True, False]])
     ids = torch.tensor([[5, 7, 9, 3]])
@@ -279,7 +279,7 @@ def test_the_language_model_packs_the_protein_tokens_it_is_given():
 
 
 def test_pair_only_families_build_neither_single_track_nor_pair_attention():
-    from foldforge.models.checkpoints.legacy import dense_model
+    from foldjet.models.checkpoints.legacy import dense_model
 
     spec = SPECS["esmfold2"]
     with torch.device("meta"):
@@ -298,8 +298,8 @@ def test_pair_only_families_build_neither_single_track_nor_pair_attention():
 
 def test_only_the_atom_blocks_take_the_rms_conditioning():
     """Gating on the family alone would strip the token blocks that have it."""
-    from foldforge.models.checkpoints.legacy import dense_model
-    from foldforge.modules.dense.diffusion_transformer import RMSNorm
+    from foldjet.models.checkpoints.legacy import dense_model
+    from foldjet.modules.dense.diffusion_transformer import RMSNorm
 
     with torch.device("meta"):
         model = dense_model(SPECS["esmfold2"])
@@ -315,7 +315,7 @@ def test_only_the_atom_blocks_take_the_rms_conditioning():
 
 
 def test_structural_token_families_carry_their_expander_and_refiner():
-    from foldforge.models.checkpoints.legacy import dense_model
+    from foldjet.models.checkpoints.legacy import dense_model
 
     spec = SPECS["opendde"]
     with torch.device("meta"):
@@ -356,7 +356,7 @@ def test_no_spec_field_is_declared_and_never_read():
     import dataclasses
     import pathlib
 
-    root = pathlib.Path(__file__).resolve().parents[2] / "src" / "foldforge"
+    root = pathlib.Path(__file__).resolve().parents[2] / "src" / "foldjet"
     sources = "\n".join(path.read_text() for path in root.rglob("*.py"))
     unread = [
         field.name
@@ -374,8 +374,8 @@ def test_keep_query_subsampling_never_drops_the_query():
     1 - num_msa/depth. A trunk handed an alignment with no query in it folds
     WORSE the moment it is given a real one, which is how this was found.
     """
-    from foldforge.data.features import dense as features
-    from foldforge.modules.dense import featurization
+    from foldjet.data.features import dense as features
+    from foldjet.modules.dense import featurization
 
     depth, width, keep = 40, 6, 8
     # Row i is all i, so a subsample can be read straight off the first column.
@@ -417,8 +417,8 @@ def test_the_relative_chain_bucket_flips_every_pair_of_a_monomer():
     column either way -- but a DIFFERENT one into a trained projection, and the
     reference measured it at 1.522 -> 0.719 A when it was first found.
     """
-    from foldforge.data.features import dense as features
-    from foldforge.modules.dense import featurization
+    from foldjet.data.features import dense as features
+    from foldjet.modules.dense import featurization
 
     n = 4
     tokens = features.TokenFeatures(
@@ -458,7 +458,7 @@ def test_the_outer_product_mean_is_afs_for_every_family():
     The clamped divisor and the bias-after-divide some releases use were
     unified: resetting either moved no fold beyond 0.1 A.
     """
-    from foldforge.models.checkpoints.legacy import primitives
+    from foldjet.models.checkpoints.legacy import primitives
 
     torch.manual_seed(0)
     msa, mask = torch.randn(2, 5, 8), torch.ones(2, 5)
@@ -503,8 +503,8 @@ def test_the_reference_geometry_override_replaces_by_atom_name():
     """Its atom encoder was trained on ITS frame, and ref_pos is not pose-invariant."""
     import numpy as np
 
-    from foldforge.data.constants import residue_geometry
-    from foldforge.data.features.dense_conventions import override_ref_conformers
+    from foldjet.data.constants import residue_geometry
+    from foldjet.data.features.dense_conventions import override_ref_conformers
 
     frame = residue_geometry.as_conformers("esmfold2")
     names, positions = frame["ALA"]
@@ -553,7 +553,7 @@ def test_a_family_with_no_msa_stack_builds_neither_the_stack_nor_its_inputs():
     shifts the trunk and the coda down one -- which is a fact about the NAMES,
     and a blob written one way cannot be read the other.
     """
-    from foldforge.models.architectures.af3 import Evoformer
+    from foldjet.models.architectures.af3 import Evoformer
 
     with torch.device("meta"):
         fast = Evoformer(SPECS["esmfold2-fast"])
@@ -592,7 +592,7 @@ def test_the_confidence_head_branches_on_facts_not_on_family_names():
     # choice (re-embedding the pair) is a boolean of its own.
     head = (
         _pathlib.Path(__file__).resolve().parents[2]
-        / "src/foldforge/modules/dense/head.py"
+        / "src/foldjet/modules/dense/head.py"
     )
     source = head.read_text()
     names = [n for n in SPECS if f'== "{n}"' in source]
@@ -603,7 +603,7 @@ def test_the_structural_batch_reads_the_residue_batchs_posed_conformer():
     """The release keeps one atom array: its denoiser sees the trunk's posed ref_pos."""
     import numpy as np
 
-    from foldforge.data.features.structural_tokens import (
+    from foldjet.data.features.structural_tokens import (
         _residue_ref_pos_onto_structural,
     )
 
@@ -623,7 +623,7 @@ def test_a_lone_atom_component_sits_at_the_origin():
     """An ion's CCD conformer is (0, 0, 0); a frame-reading family must see that."""
     import numpy as np
 
-    from foldforge.data.features.dense_conventions import single_atoms_at_origin
+    from foldjet.data.features.dense_conventions import single_atoms_at_origin
 
     example = {
         "ref_pos": np.array(
@@ -645,7 +645,7 @@ _ESM_CLASS_OF_AF3 = [*range(2, 23), 1, 23, 24, 25, 26, 28, 29, 30, 31, 27]
 def test_widening_puts_each_af3_class_on_its_esmfold2_class():
     import torch
 
-    from foldforge.modules.dense.featurization import widen_to_esm_classes
+    from foldjet.modules.dense.featurization import widen_to_esm_classes
 
     x = torch.zeros(31, 447)
     x[torch.arange(31), torch.arange(31)] = 1
@@ -659,7 +659,7 @@ def test_converted_esmfold2_columns_are_reordered_onto_their_bases():
     """The converter laid ESM 23..31 on AF3 22..30 in order: DNA read the base below."""
     import torch
 
-    from foldforge.models.loading import reorder_esm_nucleic_columns
+    from foldjet.models.loading import reorder_esm_nucleic_columns
 
     class Trunk(torch.nn.Module):
         def __init__(self) -> None:
@@ -687,7 +687,7 @@ def test_converted_esmfold2_columns_are_reordered_onto_their_bases():
 
 def test_nucleic_order_is_sliced_not_indexed():
     """The runs spell the same order as the tuple (a list index is a host copy)."""
-    from foldforge.modules.dense.featurization import (
+    from foldjet.modules.dense.featurization import (
         _NUCLEIC_RUNS,
         AF3_NUCLEIC_IN_ESM_ORDER,
     )

@@ -12,11 +12,11 @@ from types import SimpleNamespace
 import pytest
 import torch
 
-from foldforge.diffusion.edm.sampling import EulerSampler
-from foldforge.models import sampler_graph
-from foldforge.train import rollout_graph, step
-from foldforge.train.config import TrainConfig
-from foldforge.train.rollout_graph import RolloutGraph, _Entry, graph_key, graph_tree
+from foldjet.diffusion.edm.sampling import EulerSampler
+from foldjet.models import sampler_graph
+from foldjet.train import rollout_graph, step
+from foldjet.train.config import TrainConfig
+from foldjet.train.rollout_graph import RolloutGraph, _Entry, graph_key, graph_tree
 
 
 @dataclasses.dataclass
@@ -124,7 +124,7 @@ def test_cpu_inputs_fall_back_to_the_eager_rollout() -> None:
     assert graph(model, {}, batch, {"pair": torch.zeros(3, 3, 2)}, 20) is None
     assert graph.fallbacks == 1
     calls = []
-    model.__dict__.pop("_foldforge_rollout_graph", None)
+    model.__dict__.pop("_foldjet_rollout_graph", None)
     out = rollout_graph.mini_rollout(
         model,
         {},
@@ -136,7 +136,7 @@ def test_cpu_inputs_fall_back_to_the_eager_rollout() -> None:
     assert out == "eager"
     assert len(calls) == 1
     # the graph is made once per model
-    assert model.__dict__["_foldforge_rollout_graph"].fallbacks == 1
+    assert model.__dict__["_foldjet_rollout_graph"].fallbacks == 1
 
 
 def test_structural_tokens_are_not_served() -> None:

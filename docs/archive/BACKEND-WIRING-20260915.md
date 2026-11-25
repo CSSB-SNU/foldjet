@@ -58,7 +58,7 @@ callable. The data does not establish the isolated cost of each of those parts.
 One model/input/GPU is not evidence of the same benefit for every model or length.
 
 Raw experiment sources/results are preserved on cssb3 under
-`/home/psk6950/practice/FoldForge/validation/graph-ab-20260915/` (job 43907),
+`/home/psk6950/practice/FoldJet/validation/graph-ab-20260915/` (job 43907),
 with an immutable source snapshot. The post-wiring snapshot, numerical checks,
 full-checkpoint smoke tests and repeated timing live under
 `validation/backend-wiring-20260915/`.

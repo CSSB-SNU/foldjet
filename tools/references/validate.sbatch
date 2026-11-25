@@ -1,5 +1,5 @@
 #!/bin/bash
-# One FoldForge fold for tools/references/validate.sh: task i of $LIST.
+# One FoldJet fold for tools/references/validate.sh: task i of $LIST.
 #SBATCH --partition=A100
 #SBATCH --gres=gpu:A100:1
 #SBATCH --cpus-per-task=8

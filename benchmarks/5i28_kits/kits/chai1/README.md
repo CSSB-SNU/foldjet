@@ -61,7 +61,7 @@ writing. `load_exported` is rebound only during each fold call and restored afte
 
 CPU check (`scripts/cpu_check_inner.sh`, chai's own `make_all_atom_feature_context` without ESM, n = 1, 2): `Loaded 4 templates: ['5SYD|A',
 '6KOL|A', '5YT7|A', '6TFD|A']` per chain, `TemplateContext(num_templates=4, num_nonnull_templates=4)`, msa depth 6789. Template residues with
-coordinates per slot (n=1): 88 / 120 / 114 / 127 (FoldForge's rows: 88 / 120 / 114 / 101 -- chai's kalign maps 6TFD onto all 127 positions).
+coordinates per slot (n=1): 88 / 120 / 114 / 127 (FoldJet's rows: 88 / 120 / 114 / 101 -- chai's kalign maps 6TFD onto all 127 positions).
 
 ## Notes
 

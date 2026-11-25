@@ -1,8 +1,8 @@
 # MiniWorld format contract
 
-FoldForge uses MiniWorld's inference YAML, FASTA grammar and CCDMol serialization.
+FoldJet uses MiniWorld's inference YAML, FASTA grammar and CCDMol serialization.
 `miniworld-engine` owns kernels and standalone operators; `team-gm` owns reusable
-block compositions; FoldForge owns complete predictors, input packing, heads and
+block compositions; FoldJet owns complete predictors, input packing, heads and
 released-checkpoint conversion. Model-specific equations, vocabularies and weight
 layouts remain explicit at those boundaries.
 
@@ -33,11 +33,11 @@ Prepare once on an allocated compute node:
 
 ```bash
 source tools/activate_env.sh
-foldforge ccd prepare \
+foldjet ccd prepare \
   --components data/ccd/components.cif \
   --rdkit data/ccd/molecules.pkl \
   --out $FOLDFORGE_HOME/ccd/preprocessed_CCD.lmdb
-foldforge ccd verify --ccd-db $FOLDFORGE_HOME/ccd/preprocessed_CCD.lmdb
+foldjet ccd verify --ccd-db $FOLDFORGE_HOME/ccd/preprocessed_CCD.lmdb
 ```
 
 The old files above are migration inputs only. Preparation uses a temporary sibling
@@ -53,12 +53,12 @@ from pickle transport. Caches belong to the selected lookup/database instance.
 ## Inputs and settings
 
 ```bash
-foldforge fold af3 --spec docs/examples/inference/1ubq.yaml \
+foldjet fold af3 --spec docs/examples/inference/1ubq.yaml \
   --config docs/examples/inference/native-bf16.yaml --out $FOLDFORGE_HOME/runs/af3
-foldforge fold protenix2 --spec docs/examples/inference/1ubq.yaml --out $FOLDFORGE_HOME/runs/protenix2
+foldjet fold protenix2 --spec docs/examples/inference/1ubq.yaml --out $FOLDFORGE_HOME/runs/protenix2
 ```
 
-The same `--spec` works with every model `foldforge models` lists. Paths in
+The same `--spec` works with every model `foldjet models` lists. Paths in
 it are relative to the spec file. Numeric `chain_letters` keys determine chain
 order; repeated letters share FASTA/MSA input. The adapter emits unique chain IDs
 and records the mapping in `chain-map.json`. MiniWorld's typed FASTA headers support
@@ -73,9 +73,9 @@ now something a config asks for rather than something it gets by omission.
 `trunk.msa_depth` caps prepared alignment rows for every adapter; null means the
 shared policy value of 16384 rows, the AF3 `msa_crop_size`. Inside the model,
 every trunk pass embeds a fresh uniformly random subset of 1024 valid rows and
-re-draws it on each recycle, as the AF3 MSA module does. FoldForge applies this
+re-draws it on each recycle, as the AF3 MSA module does. FoldJet applies this
 one rule to every predictor, from its `DenseSpec` row's `msa_subsample`
-(`foldforge.models.msa_policy` carries the record and the constants; the
+(`foldjet.models.msa_policy` carries the record and the constants; the
 `apply_flat`/`apply_esmfold2` appliers went with the layouts they configured).
 It replaces each checkpoint's released consumption: OpenDDE sampled 1280 rows,
 Protenix drew a random-size subset (Uniform[1, n] rows) on every cycle in
@@ -105,7 +105,7 @@ it uses the same CCD database and precision/block plumbing.
 
 ## MiniWorld MSA-LMDB and template-LMDB
 
-`foldforge fold MODEL --spec input.yaml --out results/target` reads the existing
+`foldjet fold MODEL --spec input.yaml --out results/target` reads the existing
 StructCooker/MiniWorld serialized records directly. Fragment tokenization is not
 required. Add the following fields to the normal FASTA/CCD spec:
 
@@ -195,7 +195,7 @@ indexing, schedulers, feature encodings and heads preserve their trained equatio
 The present qualification covers single-GPU inference, not distributed training.
 
 Source file identities and hashes for the MiniWorld formats are recorded in
-`src/foldforge/data/MINIWORLD-SOURCE.json`. Frozen pre-migration forward/attention
+`src/foldjet/data/MINIWORLD-SOURCE.json`. Frozen pre-migration forward/attention
 oracles in `tests/references` support regression comparisons after promotion.
 
 ## Validation (2026-09-14)
@@ -226,7 +226,7 @@ metadata changes were independently proven not to alter chemistry, conformers or
 those target records. Primitive tests additionally cover masks, OPM bias/epsilon,
 BF16 precision boundaries and gradients; reader tests cover fork/spawn and missing
 fragmentation chemistry. MiniWorld's original CCDMol and fragmentation functions
-were run against the new records, independently of the copied FoldForge helpers.
+were run against the new records, independently of the copied FoldJet helpers.
 
 Self-contained validation evidence is archived under
 `validation/miniworld-format-20260914/`; full raw run artifacts are retained in
@@ -312,7 +312,7 @@ seed leaves the trunk's RNG stream untouched. Changing a trunk seed changes the
 conditioning; the same diffusion seed reproduces the noise only when shapes,
 sample count and sampling settings match, not the final predicted coordinates.
 
-Override either value with `foldforge fold <model> --spec input.yaml --config
+Override either value with `foldjet fold <model> --spec input.yaml --config
 config.yaml --trunk-seed 7 --diffusion-seed 19`. The request's trunk seed overrides
 `modelSeeds` in legacy AF3 JSON. Notebook seed lists use the Cartesian product of
 `trunk_seeds` and `diffusion_seeds`.

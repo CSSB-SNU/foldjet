@@ -13,10 +13,10 @@ Two runs, **identical recipe, data, seed (`FT_SEED=0`) and sample order** (a pur
 `run_ft.sbatch` is one continuous job per run (QOS `cssb_h100` allows 30 days; `--mem=128G` = the per-job cap, `-w node01`: the BioMolDB copy is node-local on node01 / node02).
 `submit_chain.sh` is the fallback of the earlier shape (24 h segments, resume from the newer of last / epoch).
 
-## Commands (full campaign; started by the coordinator after the release and the FoldForge pin; 2 + 2 H100)
+## Commands (full campaign; started by the coordinator after the release and the FoldJet pin; 2 + 2 H100)
 
 ```
-cd <FoldForge checkout at the pinned commit>
+cd <FoldJet checkout at the pinned commit>
 BACKEND=miniworld TOTAL_EPOCHS=10 sbatch -J f7-engine  --export=ALL --time=3-00:00:00 benchmarks/paper/F7_finetune_loss/run_ft.sbatch
 BACKEND=pytorch   TOTAL_EPOCHS=10 sbatch -J f7-pytorch --export=ALL --time=7-00:00:00 benchmarks/paper/F7_finetune_loss/run_ft.sbatch
 # afterwards (any machine with python3, not a cluster login node):
@@ -32,7 +32,7 @@ Smoke (2 GPUs, 2 optimizer steps of effective batch 2): `RUN_ROOT=<dir> EFFECTIV
 ## Output
 
 `~/foldforge-scratch/paper/F7_finetune_loss/h100/` (`runs/ft_engine`, `runs/ft_pytorch` with the checkpoints; Slurm logs `slurm_f7-engine_<job>.log`, `slurm_f7-pytorch_<job>.log`; `meta_*.txt`
-with FoldForge commit, engine source, GPUs, node, job id). `collect.py` writes `engine_steps.txt` / `pytorch_steps.txt` (the shape of paper `data/finetune/*_steps.txt`, read by
+with FoldJet commit, engine source, GPUs, node, job id). `collect.py` writes `engine_steps.txt` / `pytorch_steps.txt` (the shape of paper `data/finetune/*_steps.txt`, read by
 `scripts/fig2_training_accuracy.py`), `finetune_steps.csv` (every step, every loss term, seconds and cumulative hours per run) and `finetune.json` (steps, median seconds per step, hours,
 common steps, per-term correlation and mean difference, `same_step_count`).
 

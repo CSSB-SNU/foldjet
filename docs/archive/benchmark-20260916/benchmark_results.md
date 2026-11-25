@@ -2,7 +2,7 @@
 
 Updated 2026-09-16. **4YX2: 594 residues, three chains (163 + 218 + 213).**
 All four models now have five measured configurations. Reference means each
-model's released **precision policy** in FoldForge's PyTorch backend; it is not
+model's released **precision policy** in FoldJet's PyTorch backend; it is not
 the original application's complete runtime. Native BF16 stores learned parameters
 in BF16 except FP32 norms and uses no autocast.
 
@@ -37,7 +37,7 @@ per-sample checks below.
 Reference AMP scopes follow [Protenix inference](https://github.com/bytedance/Protenix/blob/main/runner/inference.py),
 [ESMFold2 pinned implementation](https://github.com/Biohub/transformers/blob/b435f1f92dd5b4a653be57157d4f4f5ddba4f145/src/transformers/models/esmfold2/modeling_esmfold2.py),
 and [OpenDDE defaults](https://github.com/aurekaresearch/OpenDDE/blob/main/opendde/config/model_base.py).
-These compare backend configurations with common FoldForge adapters, not exact
+These compare backend configurations with common FoldJet adapters, not exact
 upstream end-to-end applications. PyTorch mode retains the architecture's permitted
 FlashAttention path and uses PyTorch for the other replaceable operations.
 
@@ -265,5 +265,5 @@ and capture; the **15.49 s** figure is the subsequent warm median.
 [Reference dtype audit](assets/af3_reference_precision_audit.json) ·
 [Native BF16 dtype audit](assets/af3_precision_audit.json).
 
-FoldForge source changes and two shared team-gm source changes are included in the
-snapshot hashes. The shared submodule changes must accompany the FoldForge changes.
+FoldJet source changes and two shared team-gm source changes are included in the
+snapshot hashes. The shared submodule changes must accompany the FoldJet changes.

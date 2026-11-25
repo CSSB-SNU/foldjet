@@ -1,6 +1,6 @@
-"""``foldforge.diffusion`` must stay movable into its own package.
+"""``foldjet.diffusion`` must stay movable into its own package.
 
-No import of another foldforge module or of the engine.
+No import of another foldjet module or of the engine.
 """
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ import ast
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import foldforge.diffusion as diffusion
+import foldjet.diffusion as diffusion
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -31,10 +31,10 @@ def test_imports_stay_inside_the_subpackage():
     for path in sorted(ROOT.rglob("*.py")):
         for module in _imports(path):
             top = module.split(".")[0]
-            if top == "foldforge":
+            if top == "foldjet":
                 if not (
-                    module == "foldforge.diffusion"
-                    or module.startswith("foldforge.diffusion.")
+                    module == "foldjet.diffusion"
+                    or module.startswith("foldjet.diffusion.")
                 ):
                     offenders.append((str(path.relative_to(ROOT)), module))
             elif top == "miniworld_engine":

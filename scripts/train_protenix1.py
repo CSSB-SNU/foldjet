@@ -1,4 +1,4 @@
-r"""Protenix v1 finetuning on the FoldForge graph (MiniWorld recipe).
+r"""Protenix v1 finetuning on the FoldJet graph (MiniWorld recipe).
 
 Phase 0/1: eager steps, one GPU, gradient accumulation.
 
@@ -7,7 +7,7 @@ Phase 0/1: eager steps, one GPU, gradient accumulation.
   python scripts/train_protenix1.py --smoke --target 8ayg-assembly1 --steps 50 \
       --warmup-steps 0 --run-dir RUN
 
-  # training from a data source (MiniWorld provides the adapter; FoldForge does not
+  # training from a data source (MiniWorld provides the adapter; FoldJet does not
   # import MiniWorld)
   python scripts/train_protenix1.py --batch-source my_pkg.adapter:batches \
       --steps 100000 --run-dir RUN [--ckpt X.miniworld.pt]
@@ -19,7 +19,7 @@ Phase 0/1: eager steps, one GPU, gradient accumulation.
       --steps 30 --warmup-steps 10 --bench-pool-cache POOL.pt
 
 The recipe (loss weights, Adam, clip, EMA, recycles, augmentations) is
-:class:`foldforge.train.config.TrainConfig`; read the lr warning there.
+:class:`foldjet.train.config.TrainConfig`; read the lr warning there.
 """
 
 # ruff: noqa: INP001, T201 - standalone script, print logging
@@ -37,9 +37,9 @@ from typing import TYPE_CHECKING, Any
 
 import torch
 
-import foldforge as ff
-from foldforge.modules.engine.configure import activation_autocast
-from foldforge.train import (
+import foldjet as ff
+from foldjet.modules.engine.configure import activation_autocast
+from foldjet.train import (
     TrainBatch,
     TrainConfig,
     bench,
@@ -54,10 +54,10 @@ from foldforge.train import (
     recipes,
     step,
 )
-from foldforge.train import (
+from foldjet.train import (
     compile as train_compile,
 )
-from foldforge.train.profile import PhaseTimer, tensor_bytes
+from foldjet.train.profile import PhaseTimer, tensor_bytes
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -69,7 +69,7 @@ _DIVERGED_LOSS = 1e6
 
 
 def smoke_batches(pred: Any, target: str) -> Iterator[TrainBatch]:
-    """Yield one fixed example: FoldForge's own featurisation of a FoldBench target.
+    """Yield one fixed example: FoldJet's own featurisation of a FoldBench target.
 
     The ground truth is the model's own pre-training prediction of it (a STAND-IN:
     the real ground-truth atoms are not mapped to the dense layout in phase 0/1).
@@ -199,7 +199,7 @@ def load_summary(model: torch.nn.Module, backend: str) -> dict:
     The plan (backend per op, fallbacks) and every engine module that does NOT run
     the requested backend, with the reason.
     """
-    report = getattr(model, "foldforge_load_report", {}) or {}
+    report = getattr(model, "foldjet_load_report", {}) or {}
     plan = report.get("backends", {})
     modules = (report.get("engine_backends") or {}).get("modules", {})
     off = {}
@@ -509,7 +509,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915 - one linear training driver
         type=int,
         default=16384,
         help="--bench-bucket: raw MSA pool rows before the per-recycle draw (16384 = "
-        "the largest FoldForge MSA bucket: nothing is cut)",
+        "the largest FoldJet MSA bucket: nothing is cut)",
     )
     ap.add_argument(
         "--bucket-templates", type=int, default=4, help="--bench-bucket: templates"
@@ -714,7 +714,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915 - one linear training driver
     )
     prep_info = prepare.enable_training(model, cfg)
     if args.msa_rows is not None:
-        # MSA rows per recycle (the recipe: bucket_msa_size 128; FoldForge default
+        # MSA rows per recycle (the recipe: bucket_msa_size 128; FoldJet default
         # 1024)
         model.evoformer.num_msa = args.msa_rows
     dist.broadcast_parameters(
@@ -840,7 +840,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915 - one linear training driver
     # the SUM over ranks of the scaled gradients is the mean over accum x world micro
     # steps
     micro_scale = 1.0 / (accum * world.world_size)
-    from foldforge.modules.engine.serving import (  # noqa: PLC0415 - imported after the model load, as before
+    from foldjet.modules.engine.serving import (  # noqa: PLC0415 - imported after the model load, as before
         report_observations,
         reset_observations,
     )
@@ -1156,17 +1156,17 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915 - one linear training driver
                 ),
                 flush=True,
             )
-        if "_foldforge_step_graph" in model.__dict__:
+        if "_foldjet_step_graph" in model.__dict__:
             say(
                 "STEP_GRAPH",
-                json.dumps(model.__dict__["_foldforge_step_graph"].report()),
+                json.dumps(model.__dict__["_foldjet_step_graph"].report()),
                 flush=True,
             )
         # --rollout-order graph: captures, replays, cache entries, bytes held
-        if "_foldforge_rollout_graph" in model.__dict__:
+        if "_foldjet_rollout_graph" in model.__dict__:
             say(
                 "ROLLOUT_GRAPH",
-                json.dumps(model.__dict__["_foldforge_rollout_graph"].report()),
+                json.dumps(model.__dict__["_foldjet_rollout_graph"].report()),
                 flush=True,
             )
         stats = bench.summarize_steps(bench_walls)

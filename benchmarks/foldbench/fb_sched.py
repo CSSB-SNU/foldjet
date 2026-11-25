@@ -1,6 +1,6 @@
 """Bucket-affine work scheduler of fb_multi.py: pure logic (no CUDA, no IO), shared by the parent process and the `--simulate` dry run.
 
-Targets are grouped by their exact FoldForge size bucket (BucketShape.select(tokens, atoms, 1): token bucket, atom bucket). Inside a bucket the targets
+Targets are grouped by their exact FoldJet size bucket (BucketShape.select(tokens, atoms, 1): token bucket, atom bucket). Inside a bucket the targets
 are ordered by estimated cost, largest first. A worker asks for its next target with `pick(worker)`:
   (a) affinity: the next target of the bucket the worker holds (its CUDA graphs stay warm);
   (b) claim:    that bucket is empty -> the unclaimed bucket (no live holder) with the largest priority (`order`: "total" = remaining summed cost,
@@ -109,7 +109,7 @@ def cost_model(
     fit_min_tokens: int = 256,
 ):
     """est(t, tokens) -> seconds. Measured per-target seconds when known: `run_dirs` (earlier FoldBench outputs, `<dir>/<t>/run.json` total_s,
-    read-only) first, then `per_target_tsv` (target, af3_tokens, seconds; foldbench_cost_s.tsv: the measured FoldForge seconds per target of the
+    read-only) first, then `per_target_tsv` (target, af3_tokens, seconds; foldbench_cost_s.tsv: the measured FoldJet seconds per target of the
     2026-11-16/17 FoldBench runs). Otherwise a log-log least-squares fit
     sec = a * tokens^b over the measured targets with >= `fit_min_tokens` tokens (the unmeasured ones are the large ones); tokens^2.5 without data."""
     import json

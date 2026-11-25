@@ -1,6 +1,6 @@
 [project]
 authors = [{ name = "Sanggeun Park", email = "psk6950@snu.ac.kr" }]
-name = "foldforge"
+name = "foldjet"
 description = "Reusable structure prediction and staged test-time sampling"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
@@ -43,14 +43,15 @@ language = ["transformers==4.57.6"]
 flash2 = ["flash-attn==2.8.3.post1"]
 
 [project.scripts]
-foldforge = "foldforge.cli:main"
+foldjet = "foldjet.cli:main"
+foldforge = "foldjet.cli:main"  # the name before the rename
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/foldforge"]
+packages = ["src/foldjet", "src/foldforge"]
 
 # One pixi project, the same layout as MiniWorld and miniworld-engine. `cu12` is torch 2.13.0+cu129
 # (the newest CUDA the cluster drivers run); `cu13` is the CUDA 13 build.
@@ -96,7 +97,7 @@ index-strategy = "unsafe-best-match"
 [tool.pixi.pypi-dependencies]
 # Retain the validated Torch-provided Triton binary in both CUDA environments.
 triton = { url = "https://download-r2.pytorch.org/whl/triton-3.7.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" }
-foldforge = { path = ".", editable = true, extras = ["weights", "language"] }
+foldjet = { path = ".", editable = true, extras = ["weights", "language"] }
 foldforge-af3-data = { path = "third_party/af3-data" }
 # Match the reference ESMFold2 input processor.
 esm = { git = "https://github.com/Biohub/esm.git", rev = "fba1e42a8a0f8df2b7e08611c88807aa32a25d9c" }
@@ -105,7 +106,7 @@ esm = { git = "https://github.com/Biohub/esm.git", rev = "fba1e42a8a0f8df2b7e086
 [tool.ruff]
 line-length = 88
 target-version = "py312"
-extend-exclude = ["third_party", "tools/typings", "src/foldforge/modules/esmc"]
+extend-exclude = ["third_party", "tools/typings", "src/foldjet/modules/esmc"]
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -145,7 +146,7 @@ known-third-party = ["wandb"]
   "C901",
   "PLR0915", # Too many statements
 ]
-# Benchmark harness scripts (5I28 FoldForge side and the kit-side scripts that run inside other projects' environments):
+# Benchmark harness scripts (5I28 FoldJet side and the kit-side scripts that run inside other projects' environments):
 # operational scripts like tools/*, run as `python file.py` (no package); their printed lines are the benchmark records.
 "benchmarks/**" = [
   "D",
@@ -160,7 +161,7 @@ known-third-party = ["wandb"]
 ]
 # The FoldBench end-to-end harness: a multi-process scheduler written as module-level scripts (globals shared with the receiver /
 # finisher threads, imports after the fork setup), node-local /tmp for the worker socket and the CUDA MPS pipe directory by design,
-# the engine-private featurisation hooks of FoldForge, long log-format lines. Imports, correctness and security otherwise still checked.
+# the engine-private featurisation hooks of FoldJet, long log-format lines. Imports, correctness and security otherwise still checked.
 "benchmarks/foldbench/**" = ["ANN", "E402", "E501", "SLF001", "SIM102", "SIM105", "SIM115", "PTH", "PLW0603", "TRY003", "TRY300", "EM102", "S108", "S603", "S607", "S112", "BLE001", "PLR2004", "PLR0912", "FBT002", "FBT003"]
 # The MiniWorld data adapter of the fine-tune and its tools: operational scripts run as `python file.py` / imported by
 # path (no package), lazy imports in the DataLoader workers, print logging. Imports, correctness and security still checked.
@@ -169,13 +170,13 @@ known-third-party = ["wandb"]
 # Paper-notation numerical code, the gather/geometry tables and the compile/graph glue:
 # single-letter names, untyped tensor helpers and long equations are idiomatic there.
 # Every file is still checked for imports, correctness and security.
-"src/foldforge/{modules,eval,guidance}/**" = ["E402", "PLC0414", "PLC0415", "RUF009", "S101", "B023", "SLF001", "A002", "ARG002", "SIM102", "B008", "BLE001", "E721", "N802", "N803", "N806", "ANN", "ARG001", "D", "E501", "PLR2004", "PLR0912", "C901", "TC001", "TC002", "FBT001", "FBT002", "ERA001", "RET504", "TRY003", "TRY004", "EM101", "EM102", "B905", "RUF005", "RUF013", "UP035", "B006", "C408", "SIM108", "RUF059", "TC003", "FURB171", "RUF046", "SIM201", "T201"]
-"src/foldforge/utils/{atom_layout,dense_geometry,gather_grad}.py" = ["E402", "PLC0414", "PLC0415", "RUF009", "S101", "B023", "SLF001", "A002", "ARG002", "SIM102", "B008", "BLE001", "E721", "N802", "N803", "N806", "ANN", "ARG001", "D", "E501", "PLR2004", "PLR0912", "C901", "TC001", "TC002", "FBT001", "FBT002", "ERA001", "RET504", "TRY003", "TRY004", "EM101", "EM102", "B905", "RUF005", "RUF013", "UP035", "B006", "C408", "SIM108", "RUF059", "TC003", "FURB171", "RUF046", "SIM201", "T201"]
-"src/foldforge/data/features/dense_protein.py" = ["E402", "PLC0414", "PLC0415", "RUF009", "S101", "B023", "SLF001", "A002", "ARG002", "SIM102", "B008", "BLE001", "E721", "N802", "N803", "N806", "ANN", "ARG001", "D", "E501", "PLR2004", "PLR0912", "C901", "TC001", "TC002", "FBT001", "FBT002", "ERA001", "RET504", "TRY003", "TRY004", "EM101", "EM102", "B905", "RUF005", "RUF013", "UP035", "B006", "C408", "SIM108", "RUF059", "TC003", "FURB171", "RUF046", "SIM201", "T201"]
+"src/foldjet/{modules,eval,guidance}/**" = ["E402", "PLC0414", "PLC0415", "RUF009", "S101", "B023", "SLF001", "A002", "ARG002", "SIM102", "B008", "BLE001", "E721", "N802", "N803", "N806", "ANN", "ARG001", "D", "E501", "PLR2004", "PLR0912", "C901", "TC001", "TC002", "FBT001", "FBT002", "ERA001", "RET504", "TRY003", "TRY004", "EM101", "EM102", "B905", "RUF005", "RUF013", "UP035", "B006", "C408", "SIM108", "RUF059", "TC003", "FURB171", "RUF046", "SIM201", "T201"]
+"src/foldjet/utils/{atom_layout,dense_geometry,gather_grad}.py" = ["E402", "PLC0414", "PLC0415", "RUF009", "S101", "B023", "SLF001", "A002", "ARG002", "SIM102", "B008", "BLE001", "E721", "N802", "N803", "N806", "ANN", "ARG001", "D", "E501", "PLR2004", "PLR0912", "C901", "TC001", "TC002", "FBT001", "FBT002", "ERA001", "RET504", "TRY003", "TRY004", "EM101", "EM102", "B905", "RUF005", "RUF013", "UP035", "B006", "C408", "SIM108", "RUF059", "TC003", "FURB171", "RUF046", "SIM201", "T201"]
+"src/foldjet/data/features/dense_protein.py" = ["E402", "PLC0414", "PLC0415", "RUF009", "S101", "B023", "SLF001", "A002", "ARG002", "SIM102", "B008", "BLE001", "E721", "N802", "N803", "N806", "ANN", "ARG001", "D", "E501", "PLR2004", "PLR0912", "C901", "TC001", "TC002", "FBT001", "FBT002", "ERA001", "RET504", "TRY003", "TRY004", "EM101", "EM102", "B905", "RUF005", "RUF013", "UP035", "B006", "C408", "SIM108", "RUF059", "TC003", "FURB171", "RUF046", "SIM201", "T201"]
 # The diffusion package follows the EDM / SE(3) paper notation (sigma, D_x, R, T): its
 # argument and field names are public API, so only the naming rules are relaxed here.
-"src/foldforge/diffusion/**" = ["N802", "N803", "N806", "N815"]
-"src/foldforge/models/execution.py" = ["E402", "PLC0414", "PLC0415", "RUF009", "S101", "B023", "SLF001", "A002", "ARG002", "SIM102", "B008", "BLE001", "E721", "N802", "N803", "N806", "ANN", "ARG001", "D", "E501", "PLR2004", "PLR0912", "C901", "TC001", "TC002", "FBT001", "FBT002", "ERA001", "RET504", "TRY003", "TRY004", "EM101", "EM102", "B905", "RUF005", "RUF013", "UP035", "B006", "C408", "SIM108", "RUF059", "TC003", "FURB171", "RUF046", "SIM201", "T201"]
+"src/foldjet/diffusion/**" = ["N802", "N803", "N806", "N815"]
+"src/foldjet/models/execution.py" = ["E402", "PLC0414", "PLC0415", "RUF009", "S101", "B023", "SLF001", "A002", "ARG002", "SIM102", "B008", "BLE001", "E721", "N802", "N803", "N806", "ANN", "ARG001", "D", "E501", "PLR2004", "PLR0912", "C901", "TC001", "TC002", "FBT001", "FBT002", "ERA001", "RET504", "TRY003", "TRY004", "EM101", "EM102", "B905", "RUF005", "RUF013", "UP035", "B006", "C408", "SIM108", "RUF059", "TC003", "FURB171", "RUF046", "SIM201", "T201"]
 
 [tool.pytest.ini_options]
 pythonpath = [".", "tests"]
@@ -183,9 +184,9 @@ testpaths = ["tests"]
 markers = ["checkpoints: requires all registered checkpoint files; run on a provisioned machine"]
 
 [tool.pyright]
-include = ["src/foldforge"]
+include = ["src/foldjet"]
 # vendored ESM C stays excluded as in [tool.ruff]
-exclude = ["third_party", "src/foldforge/modules/esmc"]
+exclude = ["third_party", "src/foldjet/modules/esmc"]
 stubPath = "tools/typings"
 venvPath = ".pixi/envs"
 venv = "default"

@@ -11,13 +11,13 @@ import torch
 from conftest import cli
 from torch import nn
 
-from foldforge.diffusion.edm.sampling import EulerSampler
-from foldforge.models.config import Config, ExecutionConfig
-from foldforge.models.execution import ExecutedCallable
-from foldforge.models.io.cli import parse
-from foldforge.models.io.request import Request
-from foldforge.models.sampling import bind_sampling_seed
-from foldforge.utils.seed import RNGState, conformer_seed, seed_all, seed_context
+from foldjet.diffusion.edm.sampling import EulerSampler
+from foldjet.models.config import Config, ExecutionConfig
+from foldjet.models.execution import ExecutedCallable
+from foldjet.models.io.cli import parse
+from foldjet.models.io.request import Request
+from foldjet.models.sampling import bind_sampling_seed
+from foldjet.utils.seed import RNGState, conformer_seed, seed_all, seed_context
 
 
 @pytest.mark.parametrize("seed", [-1, 2**32, True, 1.5])
@@ -81,7 +81,7 @@ def test_rdkit_seed_covers_unsigned_input_range():
 def test_af3_json_uses_requested_trunk_seed(tmp_path, monkeypatch):
     from alphafold3.data import featurisation
 
-    from foldforge.models.io import dense_atoms
+    from foldjet.models.io import dense_atoms
 
     path = tmp_path / "input.json"
     path.write_text(

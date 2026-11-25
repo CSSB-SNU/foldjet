@@ -36,11 +36,11 @@ per recycle (`--msa-rows 1024`). The padded shape sets the memory; the trial doe
 
 ## Output
 
-`~/foldforge-scratch/paper/F10_training_limit/<card>/`: `results.jsonl` (every trial: arm, part, tokens, atoms, chunk, ckpt, blocks, status, peaks, step time, FoldForge commit,
+`~/foldforge-scratch/paper/F10_training_limit/<card>/`: `results.jsonl` (every trial: arm, part, tokens, atoms, chunk, ckpt, blocks, status, peaks, step time, FoldJet commit,
 engine version / file, GPU, host, Slurm job, log), `summary_<part>_<arm>.json`, `logs/`, `meta_<job>.txt`. `collect.py` writes `f10_trials_<card>.csv` (every trial) and
 `f10_limits_<card>.csv` (per part x arm: the maximum, the first failing value, the chunk used, peak memory at the maximum).
 
-## Commands (full campaign; started by the coordinator after the release and the FoldForge pin)
+## Commands (full campaign; started by the coordinator after the release and the FoldJet pin)
 
 ```
 mkdir -p ~/foldforge-scratch/paper/F10_training_limit/h100/pool && cp ~/foldforge-scratch/paper/F6_training_speed/h100/pool/pool_protenix1.pt ~/foldforge-scratch/paper/F10_training_limit/h100/pool/

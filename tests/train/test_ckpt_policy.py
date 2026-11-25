@@ -9,7 +9,7 @@ import pytest
 import torch
 from torch import nn
 
-from foldforge.train import prepare
+from foldjet.train import prepare
 
 
 class PairformerBlock(nn.Module):

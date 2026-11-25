@@ -16,9 +16,9 @@ if TYPE_CHECKING:
 import pytest
 from click.testing import CliRunner
 
-from foldforge.cli import app
-from foldforge.models.checkpoints import download as weights
-from foldforge.models.checkpoints.lock import CheckpointMismatchError, Pin
+from foldjet.cli import app
+from foldjet.models.checkpoints import download as weights
+from foldjet.models.checkpoints.lock import CheckpointMismatchError, Pin
 
 
 def artifact(name, content, **kwargs: Any):
@@ -192,7 +192,7 @@ def test_http_transfer_checks_hash_retries_and_reuses_cache(tmp_path, monkeypatc
     def routed(request, **kwargs: Any) -> HTTPResponse:
         assert request.full_url == "https://example.test/weights.pt"
         assert not request.has_header("Authorization")
-        assert request.get_header("User-agent") == "foldforge/0.1.0"
+        assert request.get_header("User-agent") == "foldjet/0.1.0"
         return original(f"http://127.0.0.1:{server.server_port}/weights.pt", **kwargs)
 
     monkeypatch.setattr(urllib.request, "urlopen", routed)

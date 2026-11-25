@@ -2,7 +2,7 @@
 
 from functools import partial
 
-from foldforge.models.io.cli import run
+from foldjet.models.io.cli import run
 
 main = partial(run, "esmfold2")
 

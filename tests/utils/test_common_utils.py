@@ -7,7 +7,7 @@ import random
 import numpy as np
 import torch
 
-from foldforge.utils.seed import seed_everything
+from foldjet.utils.seed import seed_everything
 
 
 def test_seed_reproducibility_and_determinism_reset():

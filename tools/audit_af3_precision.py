@@ -18,8 +18,8 @@ import torch
 from torch.overrides import TorchFunctionMode
 from torch.utils._pytree import tree_leaves
 
-from foldforge.models.inference import run
-from foldforge.models.io import runtime
+from foldjet.models.inference import run
+from foldjet.models.io import runtime
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -70,7 +70,7 @@ class PrecisionAudit(TorchFunctionMode):
         return func(*args, **(kwargs or {}))
 
     def install(self, model: torch.nn.Module) -> None:
-        self.report["load_report"] = getattr(model, "foldforge_load_report", {})
+        self.report["load_report"] = getattr(model, "foldjet_load_report", {})
         self.report["reference_precision"] = getattr(
             model, "reference_precision", False
         )

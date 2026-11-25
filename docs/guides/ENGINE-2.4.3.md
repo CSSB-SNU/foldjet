@@ -2,10 +2,10 @@
 
 > Historical migration record for that engine release. The current engine integration (2.5.1) is described in [BACKENDS.md](BACKENDS.md), [../ENGINE-UNSUPPORTED.md](../ENGINE-UNSUPPORTED.md) and [CHECKPOINT-FORMAT.md](CHECKPOINT-FORMAT.md).
 
-FoldForge pins `miniworld-engine==2.4.3`. The engine now builds its modules from the released (FoldForge dense) layout:
+FoldJet pins `miniworld-engine==2.4.3`. The engine now builds its modules from the released (FoldJet dense) layout:
 `<Module>.from_released(state_dict, ...)` (engine `docs/kernels/released-checkpoints.md`).
 
-| FoldForge adapter (`modules/engine/modules.py`) | engine call |
+| FoldJet adapter (`modules/engine/modules.py`) | engine call |
 |---|---|
 | `_build_triangle_multiplication` | `TriangleMultiplication.from_released(..., outgoing=...)` |
 | `_build_triangle_attention` | `TriangleAttention.from_released(..., transposed_bias=..., untransposed_output=...)` (gate / out / dual biases follow from the weights) |

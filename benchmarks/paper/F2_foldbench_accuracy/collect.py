@@ -3,7 +3,7 @@
     python collect.py --arm af3kit=EVAL/af3kit --arm af3_bf16=EVAL/af3_bf16 --arm af3_fp8=EVAL/af3_fp8 [--stamp af3_bf16=F1RUN/stamp.json ...] --out results/ [--prefix f2]
 
 EVAL/<arm> = the --eval-dir of evaluate.py (holds scores_<name>.csv). Writes
-  <prefix>_task_scores.csv   long: arm, task, metric, n, top1, oracle, plus the run stamp (FoldForge commit, engine, GPU, node, Slurm job id) when --stamp is given
+  <prefix>_task_scores.csv   long: arm, task, metric, n, top1, oracle, plus the run stamp (FoldJet commit, engine, GPU, node, Slurm job id) when --stamp is given
   <prefix>_top1_wide.csv     rows = task, columns = arm: the shape of the paper's tables/foldbench_full_af3_accuracy.csv (',arm1,arm2,...')
   <prefix>_oracle_wide.csv   the same for the oracle (best of 25)
 Values are percent (interfaces: DockQ >= 0.23 / ligand rmsd < 2 and lDDT-PLI > 0.8 success rate; monomers: mean lDDT x 100), rules of score_tasks.py.

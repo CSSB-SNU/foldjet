@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """F6 step profiler: where does ONE warm optimizer step of the F6 training benchmark spend its time?
 
-Runs FoldForge's own ``scripts/train_protenix1.py`` (the F6 harness: ``--bench`` stand-in pool, ``--step-graph``, activation checkpointing, 48 augmentations in one pass,
-``af3_default`` precision) unchanged and wraps ``foldforge.train.step.micro_step``:
+Runs FoldJet's own ``scripts/train_protenix1.py`` (the F6 harness: ``--bench`` stand-in pool, ``--step-graph``, activation checkpointing, 48 augmentations in one pass,
+``af3_default`` precision) unchanged and wraps ``foldjet.train.step.micro_step``:
 
 * every micro step after the warm-up step is timed on its own (synchronised before and after; wall seconds, recycle count);
 * the micro steps of the profiled step (``--prof-step``, default 1: step 0 holds the graph captures / warm-up) run under ``torch.profiler`` (CPU + CUDA); each micro step is
@@ -224,7 +224,7 @@ def _install_random_init() -> None:
     Kernel times do not depend on the values (except data-dependent guard paths). Pass any existing file named *.miniworld.pt as --ckpt (it is never read).
     """
     import torch
-    from foldforge.models.checkpoints import miniworld
+    from foldjet.models.checkpoints import miniworld
 
     def load_into(model, path, *, family):  # noqa: ARG001
         g = torch.Generator().manual_seed(0)
@@ -270,7 +270,7 @@ def main() -> None:
     import torch
     from torch.profiler import ProfilerActivity, profile, record_function
 
-    from foldforge.train import step as step_mod
+    from foldjet.train import step as step_mod
 
     orig = step_mod.micro_step
     state = {"n": 0, "prof": None, "walls": []}

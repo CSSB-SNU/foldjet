@@ -1,3 +1,3 @@
 # F8 arms (name  model  checkpoint)  -- the checkpoint paths are on the H100 cluster (not in the repository)
-released  protenix1  (the released Protenix v1 weights of FoldForge's checkpoint cache)
+released  protenix1  (the released Protenix v1 weights of FoldJet's checkpoint cache)
 ft10      protenix1  ~/foldforge-scratch/ft_train/runs/ft_engine_fp32d/epoch0010.miniworld.pt

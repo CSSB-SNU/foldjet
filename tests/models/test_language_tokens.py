@@ -6,8 +6,8 @@ from typing import Any
 
 import torch
 
-from foldforge.models.io import language
-from foldforge.modules import language_model as tower
+from foldjet.models.io import language
+from foldjet.modules import language_model as tower
 
 
 class _Shim(torch.nn.Module):

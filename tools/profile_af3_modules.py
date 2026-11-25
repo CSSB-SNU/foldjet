@@ -20,9 +20,9 @@ from typing import Any
 import torch
 import yaml
 
-from foldforge import paths
-from foldforge.models.io import runtime as runtime_module
-from foldforge.models.io.paths import run_directory
+from foldjet import paths
+from foldjet.models.io import runtime as runtime_module
+from foldjet.models.io.paths import run_directory
 
 STAGES = (
     "evoformer_conditioning",
@@ -206,7 +206,7 @@ def main() -> int:
         return execution
 
     runtime_module.Runtime.bind = bind  # type: ignore[method-assign]
-    from foldforge.models.inference import run
+    from foldjet.models.inference import run
 
     status = run(
         "af3",

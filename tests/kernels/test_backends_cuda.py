@@ -15,9 +15,9 @@ import copy
 import pytest
 import torch
 
-from foldforge.modules.engine import backends, policy
-from foldforge.modules.engine.pairformer import pairformer_block
-from foldforge.modules.engine.serving import report_observations
+from foldjet.modules.engine import backends, policy
+from foldjet.modules.engine.pairformer import pairformer_block
+from foldjet.modules.engine.serving import report_observations
 
 pytestmark = pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA required")
 

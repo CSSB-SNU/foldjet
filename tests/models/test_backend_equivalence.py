@@ -1,7 +1,7 @@
 """A whole fold on each backend agrees with the PyTorch backend.
 
 AlphaFold 3 on 5I28 (one chain, no MSA, no templates), the released weights, the
-same seeds: one fold per backend through ``foldforge fold``'s own entry point. The
+same seeds: one fold per backend through ``foldjet fold``'s own entry point. The
 diffusion sampler amplifies kernel rounding over 200 steps, so the predicted
 coordinates are compared after the best rigid fit and by pLDDT, not elementwise.
 Skipped without a GPU, the AF3 checkpoint or the CCD database; the anthropic backend
@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 import torch
 
-from foldforge.modules.engine.backends import ALIASES, SERVES
+from foldjet.modules.engine.backends import ALIASES, SERVES
 
 pytestmark = pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA required")
 
@@ -45,10 +45,10 @@ def _checkpoint_or_skip(monkeypatch: pytest.MonkeyPatch) -> None:
     """Skip without the AF3 checkpoint in the miniworld format and the CCD database.
 
     The checkpoint comes from
-    ``python -m foldforge.models.checkpoints.miniworld convert af3``.
+    ``python -m foldjet.models.checkpoints.miniworld convert af3``.
     """
-    from foldforge.data.ccd import default_path
-    from foldforge.models.checkpoints import miniworld, resolve
+    from foldjet.data.ccd import default_path
+    from foldjet.models.checkpoints import miniworld, resolve
 
     try:
         resolve("af3", miniworld.NATIVE_FILES["af3"])
@@ -83,8 +83,8 @@ def folds(tmp_path_factory):
     ) -> tuple[np.ndarray, float, dict]:
         if backend in cache:
             return cache[backend]
-        from foldforge.models import inference
-        from foldforge.models.io import paths
+        from foldjet.models import inference
+        from foldjet.models.io import paths
 
         _checkpoint_or_skip(monkeypatch)
 

@@ -1,4 +1,4 @@
-"""Import shim: MiniWorld's data modules import ``miniworld_engine.utils.typecheck`` (engine 2.4.x); the engine in the FoldForge env (2.5.x) no longer ships it.
+"""Import shim: MiniWorld's data modules import ``miniworld_engine.utils.typecheck`` (engine 2.4.x); the engine in the FoldJet env (2.5.x) no longer ships it.
 In MiniWorld's engine that decorator is the identity unless ``settings.typecheck`` is on (default off), so an identity module is registered here.
 Nothing is installed or written into any env.
 """
@@ -17,8 +17,8 @@ if "miniworld_engine.utils.typecheck" not in sys.modules:
         module.__all__ = ["typecheck"]
         sys.modules["miniworld_engine.utils.typecheck"] = module
 
-# ``miniworld.training/__init__`` pulls in the whole trainer (param_policy -> miniworld.blocks -> an OLD ``foldforge.blocks`` that the current
-# FoldForge does not have). The data pipeline only needs ``miniworld.training.batch`` (BaseBatch), so ``miniworld.training`` is registered as a
+# ``miniworld.training/__init__`` pulls in the whole trainer (param_policy -> miniworld.blocks -> an OLD ``foldjet.blocks`` that the current
+# FoldJet does not have). The data pipeline only needs ``miniworld.training.batch`` (BaseBatch), so ``miniworld.training`` is registered as a
 # bare package (same search path, its __init__ never runs).
 if "miniworld.training" not in sys.modules:
     import importlib.util

@@ -7,12 +7,12 @@ import pytest
 import torch
 from conftest import cli
 
-import foldforge
-from foldforge.models.io import paths
-from foldforge.models.io.cli import parse
-from foldforge.models.io.output import Decoded, write_output
-from foldforge.models.io.request import Request
-from foldforge.prediction import Prediction
+import foldjet
+from foldjet.models.io import paths
+from foldjet.models.io.cli import parse
+from foldjet.models.io.output import Decoded, write_output
+from foldjet.models.io.request import Request
+from foldjet.prediction import Prediction
 
 
 @pytest.fixture
@@ -102,7 +102,7 @@ def test_spec_cli_rejects_external_directory_before_preparation(
     tmp_path,
     monkeypatch,
 ):
-    from foldforge.models import inference
+    from foldjet.models import inference
 
     reader = Mock()
     monkeypatch.setattr(inference, "load", reader)
@@ -114,11 +114,11 @@ def test_spec_cli_rejects_external_directory_before_preparation(
 
 
 def test_module_entry_point_dispatches_like_the_console_script():
-    """``python -m foldforge.cli`` must not exit 0 having run nothing.
+    """``python -m foldjet.cli`` must not exit 0 having run nothing.
 
     A module with no ``__main__`` guard is silent and successful, which reads
     as a fold that produced no output rather than a command that never ran.
     """
-    source = (Path(foldforge.__file__).parent / "cli.py").read_text()
+    source = (Path(foldjet.__file__).parent / "cli.py").read_text()
     assert 'if __name__ == "__main__":' in source
     assert "raise SystemExit(main())" in source

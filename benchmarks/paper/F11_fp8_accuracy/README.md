@@ -1,4 +1,4 @@
-# F11: FP8 accuracy on antibody-antigen and protein-RNA (AF3, FoldForge)
+# F11: FP8 accuracy on antibody-antigen and protein-RNA (AF3, FoldJet)
 
 **Question (user, 2026-11-21).** Not whether a bf16 re-run differs less than FP8 from bf16 (it trivially does), but whether the FP8 (low-precision)
 perturbation of the **same seed** is small compared with the natural variation **between seeds**: is running FP8 like choosing another seed, or a real
@@ -11,8 +11,8 @@ The 162 targets of the two tasks (`targets_abag_rna.txt`: 113 antibody-antigen, 
 
 | pair | engine | bf16 run | FP8 run (`MINIWORLD_FP8=safe`, `MINIWORLD_FP8_MODEL=af3`) |
 |---|---|---|---|
-| primary `v306` | 3.0.6 (FoldForge `paper-306`) | `~/foldforge-scratch/paper/F11/h100/af3_306_bf16_abagrna` (Slurm 62832) | `af3_306_fp8_abagrna` (62834; `fp8.check()` after every group, 0 saturations) |
-| replicate `v301` | 3.0.1 (FoldForge a9e1549) | `~/foldforge-scratch/foldbench/ff_full/af3_301` (58554, whole FoldBench) | `af3_301_fp8` (58867, no `check()`) |
+| primary `v306` | 3.0.6 (FoldJet `paper-306`) | `~/foldforge-scratch/paper/F11/h100/af3_306_bf16_abagrna` (Slurm 62832) | `af3_306_fp8_abagrna` (62834; `fp8.check()` after every group, 0 saturations) |
+| replicate `v301` | 3.0.1 (FoldJet a9e1549) | `~/foldforge-scratch/foldbench/ff_full/af3_301` (58554, whole FoldBench) | `af3_301_fp8` (58867, no `check()`) |
 
 Per-sample scores: the FoldBench evaluator (F2 `evaluate.py`, 25 samples; Slurm 62944 / 62945 for 3.0.6, the F11 evaluations of 3.0.1). Upstream rules:
 interface groups (pdb_id, chain 1, chain 2), rows with a NaN DockQ dropped (166 of the 172 antibody-antigen groups remain), success = DockQ >= 0.23.

@@ -26,7 +26,7 @@ exit \$rc
 EOT
 CU130_EXTRA_LD=$FF_SCRATCH/cuda13tk/.pixi/envs/default/lib "$H/scripts/cu130run.sh" bash "$D/inner.sh" > "$L" 2>&1
 RC=$?
-# forward seconds: the kit's PHASE line per input, fwd_s = Boltz2.forward, CUDA-synchronized (audit 2026-10-29: same span as FoldForge)
+# forward seconds: the kit's PHASE line per input, fwd_s = Boltz2.forward, CUDA-synchronized (audit 2026-10-29: same span as FoldJet)
 FWD=$(grep -E '^PHASE item=a[0-9]+ ' "$L" | grep -oE 'fwd_s=[0-9.]+' | cut -d= -f2 | tr '\n' ' ' | sed 's/ $//')
 WARM=$(echo $FWD | tr ' ' '\n' | tail -n +2 | grep . | sort -g | awk '{a[NR]=$1} END{if(NR) printf "%.3f", (NR%2)?a[(NR+1)/2]:(a[NR/2]+a[NR/2+1])/2; else printf "NA"}')
 # templates: the kit's model-entry census per input ([boltz2-opt] TEMPLATES record=.. names=<distinct> live_slots=<j> real=<j>/<T>), min over inputs of

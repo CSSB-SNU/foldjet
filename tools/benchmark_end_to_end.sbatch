@@ -13,7 +13,7 @@
 #     --targets 5i28x4
 #   sbatch -p gpu --gres=gpu:A6000:1 tools/benchmark_end_to_end.sbatch ... (local)
 set -euo pipefail
-cd /home/psk6950/practice/FoldForge
+cd /home/psk6950/practice/FoldJet
 
 source tools/activate_env.sh
 ENV=$VIRTUAL_ENV

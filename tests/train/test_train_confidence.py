@@ -13,11 +13,11 @@ import pytest
 import torch
 from torch import nn
 
-from foldforge.data.constants import atom_types, residue_names
-from foldforge.train.config import TrainConfig
-from foldforge.train.loss import confidence as conf
-from foldforge.train.step import confidence_step, mini_rollout
-from foldforge.utils.atom_layout import GatherInfo
+from foldjet.data.constants import atom_types, residue_names
+from foldjet.train.config import TrainConfig
+from foldjet.train.loss import confidence as conf
+from foldjet.train.step import confidence_step, mini_rollout
+from foldjet.utils.atom_layout import GatherInfo
 
 RES, ATOMS = 6, 5
 CODES = residue_names.POLYMER_TYPES_WITH_UNKNOWN_AND_GAP
@@ -283,7 +283,7 @@ def test_confidence_step_detaches_the_trunk_rolls_out_without_grad_and_restores_
 
 
 def test_the_phase_timer_is_inert_when_disabled_and_reports_nothing():
-    from foldforge.train.profile import PhaseTimer, arm_trunk_grad_marker, tensor_bytes
+    from foldjet.train.profile import PhaseTimer, arm_trunk_grad_marker, tensor_bytes
 
     timer = PhaseTimer(False)  # noqa: FBT003 - positional flag of the API under test
     with timer.phase("x"):
@@ -327,7 +327,7 @@ def _random_inputs(seed: int, res: int = 7, atoms: int = 6) -> tuple[torch.Tenso
 def _targets_fixed(
     pred, gt, mask, is_nuc, is_lig, length
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    from foldforge.train.data import fixed_atom_index
+    from foldjet.train.data import fixed_atom_index
 
     res, atoms, _ = pred.shape
     index, valid = fixed_atom_index(mask, length)
@@ -366,7 +366,7 @@ def test_fixed_length_present_index_gives_the_nonzero_path_targets_bit_for_bit(
 
 
 def test_fixed_atom_index_is_ascending_padded_and_grows_past_its_length():
-    from foldforge.train.data import fixed_atom_index
+    from foldjet.train.data import fixed_atom_index
 
     mask = torch.zeros(4, 5, dtype=torch.bool)
     mask[0, 1] = mask[2, 3] = mask[3, 4] = True

@@ -13,8 +13,8 @@ from pathlib import Path
 
 import torch
 
-from foldforge.models.checkpoints.legacy import haiku
-from foldforge.modules.dense.spec import SPECS
+from foldjet.models.checkpoints.legacy import haiku
+from foldjet.modules.dense.spec import SPECS
 
 
 def main() -> int:
@@ -23,7 +23,7 @@ def main() -> int:
     parser.add_argument("--family", required=True, choices=sorted(SPECS))
     parser.add_argument("--name", help="report under this family name")
     args = parser.parse_args()
-    from foldforge.models.architectures.af3 import AlphaFold3
+    from foldjet.models.architectures.af3 import AlphaFold3
 
     spec = SPECS[args.family]
     if args.name:

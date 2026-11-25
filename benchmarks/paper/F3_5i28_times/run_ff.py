@@ -1,4 +1,4 @@
-"""F3, FoldForge side: seconds per forward on 5I28, n = 1, 2, 4, 8, 12, 16 chains (128 .. 2,048 tokens), one predictor, one arm, one job.
+"""F3, FoldJet side: seconds per forward on 5I28, n = 1, 2, 4, 8, 12, 16 chains (128 .. 2,048 tokens), one predictor, one arm, one job.
 
     python run_ff.py --model af3 --arm engine|engine_fp8 --out DIR [--sizes 1 2 4 ...] [--repeats 6] [--rep 1]
 
@@ -26,7 +26,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "common"))
-import ffpaper  # noqa: E402  (before foldforge: sets the FP8 environment)
+import ffpaper  # noqa: E402  (before foldjet: sets the FP8 environment)
 
 parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 parser.add_argument("--model", required=True, choices=ffpaper.PREDICTORS_5I28)
@@ -45,7 +45,7 @@ REPO = HERE.parents[2]
 sys.path.insert(0, str(REPO / "benchmarks/5i28_ff"))
 import run_5i28_ff as H  # noqa: E402
 
-import foldforge as ff  # noqa: E402
+import foldjet as ff  # noqa: E402
 
 
 def main() -> int:

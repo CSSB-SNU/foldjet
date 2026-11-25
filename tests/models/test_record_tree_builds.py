@@ -16,11 +16,11 @@ from __future__ import annotations
 import pytest
 import torch
 
-from foldforge.modules.dense.spec import SPECS
+from foldjet.modules.dense.spec import SPECS
 
 
 def _translation(family: str) -> dict:
-    from foldforge.models.checkpoints.legacy import dense_model, haiku
+    from foldjet.models.checkpoints.legacy import dense_model, haiku
 
     with torch.device("meta"):
         model = dense_model(SPECS[family])
@@ -40,7 +40,7 @@ def test_every_family_builds_its_record_tree(family):
 
 def haiku_flatten(records: dict) -> list[str]:
     """Return every record path the loader would ask the checkpoint for."""
-    from foldforge.models.checkpoints.legacy import haiku
+    from foldjet.models.checkpoints.legacy import haiku
 
     return list(haiku._process_translations_dict(d=records, _key_prefix=""))
 

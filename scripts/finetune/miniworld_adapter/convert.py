@@ -1,8 +1,8 @@
-"""MiniWorld cropped sample -> FoldForge dense ``TrainBatch`` tensors (CPU, numpy), built with FoldForge's / AF3's OWN featurisation code.
+"""MiniWorld cropped sample -> FoldJet dense ``TrainBatch`` tensors (CPU, numpy), built with FoldJet's / AF3's OWN featurisation code.
 
 The structure side is not re-implemented: the cropped CIFMol's atoms become an AF3 flat ``AtomLayout`` and AF3's ``tokenizer`` + ``features.*``
-classes (the ones ``foldforge.models.io.dense_atoms`` runs for inference) build every layout-dependent tensor (token features, atom-attention
-gathers, reference conformers, bonds, pseudo-beta, frames), then FoldForge's ``dense_conventions`` of the protenix1 ``DenseSpec`` are applied. What
+classes (the ones ``foldjet.models.io.dense_atoms`` runs for inference) build every layout-dependent tensor (token features, atom-attention
+gathers, reference conformers, bonds, pseudo-beta, frames), then FoldJet's ``dense_conventions`` of the protenix1 ``DenseSpec`` are applied. What
 MiniWorld contributes is what AF3's inference featuriser takes from the *input*: the crop (which atoms / residues), the sampled MSA, the sampled
 templates, the ground-truth coordinates. MSA and templates are translated from MiniWorld's arrays into AF3's alphabet / dense layout (see
 ``msa_rows`` and ``template_arrays``).
@@ -39,7 +39,7 @@ DETERMINISTIC_FRAMES_SEED = 12312837  # alphafold3.model.pipeline.pipeline._DETE
 
 
 class ConversionError(ValueError):
-    """The sample cannot be expressed in FoldForge's layout (counted and skipped by the loader)."""
+    """The sample cannot be expressed in FoldJet's layout (counted and skipped by the loader)."""
 
 
 @dataclass
@@ -71,8 +71,8 @@ class Converter:
         fixed_atoms: int = 4096,
         ccd_root: str | Path | None = None,
     ) -> None:
-        from foldforge import paths
-        from foldforge.data.ccd import CCDDatabase
+        from foldjet import paths
+        from foldjet.data.ccd import CCDDatabase
 
         self.tokens, self.atoms, self.msa_pool, self.templates = (
             tokens,
@@ -84,8 +84,8 @@ class Converter:
         self.bond_rows, self.fixed_atoms = bond_rows, fixed_atoms
         self.db = CCDDatabase(ccd_root or paths.ccd_db())
         self.ccd = self.db.af3_ccd(None)
-        from foldforge.models import entry
-        from foldforge.modules.dense.spec import spec_for
+        from foldjet.models import entry
+        from foldjet.modules.dense.spec import spec_for
 
         spec = spec_for(entry(family).family or "alphafold3", mode)
         # drop_atoms removes OXT / OP3 from the layouts of the INFERENCE featurisation; MiniWorld's loader already removed them from the cropped
@@ -313,11 +313,11 @@ class Converter:
         from alphafold3.model.atom_layout import atom_layout
         from alphafold3.structure import chemical_components as struc_chem_comps
 
-        from foldforge.data.ccd.database import (
+        from foldjet.data.ccd.database import (
             database_cache,  # noqa: F401  (keeps the import side effects of the inference path)
         )
-        from foldforge.data.features import bond_orders, chirality, dense_conventions
-        from foldforge.models.io.dense_atoms import _install_reference_date_fallback
+        from foldjet.data.features import bond_orders, chirality, dense_conventions
+        from foldjet.models.io.dense_atoms import _install_reference_date_fallback
 
         t0 = time.perf_counter()
         _install_reference_date_fallback()
@@ -608,7 +608,7 @@ class Converter:
 
         import torch
 
-        from foldforge.train.data import fixed_atom_index
+        from foldjet.train.data import fixed_atom_index
 
         index, valid = fixed_atom_index(torch.from_numpy(atom_mask), self.fixed_atoms)
 

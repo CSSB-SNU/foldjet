@@ -12,8 +12,8 @@ import pytest
 import torch
 from torch import nn
 
-from foldforge.modules.engine import modules, policy
-from foldforge.modules.engine.backends import BackendPlan, BackendUnsupportedError
+from foldjet.modules.engine import modules, policy
+from foldjet.modules.engine.backends import BackendPlan, BackendUnsupportedError
 
 
 def _kernel_backend(module: nn.Module) -> str:
@@ -28,7 +28,7 @@ def test_a_refused_call_runs_the_pytorch_backend_and_logs_once(caplog):
     # CPU tensors: the kernel backends refuse them
     layer.set_backend(_kernel_backend(layer))
     policy.guard(layer, "fallback")
-    with caplog.at_level(logging.WARNING, logger="foldforge.backend"):
+    with caplog.at_level(logging.WARNING, logger="foldjet.backend"):
         first, second = layer(x), layer(x)
     torch.testing.assert_close(first, expected)
     torch.testing.assert_close(second, expected)
@@ -129,7 +129,7 @@ def test_the_plan_gives_each_op_module_a_backend_and_keeps_composites_on_pytorch
 
 
 def test_the_pairformer_block_stays_on_pytorch_and_its_children_are_planned_alone():
-    from foldforge.modules.engine.pairformer import pairformer_block
+    from foldjet.modules.engine.pairformer import pairformer_block
 
     model = nn.Module()
     model.block = pairformer_block(
@@ -155,9 +155,9 @@ def test_the_pairformer_block_stays_on_pytorch_and_its_children_are_planned_alon
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA required")
 @pytest.mark.parametrize("compile_", [False, True])
 def test_the_token_dit_stack_graph_replays_the_eager_result(compile_):
-    from foldforge.models.execution import ExecutedCallable
-    from foldforge.modules.engine.configure import configure_model
-    from foldforge.modules.engine.transformers import token_dit_stack
+    from foldjet.models.execution import ExecutedCallable
+    from foldjet.modules.engine.configure import configure_model
+    from foldjet.modules.engine.transformers import token_dit_stack
 
     torch.manual_seed(7)
     stack = token_dit_stack(

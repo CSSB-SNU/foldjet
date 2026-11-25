@@ -48,7 +48,7 @@ same seeds, and it disappears when either seed is changed to 1 or when the same
 seeds run with the released whole-MSA embedding. That is one defective sample in
 twenty diagnostic samples; its rate is not established, so it is reported as
 observed rather than attributed to the policy. ESMFold2's paper always keeps the
-query row when it samples; FoldForge's shared sampler ranks all valid rows
+query row when it samples; FoldJet's shared sampler ranks all valid rows
 equally and can omit it.
 
 The earlier report, its assets, dtype audits and batching verification are

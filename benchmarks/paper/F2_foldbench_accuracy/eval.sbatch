@@ -1,5 +1,5 @@
 #!/bin/bash
-# F2 (also F8, F11): score FoldForge / kit FoldBench predictions with the upstream FoldBench evaluator, CPU only (no GPU: --gres=none).
+# F2 (also F8, F11): score FoldJet / kit FoldBench predictions with the upstream FoldBench evaluator, CPU only (no GPU: --gres=none).
 #   sbatch -J paper-F2-eval-af3-bf16 -o $PAPER_OUT/F2/h100/logs/%x_%j.log \
 #     --export=ALL,NAME=af3_bf16_shard,PRED_DIRS="$PAPER_OUT/F1/h100/af3_bf16_shard/pred_s0:$PAPER_OUT/F1/h100/af3_bf16_shard/pred_s1" \
 #     benchmarks/paper/F2_foldbench_accuracy/eval.sbatch
@@ -30,7 +30,7 @@ ARGS=(); for d in ${PRED_DIRS//:/ }; do ARGS+=(--pred-dir "$d"); done
 [ -n "${TARGETS_FILE:-}" ] && ARGS+=(--targets-file "$TARGETS_FILE")
 [ -n "${TOP1_ONLY:-}" ] && ARGS+=(--top1-only)
 mkdir -p "$EVAL_OUT"
-{ echo "eval job=${SLURM_JOB_ID:-} host=$(hostname) name=$NAME start=$(date -Is)"; echo "foldforge $(git -C "$REPO" rev-parse HEAD)"; echo "pred_dirs=$PRED_DIRS"; echo "FB_ROOT=${FB_ROOT:-default} FB_UPSTREAM=${FB_UPSTREAM:-default}"; } >> "$EVAL_OUT/eval_info.txt"
+{ echo "eval job=${SLURM_JOB_ID:-} host=$(hostname) name=$NAME start=$(date -Is)"; echo "foldjet $(git -C "$REPO" rev-parse HEAD)"; echo "pred_dirs=$PRED_DIRS"; echo "FB_ROOT=${FB_ROOT:-default} FB_UPSTREAM=${FB_UPSTREAM:-default}"; } >> "$EVAL_OUT/eval_info.txt"
 python -u "$P/F2_foldbench_accuracy/evaluate.py" "${ARGS[@]}" --eval-dir "$EVAL_OUT" --name "$NAME" --python "$(which python)" 2>&1 | grep --line-buffered -v "it/s\]\|s/it\]"
 RC=${PIPESTATUS[0]}
 echo "end=$(date -Is) rc=$RC" >> "$EVAL_OUT/eval_info.txt"

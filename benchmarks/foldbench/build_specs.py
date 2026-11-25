@@ -1,5 +1,5 @@
-"""FoldBench `inputs/<target>/data.yaml` (MiniWorld spec: a3m_db list, a3m_key, chain_names, template_offset) -> FoldForge spec
-(msa_db / msa per chain letter), plus `<target>.chains.json` = FoldForge chain letter -> FoldBench chain id (for renaming the output CIF).
+"""FoldBench `inputs/<target>/data.yaml` (MiniWorld spec: a3m_db list, a3m_key, chain_names, template_offset) -> FoldJet spec
+(msa_db / msa per chain letter), plus `<target>.chains.json` = FoldJet chain letter -> FoldBench chain id (for renaming the output CIF).
 
   build_specs.py TARGETS_FILE OUT_DIR [--foldbench DIR] [--resources DIR] [--ccd-db PATH] [--rna-msa PATH]
                  [--n-trunk 1] [--n-diffusion 5] [--glycans none|entity]
@@ -8,7 +8,7 @@
                default $FOLDBENCH_ROOT
   --resources  the BioMolDB `lmdb` directory holding the FoldBench cut package `foldbench/msa/a3m.lmdb`, `foldbench/msa/a3m_rna.lmdb`,
                `foldbench/template/template.lmdb`; default $FOLDBENCH_RESOURCES (the 2026-11-17 run: BioMolDB_20261014/lmdb)
-  --ccd-db     FoldForge's CCD LMDB (its own format, manifest.json; holds all 956 codes FoldBench needs); default foldforge.paths.ccd_db()
+  --ccd-db     FoldJet's CCD LMDB (its own format, manifest.json; holds all 956 codes FoldBench needs); default foldjet.paths.ccd_db()
                ($FOLDFORGE_CCD_DB, else ~/.cache/foldforge/ccd/preprocessed_CCD.lmdb)
   --rna-msa    another RNA MSA database for a sensitivity run (the release's 58 RNA records are 1-3 rows deep for most keys); default the release's
 
@@ -18,7 +18,7 @@ and databases: build them once per machine. Dropped on purpose and logged:
   - a chain's MSA when its key is not in the database for the chain's entity type (MiniWorld falls back to a query-only MSA the same way),
     and every DNA chain (AF3-family models take no DNA MSA);
   - a chain's template when the chain is not a protein (released checkpoints take protein templates only), when its key is not in the template
-    database, or when `template_offset` is non-zero (FoldForge's spec has no offset field: the template would be aligned to the wrong residues)."""
+    database, or when `template_offset` is non-zero (FoldJet's spec has no offset field: the template would be aligned to the wrong residues)."""
 
 import argparse
 import csv
@@ -51,7 +51,7 @@ if not args.foldbench or not args.resources:
         "--foldbench / --resources (or FOLDBENCH_ROOT / FOLDBENCH_RESOURCES) are required"
     )
 if args.ccd_db is None:
-    from foldforge import paths
+    from foldjet import paths
 
     args.ccd_db = str(paths.ccd_db())
 FB = Path(args.foldbench)

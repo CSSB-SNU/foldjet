@@ -1,6 +1,6 @@
-# Porting ESMFold2 from team-gm into FoldForge
+# Porting ESMFold2 from team-gm into FoldJet
 
-**Current status:** model code is in FoldForge. Current installation, command and
+**Current status:** model code is in FoldJet. Current installation, command and
 verification are recorded in [MODEL-INTEGRATION.md](../guides/MODEL-INTEGRATION.md).
 The sections below retain the original migration history and old branch details.
 
@@ -66,22 +66,22 @@ compare coordinates against a same-code repeat: the fold is not bit-deterministi
 | `team_gm.modules.layers` → `Transition`, `TriangleMultiplication` | `miniworld_engine.modules` |
 | `team_gm.modules.layers.swa_atom_attention` → `build_attention_params` | `miniworld_engine.modules.swa_atom_attention` |
 | `team_gm.modules.exceptions.ImplementationType.MINIWORLD_KERNELS` | `…MINIWORLD_ENGINE` |
-| `team_gm.checkpoints` | `foldforge.models.checkpoints` (added here; it was never upstream) |
+| `team_gm.checkpoints` | `foldjet.models.checkpoints` (added here; it was never upstream) |
 | `team_gm.modules.blocks` → `DiffusionTransformer` | unchanged |
 | `team_gm.diffusion`, `team_gm.modules.primitives`, `team_gm.utils.transform`, `team_gm.typecheck` | unchanged |
 
 `team_gm.modules.layers` now contains only `embeddings.py` and `ops.py`.
 
-### 3. `SWAAtomTransformer` — DECIDED: FoldForge owns a copy
+### 3. `SWAAtomTransformer` — DECIDED: FoldJet owns a copy
 
 ESMFold2's atom encoder and decoder both need it. It is currently in
 `team_gm.modules.blocks`, but team-gm's
 [migration plan](../../libs/team-gm/docs/MIGRATION-model-specific-to-terminals.md)
 schedules it to move to **MiniWorld**, on the grounds that it is model-specific.
 
-FoldForge cannot import from MiniWorld. Three options:
+FoldJet cannot import from MiniWorld. Three options:
 
-1. **FoldForge owns a copy** in `models/esmfold2/atom_transformer.py`. The block
+1. **FoldJet owns a copy** in `models/esmfold2/atom_transformer.py`. The block
    *is* ESMFold2's (Algorithm 8) and the architecture rule says model-specific
    blocks live next to the model that needs them — so two terminals each holding
    their own is what the layering prescribes, not a duplication bug. The shared
@@ -90,7 +90,7 @@ FoldForge cannot import from MiniWorld. Three options:
    for hub code — but it would be the only model-specific block left there.
 3. **It moves to the engine.** Wrong layer: it composes ops, it is not one.
 
-**Option 1 was taken.** It unblocks FoldForge without waiting on MiniWorld's
+**Option 1 was taken.** It unblocks FoldJet without waiting on MiniWorld's
 migration, which the plan lists as blocked on MiniWorld adopting the rename
 first. The file is now `models/esmfold2/atom_transformer.py`, copied from
 `origin/exp/miniworld` with three changes: the ownership note in the docstring,
@@ -99,7 +99,7 @@ and ruff's import sort. It is excluded from the formatter and carries a
 per-file lint ignore so it keeps diffing cleanly against team-gm's copy and
 MiniWorld's future one.
 
-It sits in the model package rather than `foldforge.modules` because ESMFold2 is
+It sits in the model package rather than `foldjet.modules` because ESMFold2 is
 its only consumer here; promote it if a second predictor needs it.
 
 **Not yet verified.** It has been copied and lints, but nothing has imported it
@@ -135,7 +135,7 @@ with `tests/test_outer_product_normalization.py` covering both orderings, the
 residual interaction, and — because the projection is zero-initialised and would
 otherwise make both orderings agree at zero — a guard that the two actually
 differ. **Still the only one of the three findings not upstream** (as of engine
-`79c819d`), so FoldForge runs against that branch via PYTHONPATH.
+`79c819d`), so FoldJet runs against that branch via PYTHONPATH.
 
 Still missing from the engine's version: the `row_chunk` streaming team-gm's copy
 had. The outer product materialises `[B, L, L, d_hidden**2]` before the

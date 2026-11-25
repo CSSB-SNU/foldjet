@@ -9,7 +9,7 @@
 #SBATCH -e slurm-%x-%j.err
 
 set -euo pipefail
-cd /home/psk6950/practice/FoldForge
+cd /home/psk6950/practice/FoldJet
 
 source tools/activate_env.sh
 ENV=$VIRTUAL_ENV

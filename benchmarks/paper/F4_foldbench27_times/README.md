@@ -14,7 +14,7 @@ process per (predictor, arm). Predictors (11): `af3 boltz2 chai1 esmfold2 intell
   RoseTTAFold3 without), `trunk_seed = diffusion_seed = 0`, 200 steps, 4 trunk passes, 5 samples, bf16, mode exact. Eager on every arm (no compile, no CUDA
   graph): the arms differ only in the backend. The structures of the last forward are saved (`pred/<arm>/<model>/<target>/`) for F5.
 - A failure (also out of memory) is a row with `status: error` and the reason; never retried here, never a number. ESMFold2 on RNA / DNA-only targets needs a
-  FoldForge with `language_model.allow_no_protein`, which is **not in `fdad9e2`** (it exists only as an uncommitted change in the main checkout, 2026-11-21): those
+  FoldJet with `language_model.allow_no_protein`, which is **not in `fdad9e2`** (it exists only as an uncommitted change in the main checkout, 2026-11-21): those
   targets are recorded as `error: No protein token` until that change is committed; `run_foldbench27.py` retries such rows on the next run.
 - RTX 5090: needs the FoldBench inputs / MSA / template LMDBs under `$FB_ROOT` (`~/data/foldbench`; 27 inputs + `msa/` + `template/`, ~2.2 GB, copied there 2026-11-21)
   and the checkpoints under `$FOLDFORGE_HOME` (`~/ff/home`; `openfold3.miniworld.pt` was missing there on 2026-11-21: `openfold3` / `openfold3-preview2` need it).
@@ -39,7 +39,7 @@ IntelliFold2 are the slow ones; the 2,008-token protein-RNA target dominates). `
 
 ## Output
 
-Run directory `~/foldforge-scratch/paper/F4/<card>/{rows,pred,specs,meta}/`; each row has FoldForge commit, engine version / source, GPU, host, Slurm job.
+Run directory `~/foldforge-scratch/paper/F4/<card>/{rows,pred,specs,meta}/`; each row has FoldJet commit, engine version / source, GPU, host, Slurm job.
 `data/F4_times_<card>.csv`: `model,target,task,tokens,anthropic,engine,torch,engine_fp8` (seconds; = the shape of `tables/supp_foldbench_times.csv`) + `torch_over_engine`,
 `torch_over_engine_fp8`, peak memory and run information per arm. `data/F4_failures_<card>.csv`: every failed cell with status, OOM flag and reason.
 
@@ -53,7 +53,7 @@ section). Failures: none for the engine since the ESMFold2 rerun of the 6 nuclei
 ## OpenDDE engine arm re-measured on engine 3.0.8: A100 and RTX 5090 (2026-11-22)
 
 Engine 3.0.8 serves `TokenDiTProtenix` / `TokenDiTMiniWorld` with `extra_pair_bias` on cuda on sm_80 and sm_120 (3.0.6 refused it -> Triton). Only the
-OpenDDE engine arm of these two cards was re-run; every other predictor and arm keeps its engine-3.0.6 rows. Same protocol, node and FoldForge checkout as
+OpenDDE engine arm of these two cards was re-run; every other predictor and arm keeps its engine-3.0.6 rows. Same protocol, node and FoldJet checkout as
 the 3.0.6 run (A100: gpu05, Slurm 97288, checkout c129a81 = 6a0593e + allow_no_protein; 5090: cssb-rtx under the GPU lock, 6a0593e); the 3.0.8 package (the
 H100 pixi install of the pin) was put in front of each card's environment (`ENGINE_SRC`), the warm caches kept. Rows: label engine 3.0.8 (`engine_*_version`
 3.0.8), `engine_cuda_only = yes`, the 3.0.6 time in the new column `engine_3.0.6`.
@@ -78,8 +78,8 @@ engine-3.0.6 OpenDDE predictions of these cards (not recomputed: not in the requ
 
 ## H100: ESMFold2 re-measured with the release sampler (134 steps), engine 3.0.9 (2026-11-23)
 
-FoldForge ran ESMFold2 with all 200 diffusion steps; the release (and the kit) caps the noise schedule at max_inference_sigma = 256 A, i.e. 134
-steps (fix 5553d19). Every ESMFold2 cell of the H100 table was re-run on FoldForge main 49d41bb, engine 3.0.9, node02 (Slurm array 65821, one
+FoldJet ran ESMFold2 with all 200 diffusion steps; the release (and the kit) caps the noise schedule at max_inference_sigma = 256 A, i.e. 134
+steps (fix 5553d19). Every ESMFold2 cell of the H100 table was re-run on FoldJet main 49d41bb, engine 3.0.9, node02 (Slurm array 65821, one
 (arm, target) per task): 108 / 108 ok, including the 6 nucleic-acid-only targets (allow_no_protein). `data/F4_times_h100_esmfold2_134.csv` replaces
 the ESMFold2 rows of `data/existing/F4_h100_engine3.0.1.csv` (200 steps, engine 3.0.1). Engine arms `all_cuda: true` on all 27 targets; the Anthropic
 arm keeps its kit refusals (fp32 Transition -> engine PyTorch backend; recorded, not gated).
@@ -97,7 +97,7 @@ A100: the ESMFold2 cells are re-measured by another session (cssb3); RTX 5090: E
 
 ## B200 data (DATA_STATUS, 2026-11-22)
 
-Host `b200` (8 x B200 sm_100a, 178.35 GiB each, shared account, no Slurm), campaign 2026-11-22. FoldForge `paper-b200` (base origin/main 1688f89), engine run from SOURCE (the PyPI wheels carry no sm100 kernels) with the sm100a prebuilt JIT cache. Environment: venv `ffenv` over the engine team's pixi env eng-2511 (torch 2.13.0+cu129, triton 3.7.1, cuequivariance 0.12); `transformer_engine` blocked in `ffenv` (sitecustomize) so ESMC takes the same PyTorch fallback as on the other cards. Weights, FoldBench inputs (27-target subset of the 1,532 copied; `data.yaml` paths rewritten to the B200 copy) and 5I28 LMDBs copied from the H100 cluster.
+Host `b200` (8 x B200 sm_100a, 178.35 GiB each, shared account, no Slurm), campaign 2026-11-22. FoldJet `paper-b200` (base origin/main 1688f89), engine run from SOURCE (the PyPI wheels carry no sm100 kernels) with the sm100a prebuilt JIT cache. Environment: venv `ffenv` over the engine team's pixi env eng-2511 (torch 2.13.0+cu129, triton 3.7.1, cuequivariance 0.12); `transformer_engine` blocked in `ffenv` (sitecustomize) so ESMC takes the same PyTorch fallback as on the other cards. Weights, FoldBench inputs (27-target subset of the 1,532 copied; `data.yaml` paths rewritten to the B200 copy) and 5I28 LMDBs copied from the H100 cluster.
 Execution: 4 always-ours lanes (GPUs 0-3) + GPUs 4-7 only while no foreign process was on them (the lane watches `nvidia-smi` compute apps; a task that saw a foreign process is `external-contention`: output purged and re-queued, never a result; a lane on 4-7 stops at the first foreign process and is not restarted). One task per GPU at a time (no overlapping on one GPU); concurrent lanes share the node (host memory bandwidth / power), no correction applied. Driver: `common/b200_lane4.sh`, tasks of `common/queue_b200_v2.txt` through `common/b200_task.sh`, `.done` marker only when the task's own validity check passed.
 Engine labels: **A** = `engine main f06154bc7 (3.0.8 + b200 clamp fix + b200 holes fix, unreleased)`: F6 engine arm and F4 OpenDDE engine arm. **B** = `engine 3.0.7 source + b200 TriAttn exp-clamp fix (3698ba9ac, unreleased)`: every other engine arm. Both are in the CSV column `engine_label` (and `notes`). The CSV column `engine*_version_installed` says 2.5.11 because it is the package metadata of the shared env; the loaded source is in `*_engine_version_loaded` / `engine_loaded_from`.
 B200 TriAttn: the released 3.0.7 B200 TriangleAttention kernels (`triattn_sm100.cu`, `triattn_dh64_sm100.cu`, `tri_l128_sm100.cu`, `ex2_poly2` without an upper clamp) produced non-finite output on real AF3 / Chai-1 inputs; those first-pass engine records (F4: AF3 21 / 27, Chai-1 25 / 27 non-finite; F3 AF3 n >= 2, Boltz2 n >= 12 ...) are NOT used (`paper/invalid_archive/` on the B200, not in the CSVs).
@@ -106,11 +106,11 @@ Backend report (engine arms): LayerNorm of 65,536 (F4 / F3 / F9) or 589,824 (F6)
 **F4 (this folder):** `data/F4_times_b200.csv` (297 rows = 11 predictors x 27 targets, arms `torch` / `engine`; no FP8 arm), `data/F4_failures_b200.csv` (35 cells), `data/F4_backend_engine_b200.csv` (per engine run: served / refused calls, `engine_cuda_only`). Failures: 23 PyTorch-operator out-of-memory cells (valid results, `oom = True`: OpenDDE 9, IntelliFold2 4, Chai-1 2, Protenix v2 2, one each AF3, Boltz2, OpenFold3, OpenFold3-preview2, Protenix v1, RoseTTAFold3) and ESMFold2 on the 6 nucleic-acid-only targets (`No protein token reached the language model`, both arms: 12 cells, the same as on the A100; not out-of-memory). Every other engine cell is finite. Engine label: OpenDDE = A, the other predictors = B (`engine_label`).
 **OpenDDE TokenDiTProtenix `extra_pair_bias`:** the released 3.0.7 / clamp-only tree refused it on the B200 as on the A100 (9,600 Triton calls: 'inference: outside the fused H100 inference block's range ...'); with the B200 holes fix (A) the OpenDDE engine arm has Triton 8 calls = the LayerNorm w64 exception only. The clamp-only OpenDDE rows are not in the CSV (`invalid_archive`).
 ESMFold2 loads ESM-C on the B200 without the 16 GB host-RAM limit of the 5090 and runs (ESM-C 6B fp32); on the 5090 ESMFold2 / ESMFold2-Fast are not feasible (the 24 GB fp32 safetensors exceed the 16 GB RAM cap; killed by systemd-oomd).
-**Engine version (2026-11-22):** FoldForge is pinned to engine 3.0.9 (3.0.9 changes only B200 code paths relative to 3.0.8; the A100 / RTX 5090 / H100 campaign rows keep their measured versions 3.0.1 / 3.0.2 / 3.0.6 / 3.0.8 and are not re-measured); the B200 rows were measured on source trees containing the 3.0.9 code (labels in the CSVs: `engine_label`, `notes`).
+**Engine version (2026-11-22):** FoldJet is pinned to engine 3.0.9 (3.0.9 changes only B200 code paths relative to 3.0.8; the A100 / RTX 5090 / H100 campaign rows keep their measured versions 3.0.1 / 3.0.2 / 3.0.6 / 3.0.8 and are not re-measured); the B200 rows were measured on source trees containing the 3.0.9 code (labels in the CSVs: `engine_label`, `notes`).
 
 ## B200: ESMFold2 re-measured with the release sampler (134 steps), engine a553001e1 (2026-11-23)
 
-`data/F4_times_b200_esmfold2_134.csv` replaces the ESMFold2 rows of `data/F4_times_b200.csv` (200 steps, engine label B). FoldForge ed6efa8b3 +
+`data/F4_times_b200_esmfold2_134.csv` replaces the ESMFold2 rows of `data/F4_times_b200.csv` (200 steps, engine label B). FoldJet ed6efa8b3 +
 22febf7 (allow_no_protein) + 5553d19 (max_inference_sigma 256) as a working-tree patch (verified: 134 steps, first sigma 256), engine main
 a553001e1 for the engine arm, arms engine / torch, 27 / 27 targets ok on both arms (the 6 nucleic-acid-only targets, failures in the campaign,
 now run; `data/F4_failures_b200_esmfold2_134.csv` is empty). Engine 1.20-7.31 s (8j62 2,008 tokens: 7.31 s, was 8.13 at 200 steps),
@@ -121,7 +121,7 @@ PyTorch 2.87-95.3 s. Engine arm backend: all cuda except the declared B200 Layer
 **Released as 3.0.10 (2026-11-24):** engine `5090-int` 07bf36ae4 -> v3.0.10 changes no code the RTX 5090 runs (TokenDiTMiniWorldBiasOnly `backend_versions` number, the GPU-less prebuild plan, an A100-only `MWE_SM120` guard in `wide_ops.cu`), so these rows are the 3.0.10 rows; the CSV `engine` columns say so and keep the measured commit.
 
 **Engine:** branch `5090-int` 07bf36ae4 as source (`ENGINE_SRC`): 3.0.9 + origin/main + Boltz-2 up-gate transition and token pair-bias hoist on sm_120
-+ the RTX 5090 FP8 routes (off unless `MINIWORLD_FP8` is set). **Unreleased.** FoldForge 49d41bb (differs from the 3.0.6 campaign's 6a0593e only in
++ the RTX 5090 FP8 routes (off unless `MINIWORLD_FP8` is set). **Unreleased.** FoldJet 49d41bb (differs from the 3.0.6 campaign's 6a0593e only in
 ESMFold2 code). Protocol of `rtx5090.sh` unchanged (27 targets, seeds 0, 200 steps, 4 trunk passes, 5 samples, bf16, eager, one process per
 (predictor, arm), warm median of cold + warm). ESMFold2 / ESMFold2-Fast: not feasible on the 5090 (16 GB host RAM), as before. OpenFold3-preview2:
 not in the 5090 campaign (as before).

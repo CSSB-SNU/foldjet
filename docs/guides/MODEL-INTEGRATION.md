@@ -3,10 +3,10 @@ Current contract: [MiniWorld formats](MINIWORLD-FORMAT.md). Current execution qu
 Current format and shared-composition reference: [MiniWorld formats](MINIWORLD-FORMAT.md).
 The dated validation sections below describe the state when those checks ran.
 
-# FoldForge model integration
+# FoldJet model integration
 
-Working tree: `main`; shared team-gm member: branch `foldforge/dense-families`.
-All predictors must use FoldForge's environment, team-gm blocks, and
+Working tree: `main`; shared team-gm member: branch `foldjet/dense-families`.
+All predictors must use FoldJet's environment, team-gm blocks, and
 miniworld-engine ops. A package name or a subprocess launching an untouched
 upstream model is not a completed shared-engine port.
 
@@ -42,7 +42,7 @@ Source pins and original licenses are retained in each model's `SOURCE.json` and
   `7b826620390afad877ee2babc6a4d0df81b94d3a0be030959853d6a7da0807cc`.
 
 The upstream source trees are retained for provenance. Unused upstream training,
-web-service, search and optional ESM utilities are not qualified FoldForge APIs.
+web-service, search and optional ESM utilities are not qualified FoldJet APIs.
 Only the packaged loaders and inference commands described here are supported.
 
 Current CCD and module-boundary status is recorded in
@@ -101,9 +101,9 @@ CLI, not one per predictor. On an allocated GPU node:
 
 ```bash
 source tools/activate_env.sh
-foldforge models
-foldforge fold af3      --spec docs/examples/inference/1ubq.yaml --out $FOLDFORGE_HOME/runs/af3
-foldforge fold esmfold2 --spec docs/examples/inference/1ubq.yaml --out $FOLDFORGE_HOME/runs/esmfold2
+foldjet models
+foldjet fold af3      --spec docs/examples/inference/1ubq.yaml --out $FOLDFORGE_HOME/runs/af3
+foldjet fold esmfold2 --spec docs/examples/inference/1ubq.yaml --out $FOLDFORGE_HOME/runs/esmfold2
 ```
 
 `--checkpoint` is optional when the release's default blob sits in
@@ -173,7 +173,7 @@ nothing about the port.
 On 6MRR, no alignment, five seeds -- against what the reference records for the
 same target and the native implementation it was comparing itself to:
 
-| | FoldForge best | FoldForge mean | reference best / mean | native mean |
+| | FoldJet best | FoldJet mean | reference best / mean | native mean |
 |---|---|---|---|---|
 | esmfold2 | 1.644 A | **1.668 A** | 1.494 / 1.742 | 1.739 |
 | esmfold2-fast | 1.662 A | **1.684 A** | 1.243 / 1.699 | 1.646 |
@@ -209,7 +209,7 @@ samples in one call hits a degenerate SVD inside the model's own Kabsch align.
 - Missing packages: `gemmi`, `antipickle==0.2.0`, `modelcif`, `typer`,
   `pandera`, `numba`. Install them to a directory and reach them with
   `PYTHONPATH` rather than into `.venv` -- they are for a control, not for
-  FoldForge.
+  FoldJet.
 - **Pin `antipickle==0.2.0`.** 0.2.2 ships a built-in `torch` adapter whose
   typestring collides with the one `chai_lab` registers, and the collision is a
   bare `assert`, not a warning.
@@ -258,7 +258,7 @@ On 5I28 with no alignment, 200 steps, five samples, both measured the same way
 | | pLDDT per sample | CA vs release sample 0 |
 |---|---|---|
 | released Chai-1 | 95.00 - 95.17 | 0.18 - 0.69 A (its own spread) |
-| FoldForge Chai-1 | **95.51 - 95.55** | **0.195 - 0.243 A** |
+| FoldJet Chai-1 | **95.51 - 95.55** | **0.195 - 0.243 A** |
 
 An earlier "97.45" for the release came from a different aggregation and was
 compared against our B-factor mean; it overstated the gap by two points.
@@ -357,7 +357,7 @@ under `$FOLDFORGE_HOME/runs/release-compare-20260924/`.
   release to inside its spread.
 - **Recycle counting.** Released applications use different conventions:
   Protenix/OpenDDE, RF3 and Chai-1 count total passes, while AF3, Boltz,
-  OpenFold3, IntelliFold and ESMFold2 count additional ones. FoldForge now
+  OpenFold3, IntelliFold and ESMFold2 count additional ones. FoldJet now
   exposes **total trunk passes for every family**: `recycles: 10` means ten
   executions. Reference-generation configs explicitly retain the released
   reference workloads' total pass counts; no model-specific counting flag remains.
@@ -623,7 +623,7 @@ After both, fp32, a seed with the dropout off: s_init rel 0.003, template input
 | 1A1K, v2 | dropout off (5 seeds) | dropout on (3 seeds) |
 |---|---|---|
 | release (101-108) | 80.2-81.0, mean 80.7 | 85.6, 87.6, 79.6 |
-| FoldForge (0-7) | 80.64-80.68 | 79.8, 85.6, 79.0 |
+| FoldJet (0-7) | 80.64-80.68 | 79.8, 85.6, 79.0 |
 
 A single-seed Protenix comparison is therefore a coin toss: compare seeds
 with the dropout in the same state, or distributions.
@@ -656,7 +656,7 @@ contacts, against 2 before and a 4.7% baseline, and the 6MRR numbers above are
 what it buys.
 
 The port also reproduces the release where the release runs. 1UBQ, no
-alignment, five seeds: released ESMFold2 best 5.775 / mean 7.354 A, FoldForge
+alignment, five seeds: released ESMFold2 best 5.775 / mean 7.354 A, FoldJet
 best 5.776 / mean 7.621.
 
 ## Acceptance per model
@@ -669,7 +669,7 @@ best 5.776 / mean 7.621.
 4. Verify compilation, inference graph capture, cache coverage and timing on the
    complete model before reporting performance.
 
-Only completed ports appear as implemented in `foldforge models`; the other
+Only completed ports appear as implemented in `foldjet models`; the other
 names remain explicitly unported.
 
 ## Verified results — 2026-09-13
@@ -717,22 +717,22 @@ AF3 uses the official AF3 JSON schema. Example input files are in
 ```bash
 source tools/activate_env.sh
 # Once for all models, independently of their checkpoints:
-foldforge ccd prepare \
+foldjet ccd prepare \
   --components $FOLDFORGE_HOME/checkpoints/opendde/common/components.cif \
   --rdkit $FOLDFORGE_HOME/checkpoints/opendde/common/components.cif.rdkit_mol.pkl \
   --out $FOLDFORGE_HOME/ccd/preprocessed_CCD.lmdb
-foldforge ccd verify --ccd-db $FOLDFORGE_HOME/ccd/preprocessed_CCD.lmdb
+foldjet ccd verify --ccd-db $FOLDFORGE_HOME/ccd/preprocessed_CCD.lmdb
 
-foldforge fold af3 --input $FOLDFORGE_HOME/benchmarks/data/1ubq/af3-full.json \
+foldjet fold af3 --input $FOLDFORGE_HOME/benchmarks/data/1ubq/af3-full.json \
   --checkpoint $FOLDFORGE_HOME/checkpoints/af3/af3.bin.zst \
   --ccd-db $FOLDFORGE_HOME/ccd/preprocessed_CCD.lmdb --samples 1 --out $FOLDFORGE_HOME/runs/af3
-foldforge fold protenix1 --input $FOLDFORGE_HOME/benchmarks/data/1ubq/af-family.json \
+foldjet fold protenix1 --input $FOLDFORGE_HOME/benchmarks/data/1ubq/af-family.json \
   --checkpoint $FOLDFORGE_HOME/checkpoints/protenix/protenix1.bin.zst \
   --ccd-db $FOLDFORGE_HOME/ccd/preprocessed_CCD.lmdb --samples 1 --out $FOLDFORGE_HOME/runs/protenix1
-foldforge fold protenix2 --input $FOLDFORGE_HOME/benchmarks/data/1ubq/af-family.json \
+foldjet fold protenix2 --input $FOLDFORGE_HOME/benchmarks/data/1ubq/af-family.json \
   --checkpoint $FOLDFORGE_HOME/checkpoints/protenix/protenix2.bin.zst \
   --ccd-db $FOLDFORGE_HOME/ccd/preprocessed_CCD.lmdb --samples 1 --out $FOLDFORGE_HOME/runs/protenix2
-foldforge fold opendde --input $FOLDFORGE_HOME/benchmarks/data/1ubq/af-family.json \
+foldjet fold opendde --input $FOLDFORGE_HOME/benchmarks/data/1ubq/af-family.json \
   --checkpoint $FOLDFORGE_HOME/checkpoints/opendde/opendde.pt \
   --ccd-db $FOLDFORGE_HOME/ccd/preprocessed_CCD.lmdb --samples 1 --out $FOLDFORGE_HOME/runs/opendde
 ```
@@ -822,7 +822,7 @@ are not speedup measurements.
 
 The root team-gm branch is `exp/miniworld-integrated`; its engine connection is
 in place. The single transition inside Pairformer now forwards the requested
-backend in both team-gm copies, with a passing root regression. FoldForge stays
+backend in both team-gm copies, with a passing root regression. FoldJet stays
 on `main` and its team-gm member stays on `exp/miniworld`. Consumer changes remain
 local and uncommitted; existing unrelated edits are preserved.
 
@@ -871,9 +871,9 @@ Every model uses the same image writer. PNG export is disabled by
 default. Both CLI forms (`--spec` and legacy `--input`/`--input-spec`) accept:
 
 ```bash
-foldforge fold af3 --spec input.yaml --config runtime.yaml --save-images all
+foldjet fold af3 --spec input.yaml --config runtime.yaml --save-images all
 # Or select a subset:
-foldforge fold af3 --spec input.yaml --save-images pae pde plddt msa
+foldjet fold af3 --spec input.yaml --save-images pae pde plddt msa
 ```
 
 The equivalent runtime YAML (also supported as `output` in notebook requests) is:

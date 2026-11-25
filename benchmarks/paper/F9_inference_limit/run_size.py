@@ -41,7 +41,7 @@ REPO = HERE.parents[2]
 sys.path.insert(0, str(REPO / "benchmarks/5i28_ff"))
 import run_5i28_ff as H  # noqa: E402
 
-import foldforge as ff  # noqa: E402
+import foldjet as ff  # noqa: E402
 
 if RANDOM_INIT:
     ffpaper.install_random_init()

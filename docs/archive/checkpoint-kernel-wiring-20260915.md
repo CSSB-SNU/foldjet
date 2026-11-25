@@ -20,8 +20,8 @@ The rectangular 32×128 atom attention core and Protenix-v1's asymmetric 64/128
 template TriMul still require their reference equations. Connecting surrounding
 kernels does not imply that these two whole operations are engine-supported.
 
-Tests: `FoldForge/tests/kernels/test_checkpoint_fusions.py` and
-`FoldForge/tests/kernels/test_backend_attention.py`. Engine build/API regression tests and
+Tests: `FoldJet/tests/kernels/test_checkpoint_fusions.py` and
+`FoldJet/tests/kernels/test_backend_attention.py`. Engine build/API regression tests and
 the channel census are recorded in the engine report. These are module-level
 checks; they are not a new end-to-end timing table or a completed all-GPU retune.
 

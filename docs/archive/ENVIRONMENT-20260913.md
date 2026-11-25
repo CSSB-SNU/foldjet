@@ -65,7 +65,7 @@ directory must not be added: unrelated libraries can interfere with Git/TLS.
 Model Slurm runners use the repository's `.venv`, clear inherited `PYTHONPATH`,
 and retain offline checkpoint access. They no longer inject the shared Conda
 Python or temporary stub/library folders. `TEAM_GM_ENV` (team-gm) or
-`FOLDFORGE_ENV` (FoldForge) can select another complete environment.
+`FOLDFORGE_ENV` (FoldJet) can select another complete environment.
 
 Use the setup script to update this environment; omitting the optional extra can
 remove FA2, and a direct sync may rebuild it. A CUDA-13 environment is a separate target and is not qualified by
@@ -74,7 +74,7 @@ these Ampere checks.
 ## Working trees
 
 - team-gm: `exp/miniworld-integrated`.
-- FoldForge: `main`; its team-gm member remains on `exp/miniworld`.
+- FoldJet: `main`; its team-gm member remains on `exp/miniworld`.
 - Existing unrelated changes are preserved. Consumer changes remain local.
 
 Raw installation and validation logs are retained in team-gm's ignored
@@ -87,7 +87,7 @@ Slurm job **1682646**, `gpu02` / RTX A5000, completed its batch script with exit
 code 0 on 2026-09-13. Each repository ran its final setup script and tests using
 its own Python 3.12.14 interpreter, without a shared `PYTHONPATH`.
 
-| Check | team-gm | FoldForge |
+| Check | team-gm | FoldJet |
 | --- | --- | --- |
 | Dependency consistency (`uv pip check`) | passed, 167 packages | passed, 164 packages |
 | Quack 0.5.0 / CuTe 4.5.2 imports and SM86 GEMM policy | passed | passed |

@@ -9,14 +9,14 @@ import pytest
 import torch
 from torch import nn
 
-from foldforge.diffusion.augmentation import (
+from foldjet.diffusion.augmentation import (
     masked_dense_rigid_motion,
 )
-from foldforge.models.architectures.af3 import AlphaFold3
-from foldforge.models.checkpoints.legacy.transformer import SelfAttention
-from foldforge.modules.dense.diffusion_transformer import CrossAttention
-from foldforge.modules.dense.spec import ALPHAFOLD3
-from foldforge.modules.engine.configure import activation_autocast, configure_model
+from foldjet.models.architectures.af3 import AlphaFold3
+from foldjet.models.checkpoints.legacy.transformer import SelfAttention
+from foldjet.modules.dense.diffusion_transformer import CrossAttention
+from foldjet.modules.dense.spec import ALPHAFOLD3
+from foldjet.modules.engine.configure import activation_autocast, configure_model
 
 
 def test_dense_augmentation_has_independent_sample_transforms():

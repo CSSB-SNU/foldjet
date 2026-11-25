@@ -1,4 +1,4 @@
-"""Lay out a kit FoldBench run as FoldForge pred/: <pred>/<t>/<t>_seed{s}_sample{k}_pred.cif (symlinks) + ranking.csv (seed,sample,ranking_score).
+"""Lay out a kit FoldBench run as FoldJet pred/: <pred>/<t>/<t>_seed{s}_sample{k}_pred.cif (symlinks) + ranking.csv (seed,sample,ranking_score).
 Per shard: a target re-run in big mode (out_big) takes its big outputs; otherwise the fast outputs (out). Kit ranking_score as written by the kit."""
 import json, re, sys
 from pathlib import Path

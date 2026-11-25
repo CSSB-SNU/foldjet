@@ -1,11 +1,11 @@
-"""FoldForge's Protenix-recipe pieces against Protenix's OWN functions (CPU).
+"""FoldJet's Protenix-recipe pieces against Protenix's OWN functions (CPU).
 
 Runs on a tiny structure. Skipped unless ``FOLDFORGE_PROTENIX_PY`` (the Protenix
 environment's python, ``~/foldforge-base/envs/protenix/.venv/bin/python``) and
 ``FOLDFORGE_PROTENIX_SRC`` (``~/foldforge-base/protenix``) are set:
 ``protenix_reference.py`` runs in a subprocess of that environment and returns
 Protenix's values (resolved loss, pLDDT / PDE target bins, af3 lr scheduler,
-configs_base settings); the FoldForge side runs in this process. Run it in a Slurm
+configs_base settings); the FoldJet side runs in this process. Run it in a Slurm
 CPU job.
 """
 
@@ -22,11 +22,11 @@ import pytest
 import torch
 from torch import nn
 
-from foldforge.data.constants import atom_types, residue_names
-from foldforge.train import optim, recipes
-from foldforge.train.config import TrainConfig
-from foldforge.train.loss import confidence as conf
-from foldforge.utils.atom_layout import GatherInfo
+from foldjet.data.constants import atom_types, residue_names
+from foldjet.train import optim, recipes
+from foldjet.train.config import TrainConfig
+from foldjet.train.loss import confidence as conf
+from foldjet.utils.atom_layout import GatherInfo
 
 PY = os.environ.get("FOLDFORGE_PROTENIX_PY")
 SRC = os.environ.get("FOLDFORGE_PROTENIX_SRC")

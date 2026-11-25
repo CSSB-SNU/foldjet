@@ -1,6 +1,6 @@
-# 5I28 benchmark, FoldForge side
+# 5I28 benchmark, FoldJet side
 
-Runs the FoldForge half of the 5I28 benchmark ([protocol](../../docs/guides/BENCHMARK-5I28.md)): every model, n = 1, 2, 4, 8, 12, 16
+Runs the FoldJet half of the 5I28 benchmark ([protocol](../../docs/guides/BENCHMARK-5I28.md)): every model, n = 1, 2, 4, 8, 12, 16
 identical 5I28 chains (128 n tokens), the real MSA and templates of key `P0113359`, 4 trunk passes, 200 steps, 5 samples, bf16,
 `compile` + CUDA graphs (`scope: trunk`), one H100.
 
@@ -37,4 +37,4 @@ Models: `protenix1 protenix2 opendde esmfold2 af3 boltz2 chai1 openfold3 rosetta
 and its family default of no input templates is switched on, as in the 2026-10-29 run. `template_dedup` stays at its default (true):
 that is what gives the 4 distinct templates (`5SYD_A`, `6KOL_A`, `5YT7_A`, `6TFD_A`); FoldBench specs set it to false, a 5I28 spec must not.
 
-The records of runs are `docs/records/5i28_foldforge_<date>.md` and `docs/records/data/`.
+The records of runs are `docs/records/5i28_foldjet_<date>.md` and `docs/records/data/`.

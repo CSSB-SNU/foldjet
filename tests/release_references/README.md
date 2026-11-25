@@ -1,17 +1,17 @@
 # Reference outputs from the released implementations
 
 Every structure under `tests/release_references/<target>/<family>/` was produced by that
-family's **own released code and weights**, not by FoldForge. They are the
-ground truth FoldForge is judged against: `foldforge validate` folds the same
+family's **own released code and weights**, not by FoldJet. They are the
+ground truth FoldJet is judged against: `foldjet validate` folds the same
 inputs under the same conditions and reports, per family and target, whether
-FoldForge is inside the release's own seed-to-seed variation.
+FoldJet is inside the release's own seed-to-seed variation.
 
 ## Layout
 
 ```
 tests/release_references/
   inputs/<target>/            the same target in every release's input format
-    foldforge.yaml  boltz.yaml  intellifold.yaml  protenix.json
+    foldjet.yaml  boltz.yaml  intellifold.yaml  protenix.json
     of3.json  rf3.json  chai.fasta  *.fasta
   <target>/<family>/seed<k>/
     sample<i>.cif.gz          the release's i-th diffusion sample for seed k
@@ -80,11 +80,11 @@ Protenix and Chai-lab environments).
   with a count (`"count": 3`), unlike every other release.
 - Protenix v1 and v2 apply MC dropout to the pair recycle on ~40% of seeds.
 
-## Validating FoldForge
+## Validating FoldJet
 
 ```
 tools/references/validate.sh fast
-foldforge validate $FOLDFORGE_HOME/runs/validate-fast --report docs/validation/fast.md
+foldjet validate $FOLDFORGE_HOME/runs/validate-fast --report docs/validation/fast.md
 ```
 
 The latest reports are in `docs/validation/`.

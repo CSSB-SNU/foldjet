@@ -97,7 +97,7 @@ def main() -> None:
     ap.add_argument("--out", type=Path, required=True)
     a = ap.parse_args()
     if bool(a.model) == bool(a.kit):
-        ap.error("exactly one of --model (FoldForge) or --kit (Anthropic kit)")
+        ap.error("exactly one of --model (FoldJet) or --kit (Anthropic kit)")
     if a.model and not a.arm:
         ap.error("--arm is required with --model")
     a.out.mkdir(parents=True, exist_ok=True)

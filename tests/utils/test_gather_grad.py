@@ -1,4 +1,4 @@
-"""``foldforge.utils.gather_grad`` against torch's own ``index`` backward (CUDA).
+"""``foldjet.utils.gather_grad`` against torch's own ``index`` backward (CUDA).
 
 BITWISE: every dtype / slice size / leading-dim layout the atom layouts use,
 pile-ups of thousands of duplicates on one target, exact zeros of both signs,
@@ -9,7 +9,7 @@ with the kernel on and off.
 import pytest
 import torch
 
-from foldforge.utils import atom_layout, gather_grad
+from foldjet.utils import atom_layout, gather_grad
 
 pytestmark = pytest.mark.skipif(
     not (torch.cuda.is_available() and gather_grad.HAVE_TRITON),

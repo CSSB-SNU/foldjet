@@ -3,7 +3,7 @@
 Run one model on one input under each backend and compare them with the PyTorch
 backend.
 
-One command, one config: the same ``foldforge fold`` (the spec and the runtime
+One command, one config: the same ``foldjet fold`` (the spec and the runtime
 config you give) runs once per backend in its own process, so the Anthropic payload
 locations are present only for the Anthropic run and the engine's JIT state is not
 shared. Each row records the backend, the backend of every op, the warm median model
@@ -35,7 +35,7 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-from foldforge.modules.engine.backends import BACKENDS
+from foldjet.modules.engine.backends import BACKENDS
 
 REFERENCE = "pytorch"
 #: Locations the Anthropic backend reads; only its own run sees them (the engine's
@@ -88,7 +88,7 @@ def coordinate_difference(
 
 
 def run_backend(args: argparse.Namespace, backend: str, base: dict) -> dict:
-    """One ``foldforge fold`` process on one backend; the row of its result."""
+    """One ``foldjet fold`` process on one backend; the row of its result."""
     root = args.out / backend
     root.mkdir(parents=True, exist_ok=True)
     config = {**base, "backend": backend}
@@ -101,7 +101,7 @@ def run_backend(args: argparse.Namespace, backend: str, base: dict) -> dict:
         sys.executable,
         "-c",
         (
-            "import sys; from foldforge.models.inference import run; "
+            "import sys; from foldjet.models.inference import run; "
             "raise SystemExit(run(sys.argv[1], sys.argv[2:]))"
         ),
         args.model,

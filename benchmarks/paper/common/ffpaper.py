@@ -1,6 +1,6 @@
 """Shared helpers of the paper experiments F3 / F4 / F5 / F9 (inference timing, sample comparison, inference limit).
 
-Import this module BEFORE ``foldforge`` / ``miniworld_engine`` in a runner: ``apply_arm_env`` sets the FP8 switches, which the engine reads when
+Import this module BEFORE ``foldjet`` / ``miniworld_engine`` in a runner: ``apply_arm_env`` sets the FP8 switches, which the engine reads when
 its FP8 modules are imported.
 
 Arms (``ARMS``): ``torch`` = backend ``pytorch`` (PyTorch operators), ``engine`` = backend ``miniworld`` (bf16 / fp16 engine kernels),
@@ -21,7 +21,7 @@ ARMS = ("torch", "engine", "engine_fp8", "anthropic")
 BACKEND = {"torch": "pytorch", "engine": "miniworld", "engine_fp8": "miniworld", "anthropic": "anthropic"}
 CARDS = {"h100": "H100", "a100": "A100", "rtx5090": "5090", "b200": "B200"}
 
-#: FoldForge predictors of F3 / F9 (the 5I28 benchmark's eleven) and of F4 / F5 (the FoldBench 27-target set's eleven; the two lists differ:
+#: FoldJet predictors of F3 / F9 (the 5I28 benchmark's eleven) and of F4 / F5 (the FoldBench 27-target set's eleven; the two lists differ:
 #: F4 / F5 have openfold3-preview2 and no esmfold2-fast).
 PREDICTORS_5I28 = (
     "protenix1", "protenix2", "opendde", "esmfold2", "esmfold2-fast", "intellifold2", "af3", "boltz2", "chai1", "openfold3", "rosettafold3",
@@ -58,16 +58,16 @@ def random_init_enabled() -> bool:
 
 
 def install_random_init(seed: int = 0) -> None:
-    """Replace FoldForge's checkpoint load by a seeded random initialisation (opt-in, ``FF_PAPER_RANDOM_INIT=1``; no file is read).
+    """Replace FoldJet's checkpoint load by a seeded random initialisation (opt-in, ``FF_PAPER_RANDOM_INIT=1``; no file is read).
 
-    Every predictor family loads through ``foldforge.models.checkpoints.miniworld.load_into`` (``ff.load_model`` -> ``models.loading``): the
+    Every predictor family loads through ``foldjet.models.checkpoints.miniworld.load_into`` (``ff.load_model`` -> ``models.loading``): the
     checkpoint path is resolved without requiring the file (a missing file skips the size check), and ``load_into`` fills the parameters of the
     built model instead of a strict load. Scale as F6's profiler (``F6PROF_RANDOM_INIT``): matrices randn / sqrt(fan_in), norm weights / scales 1,
     biases and other vectors 0; the Fourier noise features (buffers the file normally supplies) randn / rand of the module's own ``dim``.
     Peak memory and whether a size fits do not depend on the values; the outputs are meaningless (finiteness is recorded, not required).
     """
     import torch
-    from foldforge.models.checkpoints import miniworld
+    from foldjet.models.checkpoints import miniworld
 
     import tempfile
 
@@ -77,7 +77,7 @@ def install_random_init(seed: int = 0) -> None:
         # an empty skeleton (the API checks that the path exists); its name is no pinned blob's, so the size check skips it; never read.
         # Fixed input towers that live beside the weights (Chai-1's ESM2 `esm/`) are not model parameters: when the model's checkpoint
         # directory exists, its other entries are linked into the skeleton directory (the weights file itself never is).
-        from foldforge.models.checkpoints import _roots
+        from foldjet.models.checkpoints import _roots
 
         d = skeletons / model
         d.mkdir(exist_ok=True)
@@ -146,7 +146,7 @@ def run_meta(**extra) -> dict:
     gpu = torch.cuda.get_device_name(0) if torch.cuda.is_available() else None
     meta = {
         "foldforge_commit": _git(repo, "rev-parse", "HEAD"),
-        "foldforge_dirty": bool(_git(repo, "status", "--porcelain", "--untracked-files=no")),
+        "foldjet_dirty": bool(_git(repo, "status", "--porcelain", "--untracked-files=no")),
         "engine_version_installed": engine,
         "engine_loaded_from": engine_from,  # differs from the installed one when PYTHONPATH shadows it (a release candidate)
         "engine_version_loaded": engine_source_version(engine_from) or engine,
@@ -214,10 +214,10 @@ def oom_of(error: BaseException | None) -> BaseException | None:
 
 
 def backend_plan(device: str = "cuda:0") -> dict | None:
-    """Per op class, the backend FoldForge's engine policy chooses on this card (printed first in a real run: a Triton / PyTorch route in an engine run is a bug)."""
+    """Per op class, the backend FoldJet's engine policy chooses on this card (printed first in a real run: a Triton / PyTorch route in an engine run is a bug)."""
     try:
         import torch
-        from foldforge.modules.engine.backends import OPS, choose_backend, op_classes
+        from foldjet.modules.engine.backends import OPS, choose_backend, op_classes
 
         dev = torch.device(device)
         plan = {op: {c.__name__: choose_backend("miniworld", c, dev)[0] for c in op_classes(op)} for op in OPS}
@@ -234,7 +234,7 @@ def backend_table(predictor) -> dict | None:
     try:
         import collections
 
-        from foldforge.modules.engine.serving import report_observations
+        from foldjet.modules.engine.serving import report_observations
 
         rep = report_observations(predictor._network)["modules"]
         agg = collections.defaultdict(lambda: [collections.Counter(), collections.Counter(), collections.Counter(), 0])

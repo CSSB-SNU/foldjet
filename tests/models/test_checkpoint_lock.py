@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import pytest
 
-from foldforge.models.checkpoints import lock
+from foldjet.models.checkpoints import lock
 
 
 def test_every_default_checkpoint_is_locked():
-    from foldforge.models.checkpoints import DEFAULT_FILES
+    from foldjet.models.checkpoints import DEFAULT_FILES
 
     pinned = lock.pins()
     for name, filename in DEFAULT_FILES.items():

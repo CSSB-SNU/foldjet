@@ -1,0 +1,354 @@
+"""Fused template embedder shared by the Boltz-2, Protenix and RoseTTAFold3 weights.
+
+AF3 embeds each template feature with its own projection, runs a small pairformer
+and averages. This form projects one concatenated feature vector, adds the normed
+query pair, runs the template pairformer, norms, averages the PRESENT templates and
+projects ``relu`` of the mean back to the pair width:
+
+    v = z_proj(z_norm(z)) + a_proj(features);  v = [v +] pairformer(v);  v = v_norm(v)
+    u = mean over present templates;            out = u_proj(relu(u))
+
+Families differ in the feature builder and in the two conventions named on the
+spec, never in this forward.
+"""
+
+from __future__ import annotations
+
+import math
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+from foldjet.data.features import dense as features
+from foldjet.data.features import dense_protein as protein_data_processing
+from foldjet.modules.dense import confidence as scoring
+from foldjet.modules.dense.spec import ALPHAFOLD3, DenseSpec
+from foldjet.modules.dense.template import template_embedding_mean
+from foldjet.modules.engine import graph as engine_graph
+from foldjet.modules.engine import modules as engine_modules
+from foldjet.utils.device_constants import built_on_device, on_device
+
+_EPS = 1e-10
+#: RoseTTAFold3's template distogram bin edges (1-4 A by 0.1, 4-20 A by 0.5: 63 edges, 64 bins).
+_RF3_DISTOGRAM_EDGES = torch.cat(
+    [torch.arange(1.0, 4.0, 0.1), torch.arange(4.0, 20.5, 0.5)]
+)
+
+
+def _backbone(aatype: torch.Tensor, positions: torch.Tensor, mask: torch.Tensor):
+    """C, CA, N positions and their joint mask; rigid group 0 lists them in that order."""
+    group = on_device(
+        protein_data_processing.RESTYPE_RIGIDGROUP_DENSE_ATOM_IDX, aatype.device
+    )
+    index = group[aatype.to(torch.int64)][:, 0].to(torch.int64)  # (N, 3) = [C, CA, N]
+    picked = torch.gather(positions, 1, index[..., None].expand(-1, -1, 3))
+    picked_mask = torch.gather(mask, 1, index)
+    return picked[:, 0], picked[:, 1], picked[:, 2], picked_mask.prod(dim=1).float()
+
+
+#: AF3 residue index -> the OpenFold3/Protenix 32-class order.
+_AF3_TO_OF3 = (
+    *range(21),
+    31,
+    21,
+    22,
+    23,
+    24,
+    26,
+    27,
+    28,
+    29,
+    25,
+)
+
+
+def protenix2_template_features(
+    aatype: torch.Tensor,
+    positions: torch.Tensor,
+    mask: torch.Tensor,
+    visible: torch.Tensor,
+) -> torch.Tensor:
+    """108 features: CB distogram 39, CB mask, restype 32 x 2, unit vector 3, frame mask.
+
+    The distogram is masked by the chain visibility as well as by coverage. A
+    distogram one-hot is nonzero for EVERY pair, because a distance always lands
+    in some bin, so an unmasked cross-chain entry is not a zero but a confident
+    fabricated inter-chain distance from a template that carries none.
+    """
+    tokens = aatype.shape[0]
+    beta, beta_mask = scoring.pseudo_beta_fn(aatype, positions, mask)
+    c_atom, ca, n_atom, frame_mask = _backbone(aatype, positions, mask)
+    eps = 1e-6
+    first = c_atom - ca
+    first = first / (first.norm(dim=-1, keepdim=True) + eps)
+    second = n_atom - ca
+    second = second - first * (first * second).sum(-1, keepdim=True)
+    second = second / (second.norm(dim=-1, keepdim=True) + eps)
+    rotation = torch.stack([first, second, torch.cross(first, second, dim=-1)], dim=-1)
+    # A real unit vector of (ca_j - ca_i) in residue i's frame.
+    unit = torch.einsum("ilk,ijl->ijk", rotation, ca[None, :, :] - ca[:, None, :])
+    unit = unit / (unit.norm(dim=-1, keepdim=True) + eps)
+
+    squared = (beta[:, None] - beta[None]).square().sum(-1)[..., None]
+    lower = torch.linspace(3.25, 50.75, 39, device=squared.device).square()
+    upper = torch.cat([lower[1:], lower.new_full((1,), 1e8)])
+    distogram = ((squared > lower) & (squared < upper)).float()
+
+    covered = (beta_mask[:, None] * beta_mask[None] * visible)[..., None].float()
+    framed = (frame_mask[:, None] * frame_mask[None] * visible)[..., None].float()
+    remap = built_on_device(
+        "af3_to_of3",
+        aatype.device,
+        lambda: torch.tensor(_AF3_TO_OF3, device=aatype.device, dtype=torch.int64),
+    )
+    restype = F.one_hot(remap[aatype.to(torch.int64)], 32).float()
+    return torch.cat(
+        [
+            distogram * covered,
+            covered,
+            # The j-varying block comes FIRST, which is the vendor's own order;
+            # the projection is converted with no column permutation.
+            restype[None, :, :].expand(tokens, tokens, 32),
+            restype[:, None, :].expand(tokens, tokens, 32),
+            unit * framed,
+            framed,
+        ],
+        dim=-1,
+    )
+
+
+def boltz2_template_features(
+    aatype: torch.Tensor,
+    positions: torch.Tensor,
+    mask: torch.Tensor,
+    visible: torch.Tensor,
+) -> torch.Tensor:
+    """109 features: CB distogram 38, CB mask, frame-sign vector 3, frame mask, restype 33 x 2."""
+    tokens = aatype.shape[0]
+    covered = mask.sum(-1) > 0
+    beta, beta_mask = scoring.pseudo_beta_fn(aatype, positions, mask)
+    c_atom, ca, n_atom, frame_mask = _backbone(aatype, positions, mask)
+    first = c_atom - ca
+    first = first / (first.norm(dim=-1, keepdim=True) + _EPS)
+    second = n_atom - ca
+    second = second - first * (first * second).sum(-1, keepdim=True)
+    second = second / (second.norm(dim=-1, keepdim=True) + _EPS)
+    rotation = torch.stack([first, second, torch.cross(first, second, dim=-1)], dim=-1)
+    distance = ((beta[:, None] - beta[None]).square().sum(-1) + _EPS).sqrt()
+    edges = torch.linspace(3.25, 50.75, 37, device=distance.device)
+    distogram = F.one_hot((distance[..., None] > edges).sum(-1), 38)
+    # The vendor normalises a (..., 3, 1) vector over its size-one axis, so the
+    # trained feature is the per-component SIGN of R_j^T (ca_i - ca_j), not a unit
+    # vector. The weights depend on it.
+    local = torch.einsum("jdk,ijd->ijk", rotation, ca[:, None] - ca[None])
+    geometry = (
+        torch.cat(
+            [
+                distogram.float(),
+                (beta_mask[:, None] * beta_mask[None])[..., None].float(),
+                torch.sign(local),
+                (frame_mask[:, None] * frame_mask[None])[..., None],
+            ],
+            dim=-1,
+        )
+        * visible[..., None].float()
+    )
+    restype = F.one_hot(torch.where(covered, aatype.to(torch.int64) + 2, 0), 33).float()
+    return torch.cat(
+        [
+            geometry,
+            restype[:, None].expand(tokens, tokens, 33),
+            restype[None].expand(tokens, tokens, 33),
+        ],
+        dim=-1,
+    )
+
+
+def rf3_template_features(
+    aatype: torch.Tensor,
+    positions: torch.Tensor,
+    mask: torch.Tensor,
+    visible: torch.Tensor,
+) -> torch.Tensor:
+    """66 features: CA distogram 64 (1 to 20 A), has-condition, joint noise level.
+
+    An exact template has noise scale zero, so its noise level is the constant
+    ``(log(1e-4 / 16) + 1.2) / 1.5``. The condition mask gates every channel.
+    """
+    _, ca, _, _ = _backbone(aatype, positions, mask)
+    group = on_device(
+        protein_data_processing.RESTYPE_RIGIDGROUP_DENSE_ATOM_IDX, aatype.device
+    )
+    ca_index = group[aatype.to(torch.int64)][:, 0, 1].to(torch.int64)
+    ca_mask = torch.gather(mask, 1, ca_index[:, None])[:, 0].float()
+    distance = ((ca[:, None] - ca[None]).square().sum(-1) + _EPS).sqrt()
+    distance = torch.nan_to_num(distance, nan=1e9)
+    edges = on_device(
+        _RF3_DISTOGRAM_EDGES, distance.device
+    )  # cached per device: no host copy inside a CUDA-graph capture
+    distogram = F.one_hot((distance[..., None] > edges).sum(-1), 64).float()
+    condition = (ca_mask[:, None] * ca_mask[None] * visible.float())[..., None]
+    noise = torch.full_like(condition, (math.log(1e-4 / 16.0) + 1.2) / 1.5)
+    return torch.cat([distogram, condition, noise], dim=-1) * condition
+
+
+_FEATURES = {
+    "boltz2": (boltz2_template_features, 109),
+    "rf3": (rf3_template_features, 66),
+    "protenix2": (protenix2_template_features, 108),
+}
+
+
+class FusedTemplateEmbedding(nn.Module):
+    """Template embedder for weights trained with the fused form."""
+
+    def __init__(self, spec: DenseSpec = ALPHAFOLD3) -> None:
+        super().__init__()
+        self.spec = spec
+        self.build, width = _FEATURES[spec.template]
+        channels = spec.template_channel
+        self.z_norm = engine_modules.layer_norm(spec.pair_channel)
+        self.z_proj = nn.Linear(spec.pair_channel, channels, bias=False)
+        self.a_proj = nn.Linear(width, channels, bias=False)
+        self.tmpl_pairformer = nn.ModuleList(
+            [self._block(spec, channels) for _ in range(spec.template_layers)]
+        )
+        self.v_norm = engine_modules.layer_norm(channels)
+        self.u_proj = nn.Linear(channels, spec.pair_channel, bias=False)
+
+    @staticmethod
+    def _block(spec: DenseSpec, channels: int) -> nn.Module:
+        """One pair-stack block of the template embedder."""
+        return engine_graph.make_pairformer_block(
+            spec,
+            d_pair=channels,
+            n_head_pair=spec.template_heads or spec.pair_heads,
+            qkv_dim=spec.template_qkv_dim,
+            transition_n=spec.template_transition_factor,
+            tri_hidden=spec.template_hidden_dim,
+            batched="template",
+        )
+
+    def forward(
+        self,
+        query_embedding: torch.Tensor,
+        templates: features.Templates,
+        padding_mask_2d: torch.Tensor,
+        multichain_mask_2d: torch.Tensor,
+    ) -> torch.Tensor:
+        """Return the pair update, averaged over every template SLOT.
+
+        The vendor runs an absent slot like any other -- the normed query pair
+        still drives the stack -- and divides by the slot count, so with no
+        template at all the term is live rather than zero. Skipping absent
+        slots removed a pair term of RMS 12-17 on every recycle.
+        """
+        dtype = query_embedding.dtype
+        count = templates.aatype.shape[0]
+        query = self.z_proj(self.z_norm(query_embedding))
+        if self.spec.template == "rf3":
+            return self._single_pass(
+                query, templates, padding_mask_2d, multichain_mask_2d
+            )
+
+        def prepare(index: int) -> torch.Tensor:
+            template = templates[index]
+            mask = template.atom_mask
+            visible = multichain_mask_2d
+            if self.spec.template_visibility_by_coverage:
+                # Exact mode (Boltz-2): visibility follows the SOURCE TEMPLATE,
+                # not the chain -- a template that covers two chains exposes
+                # their cross-chain block, and an uncovered chain sees itself.
+                covered = mask.sum(-1) > 0
+                visible = (covered[:, None] & covered[None]) | (
+                    ~covered[:, None] & ~covered[None] & multichain_mask_2d.bool()
+                )
+            return query + self.a_proj(
+                self.build(
+                    template.aatype,
+                    template.atom_positions.float(),
+                    mask.float(),
+                    visible,
+                ).to(dtype)
+            )
+
+        def finish(value: torch.Tensor, stacked: torch.Tensor) -> torch.Tensor:
+            if self.spec.template_stack_outer_residual and len(self.tmpl_pairformer):
+                stacked = value + stacked
+            return self.v_norm(stacked)
+
+        if (
+            count > 1
+            and len(self.tmpl_pairformer)
+            and all(
+                getattr(block, "supports_template_batch", False)
+                for block in self.tmpl_pairformer
+            )
+        ):
+            # The template slots go through the pair stack as ONE batch (the engine
+            # kernels take B samples per launch and give each the result of its own
+            # one-sample call); the slots are then summed one by one, in slot order,
+            # exactly as the per-slot loop below does.
+            values = torch.stack([prepare(index) for index in range(count)])
+            stacked = values
+            for block in self.tmpl_pairformer:
+                stacked = engine_graph.run_block(block, stacked, padding_mask_2d)
+            batched = finish(values, stacked)
+
+            def embed(index: int) -> torch.Tensor:
+                return batched[index]
+
+        else:
+
+            def embed(index: int) -> torch.Tensor:
+                value = prepare(index)
+                stacked = value
+                for block in self.tmpl_pairformer:
+                    stacked = engine_graph.run_block(block, stacked, padding_mask_2d)
+                return finish(value, stacked)
+
+        return template_embedding_mean(
+            count,
+            embed=embed,
+            empty=torch.zeros_like(query),
+            project=self.u_proj,
+            present=(
+                (lambda index: templates[index].atom_mask.any())
+                if self.spec.template_present_denominator
+                else None
+            ),
+        )
+
+    def _single_pass(
+        self,
+        query: torch.Tensor,
+        templates: features.Templates,
+        padding_mask_2d: torch.Tensor,
+        multichain_mask_2d: torch.Tensor,
+    ) -> torch.Tensor:
+        """One pass on the MEAN template feature, run even with no template.
+
+        The vendor has no per-template loop and no gating: the normed query pair
+        alone drives the stack when nothing is supplied, so the term is live on
+        every recycle. No outer residual around the stack.
+        """
+        feature = query.new_zeros(*query.shape[:2], self.a_proj.in_features)
+        present = torch.zeros((), device=query.device)
+        count = templates.aatype.shape[0] if self.spec.use_input_templates else 0
+        for index in range(count):
+            template = templates[index]
+            # An absent slot is built and weighted by zero, not skipped: the skip read the
+            # mask on the host, which a CUDA-graph capture does not allow.
+            filled = template.atom_mask.any()
+            feature = feature + self.build(
+                template.aatype,
+                template.atom_positions.float(),
+                template.atom_mask.float(),
+                multichain_mask_2d,
+            ).to(query.dtype) * filled.to(query.dtype)
+            present = present + filled
+        value = query + self.a_proj(feature / present.clamp_min(1.0))
+        for block in self.tmpl_pairformer:
+            value = engine_graph.run_block(block, value, padding_mask_2d)
+        return self.u_proj(torch.relu(self.v_norm(value)))

@@ -4,7 +4,7 @@ import math
 
 import torch
 
-from foldforge.eval.structure import kabsch_rmsd, score_against_deposit, tm_score
+from foldjet.eval.structure import kabsch_rmsd, score_against_deposit, tm_score
 
 # MQIFV... — ubiquitin's first residues, so a shifted pairing is visibly wrong.
 NAMES = [
@@ -91,7 +91,7 @@ def test_tm_score_beats_a_single_kabsch_fit_on_a_displaced_tail():
 
 
 def test_prediction_cif_without_occupancy_keeps_only_first_model_ca(tmp_path):
-    from foldforge.eval.structure import deposit_ca
+    from foldjet.eval.structure import deposit_ca
 
     path = tmp_path / "prediction.cif"
     path.write_text("""data_prediction

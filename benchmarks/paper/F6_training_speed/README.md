@@ -5,7 +5,7 @@ Cards: H100, A100, RTX 5090.
 
 ## What is measured
 
-`scripts/train_protenix1.py --bench` (FoldForge's own training driver), per model (`protenix1`, `af3`) and arm:
+`scripts/train_protenix1.py --bench` (FoldJet's own training driver), per model (`protenix1`, `af3`) and arm:
 
 | item | value |
 |---|---|
@@ -28,13 +28,13 @@ engine dispatch table of the run; the known `Transition` fp32-TF32 refusals are 
   Paper `fig1/make_fig1_panels.py: panel_train` reads `ts48-` lines for the engine and `ts-` lines (24 x 2) for the other arms; if an arm fitted all 48 on a card its line is `ts48-`
   and the paper script has to read it as that arm's value.
 
-## Commands (full campaign; started by the coordinator after the release and the FoldForge pin)
+## Commands (full campaign; started by the coordinator after the release and the FoldJet pin)
 
 ```
 # H100 (cluster; one 1-GPU job, ~3 h)
 mkdir -p ~/foldforge-scratch/paper/F6_training_speed/h100/pool && cp ~/foldforge-scratch/train_speed/pool_*.pt ~/foldforge-scratch/paper/F6_training_speed/h100/pool/
 sbatch benchmarks/paper/F6_training_speed/h100.sbatch                      # ENGINE_SRC=<tree> only for a release candidate
-# A100 (ssh cssb3; FoldForge clone at ~/practice/paper-train; pools copied to ~/foldforge-scratch/paper/F6_training_speed/a100/pool)
+# A100 (ssh cssb3; FoldJet clone at ~/practice/paper-train; pools copied to ~/foldforge-scratch/paper/F6_training_speed/a100/pool)
 sbatch benchmarks/paper/F6_training_speed/a100.sbatch
 # RTX 5090 (ssh cssb-rtx; clone at ~/mwe/paper-train; pools in ~/ff/paper/F6_training_speed/rtx5090/pool)
 nohup ~/mwe/gpu.sh 90000 benchmarks/paper/F6_training_speed/rtx5090.sh > ~/ff/paper/logs/f6.log 2>&1 &
@@ -42,7 +42,7 @@ nohup ~/mwe/gpu.sh 90000 benchmarks/paper/F6_training_speed/rtx5090.sh > ~/ff/pa
 python3 benchmarks/paper/F6_training_speed/collect.py --out-dir ~/foldforge-scratch/paper/F6_training_speed/<card>
 ```
 
-Record kept with every run: FoldForge commit, engine version and file (BENCH line, `engine_file` shows rc source vs installed wheel), GPU, node, Slurm job id (`meta_<job>.txt`, RUNMETA lines).
+Record kept with every run: FoldJet commit, engine version and file (BENCH line, `engine_file` shows rc source vs installed wheel), GPU, node, Slurm job id (`meta_<job>.txt`, RUNMETA lines).
 Smoke (plumbing only): `SMOKE=1 MODELS=protenix1 ARMS="miniworld pytorchC" ENGINE_SRC=<engine source> sbatch --time=00:10:00 --export=ALL h100.sbatch`.
 
 ## Output
@@ -65,7 +65,7 @@ training paths (AF3 / Protenix v1) do not reach; the rest of the difference is t
 on the installed 3.0.7. Source of the measurement: `git archive d967378a2 src/miniworld_engine`
 plus the 3.0.6 `_prebuilt` tree, put in front of the installed engine through `ENGINE_SRC` (the BENCH line says `engine_version 3.0.6` because the package
 metadata is the 3.0.6 one; the `engine_file` is the overlay). Same protocol as above (2 models x 3 repeats, 6 optimizer steps x 8 micro steps, 48 augmentations in
-one pass, step graph, activation checkpointing, the original H100 stand-in pools), FoldForge worktree `paper-f6-h100` (4209c51, clean). Slurm 64927 (Protenix v1),
+one pass, step graph, activation checkpointing, the original H100 stand-in pools), FoldJet worktree `paper-f6-h100` (4209c51, clean). Slurm 64927 (Protenix v1),
 64928 (AF3), after a warm-up job (SMOKE=1) for the shared extension cache. The other arms (PyTorch, PyTorch+compile, cuEq(+compile)) are NOT re-run: their rows
 stay the engine-3.0.1 H100 values in `data/existing/`; the engine row is therefore from a different session than the other arms.
 
@@ -80,7 +80,7 @@ stay the engine-3.0.1 H100 values in `data/existing/`; the engine row is therefo
 
 ## B200 data (DATA_STATUS, 2026-11-22)
 
-Host `b200` (8 x B200 sm_100a, 178.35 GiB each, shared account, no Slurm), campaign 2026-11-22. FoldForge `paper-b200` (base origin/main 1688f89), engine run from SOURCE (the PyPI wheels carry no sm100 kernels) with the sm100a prebuilt JIT cache. Environment: venv `ffenv` over the engine team's pixi env eng-2511 (torch 2.13.0+cu129, triton 3.7.1, cuequivariance 0.12); `transformer_engine` blocked in `ffenv` (sitecustomize) so ESMC takes the same PyTorch fallback as on the other cards. Weights, FoldBench inputs (27-target subset of the 1,532 copied; `data.yaml` paths rewritten to the B200 copy) and 5I28 LMDBs copied from the H100 cluster.
+Host `b200` (8 x B200 sm_100a, 178.35 GiB each, shared account, no Slurm), campaign 2026-11-22. FoldJet `paper-b200` (base origin/main 1688f89), engine run from SOURCE (the PyPI wheels carry no sm100 kernels) with the sm100a prebuilt JIT cache. Environment: venv `ffenv` over the engine team's pixi env eng-2511 (torch 2.13.0+cu129, triton 3.7.1, cuequivariance 0.12); `transformer_engine` blocked in `ffenv` (sitecustomize) so ESMC takes the same PyTorch fallback as on the other cards. Weights, FoldBench inputs (27-target subset of the 1,532 copied; `data.yaml` paths rewritten to the B200 copy) and 5I28 LMDBs copied from the H100 cluster.
 Execution: 4 always-ours lanes (GPUs 0-3) + GPUs 4-7 only while no foreign process was on them (the lane watches `nvidia-smi` compute apps; a task that saw a foreign process is `external-contention`: output purged and re-queued, never a result; a lane on 4-7 stops at the first foreign process and is not restarted). One task per GPU at a time (no overlapping on one GPU); concurrent lanes share the node (host memory bandwidth / power), no correction applied. Driver: `common/b200_lane4.sh`, tasks of `common/queue_b200_v2.txt` through `common/b200_task.sh`, `.done` marker only when the task's own validity check passed.
 Engine labels: **A** = `engine main f06154bc7 (3.0.8 + b200 clamp fix + b200 holes fix, unreleased)`: F6 engine arm and F4 OpenDDE engine arm. **B** = `engine 3.0.7 source + b200 TriAttn exp-clamp fix (3698ba9ac, unreleased)`: every other engine arm. Both are in the CSV column `engine_label` (and `notes`). The CSV column `engine*_version_installed` says 2.5.11 because it is the package metadata of the shared env; the loaded source is in `*_engine_version_loaded` / `engine_loaded_from`.
 B200 TriAttn: the released 3.0.7 B200 TriangleAttention kernels (`triattn_sm100.cu`, `triattn_dh64_sm100.cu`, `tri_l128_sm100.cu`, `ex2_poly2` without an upper clamp) produced non-finite output on real AF3 / Chai-1 inputs; those first-pass engine records (F4: AF3 21 / 27, Chai-1 25 / 27 non-finite; F3 AF3 n >= 2, Boltz2 n >= 12 ...) are NOT used (`paper/invalid_archive/` on the B200, not in the CSVs).

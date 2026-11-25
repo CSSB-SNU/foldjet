@@ -20,10 +20,10 @@ from miniworld_engine.modules import (
 from miniworld_engine.modules.primitives import BackendUnsupported
 from torch import nn
 
-from foldforge.models.config import Config
-from foldforge.modules.engine import backends, modules, policy
-from foldforge.modules.engine.install import install_engine
-from foldforge.modules.engine.serving import report_observations
+from foldjet.models.config import Config
+from foldjet.modules.engine import backends, modules, policy
+from foldjet.modules.engine.install import install_engine
+from foldjet.modules.engine.serving import report_observations
 
 
 @pytest.fixture(autouse=True)
@@ -108,7 +108,7 @@ def test_plan_resolve_reports_refused_ops(monkeypatch, caplog):
     plan = backends.BackendPlan.make(
         "pytorch", {"transition": "cuda", "conditioning": "anthropic"}
     )
-    with caplog.at_level(logging.WARNING, logger="foldforge.backend"):
+    with caplog.at_level(logging.WARNING, logger="foldjet.backend"):
         plan.resolve()
     assert plan.of("transition") == "cuda"
     assert plan.resolved["conditioning"].reason is not None
@@ -155,12 +155,12 @@ def test_unsupported_call_falls_back_once_and_logs_once(monkeypatch, caplog):
     expected = Transition.forward(model.transition, _x())
     policy.apply_plan(model, backends.BackendPlan.make("cuda"))
     assert model.transition.backend == "cuda"
-    # a CPU tensor is outside the cuda backend's range: the engine raises, FoldForge's
+    # a CPU tensor is outside the cuda backend's range: the engine raises, FoldJet's
     # guard falls back
     assert model.transition.unsupported(_x()) is not None
     with pytest.raises(BackendUnsupported):
         Transition.forward(model.transition, _x())
-    with caplog.at_level(logging.WARNING, logger="foldforge.backend"):
+    with caplog.at_level(logging.WARNING, logger="foldjet.backend"):
         first = model.transition(_x())
         second = model.transition(_x())
     torch.testing.assert_close(first, expected)
@@ -188,7 +188,7 @@ def test_composite_children_are_refused_one_by_one(monkeypatch):
     Each child has its own backend, so one child without a kernel does not take the
     block.
     """
-    from foldforge.modules.engine.pairformer import pairformer_block
+    from foldjet.modules.engine.pairformer import pairformer_block
 
     monkeypatch.setattr(backends, "capability", lambda _d: (9, 0))
     block = pairformer_block(
@@ -208,6 +208,6 @@ def test_install_engine_without_cuda_modules_runs_pytorch():
     assert {m.backend for m in (model.transition, model.trimul, model.norm)} == {
         "pytorch"
     }
-    report = model.foldforge_load_report["engine_backends"]
+    report = model.foldjet_load_report["engine_backends"]
     assert report["plan"]["backend"] == "pytorch"
     assert set(report["modules"]) == {"transition", "trimul", "norm"}

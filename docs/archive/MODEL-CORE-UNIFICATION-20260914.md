@@ -34,7 +34,7 @@ this follow-up removes 50 Python files.
 transition chunking, atom-window chunking, pair-transition chunking, dropout,
 MSA update order and activation precision. The default and bounded-memory presets
 preserve the released checkpoint conventions. There is no model-name branch in
-the shared layer forward methods, and no FoldForge import in team-gm.
+the shared layer forward methods, and no FoldJet import in team-gm.
 
 The last MSA block is intentionally different between the presets: MSA-first
 checkpoints still update MSA before the final OPM, while OPM-first checkpoints omit
@@ -79,7 +79,7 @@ unbucketed profile.
 
 The shared numerical implementations replace the duplicated Protenix/OpenDDE
 operator packages. Checkpoint loading, state-key conventions, feature preparation,
-model assembly and public output formatting remain in FoldForge adapters.
+model assembly and public output formatting remain in FoldJet adapters.
 AF3's packed projections and ESMFold2's learned topology still have checkpoint
 layout/assembly code; this change does not claim that every model directory now
 contains configuration alone. Their existing shared solver, kernel and composition
@@ -89,5 +89,5 @@ Whole-input bucketing for Protenix/OpenDDE and production-size end-to-end speed
 qualification remain separate integration work. No changes were made to the
 running MiniWorld-engine cache build.
 
-Working branches remain `team-gm: exp/miniworld`, `FoldForge: main`, and
-`FoldForge/libs/team-gm: exp/miniworld`. This work has not been committed or pushed.
+Working branches remain `team-gm: exp/miniworld`, `FoldJet: main`, and
+`FoldJet/libs/team-gm: exp/miniworld`. This work has not been committed or pushed.

@@ -11,8 +11,8 @@ from typing import Any
 import torch
 from miniworld_engine.modules import AugmentedAttentionPairBias
 
-from foldforge.models.inference import run
-from foldforge.models.io import runtime
+from foldjet.models.inference import run
+from foldjet.models.io import runtime
 
 
 def main() -> int:

@@ -1,6 +1,6 @@
 # F11 investigation: why engine FP8 lowers AlphaFold 3 accuracy on antibody-antigen interfaces
 
-Engine 3.0.6, FoldForge `paper-306`, H100, 2026-11-21. Scripts in `scripts/`, results in `data/`. Raw predictions and evaluator outputs (not in the
+Engine 3.0.6, FoldJet `paper-306`, H100, 2026-11-21. Scripts in `scripts/`, results in `data/`. Raw predictions and evaluator outputs (not in the
 repository): `~/foldforge-scratch/paper/F11_investigation/{abl,out,step3}`. 31 GPU jobs, 7.8 GPU-hours.
 
 ## Recommendation (used in the paper)

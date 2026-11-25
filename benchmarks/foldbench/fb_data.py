@@ -25,9 +25,9 @@ class FeatureDataset(Dataset):
     def __getitem__(self, idx):
         t, s = self.targets[idx // len(self.seeds)], self.seeds[idx % len(self.seeds)]
         try:
-            import foldforge as ff
-            from foldforge.data.inputs.build import limit_msa
-            from foldforge.models.io import dense_atoms
+            import foldjet as ff
+            from foldjet.data.inputs.build import limit_msa
+            from foldjet.models.io import dense_atoms
 
             if self._last[0] != t:
                 self._last = (

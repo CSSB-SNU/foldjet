@@ -11,8 +11,8 @@ import numpy as np
 import pytest
 import torch
 
-from foldforge.data.features.dense import MSA
-from foldforge.modules.dense.spec import (
+from foldjet.data.features.dense import MSA
+from foldjet.modules.dense.spec import (
     ALPHAFOLD3,
     EXACT_CONVENTIONS,
     MODES,
@@ -84,8 +84,8 @@ def test_without_alignment_empties_the_statistics():
 
 
 def test_length_divided_triangle_equals_scaling_the_norm_epsilon():
-    from foldforge.models.checkpoints.legacy.routing import triangle_residual
-    from foldforge.models.checkpoints.legacy.triangle_multiplication import (
+    from foldjet.models.checkpoints.legacy.routing import triangle_residual
+    from foldjet.models.checkpoints.legacy.triangle_multiplication import (
         TriangleMultiplication,
     )
 
@@ -103,7 +103,7 @@ def test_length_divided_triangle_equals_scaling_the_norm_epsilon():
 
 def test_the_outer_product_divisor_and_its_bias_placement_are_stated_apart():
     """One family takes the clamped divisor without the bias placement."""
-    from foldforge.models.checkpoints.legacy import primitives
+    from foldjet.models.checkpoints.legacy import primitives
 
     torch.manual_seed(0)
     msa, mask = torch.randn(2, 5, 8), torch.ones(2, 5)
@@ -147,7 +147,7 @@ def test_the_outer_product_divisor_and_its_bias_placement_are_stated_apart():
 @pytest.mark.parametrize("policy", ["pad", "slide_qblock", "circular"])
 def test_key_window_policies_differ_from_af3_only_at_the_ends(policy):
     """A block wholly inside the atoms gets AF3's window under every policy."""
-    from foldforge.data.features.dense_conventions import key_window
+    from foldjet.data.features.dense_conventions import key_window
 
     subsets, queries, keys, atoms = 6, 32, 128, 150
     flat = np.arange(subsets * queries)

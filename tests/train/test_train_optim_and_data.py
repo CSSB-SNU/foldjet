@@ -1,4 +1,4 @@
-"""``foldforge.train``: LR schedule, clipping, EMA, parameter groups.
+"""``foldjet.train``: LR schedule, clipping, EMA, parameter groups.
 
 Also the batch-source plug-in and the checkpoint round trip (CPU, tiny model).
 """
@@ -9,9 +9,9 @@ import pytest
 import torch
 from torch import nn
 
-from foldforge.models.checkpoints import miniworld
-from foldforge.train import checkpoint, data, optim
-from foldforge.train.config import TrainConfig
+from foldjet.models.checkpoints import miniworld
+from foldjet.train import checkpoint, data, optim
+from foldjet.train.config import TrainConfig
 
 
 class Tiny(nn.Module):
@@ -215,7 +215,7 @@ def test_train_batch_fixed_index_fields_are_optional_and_with_fixed_atom_index_f
 def test_features_to_device_keeps_the_gather_shape_metadata_on_the_host():
     features = {"a:input_shape": torch.tensor([3, 4]), "a:gather_idxs": torch.arange(3)}
     out = data.features_to_device(features, torch.device("cpu"))
-    from foldforge.utils.atom_layout import GatherInfo
+    from foldjet.utils.atom_layout import GatherInfo
 
     info = GatherInfo.from_dict(
         {
@@ -232,7 +232,7 @@ def test_features_to_device_keeps_the_gather_shape_metadata_on_the_host():
 def test_device_parts_floats_replay_the_old_per_chunk_float_accumulation_exactly():
     from types import SimpleNamespace
 
-    from foldforge.train.step import DeviceParts
+    from foldjet.train.step import DeviceParts
 
     g = torch.Generator().manual_seed(5)
     w = SimpleNamespace(diffusion_loss=4.0, bond_loss=1.0, distogram_loss=0.03)

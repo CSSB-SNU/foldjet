@@ -1,5 +1,5 @@
 #!/bin/bash
-# One model of the 5I28 benchmark (FoldForge side) on ONE GPU: every n in one process, host probe + GPU clock log around it.
+# One model of the 5I28 benchmark (FoldJet side) on ONE GPU: every n in one process, host probe + GPU clock log around it.
 #   sbatch --export=ALL,MODEL=protenix1,OUT_ROOT=<dir>,FOLDFORGE_5I28_FASTA=...,FOLDFORGE_5I28_MSA_DB=...,FOLDFORGE_5I28_TEMPLATE_DB=... \
 #          -J ff5i28-protenix1 benchmarks/5i28_ff/run_model.sbatch
 # Edit the partition / account / qos lines for your cluster. --hint=nomultithread: PIN physical cores (the first PIN logical CPUs of the allocation).

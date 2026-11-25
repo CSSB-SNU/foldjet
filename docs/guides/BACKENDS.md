@@ -1,6 +1,6 @@
 # Backends
 
-FoldForge's graph holds miniworld-engine modules directly (a pairformer block IS `miniworld_engine.modules.PairformerBlock`), so a model's
+FoldJet's graph holds miniworld-engine modules directly (a pairformer block IS `miniworld_engine.modules.PairformerBlock`), so a model's
 backend is the engine's: every op module has a `backends` tuple and `module.set_backend(name)`. A model is loaded with one `backend` for every
 op, single ops can be pinned elsewhere with `engine.ops`, and `engine.unsupported` says what happens to a call a backend cannot take.
 
@@ -23,7 +23,7 @@ engine:
 | `miniworld` (default, alias) | the engine's own kernels, chosen **per module class**: `cuda` where the class has it and a CUDA device exists (every card: H100, A100, RTX 5090, ...; the engine refuses a call outside a card's range itself and the ladder runs `triton`, then `pytorch`), else `triton` where the class has it and a CUDA device exists, else `pytorch` (not a refusal) |
 | `cuequivariance` (alias) | `cueq` |
 
-`miniworld_engine` (the engine package name) is accepted by the loader as `miniworld`. The aliases are FoldForge policy (`modules/engine/backends.py::ALIASES`);
+`miniworld_engine` (the engine package name) is accepted by the loader as `miniworld`. The aliases are FoldJet policy (`modules/engine/backends.py::ALIASES`);
 the engine itself knows only `pytorch | cuda | triton | anthropic | cueq`.
 
 A named backend (`cuda`, `triton`, `anthropic`, `cueq`) the module class does not have, and `cuda` / `triton` without a CUDA
@@ -49,25 +49,25 @@ mask, gradient) is the module's own `unsupported(*args)`, asked at the call.
 | `sampler_ops` | `AugmentNoise`, `AlignEuler`, `PoolAtoms` |
 
 What each backend serves is **derived from the engine classes' `backends` tuples**, never written down here:
-`foldforge.modules.engine.backends.SERVES` maps every op to the policy names some class of it has (`miniworld` when any class has `cuda` or
+`foldjet.modules.engine.backends.SERVES` maps every op to the policy names some class of it has (`miniworld` when any class has `cuda` or
 `triton`). The load report records the outcome (below). Composite blocks (`PairformerBlock`, `Pairformer`) stay on `pytorch` themselves and their
 children are set one by one, so an op without a kernel is refused alone instead of taking the whole block down.
 
 ## `engine.unsupported`
 
 - `fallback` (default): a module whose chosen backend refuses a call runs its engine `pytorch` backend for that call and says so in **one** log line
-  per (class, backend, reason) (logger `foldforge.backend`). At load, an op that NO class of can serve what was asked logs one line naming every
+  per (class, backend, reason) (logger `foldjet.backend`). At load, an op that NO class of can serve what was asked logs one line naming every
   such op.
 - `error`: `BackendUnsupportedError`, at load for ops and at the call for refusals. Meant for a per-op request (`backend: pytorch`,
   `engine.ops: {trimul: anthropic}`).
 
 Nothing is substituted silently and never by another backend's kernel: the fallback is always the engine's `pytorch` backend of that module.
-The guard lives in `modules/engine/policy.py`; what FoldForge asked for and what the engine refuses is catalogued in
+The guard lives in `modules/engine/policy.py`; what FoldJet asked for and what the engine refuses is catalogued in
 [ENGINE-UNSUPPORTED.md](../ENGINE-UNSUPPORTED.md) (U-backend).
 
 ## What a run records
 
-The load report (`model.foldforge_load_report`, and `checkpoint` in the run's JSON) holds `backend`, `backends` (the plan: `backend`, `ops` = the
+The load report (`model.foldjet_load_report`, and `checkpoint` in the run's JSON) holds `backend`, `backends` (the plan: `backend`, `ops` = the
 backend that runs each op, `fallbacks` = op: reason, `unsupported`), `engine_backends.modules` (per module: class, op, backend, requested, reason),
 `precision` (`master` / `fp32`), `activation_dtype`, `parameter_dtype` (always `float32`). Runtime results carry `engine_dispatch`: per guarded
 module the selected backend and the **host-observed** calls (`served_host_calls` per backend, `refused_host_calls` per reason). These count Python
@@ -78,18 +78,18 @@ not a kernel trace.
 
 `precision` is the engine's parameter precision, derived from the activation dtype: `bf16` (default) and `af3_default` run `master` (fp32 parameters,
 bf16 activations under `activation_autocast`), `fp32` runs `fp32` (plain fp32). There are no native-bf16 parameters; the trunk is always `master`.
-`af3_default` additionally lets the diffusion head use TF32 (`foldforge_tf32` through `set_tf32_policy`) while the trunk stays exact. See
+`af3_default` additionally lets the diffusion head use TF32 (`foldjet_tf32` through `set_tf32_policy`) while the trunk stays exact. See
 [CONFIG.md](CONFIG.md) and [ENGINE-UNSUPPORTED.md](../ENGINE-UNSUPPORTED.md) (U-precision).
 
 ## External baselines
 
 `anthropic` and `cueq` are connections to other people's kernels, kept as comparison baselines. They are located by the engine (the Anthropic
 release is `MINIWORLD_ANTHROPIC_ROOT`, else the engine's `third_party/anthropic/upstream`, revision- and hash-checked by the engine's loader;
-cuEquivariance is the `baselines` extra). FoldForge never gates them on accuracy and calls no vendor library itself.
+cuEquivariance is the `baselines` extra). FoldJet never gates them on accuracy and calls no vendor library itself.
 
 ## Other cards
 
-The checks that decide whether a kernel runs ask the device (`torch.cuda.get_device_capability`); FoldForge holds no card list. On a card that is
+The checks that decide whether a kernel runs ask the device (`torch.cuda.get_device_capability`); FoldJet holds no card list. On a card that is
 not an H100, `miniworld` means the engine's `triton` kernels for classes that have them and `pytorch` for the rest; `cuda` is refused. Only an H100
 was available to test this port: nothing was run on other cards.
 

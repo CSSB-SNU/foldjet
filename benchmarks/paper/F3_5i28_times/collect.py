@@ -4,7 +4,7 @@
 
 Reads   <root>/<card>/{engine,engine_fp8}_rep<r>/<model>/cells.jsonl      (run_ff.py)
         <root>/<card>/kits_rep<r>/done_final/{kit_*,sep_*}                (the kit harness's done markers: `KIT ... fwd=[...]`)
-Writes  F3_foldforge_<card>.csv   run,model,n,status,s,...   first five columns = `data/records_5i28/5i28_foldforge_301_bf16_fp8.csv` (run = bf16 | fp8)
+Writes  F3_foldjet_<card>.csv   run,model,n,status,s,...   first five columns = `data/records_5i28/5i28_foldjet_301_bf16_fp8.csv` (run = bf16 | fp8)
         F3_kits_<card>.csv        kit,n,tokens,value_s,mode,status,n_timed,forwards_s,templates,source,job,node,reps,...   first columns =
                                   `5i28_kits_baseline_20261118.csv`
 The value of a cell = the median over the repetitions of the per-repetition steady value (forward 1 = cold and forward 2 dropped, median of the rest);
@@ -34,7 +34,7 @@ def steady(forwards: list[float], drop: int = 2) -> float | None:
     return statistics.median(rest) if rest else None
 
 
-def foldforge_rows(card_dir: Path) -> list[dict]:
+def foldjet_rows(card_dir: Path) -> list[dict]:
     cells: dict[tuple, list[dict]] = {}
     for jl in sorted(card_dir.glob("*_rep*/*/cells.jsonl")):
         for row in read_jsonl(jl):
@@ -115,7 +115,7 @@ def main() -> None:
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
     card_dir = args.root / args.card
-    write(args.out / f"F3_foldforge_{args.card}.csv", foldforge_rows(card_dir), ["run", "model", "n", "status", "s"])
+    write(args.out / f"F3_foldjet_{args.card}.csv", foldjet_rows(card_dir), ["run", "model", "n", "status", "s"])
     write(args.out / f"F3_kits_{args.card}.csv", kit_rows(card_dir),
           ["kit", "n", "tokens", "value_s", "mode", "status", "n_timed", "forwards_s", "templates", "source", "job", "node"])
 

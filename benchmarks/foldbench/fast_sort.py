@@ -2,7 +2,7 @@
 
 tokens: a standard polymer residue is one token; a non-standard residue in a polymer, a ligand and a glycan are one token per heavy atom
 (AlphaFold 3 tokenisation). atoms: heavy atoms per residue / component from a CCD table (code -> heavy atoms), built once by
-`fast_sort.py build CCD_LMDB OUT_TSV` (static data, like the CCD itself). Bucket = FoldForge's own ladder (models.bucketing.BucketShape).
+`fast_sort.py build CCD_LMDB OUT_TSV` (static data, like the CCD itself). Bucket = FoldJet's own ladder (models.bucketing.BucketShape).
 FASTA files are read by a thread pool (they live on NFS)."""
 
 from __future__ import annotations
@@ -148,13 +148,13 @@ def load_table(path: Path = TABLE) -> dict:
 
 SIZES = (
     Path(__file__).resolve().parent / "foldbench_af3_sizes.tsv"
-)  # dataset metadata: AF3 tokens / atoms of every target (FoldForge featurisation, computed once)
+)  # dataset metadata: AF3 tokens / atoms of every target (FoldJet featurisation, computed once)
 
 
 def size_sort(
     targets: list[str], specs: str, workers: int = 32, out: Path | None = None
 ) -> list[str]:
-    from foldforge.models.bucketing import BucketShape
+    from foldjet.models.bucketing import BucketShape
 
     t0 = time.perf_counter()
     meta = {}
@@ -191,12 +191,12 @@ def size_sort(
 
 
 def build(ccd_lmdb: str, out: str) -> None:
-    """code -> heavy atoms (no H / D) for every component of the CCD LMDB FoldForge uses."""
-    from foldforge.data.ccd.database import CCDDatabase
+    """code -> heavy atoms (no H / D) for every component of the CCD LMDB FoldJet uses."""
+    from foldjet.data.ccd.database import CCDDatabase
 
     ccd = CCDDatabase(Path(ccd_lmdb)).af3_ccd(user_ccd=None)
     lines = []
-    for code in ccd.keys():  # noqa: SIM118 - the CCD mapping of foldforge.data.ccd
+    for code in ccd.keys():  # noqa: SIM118 - the CCD mapping of foldjet.data.ccd
         symbols = ccd.get(code).get("_chem_comp_atom.type_symbol") or []
         lines.append(
             f"{code}\t{sum(1 for s in symbols if s.upper() not in ('H', 'D'))}\n"
@@ -211,7 +211,7 @@ if __name__ == "__main__":
     elif (
         sys.argv[1] == "check"
     ):  # check SPECS TARGETS EXACT_TSV: estimated vs featurised (size_sorted.tsv: t tokens atoms tokbucket atombucket)
-        from foldforge.models.bucketing import BucketShape
+        from foldjet.models.bucketing import BucketShape
 
         targets = Path(sys.argv[3]).read_text().split()
         order = size_sort(targets, sys.argv[2])

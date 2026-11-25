@@ -6,7 +6,7 @@ set -uo pipefail
 : "${ARM:?ARM engine|torch}" "${MODEL:?MODEL}"
 [ "$ARM" = engine_fp8 ] && { echo "FP8 is H100 only"; exit 2; }
 SECS=${1:-28800}
-HERE=${FF_REPO:-$HOME/ff/FoldForge}/benchmarks/paper
+HERE=${FF_REPO:-$HOME/ff/FoldJet}/benchmarks/paper
 source "$HERE/common/cards/rtx5090.env"
 export OMP_NUM_THREADS=8
 mkdir -p "$PAPER_OUT/logs"; cd "$FF_REPO"

@@ -1,4 +1,4 @@
-"""`import foldforge` sets expandable segments unless the user set an allocator conf."""
+"""`import foldjet` sets expandable segments unless the user set an allocator conf."""
 
 import json
 import os
@@ -7,7 +7,7 @@ import sys
 
 import pytest
 
-from foldforge.allocator import DEFAULT_ALLOC_CONF
+from foldjet.allocator import DEFAULT_ALLOC_CONF
 
 VARIABLES = ("PYTORCH_CUDA_ALLOC_CONF", "PYTORCH_ALLOC_CONF")
 REPORT = (
@@ -30,7 +30,7 @@ def _after_import(preamble: str, **set_vars: str) -> dict:
     return json.loads(result.stdout.strip().splitlines()[-1])
 
 
-@pytest.mark.parametrize("preamble", ["import foldforge", "import torch, foldforge"])
+@pytest.mark.parametrize("preamble", ["import foldjet", "import torch, foldjet"])
 def test_default_applied_when_absent(preamble):
     seen = _after_import(preamble)
     assert seen == {
@@ -48,7 +48,7 @@ def test_default_applied_when_absent(preamble):
     ],
 )
 def test_user_value_kept(name, value):
-    seen = _after_import("import foldforge", **{name: value})
+    seen = _after_import("import foldjet", **{name: value})
     expected = dict.fromkeys(VARIABLES)
     expected[name] = value
     assert seen == expected

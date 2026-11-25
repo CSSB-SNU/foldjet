@@ -1,6 +1,6 @@
 #!/bin/bash
 # F3 full campaign: every (predictor, arm, repetition) as its own job; kits the same. Run from the checkout of the card, ONCE, after the release is pinned.
-#   H100:  CARD=h100 NODE=node02 benchmarks/paper/F3_5i28_times/submit_all.sh            (FoldForge bf16 + FP8 + the 12 kits)
+#   H100:  CARD=h100 NODE=node02 benchmarks/paper/F3_5i28_times/submit_all.sh            (FoldJet bf16 + FP8 + the 12 kits)
 #   A100:  CARD=a100 benchmarks/paper/F3_5i28_times/submit_all.sh                          (on cssb3)
 #   5090:  CARD=rtx5090 ... see README (a sequential shell loop under the GPU lock; there is no scheduler)
 # WHAT=ff|kits|all (default all), REPS="1 2 3". A refused submit stops the script (no other job shape is substituted: ask).

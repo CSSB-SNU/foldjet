@@ -4,14 +4,14 @@ Current contract: [MiniWorld formats](../guides/MINIWORLD-FORMAT.md). Current ex
 
 This pass follows [the first CCD/Pairformer pass](CODE-UNIFICATION-20260913.md).
 Validation was performed in a separate candidate tree while the original dirty
-FoldForge checkout was preserved. No checkpoint, CCD asset, dependency pin or
+FoldJet checkout was preserved. No checkpoint, CCD asset, dependency pin or
 branch was replaced.
 
 ## CCD answer
 
 All five qualified model variants select the same `CCDDatabase` and manifest.
 This follows MiniWorld's explicit database selection and per-database cache
-ownership, **not its physical BioMol LMDB schema**. FoldForge currently retains
+ownership, **not its physical BioMol LMDB schema**. FoldJet currently retains
 the full CIF, prepared RDKit reference molecules and derived AF3 category index.
 MiniWorld's processed molecule schema is not a substitute for all of those
 source categories and conformer metadata. No LMDB interchange compatibility is
@@ -81,14 +81,14 @@ key windows. Frozen pre-change forward bodies are versioned under
 into a comparison of the new function against itself. Constructors and unchanged
 primitive operators remain shared and are not an independent full-model oracle.
 
-**127 FoldForge tests passed**, plus the root team-gm diffusion block forward/backward
+**127 FoldJet tests passed**, plus the root team-gm diffusion block forward/backward
 comparison (**1 passed**, 51 other parameterizations deselected). New code and adapted
 imports pass Ruff. The inventory contains 145 forward-bearing classes; this is
 not a completion percentage.
 
 Validation logs and structures currently live under root team-gm's ignored
 `validation/unify2-*` paths, with `unify2-results/comparison.json`. The original
-first-pass outputs remain in FoldForge's `validation/results/unify-20260913`.
+first-pass outputs remain in FoldJet's `validation/results/unify-20260913`.
 
 ## Remaining limits
 
@@ -108,11 +108,11 @@ qualification. Full ligand/complex inference, Fold-CP/distributed execution,
 training, compile/graph performance and complete cache coverage are not certified
 by these single-GPU inference tests. Missing-shape heuristic warnings remain.
 
-Root team-gm: `exp/miniworld-integrated`; FoldForge: `main`; its team-gm member:
+Root team-gm: `exp/miniworld-integrated`; FoldJet: `main`; its team-gm member:
 `exp/miniworld`. No commit or push is included in this continuation.
 
 The validated files were promoted with before/after SHA256 checks and backups
-in `validation/unify2-before`. Actual-environment imports resolve to FoldForge
+in `validation/unify2-before`. Actual-environment imports resolve to FoldJet
 and its member team-gm without the candidate PYTHONPATH. Post-promotion smoke
 checks passed **13 tests** (58 other cases deselected), and `uv pip check`
 confirmed all 175 installed packages are compatible. The smoke log is

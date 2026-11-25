@@ -1,6 +1,6 @@
 """``released.py``: the released (dense) layout converts to the engine classes' own.
 
-The engine class computes the same thing. Each test builds a dense FoldForge module
+The engine class computes the same thing. Each test builds a dense FoldJet module
 with random weights (fp32, CPU), converts its state dict with the pure-tensor helpers,
 loads it strictly into the engine class on the ``pytorch`` backend, and compares the
 outputs where the pair is real. The checks that cannot be a parity (the atom
@@ -15,25 +15,25 @@ import dataclasses
 import pytest
 import torch
 
-from foldforge.models.checkpoints.legacy import released
-from foldforge.models.checkpoints.legacy.attention import (
+from foldjet.models.checkpoints.legacy import released
+from foldjet.models.checkpoints.legacy.attention import (
     GridSelfAttention,
     MSAAttention,
 )
-from foldforge.models.checkpoints.legacy.primitives import OuterProductMean, Transition
-from foldforge.models.checkpoints.legacy.released import (
+from foldjet.models.checkpoints.legacy.primitives import OuterProductMean, Transition
+from foldjet.models.checkpoints.legacy.released import (
     load_atom_stack,
     load_token_stack,
 )
-from foldforge.models.checkpoints.legacy.routing import triangle_residual
-from foldforge.models.checkpoints.legacy.transformer import DiffusionTransformer
-from foldforge.models.checkpoints.legacy.triangle_multiplication import (
+from foldjet.models.checkpoints.legacy.routing import triangle_residual
+from foldjet.models.checkpoints.legacy.transformer import DiffusionTransformer
+from foldjet.models.checkpoints.legacy.triangle_multiplication import (
     TriangleMultiplication,
 )
-from foldforge.modules.dense.diffusion_transformer import DiffusionCrossAttTransformer
-from foldforge.modules.dense.spec import ALPHAFOLD3, SPECS
-from foldforge.modules.engine import modules as factory
-from foldforge.modules.engine.transformers import atom_dit_stack, token_dit_stack
+from foldjet.modules.dense.diffusion_transformer import DiffusionCrossAttTransformer
+from foldjet.modules.dense.spec import ALPHAFOLD3, SPECS
+from foldjet.modules.engine import modules as factory
+from foldjet.modules.engine.transformers import atom_dit_stack, token_dit_stack
 
 L = 12
 

@@ -6,15 +6,15 @@ The separate pre-existing miniworld-engine checkout and A100 cache job 43215 are
 
 | Workspace | Branch | Base commit |
 | --- | --- | --- |
-| `/home/psk6950/practice/FoldForge` | main | ebfb85a4201580fcb234b14b539fdb5783b9fdd9 |
+| `/home/psk6950/practice/FoldJet` | main | ebfb85a4201580fcb234b14b539fdb5783b9fdd9 |
 | `/home/psk6950/practice/team-gm` | exp/miniworld | dbc204f3cf76cf4a8bff049ce6a7dd2ce9354c93 |
-| FoldForge `libs/team-gm` | exp/miniworld | dbc204f3cf76cf4a8bff049ce6a7dd2ce9354c93 |
+| FoldJet `libs/team-gm` | exp/miniworld | dbc204f3cf76cf4a8bff049ce6a7dd2ce9354c93 |
 
 Local uncommitted changes were applied on top of these commits. `code-manifest.json`
 records source SHA256 hashes; all 816 initial entries matched after transfer, including
 AF3 vendor-attention batch-axis fix. No commit or push was performed.
 
-Copied the existing FoldForge Python 3.12 environment, its interpreter and GCC 14
+Copied the existing FoldJet Python 3.12 environment, its interpreter and GCC 14
 runtime library. Required versions: Torch 2.10.0+cu128, Triton 3.6.0,
 Quack 0.5.0, CUTLASS DSL 4.5.2, FlashAttention 2.8.3.post1,
 miniworld-engine d2266a035de11384c46f8cc980e6460f60925413.
@@ -30,7 +30,7 @@ The existing absolute template paths resolve through the team-gm validation syml
 Validation is launched with:
 
 ```bash
-cd /home/psk6950/practice/FoldForge
+cd /home/psk6950/practice/FoldJet
 sbatch validation/cssb3-runtime/validate.sbatch
 ```
 
@@ -45,12 +45,12 @@ steps and denoiser compile+CUDA graph capture. It is not full-model production
 qualification or a three-backend benchmark.
 
 Protenix/OpenDDE whole-input bucketing and complete model parity remain unfinished;
-see `docs/archive/INFERENCE-BACKENDS-BUCKETS-20260914.md` in FoldForge.
+see `docs/archive/INFERENCE-BACKENDS-BUCKETS-20260914.md` in FoldJet.
 
 ## Verified migration results
 
 - Both environments execute BF16 FlashAttention on gpu06 (A100 80GB).
-- FoldForge imports its team-gm submodule; standalone team-gm imports its own src.
+- FoldJet imports its team-gm submodule; standalone team-gm imports its own src.
 - The pinned engine commit and requested Quack/CuTe versions match.
 - SM80 internal mm/addmm/bmm excludes unsupported Quack calibration.
 - Job 43660: 25 focused backend/bucketing tests passed in 63.79 seconds.

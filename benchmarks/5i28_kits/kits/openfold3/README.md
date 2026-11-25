@@ -35,7 +35,7 @@ name is `openfold3:<mode>`.
   - Its alignment pairs 15 residues that have no coordinates (label 1-25), and stock OF3 drops a slot when any aligned template
     residue is unresolved.
 
-  26-134 is the resolved part of FoldForge's LMDB hit span (1-134). The trimmed chain scores 0.113.
+  26-134 is the resolved part of FoldJet's LMDB hit span (1-134). The trimmed chain scores 0.113.
 - **CPU check** (`check/of3_check.sh`, srun without a GPU; output in `check/of3_check_slot.out`): upstream's TemplatePreprocessor
   gives all 4 ids for x1 and x16. Each one passes the featurisation's real-slot condition:
   - 5yt7_A: score 0.786, 114 aligned pairs
@@ -43,7 +43,7 @@ name is `openfold3:<mode>`.
   - 6kol_A: score 0.214, 100 aligned pairs
   - 6tfd_A: score 0.113, 74 aligned pairs
 
-  OF3 realigns with kalign. For 5yt7 and 5syd that matches FoldForge's LMDB alignment exactly; for 6kol and 6tfd it does not.
+  OF3 realigns with kalign. For 5yt7 and 5syd that matches FoldJet's LMDB alignment exactly; for 6kol and 6tfd it does not.
 - **Sampling:** OF3 defaults: num_recycles 3 + 1 = 4 trunk passes, 200 steps, `--num-diffusion-samples 5`. Query seeds are `[0]`, but
   earlier kit logs print `seed=42`.
 - **Caches:** `cache/` is a copy of the kit's warm `cache/openfold3_ob0_gpu130`, with the paths in Triton's group files rewritten.

@@ -1,6 +1,6 @@
 # Released forward oracles
 
-Immutable forward bodies from the pre-unification FoldForge AF-family ports,
+Immutable forward bodies from the pre-unification FoldJet AF-family ports,
 snapshotted 2026-09-13. File SHA256 values identify the precise local source.
 Original source provenance and licenses are recorded in each model's
 `SOURCE.json` and `UPSTREAM-LICENSE` (AF3 CC BY-NC-SA 4.0; Protenix/OpenDDE Apache 2.0).

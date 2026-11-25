@@ -4,7 +4,7 @@
 #SBATCH -c 16
 #SBATCH --mem=80G
 #SBATCH -t 04:00:00
-#SBATCH -J foldforge-env
+#SBATCH -J foldjet-env
 #SBATCH -o slurm-setup-env-%j.log
 
 # Submit from this repository's root. The install needs no GPU: on the H100 cluster a CPU allocation does
@@ -23,4 +23,4 @@ pixi install --locked
 if [[ "${FOLDFORGE_FLASH2:-0}" == 1 ]]; then
     pixi run --locked pip install --no-build-isolation "flash-attn==2.8.3.post1"
 fi
-pixi run --locked python -c 'import torch, miniworld_engine, foldforge; print(torch.__version__, torch.version.cuda)'
+pixi run --locked python -c 'import torch, miniworld_engine, foldjet; print(torch.__version__, torch.version.cuda)'

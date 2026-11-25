@@ -12,8 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from foldforge.data.ccd import CCDDatabase, current_database
-from foldforge.data.ccd.database import database_cache
+from foldjet.data.ccd import CCDDatabase, current_database
+from foldjet.data.ccd.database import database_cache
 
 
 def _database(root: Path, glycan: str) -> CCDDatabase:

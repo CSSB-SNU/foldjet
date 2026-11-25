@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from foldforge.models.config import Config
-from foldforge.models.config.runtime import ENGINE_SKIP_KEYS, REMOVED_ENVIRONMENT
+from foldjet.models.config import Config
+from foldjet.models.config.runtime import ENGINE_SKIP_KEYS, REMOVED_ENVIRONMENT
 
 
 def test_defaults_are_the_behaviour_without_the_old_variables():
@@ -45,7 +45,7 @@ def test_a_removed_environment_variable_is_an_error(monkeypatch, name):
 
 
 def test_the_loader_rejects_a_removed_variable_too(monkeypatch):
-    from foldforge.models.loading import load_checkpoint
+    from foldjet.models.loading import load_checkpoint
 
     monkeypatch.setenv("FF_ENGINE_SKIP", "pairformers")
     with pytest.raises(RuntimeError, match="FF_ENGINE_SKIP"):
@@ -56,7 +56,7 @@ def test_the_engine_skip_reaches_the_install():
     """``skip`` is the only route: the install reads no environment."""
     import inspect
 
-    from foldforge.modules.engine import install, modules
+    from foldjet.modules.engine import install, modules
 
     assert "environ" not in inspect.getsource(install)
     assert "environ" not in inspect.getsource(modules)

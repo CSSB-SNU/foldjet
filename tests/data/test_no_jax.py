@@ -13,10 +13,10 @@ class NoJax(importlib.abc.MetaPathFinder):
             raise AssertionError('Forbidden import: ' + fullname)
 sys.meta_path.insert(0, NoJax())
 import numpy as np
-import foldforge as ff
+import foldjet as ff
 from alphafold3.model import features, feat_batch, merging_features
 from alphafold3.model.atom_layout import atom_layout
-from foldforge.models.architectures.af3 import AlphaFold3
+from foldjet.models.architectures.af3 import AlphaFold3
 value = np.array([1, 2], dtype=np.int32)
 chains = features.Chains(
     chain_id=np.array(['A','B']), asym_id=value, entity_id=value, sym_id=value

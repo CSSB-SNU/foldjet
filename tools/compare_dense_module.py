@@ -1,6 +1,6 @@
 """Run one module of a dense-graph family on saved inputs, against a reference dump.
 
-Porting aid. The reference outputs come from the AF3 fork that FoldForge's family
+Porting aid. The reference outputs come from the AF3 fork that FoldJet's family
 conventions mirror (refs/oracle/reference_module.py), run with the same blob and the
 same inputs.
 """
@@ -13,8 +13,8 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from foldforge.models.checkpoints.legacy.haiku import import_jax_weights_
-from foldforge.modules.dense.spec import SPECS
+from foldjet.models.checkpoints.legacy.haiku import import_jax_weights_
+from foldjet.modules.dense.spec import SPECS
 
 
 def main() -> int:
@@ -25,7 +25,7 @@ def main() -> int:
     parser.add_argument("--inputs", type=Path, required=True)
     parser.add_argument("--reference", type=Path, required=True)
     args = parser.parse_args()
-    from foldforge.models.checkpoints.legacy import dense_model
+    from foldjet.models.checkpoints.legacy import dense_model
 
     model = dense_model(
         SPECS[args.family]
@@ -57,7 +57,7 @@ def main() -> int:
                 pair_mask=data["pair_mask"],
             )
         elif args.kind == "atom_transformer":
-            from foldforge.utils import atom_layout
+            from foldjet.utils import atom_layout
 
             gather = atom_layout.GatherInfo(
                 gather_idxs=data["key_idxs"],

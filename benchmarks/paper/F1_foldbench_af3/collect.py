@@ -1,17 +1,17 @@
-"""F1: raw run records -> the CSVs / JSON the paper scripts read (GPU-hours of the Anthropic kit vs FoldForge bf16 / FP8 on the whole FoldBench).
+"""F1: raw run records -> the CSVs / JSON the paper scripts read (GPU-hours of the Anthropic kit vs FoldJet bf16 / FP8 on the whole FoldBench).
 
     python collect.py --kit KITRUN --ff af3_bf16_shard=FFRUN --ff af3_fp8_shard=FFRUN [--ff-multi af3_bf16_multi=FFRUN ...] --out results/
 
 KITRUN  = run_kit.sbatch output dir ($PAPER_OUT/F1/h100/<name>): s<k>/{run_info.txt, out/, out_big/, forward_fast.log, forward_big.log}, job_info.txt
 FFRUN   = run_ff.sbatch output dir: launch.txt, stamp.json, and either pred_s<k>/ (LAUNCH=shard: job_info.txt per shard) or pred/ (LAUNCH=multi)
-Which launch mode a FoldForge run used is read from its launch.txt and written to every row: the paper must say which one the number is.
+Which launch mode a FoldJet run used is read from its launch.txt and written to every row: the paper must say which one the number is.
 
 Writes
   f1_shard_wall.csv    one row per (arm, shard): launch, targets, done, failed, wall_s, wall_h (kit: fast pass, big pass, total) + run stamp
   f1_summary.csv       one row per arm: launch, gpu_h (kit and shard mode: sum of the shard wall times; multi mode: GPUs x wall), slower-shard wall, done, failed,
                        speed-up over the kit (gpu_h ratio and slower-shard ratio)
   f1_per_target.csv    arm, target, shard, status (ok | failed | oom | missing), mode (fast | big | ff), tokens, gpu_s (kit: sum of forward_s over the seeds;
-                       FoldForge: run.json gpu_s), peak_alloc_gib, fp8 saturation checks (FoldForge FP8)
+                       FoldJet: run.json gpu_s), peak_alloc_gib, fp8 saturation checks (FoldJet FP8)
   f1_record.json       the same numbers in the layout of the paper's data/foldbench_full_af3.json ("kit_wall_h", "kit_fallback", "ff": per arm)
 Failures and OOM are results: listed in f1_per_target.csv (status), never dropped, and drawn nowhere by the paper scripts.
 """
@@ -134,8 +134,8 @@ def collect_ff(arm: str, run: Path) -> tuple[list[dict], list[dict]]:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--kit", type=Path, help="kit run dir")
-    ap.add_argument("--ff", action="append", default=[], metavar="ARM=DIR", help="FoldForge run dirs (shard or multi, read from launch.txt)")
-    ap.add_argument("--sizes", type=Path, default=Path(__file__).resolve().parents[2] / "foldbench/foldbench_af3_sizes.tsv", help="AF3 token counts (FoldForge featurisation)")
+    ap.add_argument("--ff", action="append", default=[], metavar="ARM=DIR", help="FoldJet run dirs (shard or multi, read from launch.txt)")
+    ap.add_argument("--sizes", type=Path, default=Path(__file__).resolve().parents[2] / "foldbench/foldbench_af3_sizes.tsv", help="AF3 token counts (FoldJet featurisation)")
     ap.add_argument("--out", type=Path, required=True)
     a = ap.parse_args()
     walls, targets = [], []
@@ -154,7 +154,7 @@ def main() -> None:
         T = T.merge(sizes[["target", "tokens_af3"]], on="target", how="left")
         T["tokens"] = T["tokens"].astype(float).fillna(T["tokens_af3"])
         T = T.drop(columns="tokens_af3")
-    # summary: GPU-hours = sum of shard wall times (kit; FoldForge shard mode) | GPUs x wall (FoldForge multi mode)
+    # summary: GPU-hours = sum of shard wall times (kit; FoldJet shard mode) | GPUs x wall (FoldJet multi mode)
     rows = []
     for arm, g in W.groupby("arm", sort=False):
         launch = g.launch.iloc[0]
@@ -170,7 +170,7 @@ def main() -> None:
     W.to_csv(a.out / "f1_shard_wall.csv", index=False)
     S.to_csv(a.out / "f1_summary.csv", index=False)
     T.sort_values(["arm", "target"]).to_csv(a.out / "f1_per_target.csv", index=False)
-    rec: dict = {"what": "AlphaFold 3 (DeepMind weights) on the whole FoldBench (1,522 targets, seeds 42,66,101,2024,8888, 5 samples, 200 steps, 11 trunk passes); GPU-hours = sum of the shard wall times (kit and FoldForge shard mode) or GPUs x wall (FoldForge multi mode); see f1_summary.csv",
+    rec: dict = {"what": "AlphaFold 3 (DeepMind weights) on the whole FoldBench (1,522 targets, seeds 42,66,101,2024,8888, 5 samples, 200 steps, 11 trunk passes); GPU-hours = sum of the shard wall times (kit and FoldJet shard mode) or GPUs x wall (FoldJet multi mode); see f1_summary.csv",
                  "summary": S.to_dict("records"), "shard_wall": W.to_dict("records")}
     kw = W[W.arm == "kit"]
     if len(kw):

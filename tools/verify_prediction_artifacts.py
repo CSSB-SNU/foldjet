@@ -1,6 +1,6 @@
 """Compare inference I/O artifacts, including confidence heads and CIF atom order.
 
-Run on a compute node with the FoldForge environment activated. Both directories
+Run on a compute node with the FoldJet environment activated. Both directories
 contain one subdirectory per model, produced with identical input and settings.
 Timing/report metadata is deliberately excluded from the numerical comparison.
 """

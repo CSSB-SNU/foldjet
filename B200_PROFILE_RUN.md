@@ -11,7 +11,7 @@ the E1 operators are faster. The H100 profile of the same step (`~/foldforge-scr
 
 ## What is deployed (files from the branch f6prof of ~/foldforge-scratch/f6prof)
 `benchmarks/paper/F6_training_speed/{profile_step.py, profile_step.sh, b200_profile.sh, compare_profiles.py}`: copied into the B200 checkout
-(`$W/ff/foldforge/benchmarks/paper/F6_training_speed/`; untracked files, the campaign scripts are not touched). `W=/NHNHOME/WORKSPACE/26mohw002_A/psk6950/paper-b200`.
+(`$W/ff/foldjet/benchmarks/paper/F6_training_speed/`; untracked files, the campaign scripts are not touched). `W=/NHNHOME/WORKSPACE/26mohw002_A/psk6950/paper-b200`.
 Environment (identical to the F6 engine task of `common/b200_task.sh`): `ffenv` (torch 2.13.0+cu129), engine tree `$W/diag-nan2` (engine main f06154bc7 + B200 clamp
 and holes fixes, own sm100a JIT cache `$W/diag-nan2/cache`), `CUDA_HOME=$W/eng-2511/.pixi/envs/default` (nvcc 12.9), `common/cards/b200.env`
 (`B200_ENGINE_FIX3=$W/diag-nan2` selects all of that); pool `$W/ff/paper/F6_training_speed/b200/pool/pool_protenix1.pt` (the original H100 stand-in pool).
@@ -23,8 +23,8 @@ SCP="scp -o ControlMaster=auto -o ControlPath=$HOME/.ssh/cm/b200-%C"
 F=~/foldforge-scratch/f6prof/benchmarks/paper/F6_training_speed
 W=/NHNHOME/WORKSPACE/26mohw002_A/psk6950/paper-b200
 # 1. deploy + choose a free GPU + run graph profile then eager profile in ONE ssh command (background on the host, logs on the host)
-$SCP $F/profile_step.py $F/profile_step.sh $F/b200_profile.sh $F/compare_profiles.py b200:$W/ff/foldforge/benchmarks/paper/F6_training_speed/
-$SSH 'W=/NHNHOME/WORKSPACE/26mohw002_A/psk6950/paper-b200; D=$W/ff/foldforge/benchmarks/paper/F6_training_speed
+$SCP $F/profile_step.py $F/profile_step.sh $F/b200_profile.sh $F/compare_profiles.py b200:$W/ff/foldjet/benchmarks/paper/F6_training_speed/
+$SSH 'W=/NHNHOME/WORKSPACE/26mohw002_A/psk6950/paper-b200; D=$W/ff/foldjet/benchmarks/paper/F6_training_speed
  for g in 0 1 2 3; do [ -z "$(nvidia-smi -i $g --query-compute-apps=pid --format=csv,noheader)" ] && GPU=$g && break; done
  [ -z "${GPU:-}" ] && { echo "no free GPU in 0-3: NOT started"; exit 3; }
  echo using GPU $GPU; mkdir -p $W/ff/paper/F6_profile/b200

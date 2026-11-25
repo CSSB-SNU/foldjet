@@ -19,7 +19,7 @@ from pathlib import Path
 
 import numpy as np
 
-from foldforge import paths
+from foldjet import paths
 
 ROOT = Path(__file__).resolve().parents[2]
 PATTERNS = {

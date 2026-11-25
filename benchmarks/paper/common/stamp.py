@@ -1,6 +1,6 @@
-"""Write the run stamp of a paper experiment: FoldForge commit, engine version, GPU(s), node, Slurm job id, FP8 switches.
+"""Write the run stamp of a paper experiment: FoldJet commit, engine version, GPU(s), node, Slurm job id, FP8 switches.
 
-    python stamp.py OUT.json [key=value ...]      (run with the FoldForge env's python, on the compute node, inside the job)
+    python stamp.py OUT.json [key=value ...]      (run with the FoldJet env's python, on the compute node, inside the job)
 
 Every result of benchmarks/paper carries this record (INSTRUCTIONS common rule: commit, engine version, GPU, node, job id).
 """
@@ -44,8 +44,8 @@ def stamp() -> dict:
     return {
         "time": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
         "foldforge_commit": _run("git", "-C", str(REPO), "rev-parse", "HEAD"),
-        "foldforge_dirty_paths": _run("git", "-C", str(REPO), "status", "--porcelain", "--untracked-files=no").splitlines(),
-        "foldforge_version": _version("foldforge"),
+        "foldjet_dirty_paths": _run("git", "-C", str(REPO), "status", "--porcelain", "--untracked-files=no").splitlines(),
+        "foldjet_version": _version("foldjet"),
         "engine_version": _version("miniworld-engine"),
         "engine_kernels": {d: _version(d) for d in ("miniworld-engine-kernels-sm90-cu129", "miniworld-engine-kernels-sm80-cu129", "miniworld-engine-kernels-sm120-cu129")},
         "engine_path": engine_file,

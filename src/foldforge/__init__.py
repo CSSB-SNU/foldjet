@@ -1,85 +1,43 @@
-"""FoldForge — many structure predictors, one environment.
+"""Compatibility alias: ``FoldForge`` was renamed ``FoldJet``.
 
-FoldForge is a *terminal* repo in a two-layer stack: miniworld-engine holds the
-fused kernels and the modules that wrap them (since 2.4.2 no architecture, diffusion
-or checkpoint adapters: those are ``foldforge.diffusion`` / ``blocks`` / ``layers`` /
-``checkpoints``); the full models are assembled here. Nothing in this package should
-define an op or a general-purpose block — if you are writing one, it belongs in the
-engine. The point of the repo is that AF3, Boltz-2, Chai-1, Protenix, ESMFold2 and
-OpenDDE run off *one* set of blocks and one set of kernels, so a change to a
-triangle multiplication is a change to all of them at once.
+``import foldforge`` and ``import foldforge.<sub>`` return the SAME module objects as ``foldjet`` /
+``foldjet.<sub>`` (one module per name, no second copy of any state), with one ``FutureWarning`` per process. New code
+imports ``foldjet``.
 """
 
-from importlib import import_module
-from typing import TYPE_CHECKING, Any
+from __future__ import annotations
 
-# first: the allocator default (expandable segments) before anything touches CUDA
-from foldforge import allocator  # noqa: F401
-from foldforge.errors import (
-    ConcurrentCallError,
-    FoldForgeError,
-    InputError,
-    ModelClosedError,
-    TrunkStateError,
+import importlib
+import importlib.abc
+import importlib.util
+import sys
+import warnings
+
+import foldjet as _new
+
+_OLD, _NEW = "foldforge", "foldjet"
+
+
+class _Alias(importlib.abc.MetaPathFinder, importlib.abc.Loader):
+    """``foldforge.x.y`` -> the module ``foldjet.x.y`` (imported once, shared under both names)."""
+
+    def find_spec(self, name, path=None, target=None):  # noqa: ARG002
+        if name.startswith(_OLD + "."):
+            return importlib.util.spec_from_loader(name, self)
+        return None
+
+    def create_module(self, spec):
+        return importlib.import_module(_NEW + spec.name[len(_OLD) :])
+
+    def exec_module(self, module):
+        pass
+
+
+if not any(isinstance(f, _Alias) for f in sys.meta_path):
+    sys.meta_path.insert(0, _Alias())
+warnings.warn(
+    "foldforge was renamed foldjet; import foldjet instead",
+    FutureWarning,
+    stacklevel=2,
 )
-from foldforge.models import describe, get_model, known_models, load, registered_models
-from foldforge.models.checkpoints import available, resolve
-from foldforge.models.config import Config
-
-if TYPE_CHECKING:
-    from foldforge.api import Predictor, load_model, predict
-    from foldforge.inputs import Inputs, load_inputs, protein
-    from foldforge.prediction import Prediction
-    from foldforge.result import PredictionResult
-    from foldforge.stages import TrunkState
-
-_LAZY = {
-    "Inputs": "foldforge.inputs",
-    "load_inputs": "foldforge.inputs",
-    "protein": "foldforge.inputs",
-    "Predictor": "foldforge.api",
-    "load_model": "foldforge.api",
-    "predict": "foldforge.api",
-    "Prediction": "foldforge.prediction",
-    "PredictionResult": "foldforge.result",
-    "TrunkState": "foldforge.stages",
-}
-
-__all__ = [
-    "ConcurrentCallError",
-    "Config",
-    "FoldForgeError",
-    "InputError",
-    "Inputs",
-    "ModelClosedError",
-    "Prediction",
-    "PredictionResult",
-    "Predictor",
-    "TrunkState",
-    "TrunkStateError",
-    "available",
-    "describe",
-    "get_model",
-    "known_models",
-    "load",
-    "load_inputs",
-    "load_model",
-    "predict",
-    "protein",
-    "registered_models",
-    "resolve",
-]
-
-
-def __getattr__(name: str) -> Any:
-    """Import optional inference dependencies only when their public API is used."""
-    if name not in _LAZY:
-        message = f"module {__name__!r} has no attribute {name!r}"
-        raise AttributeError(message)
-    value = getattr(import_module(_LAZY[name]), name)
-    globals()[name] = value
-    return value
-
-
-def __dir__() -> list[str]:
-    return sorted(set(globals()) | set(__all__))
+sys.modules[_OLD] = _new

@@ -1,4 +1,4 @@
-"""CPU tests of ``foldforge.train.step_graph``.
+"""CPU tests of ``foldjet.train.step_graph``.
 
 The signature / key / static-buffer / cache logic with a FAKE capture (no CUDA graph
 is made here; the real capture is exercised by the GPU gates in
@@ -14,10 +14,10 @@ from typing import Any, NoReturn
 import pytest
 import torch
 
-from foldforge.train import step_graph
-from foldforge.train.config import TrainConfig
-from foldforge.train.data import TrainBatch
-from foldforge.train.step import DeviceParts
+from foldjet.train import step_graph
+from foldjet.train.config import TrainConfig
+from foldjet.train.data import TrainBatch
+from foldjet.train.step import DeviceParts
 
 
 @pytest.fixture(autouse=True)

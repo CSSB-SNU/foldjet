@@ -1,4 +1,4 @@
-"""Real-data batch source for ``scripts/train_protenix1.py``: MiniWorld's PDB sampler + loader -> FoldForge ``TrainBatch``.
+"""Real-data batch source for ``scripts/train_protenix1.py``: MiniWorld's PDB sampler + loader -> FoldJet ``TrainBatch``.
 
     python scripts/train_protenix1.py --batch-source ft_adapter:batches ...        (PYTHONPATH must contain this directory)
 
@@ -7,7 +7,7 @@
 
 Data flow (per rank): MiniWorld ``WeightedSampler`` index stream (rank-distinct, seed + epoch + rank, deterministic in the stream position) ->
 torch DataLoader with CPU worker processes (spawn) -> each worker: MiniWorld ``Preprocessor.process`` (CIF load, crop, MSA, templates) with a rng
-seeded from (seed, rank, position) -> ``convert.Converter`` (AF3 / FoldForge featurisation of the crop) -> CPU tensors -> main process moves them to
+seeded from (seed, rank, position) -> ``convert.Converter`` (AF3 / FoldJet featurisation of the crop) -> CPU tensors -> main process moves them to
 the GPU and wraps them in ``TrainBatch``.
 """
 
@@ -75,7 +75,7 @@ class Settings:
     model: str = "protenix1"
     mode: str = field(
         default_factory=lambda: _env("FT_MODE", "fast")
-    )  # FoldForge DenseSpec mode ("fast" = the training script default)
+    )  # FoldJet DenseSpec mode ("fast" = the training script default)
 
 
 def rank_world() -> tuple[int, int]:
@@ -332,7 +332,7 @@ class Source:
         return self
 
     def __next__(self):
-        from foldforge.train.data import TrainBatch, features_to_device
+        from foldjet.train.data import TrainBatch, features_to_device
 
         t_call = time.perf_counter()
         if self.last_return is not None:

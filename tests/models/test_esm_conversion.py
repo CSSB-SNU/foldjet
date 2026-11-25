@@ -7,8 +7,8 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from foldforge.models.checkpoints.convert import _prepare_esmfold2
-from foldforge.modules.dense.spec import SPECS
+from foldjet.models.checkpoints.convert import _prepare_esmfold2
+from foldjet.modules.dense.spec import SPECS
 
 
 @pytest.fixture(params=["esmfold2", "esmfold2_fast"])

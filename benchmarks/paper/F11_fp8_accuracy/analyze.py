@@ -1,6 +1,6 @@
 """F11: why is AF3 with FP8 less accurate than bf16 on antibody-antigen and protein-RNA? Rounding of the structures, or a different order of near-tied samples?
 
-Runs compared (FoldForge a9e1549 + engine 3.0.1, whole-FoldBench runs, fb_multi, 5 trunk_seeds x 5 samples, same seeds):
+Runs compared (FoldJet a9e1549 + engine 3.0.1, whole-FoldBench runs, fb_multi, 5 trunk_seeds x 5 samples, same seeds):
   bf16   ff_full/af3_301        (Slurm 58554)       FP8 ff_full/af3_301_fp8     (58867)       FP8 re-run ff_full/af3_301_fp8chk (58996, the 162 targets only)
 The re-run of the SAME FP8 configuration on the same targets measures how much two FP8 runs differ from each other by themselves (scheduling, GPU
 non-determinism, MPS grouping): the noise floor against which an FP8-vs-bf16 difference has to be read.

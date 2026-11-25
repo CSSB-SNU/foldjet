@@ -1,10 +1,10 @@
 #!/bin/bash
-# The python of a FoldForge pixi env directly (never `pixi run`: it re-syncs a shared env to the lock), this checkout's src on PYTHONPATH.
+# The python of a FoldJet pixi env directly (never `pixi run`: it re-syncs a shared env to the lock), this checkout's src on PYTHONPATH.
 #   benchmarks/foldbench/run_py.sh SCRIPT.py ARGS...
 # FFENV       the env (default <repo>/.pixi/envs/default)
 # ENGINE_OVERLAY  optional: dir of an extracted engine wheel put first on PYTHONPATH (release-candidate runs; default: the env's engine)
 # CACHE_ROOT  kernel / compile caches (default ${FOLDFORGE_HOME:-~/.cache/foldforge}/cache/foldbench): XDG_CACHE_HOME, TORCH_EXTENSIONS_DIR, TORCHINDUCTOR_CACHE_DIR
-# Weights come from FOLDFORGE_CHECKPOINT_DIR / FOLDFORGE_HOME as usual (docs/guides/CONFIG.md). PYTORCH_CUDA_ALLOC_CONF: FoldForge's default
+# Weights come from FOLDFORGE_CHECKPOINT_DIR / FOLDFORGE_HOME as usual (docs/guides/CONFIG.md). PYTORCH_CUDA_ALLOC_CONF: FoldJet's default
 # (expandable_segments:True) unless set (docs/guides/CONFIG.md).
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO=$(cd "$HERE/../.." && pwd)

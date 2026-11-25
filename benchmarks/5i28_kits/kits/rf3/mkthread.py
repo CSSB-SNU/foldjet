@@ -3,7 +3,7 @@
 Query sequence; 5syd_A N/CA/C/O coordinates on the query positions its hit row aligns;
 occupancy 0 elsewhere. RF3's only template track is the input structure's CA distogram
 (template_selection), one coordinate set per chain, so the one template is 5syd_A --
-FoldForge's first of its 4.
+FoldJet's first of its 4.
 Same construction as ~/foldforge-scratch/anthropic-kits/mkreal_rf3.py; sources here are
 the benchmark's: cif_raw/sy/5syd.cif.gz (gunzipped to inputs/src/5syd.cif) and the
 20-hit LMDB a3m (inputs/src/5i28_templates_hits20.a3m).

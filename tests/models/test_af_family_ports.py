@@ -15,7 +15,7 @@ import torch
     ("affine", "bias"), [(False, False), (True, False), (True, True)]
 )
 def test_engine_layernorm_optional_affine_keeps_its_parameters_fp32(affine, bias):
-    from foldforge.modules.engine.modules import layer_norm
+    from foldjet.modules.engine.modules import layer_norm
 
     layer = layer_norm(128, bias=bias, elementwise_affine=affine)
     x = torch.randn(13, 128, dtype=torch.bfloat16)
@@ -32,8 +32,8 @@ def test_engine_layernorm_optional_affine_keeps_its_parameters_fp32(affine, bias
 def test_af3_diffusion_preserves_random_noise_field():
     from types import SimpleNamespace
 
-    from foldforge.models.architectures.af3 import AlphaFold3
-    from foldforge.modules.dense.spec import ALPHAFOLD3
+    from foldjet.models.architectures.af3 import AlphaFold3
+    from foldjet.modules.dense.spec import ALPHAFOLD3
 
     class IdentityDenoiser(torch.nn.Module):
         def forward(self, positions_noisy, **_kwargs: object) -> torch.Tensor:
@@ -48,7 +48,7 @@ def test_af3_diffusion_preserves_random_noise_field():
         predicted_structure_info=SimpleNamespace(atom_mask=torch.ones(4, 24))
     )
     with mock.patch(
-        "foldforge.diffusion.augmentation.masked_dense_rigid_motion",
+        "foldjet.diffusion.augmentation.masked_dense_rigid_motion",
         side_effect=lambda positions, _mask: positions,
     ):
         result = model._sample_diffusion(batch, {})["atom_positions"]

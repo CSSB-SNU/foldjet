@@ -13,7 +13,7 @@ _SYMBOLS = json.loads((REFERENCE_ROOT / "current_symbols.json").read_text())
 
 
 def production_module(family, path):
-    key = f"foldforge.models.{family}.ported." + path.removesuffix(".py").replace(
+    key = f"foldjet.models.{family}.ported." + path.removesuffix(".py").replace(
         "/", "."
     )
     module = importlib.import_module(_MODULES[key])

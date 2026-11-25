@@ -2,10 +2,10 @@
 
 import pytest
 
-from foldforge.models import msa_policy, registered_models
-from foldforge.models.config import Config
-from foldforge.models.io.request import Request
-from foldforge.modules.dense.spec import SPECS
+from foldjet.models import msa_policy, registered_models
+from foldjet.models.config import Config
+from foldjet.models.io.request import Request
+from foldjet.modules.dense.spec import SPECS
 
 
 def test_policy_record_matches_af3_pipeline():

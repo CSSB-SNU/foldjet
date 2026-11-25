@@ -30,7 +30,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-import foldforge as ff
+import foldjet as ff
 
 sys.path.insert(0, str(Path.home() / "foldforge-scratch/paper/F11_investigation/scripts"))
 from step3 import SPECS, _fp8_status, regions  # noqa: E402
@@ -123,7 +123,7 @@ def install_rec32() -> None:
     import inspect  # noqa: PLC0415
     import textwrap  # noqa: PLC0415
 
-    from foldforge.models.architectures import af3  # noqa: PLC0415
+    from foldjet.models.architectures import af3  # noqa: PLC0415
 
     src = textwrap.dedent(inspect.getsource(af3.Evoformer._single_pair_trunk))
     old_pair = """pair_activations = pair_activations + self._recycle_pair(

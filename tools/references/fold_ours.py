@@ -1,9 +1,9 @@
-"""Fold one reference input with FoldForge under the references' conditions.
+"""Fold one reference input with FoldJet under the references' conditions.
 
 Usage: fold_ours.py FAMILY TARGET SEED RUN_ROOT [--precision P] [-- extra config]
 Writes <RUN_ROOT>/<family>/<target>/seed<k>/ (RUN_ROOT is relative to the runs
-tree, foldforge.paths.runs()),
-the tree ``foldforge validate`` reads.
+tree, foldjet.paths.runs()),
+the tree ``foldjet validate`` reads.
 """
 
 import argparse
@@ -15,8 +15,8 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
-from foldforge.cli import main as foldforge  # noqa: E402
-from foldforge.eval.references import FAMILIES, REFERENCES  # noqa: E402
+from foldjet.cli import main as foldjet  # noqa: E402
+from foldjet.eval.references import FAMILIES, REFERENCES  # noqa: E402
 
 parser = argparse.ArgumentParser()
 parser.add_argument("family", choices=list(FAMILIES))
@@ -49,12 +49,12 @@ with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as fh:
     yaml.safe_dump(config, fh)
 out = f"{args.run_root}/{args.family}/{args.target}/seed{args.seed}"
 raise SystemExit(
-    foldforge(
+    foldjet(
         [
             "fold",
             family["model"],
             "--spec",
-            str(REFERENCES / "inputs" / args.target / "foldforge.yaml"),
+            str(REFERENCES / "inputs" / args.target / "foldjet.yaml"),
             "--config",
             fh.name,
             "--out",

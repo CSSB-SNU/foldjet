@@ -10,7 +10,7 @@ from types import SimpleNamespace
 import pytest
 import torch
 
-from foldforge.modules import language_model as lm
+from foldjet.modules import language_model as lm
 
 N_LAYERS, D = 3, 8
 

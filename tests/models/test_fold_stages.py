@@ -10,8 +10,8 @@ import pytest
 import torch
 from torch import nn
 
-from foldforge.models.architectures import af3
-from foldforge.modules.dense.spec import SPECS
+from foldjet.models.architectures import af3
+from foldjet.modules.dense.spec import SPECS
 
 
 @pytest.mark.parametrize("family", sorted(SPECS))

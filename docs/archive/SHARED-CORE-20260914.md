@@ -1,6 +1,6 @@
 # Shared diffusion and neural core — 2026-09-14
 
-Implementation ownership moved from FoldForge's model copies to team-gm. The
+Implementation ownership moved from FoldJet's model copies to team-gm. The
 released checkpoint parameter names and input layouts remain at the model boundary.
 This change preserves numerical conventions instead of forcing different learned
 models to use one schedule, coordinate layout or augmentation distribution.
@@ -19,9 +19,9 @@ models to use one schedule, coordinate layout or augmentation distribution.
 | Activation checkpoint groups | `modules/checkpointing.py` | Released positional arguments; shared non-reentrant policy |
 | PTM/iPTM and shared confidence calculations | `metrics/confidence.py` | Model-specific confidence head and output assembly |
 
-The duplicate FoldForge ESMFold2 solver and augmentation modules were deleted.
+The duplicate FoldJet ESMFold2 solver and augmentation modules were deleted.
 The two AF-family `generator.py` files and six TFG modules are compatibility
-imports/binders. They no longer own sampling or guidance algorithms. FoldForge's
+imports/binders. They no longer own sampling or guidance algorithms. FoldJet's
 `models/sampling.py` binds released argument names; the reverse-time loop lives
 only in team-gm's Euler sampler. Existing decoupled translation/rotation diffusion
 in team-gm remains a different algorithm.
@@ -103,6 +103,6 @@ production-size end-to-end validation are separate unfinished integration work.
 The older source/count reports above describe the earlier phase; the follow-up
 report and manifest describe the final source state.
 
-Working branches remain `team-gm: exp/miniworld`, `FoldForge: main`, and
-`FoldForge/libs/team-gm: exp/miniworld`. This refactor has not been committed or
+Working branches remain `team-gm: exp/miniworld`, `FoldJet: main`, and
+`FoldJet/libs/team-gm: exp/miniworld`. This refactor has not been committed or
 pushed. The existing engine cache build and its shards were not modified.

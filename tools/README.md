@@ -12,10 +12,10 @@ the matching `.sbatch` wrapper.
 
 ## Inference
 
-The standard entry point is `foldforge fold <model> --spec <MiniWorld YAML>`,
+The standard entry point is `foldjet fold <model> --spec <MiniWorld YAML>`,
 optionally with `--config <runtime YAML>`. All predictors read `ccd_db` from the
 input YAML and share `$FOLDFORGE_HOME/ccd/preprocessed_CCD.lmdb`; prepare it with
-`foldforge ccd prepare` and check it with `foldforge ccd verify`. See
+`foldjet ccd prepare` and check it with `foldjet ccd verify`. See
 [the format contract](../docs/guides/MINIWORLD-FORMAT.md) and
 [model integration](../docs/guides/MODEL-INTEGRATION.md) for input schemas,
 checkpoint paths and complete commands.
@@ -28,7 +28,7 @@ a new run directory when changing seed policy.
 
 Compatibility tools for reproducing the recorded validation runs:
 
-- `fold_esmfold2.py` / `.sbatch`: same implementation as `foldforge fold esmfold2`
+- `fold_esmfold2.py` / `.sbatch`: same implementation as `foldjet fold esmfold2`
   through the legacy `--target` inputs. Live ESMC is the default; `--lm-source cache`
   reuses existing embeddings. Accepts `--ccd-db`.
 - `verify_prediction_artifacts.py`: compare two prediction trees produced with
@@ -82,14 +82,14 @@ Historical AF3 measurements used the former additional-pass convention
 their renderers retain the original measurement contracts.
 The benchmark retains token buckets in multiples of 128, disabled templates,
 five batched diffusion samples, and denoiser-only compile/graph scope. This is
-a FoldForge backend comparison, not a measurement of the official JAX runtime.
+a FoldJet backend comparison, not a measurement of the official JAX runtime.
 
 For the other models, `precision: model_default` keeps FP32 parameter storage.
 OpenDDE executes in FP32 without autocast. Protenix v2 uses BF16 autocast outside
 its FP32 diffusion sampler. ESMFold2 uses BF16 autocast in the input/trunk,
 confidence folding trunk and diffusion pair transitions; remaining diffusion
 projections stay FP32. Their reference TF32 setting is enabled. These are the
-released precision scopes reproduced in FoldForge, not the original applications.
+released precision scopes reproduced in FoldJet, not the original applications.
 All three native BF16 comparison modes use BF16 parameters except FP32 norms,
 with autocast disabled.
 

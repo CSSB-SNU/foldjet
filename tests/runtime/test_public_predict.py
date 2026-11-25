@@ -19,19 +19,19 @@ from click.testing import CliRunner
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-import foldforge
-from foldforge.cli import app
-from foldforge.models.io import runtime
-from foldforge.models.io.options import parse
-from foldforge.models.io.output import Decoded
-from foldforge.prediction import Prediction
+import foldjet
+from foldjet.cli import app
+from foldjet.models.io import runtime
+from foldjet.models.io.options import parse
+from foldjet.models.io.output import Decoded
+from foldjet.prediction import Prediction
 
 
 @pytest.fixture
 def fake_pipeline(tmp_path, monkeypatch):
-    from foldforge import api
-    from foldforge.data import ccd
-    from foldforge.models import execution, loading
+    from foldjet import api
+    from foldjet.data import ccd
+    from foldjet.models import execution, loading
 
     monkeypatch.setattr(api, "_resolve_device", lambda _: torch.device("cpu"))
     monkeypatch.chdir(tmp_path)
@@ -80,7 +80,7 @@ def fake_pipeline(tmp_path, monkeypatch):
         )
 
     monkeypatch.setitem(
-        sys.modules, "foldforge.models.io.dense_atoms", SimpleNamespace(prepare=prepare)
+        sys.modules, "foldjet.models.io.dense_atoms", SimpleNamespace(prepare=prepare)
     )
     return {"checkpoint": weights, "ccd_db": database}, requests
 
@@ -89,13 +89,13 @@ def test_predict_returns_cpu_results_without_artifacts_and_preserves_inputs(
     fake_pipeline, tmp_path, capsys
 ):
     options, requests = fake_pipeline
-    inputs = foldforge.protein("AG", name="example")
+    inputs = foldjet.protein("AG", name="example")
     config = {"trunk_seed": 17, "trunk": {"recycles": 2}}
     original = deepcopy((inputs, config))
     before = set(tmp_path.rglob("*"))
     state = torch.random.get_rng_state()
-    result = foldforge.predict(inputs, config, samples=2, **options)
-    assert isinstance(result, foldforge.PredictionResult)
+    result = foldjet.predict(inputs, config, samples=2, **options)
+    assert isinstance(result, foldjet.PredictionResult)
     assert result.coords.shape == (2, 3, 3)
     assert result.coords.device.type == "cpu"
     assert result.output_dir is None
@@ -106,7 +106,7 @@ def test_predict_returns_cpu_results_without_artifacts_and_preserves_inputs(
     assert (inputs, config) == original
     assert requests[0].out is None
     assert capsys.readouterr().out == ""
-    second = foldforge.predict(inputs, config, samples=2, **options)
+    second = foldjet.predict(inputs, config, samples=2, **options)
     torch.testing.assert_close(result.coords, second.coords, rtol=0, atol=0)
     saved = result.save("saved")
     assert saved.output_dir == tmp_path / "saved"
@@ -117,7 +117,7 @@ def test_predict_returns_cpu_results_without_artifacts_and_preserves_inputs(
 
 def test_predict_explicit_output_writes_same_artifacts(fake_pipeline, tmp_path):
     options, _ = fake_pipeline
-    result = foldforge.predict(foldforge.protein("AG"), out="result", **options)
+    result = foldjet.predict(foldjet.protein("AG"), out="result", **options)
     assert result.output_dir == tmp_path / "result"
     assert (result.output_dir / "model.config.json").is_file()
     assert (result.output_dir / "features.pt").is_file()
@@ -126,15 +126,15 @@ def test_predict_explicit_output_writes_same_artifacts(fake_pipeline, tmp_path):
 
 def test_bad_checkpoint_does_not_create_output(tmp_path):
     with pytest.raises(FileNotFoundError):
-        foldforge.predict(
-            foldforge.protein("AG"), checkpoint=tmp_path / "missing", out="unused"
+        foldjet.predict(
+            foldjet.protein("AG"), checkpoint=tmp_path / "missing", out="unused"
         )
     assert not (tmp_path / "unused").exists()
 
 
 def test_cli_help_and_model_metadata_use_no_gpu_imports():
     code = (
-        "import sys; from foldforge.cli import main; main(['fold','--help']); "
+        "import sys; from foldjet.cli import main; main(['fold','--help']); "
         "assert 'torch' not in sys.modules"
     )
     result = subprocess.run(  # noqa: S603 - fixed trusted Python code
@@ -150,7 +150,7 @@ def test_cli_help_and_model_metadata_use_no_gpu_imports():
 
 
 def test_cli_only_explicit_flags_override_config(tmp_path):
-    from foldforge.models.inference import resolve_cli_config
+    from foldjet.models.inference import resolve_cli_config
 
     config = tmp_path / "config.yaml"
     config.write_text(
@@ -180,7 +180,7 @@ def test_cli_only_explicit_flags_override_config(tmp_path):
 
 
 def test_cli_calls_public_api_and_prints_report(monkeypatch):
-    from foldforge.models import inference
+    from foldjet.models import inference
 
     seen = []
     monkeypatch.setattr(inference, "load", lambda _: "resolved-input")
@@ -214,16 +214,16 @@ def test_library_restores_precision_after_execution(fake_pipeline, monkeypatch, 
     monkeypatch.setattr(runtime, "predict", execute)
     if fails:
         with pytest.raises(RuntimeError, match="execution failed"):
-            foldforge.predict(foldforge.protein("AG"), **options)
+            foldjet.predict(foldjet.protein("AG"), **options)
     else:
-        foldforge.predict(foldforge.protein("AG"), **options)
+        foldjet.predict(foldjet.protein("AG"), **options)
     assert torch.get_float32_matmul_precision() == original_precision
 
 
 def test_engine_cache_dir_is_accepted_and_ignored_with_one_warning(tmp_path):
     import warnings
 
-    from foldforge import api
+    from foldjet import api
 
     api._CACHE_DIR_WARNED = False
     with pytest.warns(DeprecationWarning, match="engine_cache_dir"):
@@ -234,7 +234,7 @@ def test_engine_cache_dir_is_accepted_and_ignored_with_one_warning(tmp_path):
 
 
 def test_mapping_msa_path_does_not_acquire_conflicting_inline_default():
-    from foldforge.api import _normalize_payload
+    from foldjet.api import _normalize_payload
 
     payload = {
         "sequences": [
@@ -247,16 +247,16 @@ def test_mapping_msa_path_does_not_acquire_conflicting_inline_default():
 
 
 def test_loaded_models_reuse_weights_and_independent_inputs(fake_pipeline):
-    from foldforge.models import execution, loading
+    from foldjet.models import execution, loading
 
     options, requests = fake_pipeline
-    first = foldforge.load_inputs(foldforge.protein("AG", name="first"))
-    second = foldforge.load_inputs(foldforge.protein("GA", name="second"))
+    first = foldjet.load_inputs(foldjet.protein("AG", name="first"))
+    second = foldjet.load_inputs(foldjet.protein("GA", name="second"))
     snapshot = deepcopy(first.payload)
     weights = options["checkpoint"]
     database = options["ccd_db"]
-    a = foldforge.load_model("af3", checkpoint=weights)
-    b = foldforge.load_model("boltz2", checkpoint=weights)
+    a = foldjet.load_model("af3", checkpoint=weights)
+    b = foldjet.load_model("boltz2", checkpoint=weights)
     assert loading.load_configured.call_count == 2
     assert execution.Execution.call_count == 2
     for model, inputs in ((a, first), (b, first), (a, second), (a, first)):
@@ -277,20 +277,20 @@ def test_loaded_models_reuse_weights_and_independent_inputs(fake_pipeline):
 
 def test_loaded_json_keeps_origin_and_survives_source_removal(tmp_path):
     path = tmp_path / "input.json"
-    payload = foldforge.protein("AG")
+    payload = foldjet.protein("AG")
     path.write_text(json.dumps(payload))
-    loaded = foldforge.load_inputs(path)
+    loaded = foldjet.load_inputs(path)
     path.unlink()
     assert loaded.origin == path
     assert loaded.payload["sequences"][0]["protein"]["sequence"] == "AG"
     assert loaded.payload["sequences"][0]["protein"]["id"] == "A"
     assert loaded.payload["name"] == payload["name"]
-    assert foldforge.load_inputs(loaded) is loaded
+    assert foldjet.load_inputs(loaded) is loaded
 
 
 def test_predictor_context_closes_after_failure(fake_pipeline):
     options, _ = fake_pipeline
-    model = foldforge.load_model(checkpoint=options["checkpoint"])
+    model = foldjet.load_model(checkpoint=options["checkpoint"])
 
     def fail() -> None:
         with model:
@@ -300,4 +300,4 @@ def test_predictor_context_closes_after_failure(fake_pipeline):
     with pytest.raises(RuntimeError, match="application failed"):
         fail()
     with pytest.raises(RuntimeError, match="closed"):
-        model(foldforge.protein("AG"), ccd_db=options["ccd_db"])
+        model(foldjet.protein("AG"), ccd_db=options["ccd_db"])

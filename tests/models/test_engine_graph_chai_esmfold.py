@@ -15,7 +15,7 @@ specific here:
   (``test_circular_*``),
 * ESMFold2: the pair-only trunk (no triangle attention), the SSM / coda /
   language-model pair encoder blocks (pair-only blocks), the token DiT, and the atom
-  stack that stays FoldForge-own (the engine's ESMFold2 atom block is pair-free).
+  stack that stays FoldJet-own (the engine's ESMFold2 atom block is pair-free).
 """
 
 from __future__ import annotations
@@ -25,18 +25,18 @@ from dataclasses import replace
 import pytest
 import torch
 
-from foldforge.models.architectures.af3 import AlphaFold3
-from foldforge.models.checkpoints import miniworld
-from foldforge.models.checkpoints.legacy import dense_model
-from foldforge.modules.dense.spec import spec_for
-from foldforge.modules.engine import graph, modules
-from foldforge.modules.engine.modules import MODEL_KEYS
-from foldforge.modules.engine.transformers import (
+from foldjet.models.architectures.af3 import AlphaFold3
+from foldjet.models.checkpoints import miniworld
+from foldjet.models.checkpoints.legacy import dense_model
+from foldjet.modules.dense.spec import spec_for
+from foldjet.modules.engine import graph, modules
+from foldjet.modules.engine.modules import MODEL_KEYS
+from foldjet.modules.engine.transformers import (
     AtomDiTStack,
     TokenDiTStack,
     engine_key_window,
 )
-from foldforge.utils import atom_layout
+from foldjet.utils import atom_layout
 
 TOLERANCE = {"rtol": 1e-4, "atol": 1e-4}
 CASES = (("chai1", "fast"), ("chai1", "exact"), ("esmfold2", "fast"))
@@ -160,7 +160,7 @@ def test_the_graph_holds_engine_classes_with_engine_keys(pair_of_models):
         )  # one shared atom AdaLN
     else:
         # engine 2.5.3+: the ESMFold2 atom block with the atom pair + rotary
-        # (AtomDiT("esmfold2_pair"), FoldForge R6) is the engine's
+        # (AtomDiT("esmfold2_pair"), FoldJet R6) is the engine's
         assert isinstance(decoder, AtomDiTStack)
         assert decoder.rotary
         assert type(decoder.blocks[0]).__name__ == "AtomDiTESMFold2Pair"
@@ -349,7 +349,7 @@ def test_diffusion_transformer_and_conditioning_transitions_match_dense(pair_of_
 
 
 def test_chai_adaln_epsilon_follows_the_mode(pair_of_models):
-    """FoldForge's fast mode is 1e-5, the exact mode is 0.1; both DiT stacks.
+    """FoldJet's fast mode is 1e-5, the exact mode is 0.1; both DiT stacks.
 
     The exact mode is the release's traced ``layer_norm(x, None, None, 0.1)``.
     """
@@ -373,7 +373,7 @@ def test_chai_adaln_epsilon_follows_the_mode(pair_of_models):
 def _atom_case(atoms: int, window: str, *, seed: int = 7) -> dict:
     """The inputs of one windowed atom transformer call on ``atoms`` real atoms.
 
-    24-atom conformers, the key window per FoldForge's word.
+    24-atom conformers, the key window per FoldJet's word.
     """
     from miniworld_engine.modules.functional import slide_starts
 
@@ -527,7 +527,7 @@ def test_the_converter_demands_every_released_key_is_read_or_a_known_discard(
 def test_known_discards_are_the_softmax_invariant_offsets_and_the_shared_adaln(
     pair_of_models,
 ):
-    from foldforge.models.checkpoints.legacy.released import is_discarded
+    from foldjet.models.checkpoints.legacy.released import is_discarded
 
     dense, engine = pair_of_models
     discarded = {k for k in dense.state_dict() if is_discarded(k)}

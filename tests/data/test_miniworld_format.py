@@ -19,10 +19,10 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 from support import REFERENCE_ROOT, REPOSITORY_ROOT
 
-from foldforge import paths
-from foldforge.data.ccd import CCDDatabase
-from foldforge.data.inputs.build import load
-from foldforge.models.checkpoints.legacy.reference.attention import attention
+from foldjet import paths
+from foldjet.data.ccd import CCDDatabase
+from foldjet.data.inputs.build import load
+from foldjet.models.checkpoints.legacy.reference.attention import attention
 
 REPOSITORY = REPOSITORY_ROOT
 REFERENCE = Path(
@@ -38,7 +38,7 @@ DATABASE = Path(os.environ.get("FOLDFORGE_TEST_CCD_DB", str(paths.ccd_db())))
 @pytest.mark.parametrize("family", ["protenix", "opendde"])
 def test_released_attention_equation(family, dtype, efficient):
     module = importlib.import_module(
-        "foldforge.models.checkpoints.legacy.reference.attention"
+        "foldjet.models.checkpoints.legacy.reference.attention"
     )
     original = json.loads((REFERENCE_ROOT / "attention_oracles.json").read_text())[
         family
@@ -156,7 +156,7 @@ def test_real_miniworld_ccdmol_reads_new_records(key):
 def test_empty_heavy_atom_record():
     from biotite.structure.io.pdbx import CIFBlock, CIFCategory
 
-    from foldforge.data.ccd.build import record
+    from foldjet.data.ccd.build import record
 
     b = CIFBlock()
     b["chem_comp"] = CIFCategory({"id": ["H"], "name": ["hydrogen"], "formula": ["H"]})
@@ -167,7 +167,7 @@ def test_empty_heavy_atom_record():
 
 
 def test_af3_opm_mask_normalization_and_bias():
-    from foldforge.models.checkpoints.legacy.reference.attention import (
+    from foldjet.models.checkpoints.legacy.reference.attention import (
         af3_outer_product_mean,
     )
 
@@ -185,7 +185,7 @@ def test_af3_opm_mask_normalization_and_bias():
 def test_lmdb_fork_and_spawn_readers():
     import multiprocessing
 
-    from foldforge.data.ccd import CCDLookup
+    from foldjet.data.ccd import CCDLookup
 
     reader = CCDLookup(DATABASE)
     assert reader["ALA"].n_atoms == 6
@@ -202,7 +202,7 @@ def _read_ala(reader) -> list[str]:
 
 @pytest.mark.skipif(not DATABASE.exists(), reason="prepared integration database")
 def test_fragmentation_levels_and_missing_chemistry():
-    from foldforge.data.ccd import CCDLookup
+    from foldjet.data.ccd import CCDLookup
 
     reader = CCDLookup(DATABASE)
     levels = reader.fragments("ATP")
@@ -213,7 +213,7 @@ def test_fragmentation_levels_and_missing_chemistry():
 
 
 def test_common_msa_limit_is_applied_before_adapter(tmp_path):
-    from foldforge.data.inputs.build import limit_msa
+    from foldjet.data.inputs.build import limit_msa
 
     (tmp_path / "a.fa").write_text(">a | polypeptide(L) | Chain:A\nACD\n")
     (tmp_path / "a.a3m").write_text(">query\nACD\n>one\nA-D\n>two\nAC-\n")
@@ -263,7 +263,7 @@ def test_serialization_is_readable_by_older_miniworld_biomol():
     from biotite.structure.io.pdbx import CIFBlock, CIFCategory
     from zstandard import ZstdDecompressor
 
-    from foldforge.data.ccd.build import record
+    from foldjet.data.ccd.build import record
 
     block = CIFBlock()
     block["chem_comp"] = CIFCategory(

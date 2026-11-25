@@ -7,7 +7,7 @@ the earlier one-process-per-shard runner (grouped trunk_seeds, ranking.csv, run.
 
 Failures are reported, never retried here: out of memory with CUDA graphs -> the rest of this bucket runs without graphs on this worker and the parent
 requeues the target (flagged no-graphs); a sticky CUDA error -> report, flush the writers, exit 75 (the parent respawns the worker).
-PYTORCH_CUDA_ALLOC_CONF comes from the parent (the FoldForge default expandable_segments:True unless the user set one).
+PYTORCH_CUDA_ALLOC_CONF comes from the parent (the FoldJet default expandable_segments:True unless the user set one).
 FF_ALLOW_SIZE_MISMATCH=1 skips the checkpoint blob size check (a local blob of another converter version; off by default)."""
 
 import argparse
@@ -82,15 +82,15 @@ WID = args.wid
 out = Path(args.out)
 
 if os.environ.get("FF_ALLOW_SIZE_MISMATCH"):
-    import foldforge.models.checkpoints.lock as _LK
+    import foldjet.models.checkpoints.lock as _LK
 
     _LK.check_size = lambda _p: None
 import fb_data
 import fb_io
 
-import foldforge as ff
-from foldforge.models.grouped import GroupedUnsupported
-from foldforge.models.io import dense_atoms
+import foldjet as ff
+from foldjet.models.grouped import GroupedUnsupported
+from foldjet.models.io import dense_atoms
 
 
 def log(msg):
@@ -321,7 +321,7 @@ pending: list = []
 exit_code = 0
 busy_s = 0.0
 with ff.load_model(args.model, config=config, checkpoint=args.checkpoint, device="cuda:0") as model:
-    from foldforge.api import plan_prediction
+    from foldjet.api import plan_prediction
 
     bucketing = bool(model._options.config.execution.bucketing)
     ex = getattr(model, "_execution", None)
@@ -389,11 +389,11 @@ with ff.load_model(args.model, config=config, checkpoint=args.checkpoint, device
                 w.graphs.clear()
                 w.bypass += 1
             ex.release_sampler_graphs()
-            ex.model.foldforge_sampler_scope = None
+            ex.model.foldjet_sampler_scope = None
         else:
             for w in ex.wrappers:
                 w.bypass -= 1
-            ex.model.foldforge_sampler_scope = ex.sampler_scope
+            ex.model.foldjet_sampler_scope = ex.sampler_scope
         gstate["graphs"] = on
         gc.collect()
         torch.cuda.empty_cache()

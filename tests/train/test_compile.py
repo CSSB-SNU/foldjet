@@ -1,4 +1,4 @@
-"""CPU tests of ``foldforge.train.compile``.
+"""CPU tests of ``foldjet.train.compile``.
 
 Which modules are wrapped, idempotence, forward equivalence through ``torch.compile``
 (a toy block named like the engine class; the real blocks are exercised by
@@ -14,8 +14,8 @@ import pytest
 import torch
 from torch import nn
 
-from foldforge.train import compile as train_compile
-from foldforge.train.config import TrainConfig
+from foldjet.train import compile as train_compile
+from foldjet.train.config import TrainConfig
 
 
 class PairformerBlock(nn.Module):

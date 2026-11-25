@@ -13,7 +13,7 @@ A model is loaded with one `backend`, the source of the kernels of every op in i
 | `miniworld` (default) | the miniworld-engine: hand-written CUDA where the engine has it for the card, the engine's own other legs elsewhere | any CUDA card; tuned for H100 / B200 |
 | `cuequivariance` | NVIDIA cuEquivariance 0.12 (`triangle_multiplicative_update`, `triangle_attention`, `attention_pair_bias`) | any card the library supports |
 | `anthropic` | the kernels of Anthropic's uplifting-biomolecular-modeling release (the TriMul payload, the `opt_core` cells) | where its payload builds and loads (sm_90 here) |
-| `pytorch` | the dense FoldForge modules: the reference every other backend is compared with | anywhere |
+| `pytorch` | the dense FoldJet modules: the reference every other backend is compared with | anywhere |
 
 ```yaml
 backend: miniworld          # or: cuequivariance | anthropic | pytorch
@@ -72,7 +72,7 @@ raises with `unsupported: error`; a module the machine or its widths exclude for
 | backend, op | the kernel takes |
 |---|---|
 | miniworld, any | whatever the engine's dispatch takes on the card; what it cannot serve, the engine runs as the PyTorch reference (on H100 / B200 deliberately, see the engine's `docs/gpus/h100/dispatch.md`). Dense FP32 models install the diffusion transformers only |
-| miniworld, `dit_blocks`, `atom_blocks` | on H100 / B200 the engine's CUDA blocks and variant stacks (Boltz-2, RoseTTAFold3, Chai-1 inference); on another card the engine's portable blocks where the engine holds a record for that card: the AF3-style and ESMFold2 atom blocks and the three families' token and atom stacks (head width up to 64, up to 256 keys, atom stacks with a token count that is a multiple of 32). A card without a record, or a call outside these limits, keeps FoldForge's dense blocks (the engine says so once) |
+| miniworld, `dit_blocks`, `atom_blocks` | on H100 / B200 the engine's CUDA blocks and variant stacks (Boltz-2, RoseTTAFold3, Chai-1 inference); on another card the engine's portable blocks where the engine holds a record for that card: the AF3-style and ESMFold2 atom blocks and the three families' token and atom stacks (head width up to 64, up to 256 keys, atom stacks with a token count that is a multiple of 32). A card without a record, or a call outside these limits, keeps FoldJet's dense blocks (the engine says so once) |
 | cuequivariance, `trimul` | bf16 CUDA, pair width a multiple of 32 and equal to the contraction width, no length division (RoseTTAFold3's) |
 | cuequivariance, `triangle_attention` | bf16 CUDA (any head count the library takes) |
 | cuequivariance, `single_attention` | bf16 CUDA, AF3's form: no single conditioning, k/q norm or gate bias (so not Chai-1's) |
@@ -90,14 +90,14 @@ use a named payload where it can serve; so a `miniworld` run is a run of the min
 backend but `anthropic`.
 
 Anthropic's kits also carry pair-bias attention (`apb`, atom attention), the diffusion transformer rows (`dit_exact`,
-`ditfast`) and a LayerNorm (`fastln`). They are not connected: FoldForge's single attention and diffusion blocks are
+`ditfast`) and a LayerNorm (`fastln`). They are not connected: FoldJet's single attention and diffusion blocks are
 the engine's fused blocks and the release's pieces would replace parts of them, not whole ops; its LayerNorm refuses
 bf16 weights. Those ops are `ref` on `anthropic`.
 
 ## Unsupported combinations
 
 `engine.unsupported: fallback` (default) runs the PyTorch reference for an op the backend has no kernel for, and says so
-in one log line (logger `foldforge.backend`) at load, listing the ops and the reason of each. The same list is in the
+in one log line (logger `foldjet.backend`) at load, listing the ops and the reason of each. The same list is in the
 run's JSON, `checkpoint.backends`: `ops` (the backend that ran each op), `fallbacks` (op: reason), `unsupported`.
 A call a served kernel refuses (shape, dtype, a width without a unit) logs one line per (op, reason) the first time.
 `engine.unsupported: error` raises `BackendUnsupportedError` instead, at load for the ops and at the call for the
@@ -110,7 +110,7 @@ PyTorch reference.
 ## Other cards
 
 The checks that decide whether a kernel runs ask the device (`torch.cuda.get_device_capability`, in the engine's
-dispatch and in the Anthropic payloads' own `refusal` predicates) or the payload (a unit for the widths); FoldForge
+dispatch and in the Anthropic payloads' own `refusal` predicates) or the payload (a unit for the widths); FoldJet
 holds no card list. On a card that is not an H100 or B200:
 
 - `miniworld` runs what the engine runs there (the engine owns that): its hand-written CUDA where it serves the call,
@@ -150,8 +150,8 @@ coordinate file next to the earlier fields.
 Forward-only harness, the same as `final_af3.jsonl` / `final_esm.jsonl`: `compile_graph_trunk_bucket` (compile and CUDA
 graphs on the denoiser, graphs on the trunk and heads, bucketing), real MSA (and templates where the family has them)
 for 5I28 replicated n times, `mode: exact`, 5 diffusion samples, 200 steps, the released recycles per family; warm median
-of 3 forwards (n <= 2), 2 (n <= 8) or 1. One backend per process, one process per GPU, on the engine tree FoldForge main
-runs on (the PyPI wheel `miniworld-engine==2.3.9`; the numbers below were measured on the unreleased tree 2.3.8 + `integ/all-20261023`, whose content 2.3.9 contains, and re-checked on the wheel, see "Re-check on the 2.3.9 wheel"). FoldForge `6d5b7b6`, except RoseTTAFold3 on `anthropic`
+of 3 forwards (n <= 2), 2 (n <= 8) or 1. One backend per process, one process per GPU, on the engine tree FoldJet main
+runs on (the PyPI wheel `miniworld-engine==2.3.9`; the numbers below were measured on the unreleased tree 2.3.8 + `integ/all-20261023`, whose content 2.3.9 contains, and re-checked on the wheel, see "Re-check on the 2.3.9 wheel"). FoldJet `6d5b7b6`, except RoseTTAFold3 on `anthropic`
 (`91fb117`: its length-divided TriMul is a stated reference there, see below). `anthropic` has the payloads of
 `~/ext/uplifting-biomolecular-modeling` and `trimul_native_cu129`.
 
@@ -226,7 +226,7 @@ chains: up to 80 A); pLDDT is the figure to compare. The ESMFold2 n = 1 rms of 4
 cuequivariance serves. RoseTTAFold3 is not deterministic from run to run even on the
 tree before backends existed (two runs of it differ by up to 2.5 A), so its columns carry that noise.
 
-ESMFold2, n = 16 (the largest size of the recorded series; FoldForge `9bd2e11`, which has the same source as `6d5b7b6`;
+ESMFold2, n = 16 (the largest size of the recorded series; FoldJet `9bd2e11`, which has the same source as `6d5b7b6`;
 no row failed):
 
 | backend | warm median s | pLDDT | peak allocated GiB |
@@ -284,9 +284,9 @@ transformers only on `miniworld`, and the other backends run the reference).
 
 ## Re-check on the 2.3.9 wheel
 
-FoldForge pins `miniworld-engine==2.3.9` from PyPI (2.3.9 contains the engine work the tables above were measured on:
+FoldJet pins `miniworld-engine==2.3.9` from PyPI (2.3.9 contains the engine work the tables above were measured on:
 `serves_extra_bias`, `sampler_ops`, `dit_variants`, the sm90 triangle attention fp16 core, `local_dit`, PWA up to N <= 2048).
-Nothing is put on `PYTHONPATH`: the engine is the installed wheel, FoldForge the editable checkout. Test suite
+Nothing is put on `PYTHONPATH`: the engine is the installed wheel, FoldJet the editable checkout. Test suite
 (`FOLDFORGE_TEST_ALLOW_SIZE_MISMATCH=1`, empty kernel cache, `CUTLASS_PATH=/nonexistent`): 604 passed, 1 failed (the
 missing checkpoints of `test_every_registered_family_resolves_its_checkpoint`); the backend tests with the Anthropic
 payload variables set: 52 passed. Warm median forward (empty caches, `compile_graph_trunk_bucket`, real MSA), seconds,
@@ -307,11 +307,11 @@ ship prebuilt.
 
 On a card that is not H100 / B200, `miniworld` now sends the diffusion transformers of every family to the engine
 where the engine can serve them (see "Other cards"): `variant_serves` is the one seam, the engine routes the call. Before,
-Boltz-2, RoseTTAFold3 and Chai-1 (token and atom) and ESMFold2's token stack ran FoldForge's dense blocks there, and the
+Boltz-2, RoseTTAFold3 and Chai-1 (token and atom) and ESMFold2's token stack ran FoldJet's dense blocks there, and the
 AF3-style and ESMFold2 atom blocks the engine's reference core.
 
 No other card was available, so this was measured on the **H100 with the engine's internal A/B switch**
-(`miniworld_engine.settings.configure(force_portable_kernels=True)`, set by the scratch harness `ff_stage.py` and by the tests only: FoldForge
+(`miniworld_engine.settings.configure(force_portable_kernels=True)`, set by the scratch harness `ff_stage.py` and by the tests only: FoldJet
 has no key for it), which sends the engine to the kernels a recorded card would run, for the whole model. Harness
 `ffbench/ff_fwd.py`, `compile_graph_trunk_bucket`, real MSA and templates, `mode: exact`, 5 samples, 200 steps, warm median
 of 3 (n = 1) or 2 (n = 4) forwards, wheel `miniworld-engine==2.3.10` and no overlay. Columns: `default` = `miniworld` on the
@@ -349,9 +349,9 @@ Test suite on the wheel (`FOLDFORGE_TEST_ALLOW_SIZE_MISMATCH=1`): 641 passed, 1 
 
 ## Re-check on the 2.3.11 wheel
 
-FoldForge pins `miniworld-engine==2.3.11` from PyPI (the La-Proteina kernels and the window-attention backward bands on top of
+FoldJet pins `miniworld-engine==2.3.11` from PyPI (the La-Proteina kernels and the window-attention backward bands on top of
 2.3.10). `pixi.lock` resolves the cp312 wheel with sha256 `834835eb...eec7` (the file on PyPI); the `default` and `cu13`
-environments import 2.3.11 from FoldForge's own `.pixi` with an empty `PYTHONPATH`. Test suite
+environments import 2.3.11 from FoldJet's own `.pixi` with an empty `PYTHONPATH`. Test suite
 (`FOLDFORGE_TEST_ALLOW_SIZE_MISMATCH=1`, empty kernel cache, `CUTLASS_PATH=/nonexistent`): 641 passed, 1 failed (the missing
 checkpoints of `test_every_registered_family_resolves_its_checkpoint`), 14 skipped; the backend tests with the Anthropic payload
 variables set: 52 passed. No engine extension was compiled in either run (empty `TORCH_EXTENSIONS_DIR`; the only `.so` is
@@ -370,16 +370,16 @@ Identical to the 2.3.9 / 2.3.10 numbers above within noise (miniworld AF3 0.51 s
 None was made (the engine is not touched from here). In order of value:
 
 1. `modules.dispatch.resolve` raises for `anthropic` on any op but triangle multiplication ("the anthropic payload serves
-   triangle_multiplication only"), although `TriangleAttention` and `Transition` have `anthropic` branches. FoldForge calls the
+   triangle_multiplication only"), although `TriangleAttention` and `Transition` have `anthropic` branches. FoldJet calls the
    release's adapters (`integrations.anthropic.triangle_attention`, `.transition`) itself instead of the engine modules.
 2. `integrations.opm_train.wanted` and `pwa_train.wanted` accept `ImplementationType.ANTHROPIC`, so an engine OPM / pair
    weighted averaging built with `implementation="anthropic"` runs the engine's own H100 path whenever it serves.
    `install_engine` therefore sets `settings.opm_train`, `pwa_train` and `pwa_infer` to False when those ops are on
    `anthropic`. `wanted` should exclude `ANTHROPIC`.
 3. `anthropic_msa.opm_refusal` does not know `normalize_before_proj`: the release's epilogue adds the bias after the division
-   by the pair count, AF3 before; the engine would serve AF3's OPM with the wrong bias. FoldForge refuses that case itself.
-4. `ImplementationType.ANTHROPIC` is missing from `architecture.exceptions` (FoldForge keeps the name as a string).
-5. `_CUEQ_OPS` has no `attention_pair_bias` although `cuequivariance_torch` has the op (FoldForge calls it directly).
+   by the pair count, AF3 before; the engine would serve AF3's OPM with the wrong bias. FoldJet refuses that case itself.
+4. `ImplementationType.ANTHROPIC` is missing from `architecture.exceptions` (FoldJet keeps the name as a string).
+5. `_CUEQ_OPS` has no `attention_pair_bias` although `cuequivariance_torch` has the op (FoldJet calls it directly).
 6. The engine's OPM in the OpenFold-lineage convention (`normalize_before_proj`) is slower than the PyTorch reference at
    S = 512, L = 384 on H100 (1.9 ms against 1.4; the Anthropic path: 0.43 ms). The AF3 convention is 1.1 ms.
 
@@ -389,6 +389,6 @@ None was made (the engine is not touched from here). In order of value:
 8. The window kernels of the portable atom paths (`augmented_attention_*_window_triton`) have no `ok` row in any recorded
    card's manifest at engine 2.3.10 (A100, RTX A5000, RTX A6000), so on those cards the AF3-style and ESMFold2 atom blocks and the
    atom stacks of Boltz-2 / RoseTTAFold3 / Chai-1 warn once (`UnrecordedCardWarning`) and run the dense path. `python -m
-   miniworld_engine.autotune.run_all` on each card, and the manifest committed, turns them on without a FoldForge change.
+   miniworld_engine.autotune.run_all` on each card, and the manifest committed, turns them on without a FoldJet change.
 9. The portable stacks refuse a head wider than 64 or more than 256 keys (one `KernelRefusedWarning`, then the reference) and, for the
-   atom stacks, a token count that is not a multiple of 32; FoldForge's seam only asks, so those calls keep the dense blocks.
+   atom stacks, a token count that is not a multiple of 32; FoldJet's seam only asks, so those calls keep the dense blocks.

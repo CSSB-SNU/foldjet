@@ -21,13 +21,13 @@ import numpy as np
 import pytest
 import torch
 
-from foldforge.models.architectures.af3 import AlphaFold3
-from foldforge.models.checkpoints import miniworld
-from foldforge.models.checkpoints.convert import _unfold_chai1_chain_features
-from foldforge.models.checkpoints.legacy import dense_model
-from foldforge.models.checkpoints.legacy.haiku import Param, assign
-from foldforge.modules.dense.spec import spec_for
-from foldforge.modules.engine import modules
+from foldjet.models.architectures.af3 import AlphaFold3
+from foldjet.models.checkpoints import miniworld
+from foldjet.models.checkpoints.convert import _unfold_chai1_chain_features
+from foldjet.models.checkpoints.legacy import dense_model
+from foldjet.models.checkpoints.legacy.haiku import Param, assign
+from foldjet.modules.dense.spec import spec_for
+from foldjet.modules.engine import modules
 
 KWARGS = {"num_recycles": 1, "num_samples": 1, "diffusion_steps": 1}
 

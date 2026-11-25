@@ -1,6 +1,6 @@
 # Code quality
 
-Run all static checks from an already installed FoldForge environment:
+Run all static checks from an already installed FoldJet environment:
 
 ```bash
 bash tools/check_quality.sh
@@ -16,10 +16,10 @@ commands (`pixi run --frozen pre-commit install`).
 - Ruff checks every Python file in `src`, `tests`, and `scripts`, selects `ALL`,
   targets Python 3.12, and uses an 88-character line length. Global exceptions
   follow the former team-gm policy.
-- Pyright checks all `src/foldforge` with `typeCheckingMode = "standard"` and the
+- Pyright checks all `src/foldjet` with `typeCheckingMode = "standard"` and the
   pixi environment. Tests and scripts remain included in Ruff.
 - Vendored libraries, archived validation outputs, weights and generated runs
-  are separate projects/data, not FoldForge source. No FoldForge source subtree
+  are separate projects/data, not FoldJet source. No FoldJet source subtree
   is excluded from either source check.
 - Numerical modules use the same notation/annotation exceptions as the former team-gm
   diffusion and SE(3) code. Ordered chemistry and MSA routines retain explicit
@@ -47,7 +47,7 @@ adapters restore their original import namespace and checkpoint policy when
 comparing them with shared modules.
 
 Offline ESM2 embedding generation requires fair-esm, which shares an import name
-with FoldForge's ESMC package. Use a separate fair-esm environment for that utility;
+with FoldJet's ESMC package. Use a separate fair-esm environment for that utility;
 do not replace the pinned ESMC dependency in the prediction environment.
 
 ## Finding dead code
@@ -58,7 +58,7 @@ The cleanup of 2026-09-27 used two stronger kinds of evidence together: the
 modules actually loaded by real runs (folds of five families, `validate`,
 `checkpoints verify`), unioned with everything statically reachable from every
 CLI subcommand, the public API and every script; then definitions whose name
-appears nowhere else in FoldForge, team-gm, scripts or tests. Two cautions it
+appears nowhere else in FoldJet, team-gm, scripts or tests. Two cautions it
 taught: a method a protocol calls implicitly (`seekable`, read by
 `io.BufferedReader`) has no textual caller, and a test can keep dead code alive
 by reaching it through an import string.

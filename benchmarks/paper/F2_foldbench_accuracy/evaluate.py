@@ -1,4 +1,4 @@
-"""Score FoldForge (or kit) FoldBench predictions with the upstream FoldBench evaluator (BEAM-Labs FoldBench, OpenStructure lDDT / DockQ v2) and
+"""Score FoldJet (or kit) FoldBench predictions with the upstream FoldBench evaluator (BEAM-Labs FoldBench, OpenStructure lDDT / DockQ v2) and
 write the task scores, top-1 and oracle. CPU only: run it as a Slurm job with --gres=none (never on the login node); see eval.sbatch.
 
     python evaluate.py --pred-dir RUN/pred_s0 --pred-dir RUN/pred_s1 --eval-dir OUT --name af3_bf16 [--targets-file LIST] [--top1-only]
@@ -15,7 +15,7 @@ What it adds to upstream's driver (`evaluate.py` + `task_score_summary.py`, run 
 
 Environment: FB_ROOT (default ~/data/foldbench: targets/, ground_truth/, upstream/ or upstream_cy/ with bin/ost and images/ost.sif; upstream_cy has the
 Cython DockQ v2 operations built for Linux, ~10x faster), FB_UPSTREAM (default upstream_cy if present, else upstream), MW_OST_WORKERS / MW_DOCKQ_WORKERS
-(worker counts of the evaluator copy). The interpreter (--python) needs numpy, pandas, biopython, parallelbar, networkx: the FoldForge env with parallelbar on
+(worker counts of the evaluator copy). The interpreter (--python) needs numpy, pandas, biopython, parallelbar, networkx: the FoldJet env with parallelbar on
 PYTHONPATH (see eval.sbatch).
 """
 

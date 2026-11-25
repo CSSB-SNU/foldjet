@@ -12,10 +12,10 @@ from types import SimpleNamespace
 import pytest
 import torch
 
-from foldforge.data.features import dense as features
-from foldforge.modules.dense import featurization, head
-from foldforge.modules.dense.head import ConfidenceHead, ConfidenceReembedding
-from foldforge.modules.dense.spec import SPECS
+from foldjet.data.features import dense as features
+from foldjet.modules.dense import featurization, head
+from foldjet.modules.dense.head import ConfidenceHead, ConfidenceReembedding
+from foldjet.modules.dense.spec import SPECS
 
 
 def _tokens(n: int = 12, chains: int = 3) -> features.TokenFeatures:
@@ -138,7 +138,7 @@ def test_the_per_sample_confidence_calls_share_one_fold_scope():
 
     ``_confidence_over_samples`` calls the head once per sample (chunk 1).
     """
-    from foldforge.models.architectures.af3 import AlphaFold3 as Model
+    from foldjet.models.architectures.af3 import AlphaFold3 as Model
 
     seen = []
 
@@ -249,7 +249,7 @@ def test_a_call_with_the_fold_state_equals_the_call_that_builds_it(monkeypatch):
 
 
 def test_the_sample_loop_builds_the_fold_state_once_and_hands_it_to_every_sample():
-    from foldforge.models.architectures.af3 import AlphaFold3 as Model
+    from foldjet.models.architectures.af3 import AlphaFold3 as Model
 
     seen = {"built": 0, "folds": []}
 

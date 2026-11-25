@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-import foldforge as ff
+import foldjet as ff
 
 SPECS = Path.home() / "foldforge-scratch/foldbench/specs_all"
 FB = Path.home() / "data/foldbench"

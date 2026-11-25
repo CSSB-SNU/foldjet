@@ -1,7 +1,7 @@
 # The miniworld checkpoint format
 
 Every model's graph is built from miniworld-engine classes (`PairformerBlock`, `TriangleMultiplication`, `TokenDiT*`, `AtomDiT*` ...) plus
-FoldForge-own modules, so its parameters have the engine's names and layouts. Its checkpoint is that model's `state_dict`:
+FoldJet-own modules, so its parameters have the engine's names and layouts. Its checkpoint is that model's `state_dict`:
 
 ```text
 torch.save({"format": "miniworld", "version": 1, "family": "alphafold3", "source": "af3.bin.zst",
@@ -37,18 +37,18 @@ All twelve registered models have one (`miniworld.NATIVE_FILES`), next to their 
 
 The language-model files (`esmfold2*.lm.npz`, the ESM-C directory) are not part of this format.
 
-## Finding the file (`load_model` / `foldforge fold`)
+## Finding the file (`load_model` / `foldjet fold`)
 
-`load_model("<model>")` (and `foldforge fold <model>` without `--checkpoint`) resolves `<model>.miniworld.pt` in the usual checkpoint locations
+`load_model("<model>")` (and `foldjet fold <model>` without `--checkpoint`) resolves `<model>.miniworld.pt` in the usual checkpoint locations
 (`$FOLDFORGE_CHECKPOINT_DIR` / `$FOLDFORGE_HOME/checkpoints/<dir>/`, `registry.yaml`). **It never converts at run time.** A missing file raises
 `FileNotFoundError` with the exact command, for example:
 
 ```text
-no miniworld-format checkpoint (af3.miniworld.pt) for 'af3': the released blob is present; convert it once: foldforge weights convert af3
-(same as: python -m foldforge.models.checkpoints.miniworld convert af3). The loader never converts at run time.
+no miniworld-format checkpoint (af3.miniworld.pt) for 'af3': the released blob is present; convert it once: foldjet weights convert af3
+(same as: python -m foldjet.models.checkpoints.miniworld convert af3). The loader never converts at run time.
 ```
 
-(`first fetch the released blob: foldforge weights download af3; then ...` when the blob is missing too.) An explicit `checkpoint=` that is a Haiku
+(`first fetch the released blob: foldjet weights download af3; then ...` when the blob is missing too.) An explicit `checkpoint=` that is a Haiku
 blob is refused with the same command.
 
 ## Converting a released blob
@@ -56,31 +56,31 @@ blob is refused with the same command.
 A released Haiku blob is **converted once, offline**:
 
 ```bash
-foldforge weights convert af3 boltz2            # <model>.bin.zst -> <model>.miniworld.pt next to it
-foldforge weights convert --all                 # every model whose blob is installed (skips the others)
-foldforge weights convert openfold3 --blob PATH --out PATH
-python -m foldforge.models.checkpoints.miniworld convert af3     # the same, without the click CLI
+foldjet weights convert af3 boltz2            # <model>.bin.zst -> <model>.miniworld.pt next to it
+foldjet weights convert --all                 # every model whose blob is installed (skips the others)
+foldjet weights convert openfold3 --blob PATH --out PATH
+python -m foldjet.models.checkpoints.miniworld convert af3     # the same, without the click CLI
 ```
 
 Run it on a CPU allocation (it needs no GPU; the slurm jobs of the port took about half a minute per model). The converter is the only place the released
-layout is dealt with, and it lives in one package, `src/foldforge/models/checkpoints/legacy/` (the dense released-layout modules, the Haiku record
+layout is dealt with, and it lives in one package, `src/foldjet/models/checkpoints/legacy/` (the dense released-layout modules, the Haiku record
 codec `haiku.py`, their reference equations). `convert_haiku` (`miniworld.py`):
 
 1. builds the dense released-layout graph of the family (`legacy.dense_model`, the runtime `AlphaFold3` class with the legacy blocks installed through
    `engine.graph.use_dense_blocks`) and reads the blob into it (`haiku.import_jax_weights_`);
 2. converts every module the engine graph holds as an engine class with the rules of `models/checkpoints/legacy/released.py` (split `transition1` / the TriMul
    `projection` and `gate` / the shared DiT pair projection, broadcast the shared DiT pair LayerNorm, discard the softmax-invariant pair-LayerNorm
-   offsets); FoldForge-own modules are copied through under their own names;
+   offsets); FoldJet-own modules are copied through under their own names;
 3. writes the file only if every released key was read, copied or a known discard (`released.DISCARDED`) and the result has exactly the keys and
    shapes of the engine graph. Anything else raises `ConversionError`.
 
 Checked discards of particular families: the released `k_adaptive_layernorm` of the shared-KV atom blocks (Boltz-2, RoseTTAFold3, Chai-1) must equal
 `q_adaptive_layernorm`; RoseTTAFold3's `q_projection.bias` must be all zero (the engine classes have neither). A release that violates one raises
 instead of being converted. Protenix1 / 2 and OpenDDE release the DiT pair norm per block (nothing sliced) and keep the K / V AdaLN (`chained`);
-OpenDDE's `structural_token_expander.*` is FoldForge-own.
+OpenDDE's `structural_token_expander.*` is FoldJet-own.
 
-Nothing at inference or training imports the legacy package (`tests/models/test_miniworld_resolution.py` checks that `foldforge.api`, `loading`,
+Nothing at inference or training imports the legacy package (`tests/models/test_miniworld_resolution.py` checks that `foldjet.api`, `loading`,
 `execution`, the architecture and `miniworld` import none of it). Only the converter CLI does, lazily, inside `convert_haiku`.
 
 How to produce the released blobs themselves (`<model>.bin.zst`) from each release's own file is in [CHECKPOINTS.md](CHECKPOINTS.md) and
-[WEIGHTS.md](WEIGHTS.md) (`foldforge weights download`); this page is the second step, blob to miniworld file.
+[WEIGHTS.md](WEIGHTS.md) (`foldjet weights download`); this page is the second step, blob to miniworld file.

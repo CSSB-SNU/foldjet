@@ -19,18 +19,18 @@ import numpy as np
 import torch
 import yaml
 
-from foldforge import paths
-from foldforge.data.ccd import CCDDatabase
-from foldforge.data.inputs.build import limit_msa, load, write_adapter_input
-from foldforge.models import entry
-from foldforge.models.checkpoints import resolve
-from foldforge.models.config import Config
-from foldforge.models.io import runtime as runtime_module
-from foldforge.models.io.output import write_output
-from foldforge.models.io.paths import run_directory
-from foldforge.models.io.request import Request
-from foldforge.models.msa_policy import PREPARED_ROWS
-from foldforge.utils.seed import seed_all, seed_context
+from foldjet import paths
+from foldjet.data.ccd import CCDDatabase
+from foldjet.data.inputs.build import limit_msa, load, write_adapter_input
+from foldjet.models import entry
+from foldjet.models.checkpoints import resolve
+from foldjet.models.config import Config
+from foldjet.models.io import runtime as runtime_module
+from foldjet.models.io.output import write_output
+from foldjet.models.io.paths import run_directory
+from foldjet.models.io.request import Request
+from foldjet.models.msa_policy import PREPARED_ROWS
+from foldjet.utils.seed import seed_all, seed_context
 
 STEP_ATTRIBUTE = {"af3": "diffusion_steps"}
 CHECKPOINTS = {"af3": "af3.bin.zst"}
@@ -142,7 +142,7 @@ def main() -> int:
 
     runtime_module.Runtime.bind = bind  # type: ignore[method-assign]
     layout = entry(args.model).layout
-    adapter = importlib.import_module(f"foldforge.models.io.{layout}")
+    adapter = importlib.import_module(f"foldjet.models.io.{layout}")
     runtime = runtime_module.Runtime(request)
     records = []
     with seed_context(config.trunk_seed), database.activate():

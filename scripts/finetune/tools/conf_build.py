@@ -30,8 +30,8 @@ def build_shard(job):
     from alphafold3.data.tools import rdkit_utils as ru
     from alphafold3.model import features
 
-    from foldforge import paths
-    from foldforge.data.ccd import CCDDatabase
+    from foldjet import paths
+    from foldjet.data.ccd import CCDDatabase
 
     if "ccd" not in _ctx:
         db = CCDDatabase(paths.ccd_db())

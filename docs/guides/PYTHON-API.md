@@ -5,7 +5,7 @@ checkpoint (the converted `<model>.miniworld.pt`; loading never converts) and th
 download, MSA search or template search.
 
 ```python
-import foldforge as ff
+import foldjet as ff
 
 inputs = ff.load_inputs("input.yaml")
 with ff.load_model("boltz2", config="config.yaml", device="cuda:0") as boltz:
@@ -31,7 +31,7 @@ heads from that state; it performs no input featurization, language-model forwar
 or trunk rerun.
 
 ```python
-import foldforge as ff
+import foldjet as ff
 
 inputs = ff.load_inputs("input.yaml")
 with ff.load_model("boltz2", config="config.yaml", device="cuda:0") as boltz:
@@ -57,7 +57,7 @@ states when their candidates are no longer needed. Neither a later trunk run nor
 sampling override changes the predictor's loaded `config`.
 
 ```python
-import foldforge as ff
+import foldjet as ff
 
 inputs = ff.load_inputs("input.yaml")
 with ff.load_model("opendde", config="config.yaml") as model:
@@ -97,7 +97,7 @@ conditioning fields mean empty conditioning, with no search.
 For a protein without conditioning:
 
 ```python
-import foldforge as ff
+import foldjet as ff
 
 inputs = ff.load_inputs(ff.protein("MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQ", name="example"))
 config = ff.Config.model_validate({
@@ -117,7 +117,7 @@ All counts must be positive integers. Unknown config fields are rejected.
 
 | Operation | Options |
 | --- | --- |
-| `ff.load_model(name, config=None)` | `checkpoint` (default: `<name>.miniworld.pt` in the checkpoint directory; a missing file raises with the exact `foldforge weights convert <name>`, see [CHECKPOINT-FORMAT.md](CHECKPOINT-FORMAT.md)), `device`, `engine_cache_dir` (deprecated, ignored: the engine has no autotune cache) |
+| `ff.load_model(name, config=None)` | `checkpoint` (default: `<name>.miniworld.pt` in the checkpoint directory; a missing file raises with the exact `foldjet weights convert <name>`, see [CHECKPOINT-FORMAT.md](CHECKPOINT-FORMAT.md)), `device`, `engine_cache_dir` (deprecated, ignored: the engine has no autotune cache) |
 | `model(inputs)` | `samples`, `out`, `ccd_db`, `base_dir`, `verbose` |
 | `model.run_trunk(inputs)` | `recycles`, `seed`, `ccd_db`, `base_dir`, `verbose` |
 | `model.sample_diffusion(trunk)` | `samples`, `steps`, `seed`, `out` |
@@ -143,7 +143,7 @@ from threads, but their operations serialize because engine policy, chemistry
 scopes, matmul precision and RNGs are process-global. Use worker processes for
 parallel predictions across GPUs. Caller settings and RNGs restore on failures too.
 Library calls raise Python exceptions instead of exiting the process. Lifecycle and
-input errors have public `ff.FoldForgeError` subclasses; missing resources retain
+input errors have public `ff.FoldJetError` subclasses; missing resources retain
 standard filesystem exceptions and invalid configurations use Pydantic validation.
 
 ## Saving and the CLI
@@ -151,7 +151,7 @@ standard filesystem exceptions and invalid configurations use Pydantic validatio
 Model calls and staged calls return CPU results without prediction artifacts by
 default. Compilation may still write its normal caches (the engine itself keeps no autotune cache).
 `result.save(path)` and the library's `out=path` accept a caller-owned directory,
-including an absolute path outside FoldForge's cache. Relative paths are relative
+including an absolute path outside FoldJet's cache. Relative paths are relative
 to the working directory. `save()` returns a new result with an output manifest;
 it leaves the original result unchanged. `out=` additionally saves resolved input
 and configuration artifacts during the inference request.
@@ -165,10 +165,10 @@ calling the library. Its path containment rule is separate from library saving.
 Explicit CLI flags override config values; omitted flags preserve YAML/defaults.
 
 ```bash
-foldforge models
-foldforge fold --help
-foldforge fold boltz2 --spec input.yaml --config config.yaml --device cuda:1 --out my-run
-foldforge fold boltz2 --spec input.yaml --config config.yaml --no-compile --recycles 10
+foldjet models
+foldjet fold --help
+foldjet fold boltz2 --spec input.yaml --config config.yaml --device cuda:1 --out my-run
+foldjet fold boltz2 --spec input.yaml --config config.yaml --no-compile --recycles 10
 ```
 
 `models --json` and `models --plain` are available for scripts. Legacy

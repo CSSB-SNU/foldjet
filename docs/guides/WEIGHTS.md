@@ -1,38 +1,38 @@
 # 모델 가중치 다운로드와 설치
 
-추론 전에 한 번 가중치를 준비합니다. 명령은 **`foldforge weights download`**이며,
-여러 모델을 한 번에 지정할 수 있습니다. 원본 다운로드 → FoldForge 형식으로 변환 →
+추론 전에 한 번 가중치를 준비합니다. 명령은 **`foldjet weights download`**이며,
+여러 모델을 한 번에 지정할 수 있습니다. 원본 다운로드 → FoldJet 형식으로 변환 →
 SHA-256 검증까지 처리합니다. `ff.load_model()`은 다운로드를 자동으로 시작하지 않습니다.
 
 ## 빠른 시작
 
 Pixi 체크아웃의 기본 환경에는 `weights`와 `language` extra가 포함됩니다.
-`pixi run foldforge weights download --all-public`로 실행할 수 있습니다.
+`pixi run foldjet weights download --all-public`로 실행할 수 있습니다.
 아래 `pip` 설치 단계는 별도 Python 환경에서 사용하는 경우입니다.
 
-다운로드·변환 의존성을 설치합니다. 이미 설치한 FoldForge와 같은 환경에서 실행하세요.
+다운로드·변환 의존성을 설치합니다. 이미 설치한 FoldJet와 같은 환경에서 실행하세요.
 소스 체크아웃에서는 `pip install -e '.[weights]'`를 사용합니다.
 
 ```bash
-pip install 'foldforge[weights]'
+pip install 'foldjet[weights]'
 
 # 공유 스토리지를 쓰려면 다운로드와 추론 모두 같은 환경 변수를 설정합니다.
-export FOLDFORGE_CHECKPOINT_DIR=/data/foldforge/checkpoints
+export FOLDFORGE_CHECKPOINT_DIR=/data/foldjet/checkpoints
 
 # 여러 모델을 한 번에 준비
-foldforge weights download boltz2 opendde
+foldjet weights download boltz2 opendde
 
 # 지원 모델과 자동 설치 가능 여부
-foldforge weights list
+foldjet weights list
 
 # 다운로드 없이 전체 작업 계획과 원본 파일 용량 확인
-foldforge weights download --all-public --dry-run
+foldjet weights download --all-public --dry-run
 
 # 자동 설치 가능한 모델 전체
-foldforge weights download --all-public
+foldjet weights download --all-public
 
 # 로컬 예외까지 포함해 전체 모델 시도
-foldforge weights download --all
+foldjet weights download --all
 ```
 
 `--all`은 12개 모델을 모두 대상으로 합니다. **현재 외부 원본에서 자동 설치하는 모델은
@@ -42,11 +42,11 @@ foldforge weights download --all
 
 기본 저장 위치는 `$FOLDFORGE_CHECKPOINT_DIR`, 설정하지 않았다면
 `$FOLDFORGE_HOME/checkpoints` (`FOLDFORGE_HOME` 기본값: `~/.cache/foldforge`)입니다.
-한 번만 위치를 지정하려면 `--root /data/foldforge/checkpoints`를 사용하세요.
+한 번만 위치를 지정하려면 `--root /data/foldjet/checkpoints`를 사용하세요.
 이 경우 추론 프로세스에도 같은 `FOLDFORGE_CHECKPOINT_DIR`을 설정해야 합니다.
 
 ```python
-import foldforge as ff
+import foldjet as ff
 
 model = ff.load_model("boltz2")
 inputs = ff.load_inputs("input.yaml")
@@ -70,17 +70,17 @@ result = model(inputs)
 | `af3` | `af3/af3.bin.zst` | 1.02 | 가능 | [Google 공식 직접 배포](https://github.com/google-deepmind/alphafold3#obtaining-model-parameters)의 고정된 객체 버전. 별도 변환 불필요 |
 | `chai1` | `chai1/chai1.bin.zst` | 1.20 | 가능 | 원본 6개 파일 + ESM2 3B. 고정된 CPU 변환 프로필로 검증 |
 | `intellifold2` | `intellifold2/intellifold2.bin.zst` | 3.16 | 가능 | 공통 컨테이너로 기록. 파라미터 값은 기존 원본 변환과 비트 단위 일치 |
-| `protenix1` | `protenix/protenix1.bin.zst` | 0.99 | 가능 | v1.0.0 릴리스. FoldForge 규격으로 검사하며 JAX 불필요 |
+| `protenix1` | `protenix/protenix1.bin.zst` | 0.99 | 가능 | v1.0.0 릴리스. FoldJet 규격으로 검사하며 JAX 불필요 |
 | `protenix2` | `protenix/protenix2.bin.zst` | 1.33 | 로컬 가져오기 | 공개 다운로드 대상에서 제외. 사용할 권한이 있는 로컬 변환 파일을 `--from-dir`로 가져오기 |
 
 변환 제약과 수동 변환 절차는 [CHECKPOINTS.md](CHECKPOINTS.md)에 기록되어 있습니다.
-원본 가중치를 내려받을 수 있다는 사실과 현재 FoldForge 체크포인트로 검증됐다는 사실은
+원본 가중치를 내려받을 수 있다는 사실과 현재 FoldJet 체크포인트로 검증됐다는 사실은
 구분합니다. 이 명령은 잠금 파일을 바꾸거나 불일치한 파일을 설치하지 않습니다.
 
 ## 언어모델도 함께 설치
 
 ESMFold2 두 모델에는 각각의 `*.lm.npz`와 공통 `esmc-6b/` 디렉터리가 필요합니다.
-ESMFold2 실행에는 `pip install 'foldforge[language]'`도 필요합니다.
+ESMFold2 실행에는 `pip install 'foldjet[language]'`도 필요합니다.
 공통 [ESM-C 6B](https://huggingface.co/biohub/ESMC-6B)의 원본은 약 **25.4 GB**이며,
 두 모델을 함께 요청하면 한 번만 내려받습니다. 필요한 config, shard index, 모든 가중치
 shard와 tokenizer 파일을 고정된 리비전에서 받습니다.
@@ -103,8 +103,8 @@ chai1/esm/traced_sdpa_esm2_t36_3B_UR50D_fp16.pt
 공유 언어모델과 sidecar도 함께 복사하고 SHA-256을 확인합니다.
 
 ```bash
-foldforge weights download boltz2 chai1 --from-dir /shared/authorized-checkpoints
-foldforge weights download --all --from-dir /shared/authorized-checkpoints
+foldjet weights download boltz2 chai1 --from-dir /shared/authorized-checkpoints
+foldjet weights download --all --from-dir /shared/authorized-checkpoints
 ```
 
 AF3도 공식 배포에서 직접 받은 파일을 `af3/af3.bin.zst` 위치에 준비한 뒤 가져옵니다.
@@ -132,10 +132,10 @@ AF3 파라미터의 사용과 전달은 [공식 이용 조건](https://github.co
 
 ```bash
 # 모든 주 가중치의 해시 검증. 설치하지 않은 모델도 missing으로 표시됩니다.
-foldforge checkpoints verify
+foldjet checkpoints verify
 
 # 배포에 고정된 원본 URL, 리비전, 해시 확인
-foldforge weights list --json
+foldjet weights list --json
 ```
 
 Hugging Face 접근 오류가 나면 해당 모델 페이지의 접근 조건과 로그인 상태를 확인하세요.
@@ -146,7 +146,7 @@ Hugging Face 접근 오류가 나면 해당 모델 페이지의 접근 조건과
 
 추론은 PyTorch, CPU 입력 전처리는 NumPy와 표준 `dataclasses`를 사용합니다.
 변환기에도 JAX·jaxlib·Haiku·Chex가 필요하지 않습니다. Protenix와 ESMFold2의
-설정 검사는 FoldForge의 모델 규격을 사용합니다. 코드의 `haiku.py`는 AF3 바이너리
+설정 검사는 FoldJet의 모델 규격을 사용합니다. 코드의 `haiku.py`는 AF3 바이너리
 레코드 형식을 읽고 쓰는 로컬 코덱이며 외부 Haiku 프레임워크를 사용하지 않습니다.
 
 CPU 변환 프로필 `cpu-v1`은 NumPy 2.5.3, zstandard 0.25.0과 단일 스레드 OpenBLAS
@@ -172,8 +172,8 @@ IntelliFold2의 수치는 비트 단위로 같고, Chai1과 Protenix1의 차이�
 변환은 오프라인에서 한 번만 하며(CPU 할당으로 충분), `load_model`은 런타임에 변환하지 않고 파일이 없으면 정확한 명령과 함께 오류를 냅니다.
 
 ```bash
-foldforge weights convert af3 boltz2     # 블롭 → 같은 디렉터리의 <model>.miniworld.pt
-foldforge weights convert --all          # 블롭이 설치된 모든 모델 (없는 모델은 건너뜀)
+foldjet weights convert af3 boltz2     # 블롭 → 같은 디렉터리의 <model>.miniworld.pt
+foldjet weights convert --all          # 블롭이 설치된 모든 모델 (없는 모델은 건너뜀)
 ```
 
 자세한 형식과 변환 규칙은 [CHECKPOINT-FORMAT.md](CHECKPOINT-FORMAT.md)를 보세요.

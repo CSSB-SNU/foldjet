@@ -1,5 +1,5 @@
 #!/bin/bash
-# Submit the FoldForge side of the 5I28 benchmark: one gate job, then one single-GPU job per model that starts after the gate.
+# Submit the FoldJet side of the 5I28 benchmark: one gate job, then one single-GPU job per model that starts after the gate.
 #   OUT_ROOT=<dir> FOLDFORGE_5I28_FASTA=... FOLDFORGE_5I28_MSA_DB=... FOLDFORGE_5I28_TEMPLATE_DB=... benchmarks/5i28_ff/submit_all.sh
 # Optional: WAIT_FOR (default '^b5i28': the kit jobs), MODELS (default: all nine), NO_GATE=1 (submit the model jobs directly).
 set -euo pipefail

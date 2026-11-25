@@ -1,8 +1,8 @@
 #!/bin/bash
-# F3 FoldForge side on the H100 cluster: ONE (model, arm, repetition) per job, all sizes in one process. Three repetitions = three different jobs.
+# F3 FoldJet side on the H100 cluster: ONE (model, arm, repetition) per job, all sizes in one process. Three repetitions = three different jobs.
 #   sbatch -J f3-af3-engine --export=ALL,MODEL=af3,ARM=engine,REP=1 benchmarks/paper/F3_5i28_times/h100.sbatch
 # Smoke: add `--time=00:10:00` and SIZES="1 2" REPEATS=3.   Full campaign: submit_all.sh.
-# Optional: NODE (pin the node: kits and FoldForge of one comparison run on the same node), ENGINE_SRC (release-candidate source), PAPER_OUT.
+# Optional: NODE (pin the node: kits and FoldJet of one comparison run on the same node), ENGINE_SRC (release-candidate source), PAPER_OUT.
 #SBATCH -p h100
 #SBATCH -A cssb
 #SBATCH --qos=cssb_h100

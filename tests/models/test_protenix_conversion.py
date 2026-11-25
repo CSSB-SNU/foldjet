@@ -5,8 +5,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from foldforge.models.checkpoints.convert import _convert_protenix
-from foldforge.modules.dense.spec import SPECS
+from foldjet.models.checkpoints.convert import _convert_protenix
+from foldjet.modules.dense.spec import SPECS
 
 
 @pytest.mark.parametrize("model", ["protenix1", "protenix2"])

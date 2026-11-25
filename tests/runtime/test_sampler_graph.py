@@ -7,7 +7,7 @@ import contextlib
 import pytest
 import torch
 
-from foldforge.models import sampler_graph
+from foldjet.models import sampler_graph
 
 pytestmark = pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA required")
 
@@ -59,10 +59,10 @@ CONFIGS = {
 
 
 def _scene(samples=3, tokens=16, atoms=24, real=300) -> tuple:
-    from foldforge.diffusion.augmentation import (
+    from foldjet.diffusion.augmentation import (
         masked_dense_rigid_motion,
     )
-    from foldforge.models.architectures.af3 import weighted_rigid_align
+    from foldjet.models.architectures.af3 import weighted_rigid_align
 
     torch.manual_seed(1)
     mask = (
@@ -89,7 +89,7 @@ def _scene(samples=3, tokens=16, atoms=24, real=300) -> tuple:
 @pytest.mark.parametrize("churn", list(CONFIGS))
 @pytest.mark.parametrize("sigmas", [(160.0, 120.0), (3.0, 2.2), (0.04, 0.03)])
 def test_fused_step_equals_the_torch_step(churn, sigmas):
-    from foldforge.diffusion.edm.sampling import EulerSampler
+    from foldjet.diffusion.edm.sampling import EulerSampler
 
     mask, coords, denoise, augment, align = _scene()
     sampler = EulerSampler(EulerSampler.Config(**CONFIGS[churn]))
@@ -117,7 +117,7 @@ def test_fused_step_equals_the_torch_step(churn, sigmas):
 
 @needs_glue
 def test_the_graph_replays_the_fused_step():
-    from foldforge.diffusion.edm.sampling import EulerSampler
+    from foldjet.diffusion.edm.sampling import EulerSampler
 
     mask, coords, denoise, augment, align = _scene()
     sampler = EulerSampler(EulerSampler.Config(**CONFIGS["edm"]))
@@ -151,7 +151,7 @@ def test_the_graph_replays_the_fused_step():
 
 
 def test_conditioning_rows_replace_the_per_step_computation():
-    from foldforge.diffusion.edm.sampling import EulerSampler
+    from foldjet.diffusion.edm.sampling import EulerSampler
 
     _, coords, _, _, _ = _scene()
     sampler = EulerSampler(EulerSampler.Config(**CONFIGS["af3"]))
@@ -190,7 +190,7 @@ def test_conditioning_rows_replace_the_per_step_computation():
 
 
 def test_hatted_sigmas_follow_the_churn_rule():
-    from foldforge.diffusion.edm.sampling import EulerSampler
+    from foldjet.diffusion.edm.sampling import EulerSampler
 
     sigmas = torch.tensor([160.0, 60.0, 20.0, 0.9, 0.3], device="cuda")
     af3 = sampler_graph._hatted(
@@ -210,9 +210,9 @@ def test_hatted_sigmas_follow_the_churn_rule():
 
 @needs_glue
 def test_encoder_pooling_equals_gather_relu_mask_mean():
-    from foldforge.modules.dense import utils
-    from foldforge.modules.dense.atom_cross_attention import _pool_engine
-    from foldforge.utils import atom_layout
+    from foldjet.modules.dense import utils
+    from foldjet.modules.dense.atom_cross_attention import _pool_engine
+    from foldjet.utils import atom_layout
 
     torch.manual_seed(3)
     samples, subsets, queries, channels, tokens, atoms = 3, 12, 32, 768, 16, 24
@@ -233,7 +233,7 @@ def test_encoder_pooling_equals_gather_relu_mask_mean():
 
 
 def test_a_graph_does_not_write_into_the_cublas_workspace_of_a_dropped_graph():
-    """Every FoldForge capture gets its own cuBLAS workspace (``own_cublas_workspace``).
+    """Every FoldJet capture gets its own cuBLAS workspace (``own_cublas_workspace``).
 
     torch keeps one workspace per (handle, stream); the first capture on the capture
     stream allocates it from its own pool and later captures bake the same address in.
@@ -242,7 +242,7 @@ def test_a_graph_does_not_write_into_the_cublas_workspace_of_a_dropped_graph():
     non-finite coordinates, or a segmentation fault in ``cuGraphLaunch``)."""
     import gc
 
-    from foldforge.models.execution import own_cublas_workspace
+    from foldjet.models.execution import own_cublas_workspace
 
     torch.manual_seed(0)
     # a long reduction: the GEMM splits it and reduces through the workspace

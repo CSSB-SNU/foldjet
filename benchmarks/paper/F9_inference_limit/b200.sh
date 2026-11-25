@@ -5,7 +5,7 @@
 set -uo pipefail
 : "${ARM:?ARM engine|torch}" "${MODEL:?MODEL}"
 [ "$ARM" = engine_fp8 ] && { echo "FP8 arm: not on the B200 in this campaign"; exit 2; }
-HERE=${FF_REPO:-/NHNHOME/WORKSPACE/26mohw002_A/psk6950/paper-b200/ff/foldforge}/benchmarks/paper
+HERE=${FF_REPO:-/NHNHOME/WORKSPACE/26mohw002_A/psk6950/paper-b200/ff/foldjet}/benchmarks/paper
 source "$HERE/common/cards/b200.env"
 export OMP_NUM_THREADS=8
 cd "$FF_REPO"

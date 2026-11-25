@@ -1,4 +1,4 @@
-# FoldForge inference qualification — 2026-09-14
+# FoldJet inference qualification — 2026-09-14
 
 Follow-up operational DB discovery and cache-builder repairs are recorded in
 [CLOSEOUT-20260914.md](CLOSEOUT-20260914.md). The absent-mount notes below describe
@@ -24,7 +24,7 @@ MSA/template composition, Pairformer and conditioning mappings from the precedin
 integration remain in team-gm/engine. Model-specific parameter shells and
 sampling/confidence equations remain next to the checkpoint adapter.
 
-Reusable compile/capture logic lives in `team_gm.modules.execution`; FoldForge
+Reusable compile/capture logic lives in `team_gm.modules.execution`; FoldJet
 only selects the boundary and measures the complete forward. OpenDDE's lazy
 relative-position inputs expose their tensor fields as a dataclass. AF3 atom
 layout sizes are Python integer tuples at the compute boundary, with an explicit
@@ -151,7 +151,7 @@ validation logs and are excluded from the accepted tables.
 Full regression before the final CIF writer change: **199 passed, zero skipped**.
 The added CIF roundtrip check and its neighboring confidence checks: **7 passed**.
 Final installed-tree validation: **200 passed, zero skipped**, 101.40 s.
-Imports resolved to FoldForge `src/` and its actual `libs/team-gm/src/` member;
+Imports resolved to FoldJet `src/` and its actual `libs/team-gm/src/` member;
 all 37 initially promoted file hashes matched the reviewed candidate.
 The installed public `qualify_execution.py` also passed OpenDDE protein/RNA
 inference, with both replay differences exactly zero.

@@ -16,7 +16,7 @@ Writes under bench5i28/chai1/inputs:
   5i28_x<N>.fasta                   N identical chains, names A, B, ...
 Also prints, per template, the mmCIF chains (auth name -> label subchain, resolved
 polymer length) and whether the query-aligned row of the 20-hit a3m
-(kitv2real/in/5i28_templates_hits20.a3m, = FoldForge's template) is the polymer of auth
+(kitv2real/in/5i28_templates_hits20.a3m, = FoldJet's template) is the polymer of auth
 chain A (chai) and of label chain A (Boltz).
 """
 

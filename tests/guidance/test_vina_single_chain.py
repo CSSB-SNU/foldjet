@@ -5,7 +5,7 @@ They raised TypeError before (two arguments to a one-argument helper).
 
 import torch
 
-from foldforge.guidance.potentials import VinaStericPotential
+from foldjet.guidance.potentials import VinaStericPotential
 
 
 def _feats(asym: list[int]) -> dict[str, torch.Tensor]:

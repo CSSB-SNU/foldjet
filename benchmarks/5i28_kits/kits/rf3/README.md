@@ -17,7 +17,7 @@ Stdout is a single line:
 name is `rosettafold3:<mode>`.
 
 - `fwd` is the `FWDTIME` line of `fwdtimer.py`: `RF3WithConfidence.forward` between two `torch.cuda.synchronize()` calls. It is the
-  same timer as the earlier `fwdtimer_real.py`, and the audit marks this span as matching FoldForge's. `warm_median` is the median of
+  same timer as the earlier `fwdtimer_real.py`, and the audit marks this span as matching FoldJet's. `warm_median` is the median of
   every forward except the first.
 - `templates_real` is 1/1 only when every forward's model input has the template on every chain: its `REALINPUT` line must show
   `templated_tokens = 88*N` and `template_pairs = N*88*88` (intra-chain only). Otherwise it is 0/1. The kit's own
@@ -34,18 +34,18 @@ name is `rosettafold3:<mode>`.
   (41-128), with occupancy 0 elsewhere. `template_selection` is `<chain>/*/41-128` for every chain.
   - It is built by `mkthread.py` from `~/data/cif_raw/sy/5syd.cif.gz` and the LMDB 20-hit a3m.
   - It is byte-identical to the earlier `rosettafold3_realmsa` input (`check/cpu_check.out`).
-  - 5syd_A is FoldForge's first template of its 4.
+  - 5syd_A is FoldJet's first template of its 4.
 - **Sampling:** `n_recycles=4 num_steps=200 diffusion_batch_size=5 early_stopping_plddt_threshold=0 seed=0`.
 - **Caches:** `cache/` is a copy of the kit's warm `cache/rosettafold3_gpu130`, with the paths in Triton's group files rewritten.
   TMPDIR and the outputs are under this directory.
 
-## FoldForge side
+## FoldJet side
 
-FoldForge's `rosettafold3` family has `use_input_templates=False` (`~/FoldForge/src/foldforge/modules/dense/spec.py`), so its template
+FoldJet's `rosettafold3` family has `use_input_templates=False` (`~/FoldForge/src/foldjet/modules/dense/spec.py`), so its template
 embedder runs on zero features. To give it the kit's input it needs two changes:
 
 - Set `use_input_templates=True` for that family.
-- Feed exactly one template, 5SYD_A (`template_n: 1`; it is first in the LMDB order). FoldForge's RF3 `_single_pass` averages the
+- Feed exactly one template, 5SYD_A (`template_n: 1`; it is first in the LMDB order). FoldJet's RF3 `_single_pass` averages the
   features of every present slot, so with `template_n: 4` it would condition on a mean of 4 distograms, which the kit cannot express.
 
 The template pair stack runs once in either case. The timing difference is only the per-template feature build.

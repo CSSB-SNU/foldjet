@@ -1,6 +1,6 @@
-# FoldForge keeps weights, databases, release environments and runs outside the
+# FoldJet keeps weights, databases, release environments and runs outside the
 # repository, under $FOLDFORGE_HOME (default ~/.cache/foldforge; see
-# src/foldforge/paths.py). Nothing machine-specific belongs in the checkout.
+# src/foldjet/paths.py). Nothing machine-specific belongs in the checkout.
 
 # Python
 __pycache__/

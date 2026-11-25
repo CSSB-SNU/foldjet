@@ -1,16 +1,16 @@
 # The 5I28 benchmark
 
-The model-level speed benchmark of FoldForge: every supported model on the engine against its Anthropic kit (and the vendor's stock code),
+The model-level speed benchmark of FoldJet: every supported model on the engine against its Anthropic kit (and the vendor's stock code),
 on **5I28 (azurin, 128 residues)**, one H100 80GB.
 
 **Ownership.** The protocol was first written in miniworld-engine (`benchmarks/5i28.md`, commit `71c800225`, 2026-10-30; removed from the
-engine tree by the 2.5.0 redesign). FoldForge owns it from 2026-11-11: this page is the protocol, FoldForge runs it, and the results
+engine tree by the 2.5.0 redesign). FoldJet owns it from 2026-11-11: this page is the protocol, FoldJet runs it, and the results
 are recorded here. The engine commit keeps the earlier records (all nine models, Protenix v1/v2 at 10 trunk passes, the kit
 forward-definition audit): `docs/records/5i28_*.md` and `anthropic_kits_fwd_definition_audit_20261029.md` in that commit.
 
 ## Why 5I28
 
-5I28 is 128 residues long, exactly one token-bucket unit. FoldForge rounds tokens up to multiples of 128
+5I28 is 128 residues long, exactly one token-bucket unit. FoldJet rounds tokens up to multiples of 128
 (`models/bucketing.py::TOKEN_BUCKET_SIZE = 128`), so n identical chains give 128 n tokens, a whole number of buckets for every n:
 the benchmark measures the model at 128, 256, ... 2048 tokens with **no padding rows** in the timed forward, and the size axis is
 plain "n chains". A target that is not a multiple of 128 would time padded tokens and make the sizes of different targets
@@ -19,10 +19,10 @@ incomparable. One fixed target, one known sequence and one real MSA / template s
 ## Inputs (both sides, every model, every n)
 
 - **Size:** n identical chains, n = 1, 2, 4, 8, 12, 16 (128 n tokens).
-- **MSA:** the real MSA, always. FoldForge: `msa_db: benchmarks/5i28_data/a3m_16k.lmdb` (in the repository, see its README), key `P0113359` (6790 rows); kits: the same
+- **MSA:** the real MSA, always. FoldJet: `msa_db: benchmarks/5i28_data/a3m_16k.lmdb` (in the repository, see its README), key `P0113359` (6790 rows); kits: the same
   rows as an a3m (`benchmarks/5i28_data/5i28_unpaired.a3m`). There is no run without the MSA.
 - **Templates:** 4 distinct real templates, always: `5SYD_A`, `6KOL_A`, `5YT7_A`, `6TFD_A`.
-  - FoldForge: `template_db: benchmarks/5i28_data/template.lmdb`, key `P0113359`, `template_n: 4`. The LMDB stores every chain of an entry (20 records,
+  - FoldJet: `template_db: benchmarks/5i28_data/template.lmdb`, key `P0113359`, `template_n: 4`. The LMDB stores every chain of an entry (20 records,
     6 distinct sequences). **Keep `template_dedup: true` (the default)**: `load_templates` then keeps one record per hit sequence,
     which gives these four. (FoldBench specs set `template_dedup: false`; a 5I28 spec must not.)
   - Kits: those 4, in each kit's own input form. For the Protenix-family kits (Protenix v1/v2, OpenDDE) use the whole 20-hit a3m;
@@ -36,10 +36,10 @@ incomparable. One fixed target, one known sequence and one real MSA / template s
 
 One complete model forward (trunk passes, diffusion sampler, confidence heads), CUDA-synchronized before and after, excluding
 featurization, loading and output writing. Report the median of the warm forwards; the first forward is cold.
-- FoldForge: `model_seconds_warm`.
+- FoldJet: `model_seconds_warm`.
 - Kits: their `PHASE ... fwd_s` (or the kit's equivalent span, per the kit forward-definition audit). Not the kits' wider
   "Model forward time" lines.
-- FoldForge runs on prebuilt kernels and warm caches: no JIT compile inside a timed run.
+- FoldJet runs on prebuilt kernels and warm caches: no JIT compile inside a timed run.
 - **Sampler CUDA-graph capture (R26).** With `execution.sampler_graph_cache` on (the default) and an engine that has the refresh API (miniworld-engine
   >= 2.5.6: `StaticTables.refresh`), `models/sampler_graph.py` captures the sampler graph once per shape and serves every later fold of that shape by writing
   it into the graph's static buffers; the FIRST forward of a shape (`model_seconds_cold`) includes the capture (2 eager warm-up steps + capture), later
@@ -60,14 +60,14 @@ changed once with the fix (a new deterministic variant); references made before 
 
 ## Reporting
 
-- Show the ratio as **kit / FoldForge** (> 1 means FoldForge is faster), never FoldForge / kit.
+- Show the ratio as **kit / FoldJet** (> 1 means FoldJet is faster), never FoldJet / kit.
 - A number taken any other way (no MSA, no templates, fewer than 4 real templates, a wider timing span) is not a 5I28 number.
-- Records are dated files (`docs/records/`, created with the first FoldForge record) and are not edited afterwards. The first:
-  [2026-11-11](../records/5i28_foldforge_20261111.md).
+- Records are dated files (`docs/records/`, created with the first FoldJet record) and are not edited afterwards. The first:
+  [2026-11-11](../records/5i28_foldjet_20261111.md).
   The kit side (every kit, n = 1..16, method, versions, caveats): [2026-11-11](../records/5i28_anthropic_kits_20261111.md); its harness is `benchmarks/5i28_kits/`.
 
 ## Preflight before any sweep
 
 Run n = 1 of every model on BOTH sides first and check: the checkpoint loads; the trunk passes equal the kit's; the templates and
-MSA rows are the real ones; zero compiles in the timed region; every setting matched to the kit (never a FoldForge default).
+MSA rows are the real ones; zero compiles in the timed region; every setting matched to the kit (never a FoldJet default).
 Never edit a script a running queue executes.

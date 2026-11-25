@@ -5,7 +5,7 @@
 set -uo pipefail
 : "${MODEL:?MODEL}" "${ARM:?ARM}"
 [ "$ARM" = engine_fp8 ] && { echo "FP8 arm: not on the B200 in this campaign"; exit 2; }
-HERE=${FF_REPO:-/NHNHOME/WORKSPACE/26mohw002_A/psk6950/paper-b200/ff/foldforge}/benchmarks/paper
+HERE=${FF_REPO:-/NHNHOME/WORKSPACE/26mohw002_A/psk6950/paper-b200/ff/foldjet}/benchmarks/paper
 source "$HERE/common/cards/b200.env"
 cd "$FF_REPO"
 echo "JOB local host=$(hostname) gpu=$CUDA_VISIBLE_DEVICES $(date -Is)"

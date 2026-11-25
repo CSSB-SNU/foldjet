@@ -36,9 +36,9 @@ jobs:
       - name: Public API typecheck
         run: >-
           pixi run npx --yes --package pyright@1.1.414 pyright
-          src/foldforge/__init__.py src/foldforge/api.py src/foldforge/inputs.py
-          src/foldforge/result.py src/foldforge/stages.py
-          src/foldforge/lifecycle.py src/foldforge/errors.py src/foldforge/prediction.py
+          src/foldjet/__init__.py src/foldjet/api.py src/foldjet/inputs.py
+          src/foldjet/result.py src/foldjet/stages.py
+          src/foldjet/lifecycle.py src/foldjet/errors.py src/foldjet/prediction.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -62,8 +62,8 @@ jobs:
         run: |
           pixi run python -m venv --system-site-packages .wheel-venv
           .wheel-venv/bin/python -m pip install --no-deps --force-reinstall wheelhouse/*.whl
-          .wheel-venv/bin/python tools/check_wheel.py wheelhouse/foldforge-*.whl --installed
-          .wheel-venv/bin/python -m foldforge.cli --help
+          .wheel-venv/bin/python tools/check_wheel.py wheelhouse/foldjet-*.whl --installed
+          .wheel-venv/bin/python -m foldjet.cli --help
           .wheel-venv/bin/python -m pytest tests/runtime/test_public_predict.py tests/runtime/test_staged_api.py -q
       - uses: actions/upload-artifact@v4
         with:

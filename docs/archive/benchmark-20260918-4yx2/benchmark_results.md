@@ -2,7 +2,7 @@
 
 Updated 2026-09-18. **4YX2: 594 residues, three chains (163 + 218 + 213).**
 All four models now have five measured configurations. Reference means each
-model's released **precision policy** in FoldForge's PyTorch backend; it is not
+model's released **precision policy** in FoldJet's PyTorch backend; it is not
 the original application's complete runtime. Native BF16 stores learned parameters
 in BF16 except FP32 norms and uses no autocast.
 
@@ -75,7 +75,7 @@ same seeds, and it disappears when either seed is changed to 1 or when the same
 seeds run with the released whole-MSA embedding. That is one defective sample in
 twenty diagnostic samples; its rate is not established, so it is reported as
 observed rather than attributed to the policy. ESMFold2's paper always keeps the
-query row when it samples; FoldForge's shared sampler ranks all valid rows
+query row when it samples; FoldJet's shared sampler ranks all valid rows
 equally and can omit it.
 
 The earlier report, its assets, dtype audits and batching verification are
@@ -93,7 +93,7 @@ preserved in [archive/benchmark-20260916](../benchmark-20260916/benchmark_result
 Reference AMP scopes follow [Protenix inference](https://github.com/bytedance/Protenix/blob/main/runner/inference.py),
 [ESMFold2 pinned implementation](https://github.com/Biohub/transformers/blob/b435f1f92dd5b4a653be57157d4f4f5ddba4f145/src/transformers/models/esmfold2/modeling_esmfold2.py),
 and [OpenDDE defaults](https://github.com/aurekaresearch/OpenDDE/blob/main/opendde/config/model_base.py).
-These compare backend configurations with common FoldForge adapters, not exact
+These compare backend configurations with common FoldJet adapters, not exact
 upstream end-to-end applications. PyTorch mode retains the architecture's permitted
 FlashAttention path and uses PyTorch for the other replaceable operations.
 

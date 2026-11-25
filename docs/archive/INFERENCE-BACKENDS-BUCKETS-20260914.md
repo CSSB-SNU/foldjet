@@ -68,7 +68,7 @@ would expand the shared bias and violate the vendor layout contract.
 
 ## Evidence and remaining checks
 
-- FoldForge CPU suite: 121 passed, 103 GPU tests skipped.
+- FoldJet CPU suite: 121 passed, 103 GPU tests skipped.
 - AF3 real 1UBQ input: 76 tokens -> 128, 602 atoms -> 1024,
   129 MSA rows -> 2048; official gather round-trip preserves every valid atom.
 - CPU tests cover semantic-axis collisions, masks, output cropping and bounds.
@@ -112,6 +112,6 @@ would expand the shared bias and violate the vendor layout contract.
 - Prior AF3 4YX2 compile-vs-eager numerical threshold failure remains unresolved;
   this change does not waive or loosen that threshold.
 
-Branches remain team-gm `exp/miniworld` and FoldForge `main`, including the
-FoldForge team-gm checkout. No new commit or push was performed for this
+Branches remain team-gm `exp/miniworld` and FoldJet `main`, including the
+FoldJet team-gm checkout. No new commit or push was performed for this
 unqualified work.

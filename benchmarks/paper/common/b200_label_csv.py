@@ -68,7 +68,7 @@ def f9(r):
 
 
 root = Path(sys.argv[1])
-rewrite(root / "F3/F3_foldforge_b200.csv", f3)
+rewrite(root / "F3/F3_foldjet_b200.csv", f3)
 rewrite(root / "F4/F4_times_b200.csv", f4_times)
 rewrite(root / "F4/F4_failures_b200.csv", f4_fail)
 rewrite(root / "F4/F4_backend_engine_b200.csv", f4_backend)

@@ -1,6 +1,6 @@
 # F2: accuracy per FoldBench task of the F1 runs (top-1 and oracle)
 
-**What is measured.** The structures of the F1 runs (kit, FoldForge bf16, FoldForge FP8; 25 samples per target = 5 trunk seeds x 5 samples) scored against the experimental
+**What is measured.** The structures of the F1 runs (kit, FoldJet bf16, FoldJet FP8; 25 samples per target = 5 trunk seeds x 5 samples) scored against the experimental
 structures with the **upstream FoldBench evaluator** (OpenStructure lDDT / DockQ v2, run unchanged), and aggregated per task with the **rules of upstream `task_score_summary.py`**:
 
 * **top-1** = per target (per interface for the interface tasks) the sample with the largest ranking score (AF3: 0.8 ipTM + 0.2 pTM, pTM alone for one chain; the kit's own `ranking_score`);
@@ -26,7 +26,7 @@ structures with the **upstream FoldBench evaluator** (OpenStructure lDDT / DockQ
 
 * FoldBench data: `FB_ROOT` (default `~/data/foldbench`: `targets/`, `ground_truth/`, `upstream/` and `upstream_cy/`; `upstream_cy` is the upstream copy with the DockQ v2 Cython
   operations built for Linux, ~10x faster than the pure-Python fallback upstream ships). The OpenStructure image `images/ost.sif` is run through `bin/ost` (singularity).
-* Python for the evaluator: the FoldForge env of `ff_2512` (numpy, pandas, biopython, networkx) with `parallelbar` on `PYTHONPATH` (`EVAL_ENV`, `PARALLELBAR` in `eval.sbatch`).
+* Python for the evaluator: the FoldJet env of `ff_2512` (numpy, pandas, biopython, networkx) with `parallelbar` on `PYTHONPATH` (`EVAL_ENV`, `PARALLELBAR` in `eval.sbatch`).
 * CPU only. Never on the login node.
 
 ## Commands (after the F1 campaign; one evaluation job per run, ~4.5 h for 38,050 predictions on 32 CPUs)
@@ -38,7 +38,7 @@ for spec in "af3_bf16_shard af3_bf16" "af3_fp8_shard af3_fp8"; do set -- $spec
   sbatch -J paper-F2-eval-$2 -o $PAPER_OUT/F2/h100/logs/%x_%j.log \
     --export=ALL,NAME=$2,PRED_DIRS=$R/$1/pred_s0:$R/$1/pred_s1,EVAL_OUT=$PAPER_OUT/F2/h100/eval/$2 $P/eval.sbatch     # multi-mode run: PRED_DIRS=$R/<run>/pred
 done
-# the kit run: lay its structures out like FoldForge's (CPU, seconds; symlinks <t>/<t>_seed{s}_sample{k}_pred.cif + ranking.csv from the kit's ranking_scores.csv, a big-mode target takes its out_big outputs):
+# the kit run: lay its structures out like FoldJet's (CPU, seconds; symlinks <t>/<t>_seed{s}_sample{k}_pred.cif + ranking.csv from the kit's ranking_scores.csv, a big-mode target takes its out_big outputs):
 $FFENV/bin/python benchmarks/paper/F1_foldbench_af3/kit/kit2pred.py af3 $R/af3kit $R/af3kit/pred      # then the same eval.sbatch with NAME=af3kit,PRED_DIRS=$R/af3kit/pred
 # collect (CPU):
 $FFENV/bin/python $P/collect.py --arm af3kit=$PAPER_OUT/F2/h100/eval/af3kit --arm af3_bf16=$PAPER_OUT/F2/h100/eval/af3_bf16 --arm af3_fp8=$PAPER_OUT/F2/h100/eval/af3_fp8 \

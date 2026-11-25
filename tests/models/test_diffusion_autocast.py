@@ -8,7 +8,7 @@ from __future__ import annotations
 import torch
 from torch import nn
 
-from foldforge.modules.engine.configure import activation_autocast, diffusion_autocast
+from foldjet.modules.engine.configure import activation_autocast, diffusion_autocast
 
 
 class _Fake(nn.Module):
@@ -19,8 +19,8 @@ class _Fake(nn.Module):
     ) -> None:
         super().__init__()
         self.weight = nn.Parameter(torch.zeros(1))
-        self.foldforge_precision = precision
-        self.foldforge_activation_dtype = torch.bfloat16
+        self.foldjet_precision = precision
+        self.foldjet_activation_dtype = torch.bfloat16
         self.reference_precision = reference
 
 

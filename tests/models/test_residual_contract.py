@@ -28,7 +28,7 @@ import ast
 
 from support import REPOSITORY_ROOT
 
-MODELS = REPOSITORY_ROOT / "src" / "foldforge"
+MODELS = REPOSITORY_ROOT / "src" / "foldjet"
 
 #: Self-residual sites that are model-level and correct, with why. Keyed by
 #: "<model-relative-path>:<callee>" — not by line number, which every edit invalidates.

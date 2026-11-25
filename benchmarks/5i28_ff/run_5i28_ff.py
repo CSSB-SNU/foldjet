@@ -1,11 +1,11 @@
-"""The 5I28 benchmark, FoldForge side (protocol: docs/guides/BENCHMARK-5I28.md).
+"""The 5I28 benchmark, FoldJet side (protocol: docs/guides/BENCHMARK-5I28.md).
 
 One process per model: load the model once, then run n = 1, 2, 4, 8, 12, 16 identical
 5I28 chains in ascending order. Every n is one ``Predictor`` call with
 ``execution.benchmark_repeats`` warm repeats: the first forward of a size is cold, the
 median of the warm forwards is the number (``model_seconds_warm_median``; scope: one
 complete model forward, CUDA-synchronized, without featurization / loading / output
-decoding, see ``foldforge.models.execution.measured_forward``). Each cell is written as
+decoding, see ``foldjet.models.execution.measured_forward``). Each cell is written as
 soon as it finishes (``cells/<model>_x<n>.json`` and a line in ``cells.jsonl``), so a
 run is resumable and an out-of-memory cell does not lose the earlier ones.
 
@@ -35,7 +35,7 @@ from pathlib import Path
 import torch
 import yaml
 
-import foldforge as ff
+import foldjet as ff
 
 KEY = "P0113359"
 REPO = Path(__file__).resolve().parents[2]
@@ -147,11 +147,11 @@ def release_size_memory() -> tuple[int, int]:
     once each, ascending, so none is replayed again) and the allocator's cached blocks.
     The compiled code and the weights stay. Returns the reserved bytes before and after.
     """
-    from foldforge.models.execution import ExecutedCallable
+    from foldjet.models.execution import ExecutedCallable
 
     try:
-        from foldforge.models.sampler_graph import SamplerGraphCache
-    except ImportError:  # a FoldForge without the per-shape sampler graph cache
+        from foldjet.models.sampler_graph import SamplerGraphCache
+    except ImportError:  # a FoldJet without the per-shape sampler graph cache
         SamplerGraphCache = ()  # noqa: N806 - class alias fallback
 
     torch.cuda.synchronize()
@@ -209,7 +209,7 @@ def meta(model: str, config: dict) -> dict:
         "miniworld_engine_loaded_from": engine_modules.__file__,
         "miniworld_engine_kernels": version("miniworld-engine-kernels-sm90-cu129"),
         "foldforge_commit": git("rev-parse", "HEAD"),
-        "foldforge_dirty": bool(git("status", "--porcelain", "--untracked-files=no")),
+        "foldjet_dirty": bool(git("status", "--porcelain", "--untracked-files=no")),
         "config": config,
         "pytorch_cuda_alloc_conf": os.environ.get("PYTORCH_CUDA_ALLOC_CONF", ""),
         "started": time.strftime("%Y-%m-%dT%H:%M:%S%z"),

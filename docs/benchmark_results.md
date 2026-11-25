@@ -4,7 +4,7 @@ Updated 2026-09-18. **5I28 azurin, 128 residues per chain, replicated N
 times as N identical chains.** Every chain carries the same MSA and
 templates, so length scales while the per-residue conditioning does not.
 
-Reference means each model's released precision policy in FoldForge's PyTorch
+Reference means each model's released precision policy in FoldJet's PyTorch
 backend; native BF16 stores learned parameters in BF16 except FP32 norms and
 uses no autocast. Latency is the median of five warm complete-model forwards
 and excludes featurization, checkpoint loading, initial compilation/capture,

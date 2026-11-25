@@ -5,7 +5,7 @@ from unittest import mock
 import pytest
 import torch
 
-from foldforge.models import (
+from foldjet.models import (
     _REGISTRY,
     Entry,
     describe,
@@ -13,7 +13,7 @@ from foldforge.models import (
     known_models,
     registered_models,
 )
-from foldforge.prediction import Prediction
+from foldjet.prediction import Prediction
 
 
 def test_prediction_rejects_a_squeezed_sample_axis():

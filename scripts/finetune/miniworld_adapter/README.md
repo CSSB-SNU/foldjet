@@ -1,12 +1,12 @@
-# ft_adapter: MiniWorld PDB data -> FoldForge `TrainBatch`
+# ft_adapter: MiniWorld PDB data -> FoldJet `TrainBatch`
 
 Real-data batch source for `~/FoldForge/scripts/train_protenix1.py` (Protenix v1 fine-tuning). Lives outside both repositories; it imports both
-(FoldForge for the featurisation, MiniWorld for the sampler / loader). Nothing in `~/FoldForge`, `~/MiniWorld`, `~/miniworld-engine` is changed.
+(FoldJet for the featurisation, MiniWorld for the sampler / loader). Nothing in `~/FoldForge`, `~/MiniWorld`, `~/miniworld-engine` is changed.
 
 ## Call
 
 ```bash
-source ~/foldforge-scratch/ft_train/env.sh          # FoldForge pixi env python (no `pixi run`), PYTHONPATH = adapter + FoldForge/src + MiniWorld/src + pyarrow
+source ~/foldforge-scratch/ft_train/env.sh          # FoldJet pixi env python (no `pixi run`), PYTHONPATH = adapter + FoldJet/src + MiniWorld/src + pyarrow
 cd ~/FoldForge
 python scripts/train_protenix1.py --batch-source ft_adapter:batches --backend pytorch --effective-batch 256 --ckpt ~/.cache/foldforge/checkpoints/protenix/protenix1.miniworld.pt ...
 # 2 ranks: torchrun --nproc-per-node 2 scripts/train_protenix1.py --batch-source ft_adapter:batches ...
@@ -26,10 +26,10 @@ MSA pool `FT_MSA_POOL` rows, 4 templates, `bond_pairs` 128 rows, `present_index`
 | `FT_WORKERS` | 14 | CPU worker processes per rank (spawned; 16 cores per rank -> 14 workers + the training process) |
 | `FT_PREFETCH` | 4 | batches in flight per worker (14 x 4 = 56 examples ~ 0.7 GB shared memory) |
 | `FT_START_STEP` | 0 | optimizer step the run (re)starts at (see resume policy) |
-| `FT_MSA_POOL` | 8192 | raw MSA pool rows (MiniWorld recipe: PDB pool 8192 = `bucket_msa_multiple`; FoldForge's own limit is 16384) |
+| `FT_MSA_POOL` | 8192 | raw MSA pool rows (MiniWorld recipe: PDB pool 8192 = `bucket_msa_multiple`; FoldJet's own limit is 16384) |
 | `FT_TOKENS` / `FT_ATOMS` / `FT_TEMPLATES` / `FT_BOND_ROWS` | 384 / 4096 / 4 / 128 | bucket shape |
 | `FT_EPOCH_SIZE` | 131072 | indices drawn per rank per sampler "epoch" (only chunks the stream) |
-| `FT_MODE` | `fast` | FoldForge `DenseSpec` mode (the train script loads the model in `fast`) |
+| `FT_MODE` | `fast` | FoldJet `DenseSpec` mode (the train script loads the model in `fast`) |
 | `FT_LOG_EVERY` | 25 | an `FT_DATA ...` line every N samples (the first 8 always): worker seconds, data wait ms, time between `next()` calls |
 | `FT_MAX_FAILURES` | 200 | (reserved) |
 
@@ -48,9 +48,9 @@ Rank and world size are read from `torch.distributed` (the train script initiali
 2. **Per rank**: `WeightedSampler(rank, world, seed, epoch)`; a second draw of 16 "spare" indices per position replaces a sample that fails.
 3. **Workers** (torch DataLoader, spawn): `Preprocessor.process` with an rng seeded from `(seed, rank, position)` (MiniWorld's stock `__getitem__` uses an
    unseeded rng) -> crop / MSA / templates -> `convert.Converter`.
-4. **Conversion** (`convert.py`) builds the dense features with FoldForge's / AF3's own featurisation code, not a re-implementation: the cropped CIFMol
+4. **Conversion** (`convert.py`) builds the dense features with FoldJet's / AF3's own featurisation code, not a re-implementation: the cropped CIFMol
    becomes an AF3 flat `AtomLayout`; AF3 `tokenizer`, `AtomCrossAtt`, `TokenFeatures`, `PredictedStructureInfo`, `RefStructure` (CCD / RDKit conformers),
-   `PolymerLigandBondInfo`, `LigandLigandBondInfo`, `PseudoBetaInfo`, `Frames` run on it, then FoldForge `dense_conventions.apply` (protenix1 spec),
+   `PolymerLigandBondInfo`, `LigandLigandBondInfo`, `PseudoBetaInfo`, `Frames` run on it, then FoldJet `dense_conventions.apply` (protenix1 spec),
    `bond_orders.capture`, `apply_after_bucketing`. MiniWorld contributes the crop, the sampled MSA, the sampled templates and the ground truth.
 5. Main process: CPU tensors -> GPU, `TrainBatch(features, atom_positions, atom_mask (resolved), bond_pairs, present_index, present_valid, name)`.
 
@@ -68,18 +68,18 @@ Rank and world size are read from `torch.distributed` (the train script initiali
   modified residues, AF3 token count above 384) or whose records fail to load is replaced by the next spare weighted index. MiniWorld's own retry draws
   uniformly from the whole catalog; here it stays inside the sampler distribution (the stock rule would pull distillation items into a PDB-only run).
 
-## Differences from MiniWorld's own features (deliberate; FoldForge's conventions win because the Protenix weights were trained with them)
+## Differences from MiniWorld's own features (deliberate; FoldJet's conventions win because the Protenix weights were trained with them)
 
 * Tokenisation is AF3's: MSE / UNK / unknown nucleotides are one token (MiniWorld's atom tokenizer makes one token per atom for them); MSA and templates are
   taken at residue level and expanded by AF3's tokens (`tok_res`).
-* Reference conformers: AF3 `RefStructure` (CCD ideal / RDKit, seeded per sample) + FoldForge conventions, not MiniWorld's `to_reference_features`.
+* Reference conformers: AF3 `RefStructure` (CCD ideal / RDKit, seeded per sample) + FoldJet conventions, not MiniWorld's `to_reference_features`.
 * MSA alphabet translated MiniWorld -> AF3 (`MW_TO_AF3`): gap 31 -> 21, RNA A U G C N 21..25 -> 22 25 23 24 30, DNA A T G C N 26..30 -> 26 29 27 28 30; profile
   columns re-indexed 32 -> 31; deletion counts recovered from MiniWorld's `2 arctan(d/3)/pi` encoding; ligand columns all gap then the Protenix
-  convention (`nonprotein_msa_as_query`, `dedupe_self_msa`) as in FoldForge inference.
+  convention (`nonprotein_msa_as_query`, `dedupe_self_msa`) as in FoldJet inference.
 * Templates: MiniWorld keeps N, CA, C and one CB (CA for glycine) per residue: written to AF3's per-residue-type dense slots (N 0, CA 1, C 2, CB 4); O and side
-  chains stay masked. Those are the only atoms the template embedder reads (checked with FoldForge's own `pseudo_beta_fn`).
+  chains stay masked. Those are the only atoms the template embedder reads (checked with FoldJet's own `pseudo_beta_fn`).
 * Ground truth is centred on the mean of the resolved atoms (the train step rotates about the origin; MiniWorld centres too).
-* The loader's crop has no OXT / OP3 (MiniWorld removes them before cropping); FoldForge `fast`-mode inference keeps them. The model is trained without them.
+* The loader's crop has no OXT / OP3 (MiniWorld removes them before cropping); FoldJet `fast`-mode inference keeps them. The model is trained without them.
 
 ## Files
 
@@ -90,6 +90,6 @@ Rank and world size are read from `torch.distributed` (the train script initiali
 ## Import shims (no install anywhere)
 
 MiniWorld's data package imports `miniworld_engine.utils.typecheck` (engine 2.4) and, through `miniworld.training/__init__`, the whole old trainer and an
-old `foldforge.blocks`. `_mwshim.py` registers an identity `typecheck` module (identity in MiniWorld's engine unless `settings.typecheck` is on) and a
-bare `miniworld.training` package (only `miniworld.training.batch` is needed). `pyarrow` (absent from the FoldForge env) is imported from a symlink to the
+old `foldjet.blocks`. `_mwshim.py` registers an identity `typecheck` module (identity in MiniWorld's engine unless `settings.typecheck` is on) and a
+bare `miniworld.training` package (only `miniworld.training.batch` is needed). `pyarrow` (absent from the FoldJet env) is imported from a symlink to the
 copy in MiniWorld's own env (`extra_site/pyarrow`, appended last to `sys.path`).

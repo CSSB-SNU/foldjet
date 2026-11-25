@@ -36,7 +36,7 @@ Expected wall time (H100 cluster CPU): eval ~10-40 min per task (OpenStructure o
 
 | file | content |
 |---|---|
-| `F5_<card>_pairs_summary.csv` | per (arm, predictor) and `ALL`: n sample pairs, median / p90 RMSD, median \|dpLDDT\|, median \|dPAE\| (arm `baseline` = PyTorch vs PyTorch); each row: card, engine version, FoldForge commit |
+| `F5_<card>_pairs_summary.csv` | per (arm, predictor) and `ALL`: n sample pairs, median / p90 RMSD, median \|dpLDDT\|, median \|dPAE\| (arm `baseline` = PyTorch vs PyTorch); each row: card, engine version, FoldJet commit |
 | `F5_<card>_gt.csv` | per (predictor, task, key): mean of 5 samples per arm, PyTorch's s.d., arm - torch |
 | `F5_<card>_gt_summary.csv` | per arm and kind (monomer / interface / ligand / all): n, median \|diff\|, mean signed diff, fraction within PyTorch's 1 s.d., r |
 
@@ -52,7 +52,7 @@ PyTorch arm is out of memory there); the PyTorch sample-to-sample baseline is 1.
 
 ## B200 data (DATA_STATUS, 2026-11-22)
 
-Host `b200` (8 x B200 sm_100a, 178.35 GiB each, shared account, no Slurm), campaign 2026-11-22. FoldForge `paper-b200` (base origin/main 1688f89), engine run from SOURCE (the PyPI wheels carry no sm100 kernels) with the sm100a prebuilt JIT cache. Environment: venv `ffenv` over the engine team's pixi env eng-2511 (torch 2.13.0+cu129, triton 3.7.1, cuequivariance 0.12); `transformer_engine` blocked in `ffenv` (sitecustomize) so ESMC takes the same PyTorch fallback as on the other cards. Weights, FoldBench inputs (27-target subset of the 1,532 copied; `data.yaml` paths rewritten to the B200 copy) and 5I28 LMDBs copied from the H100 cluster.
+Host `b200` (8 x B200 sm_100a, 178.35 GiB each, shared account, no Slurm), campaign 2026-11-22. FoldJet `paper-b200` (base origin/main 1688f89), engine run from SOURCE (the PyPI wheels carry no sm100 kernels) with the sm100a prebuilt JIT cache. Environment: venv `ffenv` over the engine team's pixi env eng-2511 (torch 2.13.0+cu129, triton 3.7.1, cuequivariance 0.12); `transformer_engine` blocked in `ffenv` (sitecustomize) so ESMC takes the same PyTorch fallback as on the other cards. Weights, FoldBench inputs (27-target subset of the 1,532 copied; `data.yaml` paths rewritten to the B200 copy) and 5I28 LMDBs copied from the H100 cluster.
 Execution: 4 always-ours lanes (GPUs 0-3) + GPUs 4-7 only while no foreign process was on them (the lane watches `nvidia-smi` compute apps; a task that saw a foreign process is `external-contention`: output purged and re-queued, never a result; a lane on 4-7 stops at the first foreign process and is not restarted). One task per GPU at a time (no overlapping on one GPU); concurrent lanes share the node (host memory bandwidth / power), no correction applied. Driver: `common/b200_lane4.sh`, tasks of `common/queue_b200_v2.txt` through `common/b200_task.sh`, `.done` marker only when the task's own validity check passed.
 Engine labels: **A** = `engine main f06154bc7 (3.0.8 + b200 clamp fix + b200 holes fix, unreleased)`: F6 engine arm and F4 OpenDDE engine arm. **B** = `engine 3.0.7 source + b200 TriAttn exp-clamp fix (3698ba9ac, unreleased)`: every other engine arm. Both are in the CSV column `engine_label` (and `notes`). The CSV column `engine*_version_installed` says 2.5.11 because it is the package metadata of the shared env; the loaded source is in `*_engine_version_loaded` / `engine_loaded_from`.
 B200 TriAttn: the released 3.0.7 B200 TriangleAttention kernels (`triattn_sm100.cu`, `triattn_dh64_sm100.cu`, `tri_l128_sm100.cu`, `ex2_poly2` without an upper clamp) produced non-finite output on real AF3 / Chai-1 inputs; those first-pass engine records (F4: AF3 21 / 27, Chai-1 25 / 27 non-finite; F3 AF3 n >= 2, Boltz2 n >= 12 ...) are NOT used (`paper/invalid_archive/` on the B200, not in the CSVs).
@@ -72,8 +72,8 @@ sample k median Ca/C1' RMSD 0.658 A (p90 2.66, 135 pairs, now including the nucl
 **Released as 3.0.10 (2026-11-24):** engine `5090-int` 07bf36ae4 -> v3.0.10 changes no code the RTX 5090 runs (TokenDiTMiniWorldBiasOnly `backend_versions` number, the GPU-less prebuild plan, an A100-only `MWE_SM120` guard in `wide_ops.cu`), so these rows are the 3.0.10 rows; the CSV `engine` columns say so and keep the measured commit.
 
 Predictions of the F4 runs of the same date (see the F4 README): engine bf16 on cssb-rtx (real weights, the old rows' box), engine FP8 on the rented
-4x RTX 5090 (`vast5090`, real weights; `MINIWORLD_FP8=safe` + `MINIWORLD_FP8_MODEL`), engine branch `5090-int` 07bf36ae4 (= 3.0.10 on sm_120), FoldForge
-49d41bb. The PyTorch reference = the existing 5090 PyTorch-arm predictions of the 3.0.6 campaign (not re-run: same inputs and seeds, and FoldForge
+4x RTX 5090 (`vast5090`, real weights; `MINIWORLD_FP8=safe` + `MINIWORLD_FP8_MODEL`), engine branch `5090-int` 07bf36ae4 (= 3.0.10 on sm_120), FoldJet
+49d41bb. The PyTorch reference = the existing 5090 PyTorch-arm predictions of the 3.0.6 campaign (not re-run: same inputs and seeds, and FoldJet
 6a0593e -> 49d41bb changed only ESMFold2 code). `data/F5_rtx5090_pairs_summary.csv` (released engine) is unchanged.
 
 - `data/F5_rtx5090_3010_pairs_summary.csv`: part (a) for arms `engine` and `engine_fp8` + the PyTorch baseline, with the released rows

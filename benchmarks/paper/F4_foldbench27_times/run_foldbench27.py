@@ -9,9 +9,9 @@ as F1 / F3) on every arm since 2026-11-24 (FFPAPER_F4_EXEC=eager: the earlier ea
 (`model_seconds_warm_median`, CUDA-synchronized, no featurization / loading / writing). The structures of the (last) forward are saved for F5.
 
 Output  <out>/rows/<arm>__<model>.jsonl     one row per target: status ok | error | timeout, seconds, run information
-        <out>/pred/<arm>/<model>/<target>/  FoldForge's result files (CIFs, npz with coordinates / plddt / full_pae), chain_names.json
+        <out>/pred/<arm>/<model>/<target>/  FoldJet's result files (CIFs, npz with coordinates / plddt / full_pae), chain_names.json
 Resumable: a target with a final row is skipped; a target started twice without a result is recorded as `timeout` (it does not fit the job).
-Failures (also out of memory) are results: recorded, never retried here. ESMFold2 on RNA / DNA-only targets needs a FoldForge with `allow_no_protein`.
+Failures (also out of memory) are results: recorded, never retried here. ESMFold2 on RNA / DNA-only targets needs a FoldJet with `allow_no_protein`.
 Run through Slurm / the card's GPU lock only (never on a login node).
 """
 
@@ -39,12 +39,12 @@ if _arm in ffpaper.ARMS:
 
 import yaml  # noqa: E402
 
-import foldforge as ff  # noqa: E402
-from foldforge import paths  # noqa: E402
+import foldjet as ff  # noqa: E402
+from foldjet import paths  # noqa: E402
 
 FB = Path(os.environ.get("FB_ROOT", Path.home() / "data/foldbench"))
 RF3_EXTRA = {"debug": {"dense_spec_override": {"use_input_templates": True}}}
-# model -> (trunk passes, extra config, templates). FoldForge's `recycles` = total trunk passes for every family, AF3 included. ESMFold2 takes no templates; RoseTTAFold3
+# model -> (trunk passes, extra config, templates). FoldJet's `recycles` = total trunk passes for every family, AF3 included. ESMFold2 takes no templates; RoseTTAFold3
 # runs without FoldBench templates (they ruin it: lDDT 0.25-0.68 vs 0.89-0.94 without) and takes ONE coordinate set per chain where templates are on.
 MODELS: dict[str, tuple[int, dict, bool]] = {
     "af3": (4, {}, True), "boltz2": (4, {}, True), "chai1": (4, {}, True), "esmfold2": (4, {}, False), "intellifold2": (4, {}, True),
@@ -52,7 +52,7 @@ MODELS: dict[str, tuple[int, dict, bool]] = {
     "rosettafold3": (4, RF3_EXTRA, False),
 }
 MSA_DB = {"P": FB / "msa/a3m.lmdb", "R": FB / "msa/a3m_rna.lmdb"}  # key prefix -> LMDB; DNA has no MSA
-RETRY_ERRORS = ("LMDB key", "Branched FASTA", "No protein token")  # causes fixed in FoldForge after earlier rounds: those targets are tried again
+RETRY_ERRORS = ("LMDB key", "Branched FASTA", "No protein token")  # causes fixed in FoldJet after earlier rounds: those targets are tried again
 _TEMPLATE_ENV = None
 
 
@@ -73,7 +73,7 @@ def template_has(key: str) -> bool:
 
 
 def spec_of(target: str, templates: bool, spec_dir: Path) -> tuple[Path, dict]:
-    """FoldBench's data.yaml (a3m_db / a3m_key per chain index) as a FoldForge InferenceSpec (msa_db / msa per chain letter). Returns (yaml path, chain names)."""
+    """FoldBench's data.yaml (a3m_db / a3m_key per chain index) as a FoldJet InferenceSpec (msa_db / msa per chain letter). Returns (yaml path, chain names)."""
     src = yaml.safe_load((FB / "inputs" / target / "data.yaml").read_text())
     letters = src["chain_letters"]
     msa, msa_db = {}, {}

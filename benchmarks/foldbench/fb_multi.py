@@ -20,7 +20,7 @@ Parent (this process, no CUDA): sorts the list by exact size bucket (fast_sort: 
     small ones (K > 1). Outputs are byte-identical to K = 1 (measured on 40 targets).
 Per target: CIFs, ranking.csv, run.json, done (README.md). Parent events: OUT/multi_events.log; per-target rows:
 OUT/multi_targets.tsv; summary: OUT/multi_summary.json; worker logs: OUT/workers/w{k}_{incarnation}.log.
-PYTORCH_CUDA_ALLOC_CONF defaults to expandable_segments:True (the FoldForge default, applied at `import foldforge`; a value set by the user is kept)."""
+PYTORCH_CUDA_ALLOC_CONF defaults to expandable_segments:True (the FoldJet default, applied at `import foldjet`; a value set by the user is kept)."""
 
 import argparse
 import json
@@ -40,7 +40,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import fb_sched
 
-import foldforge  # noqa: F401 - applies the FoldForge allocator default (expandable_segments), inherited by the workers
+import foldjet  # noqa: F401 - applies the FoldJet allocator default (expandable_segments), inherited by the workers
 
 ALLOC = os.environ.get(
     "PYTORCH_CUDA_ALLOC_CONF", os.environ.get("PYTORCH_ALLOC_CONF", "")

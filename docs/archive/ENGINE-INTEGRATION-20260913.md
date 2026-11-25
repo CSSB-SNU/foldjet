@@ -17,10 +17,10 @@ projection bias. FP32 attention is no longer silently quantized to BF16.
 Existing module ownership remains: triangle/ordinary transition modules own their
 residuals; conditioned transition and augmented attention return deltas.
 
-Validation: all 17 FoldForge CPU tests pass, including actual MSA and atom-block
+Validation: all 17 FoldJet CPU tests pass, including actual MSA and atom-block
 construction/forward, FP32/native-BF16 MSA execution, and residual checks. These
 used the engine Python 3.12 / Torch 2.10+cu128 environment with the existing
-ESMFold2 dependencies. No full checkpoint inference or FoldForge-specific GPU
+ESMFold2 dependencies. No full checkpoint inference or FoldJet-specific GPU
 benchmark was rerun. The sibling team-gm consumer additionally passed 112 GPU
 module tests on A5000 and 64 checkpoint/model/solver CPU tests.
 

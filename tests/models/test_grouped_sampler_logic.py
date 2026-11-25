@@ -9,7 +9,7 @@ import pytest
 import torch
 from torch import nn
 
-from foldforge.models.grouped import GroupedSampler, GroupedUnsupported
+from foldjet.models.grouped import GroupedSampler, GroupedUnsupported
 
 
 def _stack(blocks: int = 2) -> SimpleNamespace:

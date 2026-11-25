@@ -1,18 +1,18 @@
 # Checkpoints: from a release file to a locked blob
 
 For the download CLI, model-by-model setup and offline import, see
-[Weight downloads](WEIGHTS.md): `foldforge weights download boltz2 opendde`.
+[Weight downloads](WEIGHTS.md): `foldjet weights download boltz2 opendde`.
 
-FoldForge runs every family from one converted blob per model
-(`<model>.bin.zst`, AF3's record format). That blob is the released layout; at load time FoldForge reads the **miniworld checkpoint format**
-(`<model>.miniworld.pt`, [CHECKPOINT-FORMAT.md](CHECKPOINT-FORMAT.md)) converted once from it with `foldforge weights convert <model>`. The blobs are not in git (~17 GB) and
+FoldJet runs every family from one converted blob per model
+(`<model>.bin.zst`, AF3's record format). That blob is the released layout; at load time FoldJet reads the **miniworld checkpoint format**
+(`<model>.miniworld.pt`, [CHECKPOINT-FORMAT.md](CHECKPOINT-FORMAT.md)) converted once from it with `foldjet weights convert <model>`. The blobs are not in git (~17 GB) and
 must not be redistributed casually: several releases (AF3 in particular) restrict
 sharing their weights. This page is the path from each release's own file to the
 exact blob `checkpoints.lock` pins.
 
 ## Current qualified conversion releases (2026-10-28)
 
-`foldforge weights download` now supports IntelliFold2, Chai1 and Protenix1
+`foldjet weights download` now supports IntelliFold2, Chai1 and Protenix1
 through the reproducible `cpu-v1` profile, without JAX or Haiku. The original
 `checkpoints.lock` is preserved; additional validated hashes are recorded in
 `conversions.lock`. All three passed the existing release-reference criteria
@@ -25,16 +25,16 @@ hash and is installed without conversion.
 ## Layout and lookup
 
 Blobs live under `$FOLDFORGE_HOME/checkpoints/<dir>/` (see `DEFAULT_FILES` in
-`src/foldforge/models/checkpoints/__init__.py`), or under
+`src/foldjet/models/checkpoints/__init__.py`), or under
 `$FOLDFORGE_CHECKPOINT_DIR/<dir>/` to keep them on shared or larger storage.
-`foldforge checkpoints verify` checks every blob against the lock; loading
+`foldjet checkpoints verify` checks every blob against the lock; loading
 refuses a blob whose size is not the locked one.
 
 ## Converting
 
 The converter is sokrypton/alphafold3, branch `af3-any-model`, at
-`301430b3cbf9122912663c67eb19628fd6feec3e` (public), driven by FoldForge's
-`tools/convert_dense_checkpoint.py`, which runs in FoldForge's environment:
+`301430b3cbf9122912663c67eb19628fd6feec3e` (public), driven by FoldJet's
+`tools/convert_dense_checkpoint.py`, which runs in FoldJet's environment:
 
 ```bash
 git clone -b af3-any-model https://github.com/sokrypton/alphafold3 ../refs/alphafold3-any-model
@@ -42,7 +42,7 @@ git -C ../refs/alphafold3-any-model checkout 301430b3cbf9122912663c67eb19628fd6f
 source tools/activate_env.sh
 python tools/convert_dense_checkpoint.py --model <model> --checkpoint <release file> \
   --reference ../refs/alphafold3-any-model --out $FOLDFORGE_HOME/checkpoints/<dir>
-foldforge checkpoints verify
+foldjet checkpoints verify
 ```
 
 ## Per model
@@ -77,6 +77,6 @@ ESM-C 6B (`biohub/ESMC-6B`, revision `45b0fa5d7f`) is read directly from its rel
 `docs/bug-reports/esmfold2-hf-esmc-random-weights.md`).
 
 The historical mismatches above are handled by the separately qualified CPU
-conversion releases described at the top of this page. Use `foldforge weights
-download MODEL` and `foldforge checkpoints verify`; do not edit lock entries to
+conversion releases described at the top of this page. Use `foldjet weights
+download MODEL` and `foldjet checkpoints verify`; do not edit lock entries to
 make an unqualified conversion pass.

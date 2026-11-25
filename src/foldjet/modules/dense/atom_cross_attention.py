@@ -1,0 +1,1035 @@
+# Copyright 2024 xfold authors
+# Copyright 2024 DeepMind Technologies Limited
+#
+# AlphaFold 3 source code is licensed under CC BY-NC-SA 4.0. To view a copy of
+# this license, visit https://creativecommons.org/licenses/by-nc-sa/4.0/
+#
+# To request access to the AlphaFold 3 model parameters, follow the process set
+# out at https://github.com/google-deepmind/alphafold3. You may only use these
+# if received directly from Google. Use is subject to terms of use available at
+# https://github.com/google-deepmind/alphafold3/blob/main/WEIGHTS_TERMS_OF_USE.md
+
+
+import dataclasses
+from typing import cast
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+from foldjet.data.features import dense_batch as feat_batch
+from foldjet.modules.dense import utils
+from foldjet.modules.dense.chirality import dihedral_error_gradient
+from foldjet.modules.dense.diffusion_transformer import (
+    DiffusionCrossAttTransformer,
+)
+from foldjet.modules.dense.spec import ALPHAFOLD3, DenseSpec
+from foldjet.modules.engine import graph as engine_graph
+from foldjet.modules.engine import modules as engine_modules
+from foldjet.modules.engine.sampler_ops import pool_atoms
+from foldjet.modules.engine.transformers import atom_dit_stack, engine_key_window
+from foldjet.utils import atom_layout
+
+
+def _mask_atoms(act: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+    """``act * mask[..., None]``: in place without autograd, a new tensor with it.
+
+    The engine's atom blocks (2.5.1) may return a view made inside a custom autograd Function; torch refuses an in-place write to such a view when a
+    gradient is recorded. Inference (no grad) keeps the in-place form, so its memory and speed are unchanged.
+    """
+    if torch.is_grad_enabled():
+        return act * mask[..., None]
+    act *= mask[..., None]
+    return act
+
+
+def _pool_engine(queries_act, gather, atom_mask):
+    """Pool atom features to tokens with the engine, or None where it does not serve.
+
+    The pooled token activation from the engine's one-pass gather + relu + masked
+    mean (``PoolAtoms.unsupported`` decides per call), for bf16 atom features
+    ``[samples, subsets, queries, C]``; None keeps the torch pooling below.
+    """
+    module = pool_atoms(queries_act.device)
+    if module is None or queries_act.ndim != 4:
+        return None
+    flat = queries_act.reshape(queries_act.shape[0], -1, queries_act.shape[-1])
+    args = (flat, gather.gather_idxs, gather.gather_mask, atom_mask)
+    if module.unsupported(*args) is not None:
+        return None
+    return module(*args)
+
+
+def _atom_transformer(spec: DenseSpec, c_query: int) -> nn.Module:
+    """The three-block atom transformer: engine ``AtomDiT`` blocks, or FoldJet's own :class:`DiffusionCrossAttTransformer` for ESMFold2 (and
+    for the converter's released-layout graph, where ``uses_engine`` is off)."""
+    # esmfold2_*: the engine's ESMFold2 atom block is pair-free SWA; FoldJet's ESMFold2 atom stack has atom pair + rope, so it stays
+    # FoldJet-own (docs/ENGINE-UNSUPPORTED.md). ``atom_dit is None`` in the family's ModelKeys is that fact.
+    if engine_graph.uses_engine() and engine_graph.has_engine_atom_dit(spec):
+        return atom_dit_stack(
+            spec.family,
+            n_blocks=3,
+            d_single=c_query,
+            d_cond=c_query,
+            d_pair=16,
+            n_head=4,
+            key_window=engine_key_window(spec.atom_key_window)[0],
+            adaln_eps=engine_graph.chai1_adaln_eps(spec),
+        )
+    return DiffusionCrossAttTransformer(c_query=c_query, spec=spec)
+
+
+@dataclasses.dataclass(frozen=True)
+class AtomCrossAttEncoderOutput:
+    """Represent atom cross att encoder output."""
+
+    token_act: torch.Tensor  # (num_tokens, ch)
+    skip_connection: torch.Tensor  # (num_subsets, num_queries, ch)
+    queries_mask: torch.Tensor  # (num_subsets, num_queries)
+    queries_single_cond: torch.Tensor  # (num_subsets, num_queries, ch)
+    keys_mask: torch.Tensor  # (num_subsets, num_keys)
+    keys_single_cond: torch.Tensor  # (num_subsets, num_keys, ch)
+    pair_cond: torch.Tensor  # (num_subsets, num_queries, num_keys, ch)
+    #: Which query/key atom pairs the attention may open, where the family
+    #: restricts them; None lets every atom in the window attend.
+    pair_mask: torch.Tensor | None = None
+    #: The rotary tables and the sliding-window mask, carried rather than
+    #: rebuilt: the queries' and the keys' rotations are gathers of the same
+    #: flat atom list, and rebuilding them is where a mismatch would go.
+    rope_q: tuple[torch.Tensor, torch.Tensor] | None = None
+    rope_k: tuple[torch.Tensor, torch.Tensor] | None = None
+    #: The engine's layout of the atom pair and key mask (see ``AtomFoldState``).
+    engine_pair: torch.Tensor | None = None
+    engine_key_mask: torch.Tensor | None = None
+    engine_uid: torch.Tensor | None = None
+    engine_even: tuple[torch.Tensor | None, ...] | None = None
+    #: The decoder's own conditioning of the fold (``hoist_conditioning``): its atom conditioning after the post norm, and every projection of
+    #: it the decoder's blocks read. ``None`` when the decoder projects them at each step.
+    hoisted_decoder: tuple | None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class AtomFoldState:
+    """Run AtomFoldState.
+
+    What the atom encoder builds from the batch and the trunk alone: the same at
+    every sampler step of a fold.
+    """
+
+    query_base: torch.Tensor  # (num_subsets, num_queries, ch)
+    queries_mask: torch.Tensor
+    queries_single_cond: torch.Tensor
+    keys_mask: torch.Tensor
+    keys_single_cond: torch.Tensor
+    pair_cond: torch.Tensor  # (num_subsets, num_queries, num_keys, ch)
+    pair_mask: torch.Tensor | None = None
+    rope_q: tuple[torch.Tensor, torch.Tensor] | None = None
+    rope_k: tuple[torch.Tensor, torch.Tensor] | None = None
+    #: The engine's layout of the atom pair and key mask, made once per fold: the engine
+    #: hoists its pair bias per tensor OBJECT, and a view made at every call is a
+    #:new object.
+    engine_pair: torch.Tensor | None = None
+    engine_key_mask: torch.Tensor | None = None
+    #: The atoms' reference-conformer ids in the engine's flat layout, for a
+    #:family whose pair
+    #: mask is same-conformer (the engine's variant stack rebuilds the mask from them).
+    engine_uid: torch.Tensor | None = None
+    #: The same three with one empty window appended, when the atoms make an odd
+    #:number of
+    #: 32-atom windows: the variant stack's window kernel takes pairs of windows,
+    #:and padding
+    #: inside its call would be a new tensor (a new pair bias) at every step.
+    engine_even: tuple[torch.Tensor | None, ...] | None = None
+    #: ``(encoder projections, decoder conditioning)`` made once per fold by :func:`hoist_conditioning`, or ``None``.
+    hoisted: tuple | None = None
+
+
+def hoist_conditioning(
+    state: AtomFoldState, encoder: nn.Module, decoder: nn.Module
+) -> AtomFoldState:
+    """Make every projection of the atoms' single conditioning once per fold instead of once per sampler step.
+
+    The conditioning (reference conformer + trunk) is the same at every step, so what the atom blocks compute from it alone -- the AdaLN scales
+    and shifts of the query and key norms and of the transition, and the output gates -- is too. Only FoldJet's own atom stack
+    (:class:`DiffusionCrossAttTransformer`, ESMFold2's) reads the projections back; an engine ``AtomDiT`` stack, a gradient-recording call
+    (training) and a state without conditioning are returned as they are. The projections are made by the very modules and ops of the unhoisted
+    path, under the caller's autocast, so the step computes the same values.
+    """
+    encoder_stack = encoder.atom_transformer_encoder
+    decoder_stack = decoder.atom_transformer_decoder
+    if torch.is_grad_enabled() or state.queries_single_cond is None:
+        return state
+    norm = cast("nn.Module | None", decoder.post_atom_cond_layer_norm)
+    if not isinstance(encoder_stack, DiffusionCrossAttTransformer) or not isinstance(
+        decoder_stack, DiffusionCrossAttTransformer
+    ):
+        # An engine stack projects its own conditioning; only the post norm is made here, once per fold, because inside the compiled
+        # step inductor autotunes the block size of its (persistent-reduction) kernel by timing, and the pick changes the sum
+        # order: two processes gave different structures. Eagerly it is one fixed kernel.
+        if norm is None:
+            return state
+        return dataclasses.replace(
+            state,
+            hoisted=(
+                None,
+                (norm(state.queries_single_cond), norm(state.keys_single_cond), None),
+            ),
+        )
+    decoder_queries = (
+        state.queries_single_cond if norm is None else norm(state.queries_single_cond)
+    )
+    decoder_keys = (
+        state.keys_single_cond if norm is None else norm(state.keys_single_cond)
+    )
+    return dataclasses.replace(
+        state,
+        hoisted=(
+            encoder_stack.project_cond(
+                state.queries_single_cond, state.keys_single_cond
+            ),
+            (
+                decoder_queries,
+                decoder_keys,
+                decoder_stack.project_cond(decoder_queries, decoder_keys),
+            ),
+        ),
+    )
+
+
+def build_atom_rope(
+    ref_pos: torch.Tensor,
+    ref_space_uid: torch.Tensor,
+    head_dim: int,
+    config: dict[str, float],
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """A 3D rotary from the reference conformer, in whatever layout it is given.
+
+    Three spatial axes times `n_spatial` pairs, plus `n_uid` pairs of the reference
+    space uid. Queries and keys must be built SEPARATELY: they are different subsets
+    of the same flat atom list, so one rotation does not serve both -- passing the
+    query table for the keys rotates them as if they sat at the query positions.
+    """
+
+    def inverse(count: int, base: float) -> torch.Tensor:
+        steps = torch.arange(count, dtype=torch.float32, device=ref_pos.device)
+        return 1.0 / (base ** (steps / count))
+
+    spatial = inverse(int(config["n_spatial"]), config["spatial_base"])
+    uid = inverse(int(config["n_uid"]), config["uid_base"])
+    frequencies = torch.concatenate(
+        [
+            (ref_pos.float()[..., None] * spatial).reshape(*ref_pos.shape[:-1], -1),
+            ref_space_uid.float()[..., None] * uid,
+        ],
+        dim=-1,
+    )
+    half = head_dim // 2
+    if frequencies.shape[-1] < half:
+        pad = frequencies.new_zeros(
+            (*frequencies.shape[:-1], half - frequencies.shape[-1])
+        )
+        frequencies = torch.concatenate([frequencies, pad], dim=-1)
+    return torch.cos(frequencies), torch.sin(frequencies)
+
+
+def sliding_window_mask(
+    queries_mask: torch.Tensor,
+    keys_mask: torch.Tensor,
+    queries_to_keys: atom_layout.GatherInfo,
+    half: int,
+) -> torch.Tensor:
+    """The window of +/- ``half`` by RANK among VALID atoms.
+
+    AF3's key subset is only block-aligned, so this is what actually defines the
+    window; the subset is merely wide enough to contain it.
+    """
+    rank = torch.cumsum(queries_mask.reshape(-1).to(torch.int64), dim=0) - 1
+    rank = rank.reshape(queries_mask.shape)
+    key_rank = atom_layout.convert(queries_to_keys, rank, layout_axes=(-2, -1))
+    window = (rank[:, :, None] - key_rank[:, None, :]).abs() <= half
+    window = window & queries_mask[:, :, None].to(torch.bool)
+    return window & keys_mask[:, None, :].to(torch.bool)
+
+
+class AtomCrossAttEncoder(nn.Module):
+    """Represent atom cross att encoder."""
+
+    #: Distance class edges of the fused atom-pair feature. The index is the
+    #: number of edges strictly below the distance, and an invalid pair takes the
+    #: class after the last, so the one-hot is two wider than this list.
+    ATOM_PAIR_BINS = (0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 12.0, 16.0)
+    #: Registered in ``__init__`` as a non-persistent buffer.
+    atom_pair_edges: torch.Tensor
+
+    def __init__(  # noqa: PLR0915 - one checkpoint parameter layout
+        self,
+        per_token_channels: int = 384,
+        per_atom_channels: int = 128,
+        per_atom_pair_channels: int = 16,
+        with_token_atoms_act: bool = False,
+        with_trunk_single_cond: bool = False,
+        with_trunk_pair_cond: bool = False,
+        trunk_pair_channels: int = 128,
+        trunk_single_channels: int = 384,
+        spec: DenseSpec = ALPHAFOLD3,
+    ) -> None:
+        super().__init__()
+
+        self.spec = spec
+        self.with_token_atoms_act = with_token_atoms_act
+        self.with_trunk_single_cond = with_trunk_single_cond
+        self.with_trunk_pair_cond = with_trunk_pair_cond
+
+        self.c_positions = 3
+        self.c_mask = 1
+        self.c_element = 128
+        self.c_charge = 1
+        self.c_atom_name = 256
+        self.c_pair_distance = 1
+        self.per_token_channels = per_token_channels
+        self.per_atom_channels = per_atom_channels
+        self.per_atom_pair_channels = per_atom_pair_channels
+
+        self.embed_ref_pos = nn.Linear(
+            self.c_positions, self.per_atom_channels, bias=False
+        )
+
+        self.embed_ref_mask = nn.Linear(self.c_mask, self.per_atom_channels, bias=False)
+
+        self.embed_ref_element = nn.Linear(
+            self.c_element, self.per_atom_channels, bias=False
+        )
+        self.embed_ref_charge = nn.Linear(
+            self.c_charge, self.per_atom_channels, bias=False
+        )
+
+        self.embed_ref_atom_name = nn.Linear(
+            self.c_atom_name, self.per_atom_channels, bias=False
+        )
+        if spec.conformer_embedding_bias:
+            # The vendor's conformer-embedding MLP has biases and a final norm, so an
+            # all-zero conformer input still emits this fixed vector for every atom.
+            self.conformer_embedding_bias = nn.Parameter(
+                torch.zeros(self.per_atom_channels)
+            )
+        self.atom_features_norm = (
+            engine_modules.layer_norm(self.per_atom_channels, bias=True)
+            if spec.normed_atom_features
+            else None
+        )
+        if spec.atom_features_bias:
+            # The vendor embeds the concatenated atom features with ONE biased
+            # Linear; AF3's per-feature projections are bias-free.
+            self.embed_atom_features_bias = nn.Parameter(
+                torch.zeros(self.per_atom_channels)
+            )
+
+        self.single_to_pair_cond_row = nn.Linear(
+            self.per_atom_channels, self.per_atom_pair_channels, bias=False
+        )
+        self.single_to_pair_cond_col = nn.Linear(
+            self.per_atom_channels, self.per_atom_pair_channels, bias=False
+        )
+
+        self.atom_pair_distogram = spec.atom_pair_distogram_feature
+        if not self.atom_pair_distogram:
+            self.embed_pair_offsets = nn.Linear(
+                self.c_positions, self.per_atom_pair_channels, bias=False
+            )
+            self.embed_pair_distances = nn.Linear(
+                self.c_pair_distance, self.per_atom_pair_channels, bias=False
+            )
+
+        self.single_to_pair_cond_row_1 = nn.Linear(
+            128, self.per_atom_pair_channels, bias=False
+        )
+
+        self.single_to_pair_cond_col_1 = nn.Linear(
+            128, self.per_atom_pair_channels, bias=False
+        )
+
+        if self.atom_pair_distogram:
+            # One projection over [distogram one-hot, inverse-square, validity].
+            # A one-hot distogram is not a linear function of the offsets, so
+            # unlike the single side this cannot be folded into AF3's Linears.
+            # It carries a bias, which applies to invalid pairs too.
+            self.embed_atom_pair_feat = nn.Linear(
+                len(self.ATOM_PAIR_BINS) + 4, self.per_atom_pair_channels, bias=True
+            )
+        else:
+            self.embed_pair_offsets_1 = nn.Linear(
+                self.c_positions, self.per_atom_pair_channels, bias=False
+            )
+
+            self.embed_pair_distances_1 = nn.Linear(
+                1, self.per_atom_pair_channels, bias=False
+            )
+
+            self.embed_pair_offsets_valid = nn.Linear(
+                1, self.per_atom_pair_channels, bias=False
+            )
+
+        self.pair_mlp_1 = nn.Linear(
+            self.per_atom_pair_channels, self.per_atom_pair_channels, bias=False
+        )
+        self.pair_mlp_2 = nn.Linear(
+            self.per_atom_pair_channels, self.per_atom_pair_channels, bias=False
+        )
+        if not self.atom_pair_distogram:
+            self.pair_mlp_3 = nn.Linear(
+                self.per_atom_pair_channels, self.per_atom_pair_channels, bias=False
+            )
+
+        # The distogram bin edges as a buffer: building them in forward is a
+        # host-to-device
+        # copy, which a CUDA graph capture refuses.
+        self.register_buffer(
+            "atom_pair_edges", torch.tensor(self.ATOM_PAIR_BINS), persistent=False
+        )
+        self.c_query = 128
+        self.atom_transformer_encoder = _atom_transformer(spec, self.c_query)
+
+        self.project_atom_features_for_aggr = nn.Linear(
+            self.c_query, self.per_token_channels, bias=False
+        )
+
+        if self.with_trunk_single_cond is True:
+            self.c_trunk_single_cond = trunk_single_channels
+            self.lnorm_trunk_single_cond = engine_modules.layer_norm(
+                self.c_trunk_single_cond,
+                bias="lnorm_trunk_single_cond" in spec.affine_norms,
+            )
+            self.embed_trunk_single_cond = nn.Linear(
+                self.c_trunk_single_cond, self.per_atom_channels, bias=False
+            )
+
+        if self.with_token_atoms_act is True:
+            self.atom_positions_to_features = nn.Linear(
+                self.c_positions, self.per_atom_channels, bias=False
+            )
+            if spec.atom_chiral_features:
+                # Embeds the gradient of the chiral-centre dihedral error w.r.t. the
+                # noisy coordinates (``_chiral_features``). It sat unused, with its
+                # weights loaded, until the release was found feeding 669 rows on
+                # 3PTB where FoldJet fed none.
+                self.atom_chiral_to_features = nn.Linear(
+                    self.c_positions, self.per_atom_channels, bias=False
+                )
+
+        if self.with_trunk_pair_cond is True:
+            self.c_trunk_pair_cond = trunk_pair_channels
+            self.lnorm_trunk_pair_cond = engine_modules.layer_norm(
+                self.c_trunk_pair_cond,
+                bias="lnorm_trunk_pair_cond" in spec.affine_norms,
+            )
+            self.embed_trunk_pair_cond = nn.Linear(
+                self.c_trunk_pair_cond, self.per_atom_pair_channels, bias=False
+            )
+
+        # The parameter-free norm of the conditioning sum (``spec.atom_cond_norm``):
+        # an engine LayerNorm without an affine, so no state-dict key.
+        self.atom_cond_layer_norm = (
+            engine_modules.layer_norm(
+                self.per_atom_channels, bias=False, elementwise_affine=False
+            )
+            if spec.atom_cond_norm
+            else None
+        )
+
+    def _chiral_features(
+        self, batch: feat_batch.Batch, token_atoms_act: torch.Tensor
+    ) -> torch.Tensor | float:
+        """Embed the chiral-centre dihedral-error gradient of the noisy positions.
+
+        Taken on the same scaled noisy coordinates the position embedding reads, in
+        float32 whatever the trunk runs in, as the release does.
+        """
+        ref = batch.ref_structure
+        if ref.chiral_centres is None or ref.chiral_centres.shape[0] == 0:
+            return 0.0
+        flat = token_atoms_act.flatten(-3, -2)
+        grads = dihedral_error_gradient(
+            flat, ref.chiral_centres.long(), cast("torch.Tensor", ref.chiral_dihedrals)
+        ).nan_to_num()
+        grads = grads.reshape(token_atoms_act.shape).to(token_atoms_act.dtype)
+        return self.atom_chiral_to_features(
+            atom_layout.convert(
+                batch.atom_cross_att.token_atoms_to_queries,
+                grads,
+                layout_axes=(-3, -2),
+            )
+        )
+
+    def _per_atom_conditioning(
+        self, batch: feat_batch.Batch
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+
+        # Compute per-atom single conditioning
+        # Shape (num_tokens, num_dense, channels)
+        act = self.embed_ref_pos(batch.ref_structure.positions)
+        act += self.embed_ref_mask(
+            batch.ref_structure.mask[:, :, None].to(
+                dtype=self.embed_ref_mask.weight.dtype
+            )
+        )
+
+        # Element is encoded as atomic number if the periodic table, so
+        # 128 should be fine.
+        act += self.embed_ref_element(
+            F.one_hot(batch.ref_structure.element.to(dtype=torch.int64), 128).to(
+                dtype=self.embed_ref_element.weight.dtype
+            )
+        )
+        charge = batch.ref_structure.charge
+        if not self.spec.raw_ref_charge:
+            charge = torch.arcsinh(charge)
+        act += self.embed_ref_charge(charge[:, :, None])
+
+        # Characters are encoded as ASCII code minus 32, so we need 64 classes,
+        # to encode all standard ASCII characters between 32 and 96.
+        atom_name_chars_1hot = F.one_hot(
+            batch.ref_structure.atom_name_chars.to(dtype=torch.int64), 64
+        ).to(dtype=self.embed_ref_atom_name.weight.dtype)
+        num_token, num_dense, _ = act.shape
+        act += self.embed_ref_atom_name(
+            atom_name_chars_1hot.reshape(num_token, num_dense, -1)
+        )
+
+        if self.spec.atom_features_bias:
+            act = act + self.embed_atom_features_bias
+        if self.spec.conformer_embedding_bias:
+            act = act + self.conformer_embedding_bias
+        if self.atom_features_norm is not None:
+            # AF3 sums bias-free per-feature projections and leaves the result
+            # unnormalised; ESMFold2 norms the sum.
+            act = self.atom_features_norm(act)
+        act *= batch.ref_structure.mask[:, :, None]
+
+        # Compute pair conditioning
+        # shape (num_tokens, num_dense, num_dense, channels)
+        # Embed single features
+        row_act = self.single_to_pair_cond_row(torch.relu(act))
+        col_act = self.single_to_pair_cond_col(torch.relu(act))
+        pair_act = row_act[:, :, None, :] + col_act[:, None, :, :]
+
+        if not self.atom_pair_distogram:
+            # Embed pairwise offsets
+            pair_act += self.embed_pair_offsets(
+                batch.ref_structure.positions[:, :, None, :]
+                - batch.ref_structure.positions[:, None, :, :]
+            )
+
+            sq_dists = torch.sum(
+                torch.square(
+                    batch.ref_structure.positions[:, :, None, :]
+                    - batch.ref_structure.positions[:, None, :, :]
+                ),
+                dim=-1,
+            )
+            pair_act += self.embed_pair_distances(1.0 / (1 + sq_dists[:, :, :, None]))
+
+        return act, pair_act
+
+    def forward(
+        self,
+        batch: feat_batch.Batch,
+        token_atoms_act: torch.Tensor | None = None,
+        trunk_single_cond: torch.Tensor | None = None,
+        trunk_pair_cond: torch.Tensor | None = None,
+    ) -> AtomCrossAttEncoderOutput:
+        """Compute the module output: the fold's conditioning, then one step on it."""
+        if (token_atoms_act is not None) != self.with_token_atoms_act:
+            message = (
+                "Invalid state: (token_atoms_act is not None) == "
+                "self.with_token_atoms_act"
+            )
+            raise ValueError(message)
+        state = self.prepare(batch, trunk_single_cond, trunk_pair_cond)
+        return self.step(batch, token_atoms_act, state)
+
+    def prepare(  # noqa: PLR0915 - keep fold-invariant tensor preparation together
+        self,
+        batch: feat_batch.Batch,
+        trunk_single_cond: torch.Tensor | None = None,
+        trunk_pair_cond: torch.Tensor | None = None,
+    ) -> AtomFoldState:
+        """Run prepare.
+
+        Everything the encoder builds from the batch and the trunk -- not from the
+        noisy coordinates.
+
+        The atom conditioning, the atom-pair activations (trunk pair, reference
+        offsets, MLP), the masks and the rotary tables are the same at every sampler
+        step of a fold; the coordinates enter only through ``step``.
+        """
+        if (trunk_single_cond is not None) != self.with_trunk_single_cond:
+            message = (
+                "Invalid state: (trunk_single_cond is not None) == "
+                "self.with_trunk_single_cond"
+            )
+            raise ValueError(message)
+        if (trunk_pair_cond is not None) != self.with_trunk_pair_cond:
+            message = (
+                "Invalid state: (trunk_pair_cond is not None) == "
+                "self.with_trunk_pair_cond"
+            )
+            raise ValueError(message)
+
+        token_atoms_single_cond, _ = self._per_atom_conditioning(batch)
+        token_atoms_mask = batch.predicted_structure_info.atom_mask
+
+        queries_single_cond = atom_layout.convert(
+            batch.atom_cross_att.token_atoms_to_queries,
+            token_atoms_single_cond,
+            layout_axes=(-3, -2),
+        )
+
+        queries_mask = atom_layout.convert(
+            batch.atom_cross_att.token_atoms_to_queries,
+            token_atoms_mask,
+            layout_axes=(-2, -1),
+        )
+
+        # Some families query on the per-atom features alone and let only the
+        # conditioning see the trunk single.
+        # Cloned: the trunk term below is added in place.
+        query_base = queries_single_cond.clone()
+        # If provided, broadcast single conditioning from trunk to all queries
+        if trunk_single_cond is not None:
+            trunk_single_cond = cast(
+                "torch.Tensor",
+                self.embed_trunk_single_cond(
+                    self.lnorm_trunk_single_cond(trunk_single_cond)
+                ),
+            )
+            queries_single_cond += atom_layout.convert(
+                batch.atom_cross_att.tokens_to_queries,
+                trunk_single_cond,
+                layout_axes=(-2,),
+            )
+
+        if self.atom_cond_layer_norm is not None:
+            # Normalise the conditioning SUM. It carries no parameters, so no
+            # blob names it and no shape check can miss it -- but every adaptive
+            # norm in the atom stacks scales by (s + 1) off this vector, so
+            # without it the atom representation runs away rather than being
+            # merely a little off.
+            queries_single_cond = self.atom_cond_layer_norm(queries_single_cond)
+
+        if not self.spec.pre_trunk_atom_query:
+            query_base = queries_single_cond
+
+        keys_single_cond = atom_layout.convert(
+            batch.atom_cross_att.queries_to_keys,
+            queries_single_cond,
+            layout_axes=(-3, -2),
+        )
+        keys_mask = atom_layout.convert(
+            batch.atom_cross_att.queries_to_keys, queries_mask, layout_axes=(-2, -1)
+        )
+
+        # Embed single features into the pair conditioning.
+        # shape (num_subsets, num_queries, num_keys, ch)
+        row_act = self.single_to_pair_cond_row_1(torch.relu(queries_single_cond))
+        pair_cond_keys_input = atom_layout.convert(
+            batch.atom_cross_att.queries_to_keys,
+            queries_single_cond,
+            layout_axes=(-3, -2),
+        )
+
+        col_act = self.single_to_pair_cond_col_1(torch.relu(pair_cond_keys_input))
+        pair_act = row_act[:, :, None, :] + col_act[:, None, :, :]
+
+        if trunk_pair_cond is not None:
+            trunk_pair_cond = cast(
+                "torch.Tensor",
+                self.embed_trunk_pair_cond(self.lnorm_trunk_pair_cond(trunk_pair_cond)),
+            )
+
+            # Create the GatherInfo into a flattened trunk_pair_cond from the
+            # queries and keys gather infos.
+            num_tokens = trunk_pair_cond.shape[0]
+            # (num_subsets, num_queries)
+            tokens_to_queries = batch.atom_cross_att.tokens_to_queries
+            # (num_subsets, num_keys)
+            tokens_to_keys = batch.atom_cross_att.tokens_to_keys
+            # (num_subsets, num_queries, num_keys)
+            trunk_pair_to_atom_pair = atom_layout.GatherInfo(
+                gather_idxs=(
+                    num_tokens * tokens_to_queries.gather_idxs[:, :, None]
+                    + tokens_to_keys.gather_idxs[:, None, :]
+                ),
+                gather_mask=(
+                    tokens_to_queries.gather_mask[:, :, None]
+                    & tokens_to_keys.gather_mask[:, None, :]
+                ),
+                input_shape=(num_tokens, num_tokens),
+            )
+            # Gather the conditioning and add it to the atom-pair activations.
+            pair_act += atom_layout.convert(
+                trunk_pair_to_atom_pair, trunk_pair_cond, layout_axes=(-3, -2)
+            )
+
+        # Embed pairwise offsets
+        queries_ref_pos = atom_layout.convert(
+            batch.atom_cross_att.token_atoms_to_queries,
+            batch.ref_structure.positions,
+            layout_axes=(-3, -2),
+        )
+        queries_ref_space_uid = atom_layout.convert(
+            batch.atom_cross_att.token_atoms_to_queries,
+            batch.ref_structure.ref_space_uid,
+            layout_axes=(-2, -1),
+        )
+        keys_ref_pos = atom_layout.convert(
+            batch.atom_cross_att.queries_to_keys,
+            queries_ref_pos,
+            layout_axes=(-3, -2),
+        )
+        keys_ref_space_uid = atom_layout.convert(
+            batch.atom_cross_att.queries_to_keys,
+            queries_ref_space_uid,
+            layout_axes=(-2, -1),
+        )
+
+        offsets_valid = (
+            queries_ref_space_uid[:, :, None] == keys_ref_space_uid[:, None, :]
+        )
+        offsets = queries_ref_pos[:, :, None, :] - keys_ref_pos[:, None, :, :]
+
+        sq_dists = torch.sum(torch.square(offsets), dim=-1)
+        if self.atom_pair_distogram:
+            # Compare SQUARED distances against squared edges. Taking the square
+            # root first needs an epsilon, and that epsilon turns a self-pair's
+            # exact zero into a positive number, which lands every self-pair one
+            # class too high. Squaring is exact and needs no guard.
+            edges = self.atom_pair_edges.to(
+                device=sq_dists.device, dtype=sq_dists.dtype
+            )
+            index = (sq_dists[..., None] > edges.square()).sum(-1)
+            index = torch.where(
+                offsets_valid, index, index.new_full((), len(self.ATOM_PAIR_BINS) + 1)
+            )
+            dtype = self.embed_atom_pair_feat.weight.dtype
+            feature = torch.cat(
+                [
+                    F.one_hot(index, len(self.ATOM_PAIR_BINS) + 2).to(dtype),
+                    # Not masked: validity rides in its own column.
+                    (1.0 / (1.0 + sq_dists))[..., None].to(dtype),
+                    offsets_valid[..., None].to(dtype),
+                ],
+                dim=-1,
+            )
+            pair_act += self.embed_atom_pair_feat(feature)
+        else:
+            pair_act += (
+                self.embed_pair_offsets_1(offsets) * offsets_valid[:, :, :, None]
+            )
+
+            # Embed pairwise inverse squared distances
+            pair_act += (
+                self.embed_pair_distances_1(1.0 / (1 + sq_dists[:, :, :, None]))
+                * offsets_valid[:, :, :, None]
+            )
+            # Embed offsets valid mask
+            pair_act += self.embed_pair_offsets_valid(
+                offsets_valid[:, :, :, None].to(
+                    dtype=self.embed_pair_offsets_valid.weight.dtype
+                )
+            )
+
+        if self.atom_pair_distogram:
+            # Two layers with no rectifier on the way in, and one residual add.
+            pair_act = pair_act + self.pair_mlp_2(torch.relu(self.pair_mlp_1(pair_act)))
+        else:
+            # Run a small MLP on the pair acitvations
+            pair_act2 = self.pair_mlp_1(torch.relu(pair_act))
+            pair_act2 = self.pair_mlp_2(torch.relu(pair_act2))
+            pair_act += self.pair_mlp_3(torch.relu(pair_act2))
+
+        pair_mask = None
+        if self.spec.same_conformer_atom_attention:
+            # Query/key pairs of one reference conformer, both atoms real. On a
+            # protein that is one token; on a ligand it is every atom of it.
+            pair_mask = (
+                offsets_valid
+                & queries_mask[..., :, None].to(torch.bool)
+                & keys_mask[..., None, :].to(torch.bool)
+            )
+
+        rope_q = rope_k = None
+        if self.spec.atom_rope is not None:
+            head_dim: int = self.atom_transformer_encoder.key_dim_per_head  # pyright: ignore[reportAssignmentType]
+            rope_q = build_atom_rope(
+                queries_ref_pos, queries_ref_space_uid, head_dim, self.spec.atom_rope
+            )
+            rope_k = build_atom_rope(
+                keys_ref_pos, keys_ref_space_uid, head_dim, self.spec.atom_rope
+            )
+        if self.spec.atom_window_half is not None:
+            pair_mask = sliding_window_mask(
+                queries_mask,
+                keys_mask,
+                batch.atom_cross_att.queries_to_keys,
+                self.spec.atom_window_half,
+            )
+
+        subsets, queries, _ = queries_single_cond.shape[-3:]
+        engine_pair = pair_act.reshape(1, subsets, queries, -1, pair_act.shape[-1])
+        engine_key_mask = (queries_mask > 0).reshape(1, subsets * queries)
+        engine_uid = (
+            queries_ref_space_uid.reshape(subsets * queries)
+            if self.spec.same_conformer_atom_attention
+            else None
+        )
+        engine_even = None
+        if subsets % 2:
+            engine_even = (
+                F.pad(engine_pair, (0, 0, 0, 0, 0, 0, 0, 1)),
+                F.pad(engine_key_mask, (0, queries)),
+                None
+                if engine_uid is None
+                else F.pad(engine_uid, (0, queries), value=-1),
+            )
+        return AtomFoldState(
+            engine_pair=engine_pair,
+            engine_key_mask=engine_key_mask,
+            engine_uid=engine_uid,
+            engine_even=engine_even,
+            query_base=query_base,
+            queries_mask=queries_mask,
+            queries_single_cond=queries_single_cond,
+            keys_mask=keys_mask,
+            keys_single_cond=keys_single_cond,
+            pair_cond=pair_act,
+            pair_mask=pair_mask,
+            rope_q=rope_q,
+            rope_k=rope_k,
+        )
+
+    def step(
+        self,
+        batch: feat_batch.Batch,
+        token_atoms_act: torch.Tensor | None,
+        state: AtomFoldState,
+    ) -> AtomCrossAttEncoderOutput:
+        """One encoder evaluation on the fold's ``state``."""
+        token_atoms_mask = batch.predicted_structure_info.atom_mask
+        queries_mask = state.queries_mask
+        query_base = state.query_base
+        keys_mask = state.keys_mask
+        queries_single_cond = state.queries_single_cond
+        keys_single_cond = state.keys_single_cond
+        pair_act = state.pair_cond
+        pair_mask = state.pair_mask
+        rope_q, rope_k = state.rope_q, state.rope_k
+
+        if token_atoms_act is None:
+            queries_act = query_base.clone()
+        else:
+            # Convert token_atoms_act to queries layout and map to per_atom_channels
+            # (num_subsets, num_queries, channels)
+            queries_act = atom_layout.convert(
+                batch.atom_cross_att.token_atoms_to_queries,
+                token_atoms_act,
+                layout_axes=(-3, -2),
+            )
+
+            queries_act = self.atom_positions_to_features(queries_act)
+            if self.spec.atom_chiral_features:
+                queries_act = queries_act + self._chiral_features(
+                    batch, token_atoms_act
+                )
+            queries_act *= queries_mask[..., None]
+            queries_act += query_base
+
+        hoisted = (
+            {}
+            if state.hoisted is None or state.hoisted[0] is None
+            else {"hoisted": state.hoisted[0]}
+        )
+        queries_act = self.atom_transformer_encoder(
+            queries_act=queries_act,
+            queries_mask=queries_mask,
+            queries_to_keys=batch.atom_cross_att.queries_to_keys,
+            keys_mask=keys_mask,
+            queries_single_cond=queries_single_cond,
+            keys_single_cond=keys_single_cond,
+            pair_cond=pair_act,
+            pair_mask=pair_mask,
+            rope_q=rope_q,
+            rope_k=rope_k,
+            engine_inputs=(
+                state.engine_pair,
+                state.engine_key_mask,
+                state.engine_uid,
+                state.engine_even,
+            ),
+            **hoisted,
+        )
+
+        queries_act = _mask_atoms(queries_act, queries_mask)
+        skip_connection = queries_act.clone()
+
+        queries_act = self.project_atom_features_for_aggr(queries_act)
+
+        token_act = (
+            _pool_engine(
+                queries_act,
+                batch.atom_cross_att.queries_to_token_atoms,
+                token_atoms_mask,
+            )
+            if getattr(self, "foldjet_sampler_ops", True)
+            else None
+        )
+        if token_act is None:
+            token_atoms_act = atom_layout.convert(
+                batch.atom_cross_att.queries_to_token_atoms,
+                queries_act,
+                layout_axes=(-3, -2),
+            )
+
+            # Masked pooling may promote BF16 features through its FP32 denominator.
+            # Restore the feature dtype before entering the token DiT residual stream.
+            token_act = utils.mask_mean(
+                token_atoms_mask.reshape(
+                    (1,) * (token_atoms_act.ndim - token_atoms_mask.ndim - 1)
+                    + (*token_atoms_mask.shape, 1)
+                ),
+                torch.relu(token_atoms_act),
+                dim=-2,
+            ).to(token_atoms_act.dtype)
+
+        return AtomCrossAttEncoderOutput(
+            token_act=token_act,
+            skip_connection=skip_connection,
+            queries_mask=queries_mask,
+            queries_single_cond=queries_single_cond,
+            keys_mask=keys_mask,
+            keys_single_cond=keys_single_cond,
+            pair_cond=pair_act,
+            pair_mask=pair_mask,
+            rope_q=rope_q,
+            rope_k=rope_k,
+            engine_pair=state.engine_pair,
+            engine_key_mask=state.engine_key_mask,
+            engine_uid=state.engine_uid,
+            engine_even=state.engine_even,
+            hoisted_decoder=None if state.hoisted is None else state.hoisted[1],
+        )
+
+
+class AtomCrossAttDecoder(nn.Module):
+    """Represent atom cross att decoder."""
+
+    def __init__(self, spec: DenseSpec = ALPHAFOLD3) -> None:
+        super().__init__()
+
+        self.per_atom_channels = 128
+
+        self.project_token_features_for_broadcast = nn.Linear(
+            768, self.per_atom_channels, bias=False
+        )
+
+        self.atom_transformer_decoder = _atom_transformer(spec, self.per_atom_channels)
+
+        # A second, affine norm over the encoder's atom conditioning. AF3 reuses
+        # the encoder's unchanged.
+        self.post_atom_cond_layer_norm = (
+            engine_modules.layer_norm(self.per_atom_channels, bias=True)
+            if spec.post_atom_cond_norm
+            else None
+        )
+
+        self.atom_features_layer_norm = engine_modules.layer_norm(
+            self.per_atom_channels, bias="atom_features_layer_norm" in spec.affine_norms
+        )
+        self.atom_features_to_position_update = nn.Linear(
+            self.per_atom_channels, 3, bias=False
+        )
+
+    def forward(
+        self,
+        batch: feat_batch.Batch,
+        token_act: torch.Tensor,  # (num_tokens, ch)
+        enc: AtomCrossAttEncoderOutput,
+    ) -> torch.Tensor:
+        """Compute the module output."""
+        token_act = self.project_token_features_for_broadcast(token_act)
+        num_token, max_atoms_per_token = (
+            batch.atom_cross_att.queries_to_token_atoms.shape
+        )
+        token_atom_act = torch.broadcast_to(
+            token_act[..., :, None, :],
+            (
+                *token_act.shape[:-2],
+                num_token,
+                max_atoms_per_token,
+                self.per_atom_channels,
+            ),
+        )
+        queries_act = atom_layout.convert(
+            batch.atom_cross_att.token_atoms_to_queries,
+            token_atom_act,
+            layout_axes=(-3, -2),
+        )
+        queries_act = (
+            queries_act + enc.skip_connection
+            if torch.is_grad_enabled()
+            else queries_act.add_(enc.skip_connection)
+        )
+        queries_act = _mask_atoms(queries_act, enc.queries_mask)
+
+        if enc.hoisted_decoder is None:
+            decoder_queries_cond = (
+                enc.queries_single_cond
+                if self.post_atom_cond_layer_norm is None
+                else self.post_atom_cond_layer_norm(enc.queries_single_cond)
+            )
+            decoder_keys_cond = (
+                enc.keys_single_cond
+                if self.post_atom_cond_layer_norm is None
+                else self.post_atom_cond_layer_norm(enc.keys_single_cond)
+            )
+            hoisted = {}
+        else:
+            decoder_queries_cond, decoder_keys_cond, decoder_projections = (
+                enc.hoisted_decoder
+            )
+            hoisted = (
+                {} if decoder_projections is None else {"hoisted": decoder_projections}
+            )
+
+        # Run the atom cross attention transformer.
+        queries_act = self.atom_transformer_decoder(
+            queries_act=queries_act,
+            queries_mask=enc.queries_mask,
+            queries_to_keys=batch.atom_cross_att.queries_to_keys,
+            keys_mask=enc.keys_mask,
+            pair_mask=enc.pair_mask,
+            engine_inputs=(
+                enc.engine_pair,
+                enc.engine_key_mask,
+                enc.engine_uid,
+                enc.engine_even,
+            ),
+            queries_single_cond=decoder_queries_cond,
+            keys_single_cond=decoder_keys_cond,
+            pair_cond=enc.pair_cond,
+            # The decoder shares the ENCODER's rotation, not a rebuilt one: the
+            # two are gathers of the same flat atom list.
+            rope_q=enc.rope_q,
+            rope_k=enc.rope_k,
+            **hoisted,
+        )
+
+        queries_act = _mask_atoms(queries_act, enc.queries_mask)
+        queries_position_update = self.atom_features_to_position_update(
+            self.atom_features_layer_norm(queries_act)
+        )
+        position_update = atom_layout.convert(
+            batch.atom_cross_att.queries_to_token_atoms,
+            queries_position_update,
+            layout_axes=(-3, -2),
+        )
+        return position_update

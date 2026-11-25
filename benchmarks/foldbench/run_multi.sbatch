@@ -1,5 +1,5 @@
 #!/bin/bash
-# The whole FoldBench (1,522 targets) through FoldForge af3 on N GPUs in ONE job (fb_multi.py: one parent scheduler, workers per GPU):
+# The whole FoldBench (1,522 targets) through FoldJet af3 on N GPUs in ONE job (fb_multi.py: one parent scheduler, workers per GPU):
 # bf16, compile + CUDA graphs (scope trunk), 5 trunk_seeds x 5 samples, 200 steps, --recycles 11, trunk_seeds grouped up to 512 AF3 tokens,
 # small-target concurrency 3 under CUDA MPS. A walltime measurement is one continuous job: never split it into chunks.
 #   sbatch --export=ALL,SPECS=<spec dir>,OUT=<run dir>[,FFENV=<pixi env>][,TARGETS=<list>][,EXTRA="..."] benchmarks/foldbench/run_multi.sbatch

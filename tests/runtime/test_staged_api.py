@@ -15,12 +15,12 @@ if TYPE_CHECKING:
 import pytest
 import torch
 
-import foldforge as ff
-from foldforge import api
-from foldforge.models import execution, loading
-from foldforge.models.io import runtime
-from foldforge.models.io.output import Decoded
-from foldforge.prediction import Prediction
+import foldjet as ff
+from foldjet import api
+from foldjet.models import execution, loading
+from foldjet.models.io import runtime
+from foldjet.models.io.output import Decoded
+from foldjet.prediction import Prediction
 
 
 class Network(torch.nn.Module):
@@ -48,7 +48,7 @@ class Network(torch.nn.Module):
 
 @pytest.fixture
 def staged(tmp_path, monkeypatch):
-    from foldforge.data import ccd
+    from foldjet.data import ccd
 
     checkpoint = tmp_path / "weights.bin"
     checkpoint.touch()
@@ -234,7 +234,7 @@ def test_public_runtime_annotations_resolve():
 
 
 def test_library_output_is_owned_by_the_caller(staged, tmp_path, monkeypatch):
-    from foldforge.models.io import paths
+    from foldjet.models.io import paths
 
     model, inputs, options, _, _ = staged
     monkeypatch.setattr(paths, "RUNS_ROOT", tmp_path / "cli-runs")
@@ -285,7 +285,7 @@ def test_distinct_predictors_serialize_global_execution_policy(staged):
 
 
 def test_compatibility_parser_retains_explicit_device():
-    from foldforge.models.io.cli import parse
+    from foldjet.models.io.cli import parse
 
     request = parse(
         "boltz2",

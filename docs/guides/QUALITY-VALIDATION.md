@@ -1,7 +1,7 @@
 # Quality validation — 2026-09-15
 
-FoldForge uses team-gm's global Ruff `ALL` policy and numerical-code exceptions,
-with Pyright in standard mode over every FoldForge source file. See
+FoldJet uses team-gm's global Ruff `ALL` policy and numerical-code exceptions,
+with Pyright in standard mode over every FoldJet source file. See
 [CODE-QUALITY.md](CODE-QUALITY.md) for the coverage and documented exceptions.
 
 | Check | Result |
@@ -11,7 +11,7 @@ with Pyright in standard mode over every FoldForge source file. See
 | Pyright 1.1.408 | 191 source files, 0 errors, 0 warnings |
 | CPU regression suite | 245 passed, 159 skipped (CUDA cases and external fixtures) |
 | A100 full regression run | 397 passed, 7 external-fixture cases skipped |
-| CLI | `foldforge --help`, `foldforge models`, and help for all four model entrypoints passed |
+| CLI | `foldjet --help`, `foldjet models`, and help for all four model entrypoints passed |
 | Packaging | Wheel build passed |
 | Development setup | Lock consistency and pre-commit configuration validation passed |
 

@@ -14,8 +14,8 @@ mpl.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from foldforge.models import is_dense
-from foldforge.models.msa_policy import RECORD as MSA_POLICY
+from foldjet.models import is_dense
+from foldjet.models.msa_policy import RECORD as MSA_POLICY
 
 MODES = {
     "pytorch_eager_reference": "PyTorch eager · default",
@@ -35,7 +35,7 @@ MODELS = {
 REPEATS = 5
 AF3_TRUNK_PASSES = 11
 # Input contract follows the official AF3 pipeline: msa_crop_size and max_templates.
-# Every adapter then samples the same rows per recycle (foldforge.models.msa_policy).
+# Every adapter then samples the same rows per recycle (foldjet.models.msa_policy).
 MSA_DEPTH = MSA_POLICY["prepared_rows"]
 TEMPLATE_N = MSA_POLICY["templates_per_chain"]
 
@@ -202,7 +202,7 @@ def render(rows: list[dict], docs: Path) -> None:
         "",
         f"Updated {updated}. **4YX2: 594 residues, three chains (163 + 218 + 213).**",
         "All four models now have five measured configurations. Reference means each",
-        "model's released **precision policy** in FoldForge's PyTorch "
+        "model's released **precision policy** in FoldJet's PyTorch "
         "backend; it is not",
         "the original application's complete runtime. Native BF16 stores "
         "learned parameters",
@@ -263,7 +263,7 @@ def render(rows: list[dict], docs: Path) -> None:
         "mers/models/esmfold2/modeling_esmfold2.py),",
         "and [OpenDDE defaults](https://github.com/aurekaresearch/OpenDDE/"
         "blob/main/opendde/config/model_base.py).",
-        "These compare backend configurations with common FoldForge "
+        "These compare backend configurations with common FoldJet "
         "adapters, not exact",
         "upstream end-to-end applications. PyTorch mode retains the "
         "architecture's permitted",

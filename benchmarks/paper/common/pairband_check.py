@@ -1,4 +1,4 @@
-"""Check of the pair-band decision (FoldForge `DiffusionHead._pair_band_rows`): banded and unbanded pair conditioning give the same structure bit for bit, and what the
+"""Check of the pair-band decision (FoldJet `DiffusionHead._pair_band_rows`): banded and unbanded pair conditioning give the same structure bit for bit, and what the
 decision does at a size.
 
     python pairband_check.py --model af3 --n 4 [--n 12 ...] [--fraction 0.4]
@@ -35,8 +35,8 @@ import yaml  # noqa: E402
 sys.path.insert(0, str(HERE.parents[2] / "benchmarks/5i28_ff"))
 import run_5i28_ff as H  # noqa: E402
 
-import foldforge as ff  # noqa: E402
-import foldforge.modules.dense.diffusion_head as dh  # noqa: E402
+import foldjet as ff  # noqa: E402
+import foldjet.modules.dense.diffusion_head as dh  # noqa: E402
 
 if args.fraction is not None:
     dh.PAIR_BAND_FREE_FRACTION = args.fraction

@@ -1,0 +1,467 @@
+"""Input conventions a dense-graph family was trained under.
+
+These act on the featurised example before it reaches the network. They are part
+of a family's weights as much as its parameters are: applying one family's
+convention to another is a mistake, not a feature, and a missing one fails
+silently as a worse fold. Each is a field of the family's ``DenseSpec``.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+import numpy as np
+
+if TYPE_CHECKING:
+    from foldjet.modules.dense.spec import DenseSpec
+
+_NAME_CLASSES = 64
+
+#: AF3 encodes an atom name character as its ordinal less this.
+_NAME_OFFSET = 32
+
+#: Gap class in FoldJet's polymer vocabulary.
+_GAP_RESTYPE = 21
+
+
+def centre_conformers(example: dict[str, Any]) -> None:
+    """Subtract each reference conformer's own masked mean from ``ref_pos``.
+
+    Grouped by ``ref_space_uid`` as the vendors group it. Padding stays zero: the
+    mask is what every consumer reads.
+    """
+    positions = np.asarray(example["ref_pos"], dtype=np.float32)
+    flat = positions.reshape(-1, 3)
+    weight = (np.asarray(example["ref_mask"]).reshape(-1) > 0).astype(np.float32)
+    group = np.asarray(example["ref_space_uid"]).reshape(-1).astype(np.int64)
+    if not group.size:
+        return
+    groups = int(group.max()) + 1
+    count = np.maximum(np.bincount(group, weights=weight, minlength=groups), 1.0)
+    centre = (
+        np.stack(
+            [
+                np.bincount(group, weights=weight * flat[:, axis], minlength=groups)
+                for axis in range(3)
+            ],
+            axis=-1,
+        )
+        / count[:, None]
+    )
+    example["ref_pos"] = ((flat - centre[group]) * weight[:, None]).reshape(
+        positions.shape
+    )
+
+
+def random_ref_pose(example: dict[str, Any], max_translation: float = 1.0) -> None:
+    """Rotate each (centred) reference conformer at random and shift it <= 1 A.
+
+    The Protenix-lineage featuriser does this at inference too
+    (``ref_pos_augment=True``, ``random_transform``), and a family that reads
+    ``ref_pos`` through a Linear was trained on posed conformers. Drawn from the
+    request's trunk seed, so a fold stays reproducible.
+    """
+    positions = np.asarray(example["ref_pos"], dtype=np.float32)
+    flat = positions.reshape(-1, 3).copy()
+    mask = np.asarray(example["ref_mask"]).reshape(-1) > 0
+    group = np.asarray(example["ref_space_uid"]).reshape(-1).astype(np.int64)
+    for uid in np.unique(group[mask]):
+        rows = mask & (group == uid)
+        quaternion = np.random.normal(size=4)
+        w, x, y, z = quaternion / np.linalg.norm(quaternion)
+        rotation = np.array(
+            [
+                [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+                [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+                [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)],
+            ]
+        )
+        shift = np.random.uniform(-max_translation, max_translation, size=3)
+        flat[rows] = flat[rows] @ rotation.T + shift
+    example["ref_pos"] = flat.reshape(positions.shape).astype(positions.dtype)
+
+
+def drop_atoms(example: dict[str, Any], names: tuple[str, ...]) -> int:
+    """Remove atoms the vendor's tokenizer never creates, from STANDARD residues only.
+
+    AF3 gives a C-terminal residue an OXT and a 5' nucleotide an OP3; several vendors
+    emit neither, so the weights have never seen them. The names mean other things
+    elsewhere (O3P is a phosphoserine side-chain atom), so an atomised residue, one
+    real atom per token, keeps every atom. The atoms are removed from the layouts,
+    not only masked: a masked hole would shift every 32-atom attention block after
+    it and leave the output asking for an atom the model no longer predicts.
+    """
+    import dataclasses  # noqa: PLC0415
+
+    from alphafold3.model import features  # noqa: PLC0415 - AF3 input dependency
+
+    chars = np.asarray(example["ref_atom_name_chars"])
+    ref_mask = np.array(example["ref_mask"]).astype(bool)
+    real = ref_mask.sum(axis=1)
+
+    def name(row: np.ndarray) -> str:
+        # Characters are stored as ASCII minus 32 in 64 classes.
+        return "".join(chr(int(c) + 32) for c in row if 0 <= c < _NAME_CLASSES).strip()
+
+    drop = [
+        (token, atom)
+        for token, atom in zip(*np.nonzero(ref_mask), strict=True)
+        if real[token] > 1 and name(chars[token, atom]) in names
+    ]
+    if not drop:
+        return 0
+    width = ref_mask.shape[1]
+    flat = [token * width + atom for token, atom in drop]
+    for key in ("ref_mask", "pred_dense_atom_mask"):
+        if key in example:
+            value = np.array(example[key])
+            for token, atom in drop:
+                value[token, atom] = 0
+            example[key] = value
+    beta = "token_atoms_to_pseudo_beta"
+    example[f"{beta}:gather_mask"] = np.asarray(
+        example[f"{beta}:gather_mask"]
+    ) & ~np.isin(np.asarray(example[f"{beta}:gather_idxs"]), flat)
+
+    # an AF3 AtomLayout (untyped `_unwrap` infers ndarray)
+    layout: Any = features._unwrap(example["token_atoms_layout"])  # noqa: SLF001
+    atom_names = np.array(layout.atom_name, copy=True)
+    gone = set()
+    for token, atom in drop:
+        gone.add(
+            (
+                str(layout.chain_id[token, atom]),
+                int(layout.res_id[token, atom]),
+                str(atom_names[token, atom]),
+            )
+        )
+        atom_names[token, atom] = ""
+    layout = dataclasses.replace(layout, atom_name=atom_names)
+    example["token_atoms_layout"] = np.array(layout, object)
+
+    queries = np.asarray(example["token_atoms_to_queries:gather_idxs"])
+    keys = np.asarray(example["queries_to_keys:gather_idxs"]).shape[1]
+    example.update(
+        features.AtomCrossAtt.compute_features(
+            all_token_atoms_layout=layout,
+            queries_subset_size=queries.shape[1],
+            keys_subset_size=keys,
+            padding_shapes=features.PaddingShapes(
+                num_tokens=layout.shape[0],
+                msa_size=0,
+                num_chains=0,
+                num_templates=0,
+                num_atoms=queries.size,
+            ),
+        ).as_data_dict()
+    )
+
+    output: Any = features._unwrap(example["flat_output_layout"])  # noqa: SLF001
+    keep = np.array(
+        [
+            (str(chain), int(residue), str(atom)) not in gone
+            for chain, residue, atom in zip(
+                output.chain_id, output.res_id, output.atom_name, strict=True
+            )
+        ]
+    )
+    if not keep.all():
+        example["flat_output_layout"] = np.array(output[keep], object)
+        structure: Any = features._unwrap(example["empty_output_struc"])  # noqa: SLF001
+        example["empty_output_struc"] = np.array(structure.filter(mask=keep), object)
+    return len(drop)
+
+
+def widen_key_subset(example: dict[str, Any], keys: int) -> None:
+    """Rebuild the atom-attention gathers with a wider key subset.
+
+    AF3 takes 128 keys per 32-query block, which is wide enough for a window it
+    only block-aligns. A family whose window is an explicit +/-N by atom rank
+    needs a subset that contains it, or the mask reaches past the keys the
+    gather supplies and the window is silently truncated at the block edges.
+    """
+    from alphafold3.model import features  # noqa: PLC0415 - AF3 input dependency
+
+    layout = features._unwrap(example["token_atoms_layout"])  # noqa: SLF001
+    queries = np.asarray(example["token_atoms_to_queries:gather_idxs"])
+    example.update(
+        features.AtomCrossAtt.compute_features(
+            all_token_atoms_layout=layout,  # pyright: ignore[reportArgumentType]
+            queries_subset_size=queries.shape[1],
+            keys_subset_size=keys,
+            padding_shapes=features.PaddingShapes(
+                num_tokens=layout.shape[0],
+                msa_size=0,
+                num_chains=0,
+                num_templates=0,
+                num_atoms=queries.size,
+            ),
+        ).as_data_dict()
+    )
+
+
+def single_atoms_at_origin(example: dict[str, Any]) -> int:
+    """Put every one-atom component (an ion) at the origin, as a CCD conformer has it.
+
+    A family that reads its own conformer frame takes each component's computed
+    CCD conformer, and a lone atom's is (0, 0, 0). AF3's ideal-else-model rule can
+    leave it wherever the model coordinates were -- ZN at (2.1, 2.1, 0.3) -- and
+    ``ref_pos`` reaches a Linear, so the ion reads as a different atom.
+    """
+    positions = np.array(example["ref_pos"])
+    flat = positions.reshape(-1, 3)
+    mask = np.asarray(example["ref_mask"]).reshape(-1) > 0
+    group = np.asarray(example["ref_space_uid"]).reshape(-1)
+    uids, counts = np.unique(group[mask], return_counts=True)
+    lone = np.isin(group, uids[counts == 1]) & mask
+    flat[lone] = 0.0
+    example["ref_pos"] = flat.reshape(positions.shape).astype(
+        np.asarray(example["ref_pos"]).dtype
+    )
+    return int(lone.sum())
+
+
+def override_ref_conformers(example: dict[str, Any], conformers: dict) -> int:
+    """Replace `ref_pos` with another model's reference geometry, by atom name.
+
+    AF3 takes reference coordinates from the CCD ideal values. A family trained
+    on its own idealised frame was trained on THAT one, and the feature goes
+    straight into a Linear, so it is not pose-invariant. Atoms whose names the
+    table does not carry keep the coordinates they already had.
+    """
+    from alphafold3.constants import residue_names  # noqa: PLC0415 - AF3 input
+
+    positions = np.array(example["ref_pos"])
+    mask = np.asarray(example["ref_mask"])
+    chars = np.asarray(example["ref_atom_name_chars"])
+    aatype = np.asarray(example["aatype"])
+    codes = residue_names.POLYMER_TYPES_WITH_UNKNOWN_AND_GAP
+
+    def name(row: np.ndarray) -> str:
+        codes = (
+            chr(int(c) + _NAME_OFFSET) if 0 <= c < _NAME_CLASSES else "" for c in row
+        )
+        return "".join(codes).strip()
+
+    replaced = 0
+    for token in range(positions.shape[0]):
+        index = int(aatype[token])
+        entry = conformers.get(codes[index]) if index < len(codes) else None
+        if entry is None:
+            continue
+        names, reference = entry
+        lookup = {atom: slot for slot, atom in enumerate(names)}
+        for atom in range(positions.shape[1]):
+            if not mask[token, atom]:
+                continue
+            slot = lookup.get(name(chars[token, atom]))
+            if slot is not None:
+                positions[token, atom] = reference[slot]
+                replaced += 1
+    example["ref_pos"] = positions.astype(np.asarray(example["ref_pos"]).dtype)
+    return replaced
+
+
+def dedupe_self_msa(example: dict[str, Any]) -> None:
+    """Keep the query ONCE when every live MSA row is the query.
+
+    AF3 concatenates a paired and an unpaired MSA and both begin with the query, so
+    a chain with no alignments arrives with two identical rows; these vendors emit
+    depth one. It fires only on a self-MSA: with a real alignment the duplicate is
+    what the vendor's own pipeline produces too.
+    """
+    msa, mask = np.asarray(example["msa"]), np.asarray(example["msa_mask"])
+    live = np.flatnonzero(mask.any(-1))
+    duplicated = live.size > 1 and all(
+        np.array_equal(msa[live[0]], msa[i]) for i in live[1:]
+    )
+    if not duplicated:
+        return
+    # Only the first duplicate goes, as in the reference: depth two is what AF3 builds.
+    mask = mask.copy()
+    mask[live[1]] = False
+    example["msa_mask"] = mask
+    if "num_alignments" in example:
+        count = np.asarray(example["num_alignments"])
+        example["num_alignments"] = np.asarray(count - 1, dtype=count.dtype)
+
+
+#: AF3's gap class in the MSA and profile.
+_GAP = 21
+
+
+def nonprotein_msa_as_query(example: dict[str, Any], rows: str = "rows") -> None:
+    """Fill a non-protein chain's all-gap MSA rows with its own residue types.
+
+    ``rows="query"`` fills the query row only, as RoseTTAFold3's atomworks
+    featurisation does: its first row is the encoded sequence for every token,
+    every other row of a chain without an alignment stays padding.
+
+    AF3 writes a ligand's MSA column as the gap -- the query row included -- and
+    a nucleic chain's column as the gap in every protein alignment row. The
+    Protenix lineage fills any row where a non-protein chain is entirely gap
+    with that chain's query ("forward compatibility patch for non-protein
+    entities"), and its query row for a ligand is the ligand's residue type,
+    UNK, so no non-protein token ever reads as gap. The profile follows: a
+    non-protein token whose profile is pure gap takes its residue type. Missed,
+    a zinc ion's profile was the gap where the release's is UNK, and it moved
+    every token's initial single through the outer sum.
+    """
+    msa = np.array(example["msa"])
+    live = np.asarray(example["msa_mask"]).any(-1)
+    aatype = np.asarray(example["aatype"])
+    real = np.asarray(example["seq_mask"]).astype(bool)
+    other = real & ~np.asarray(example["is_protein"]).astype(bool)
+    asym = np.asarray(example["asym_id"])
+    for chain in np.unique(asym[other]):
+        cols = np.flatnonzero(other & (asym == chain))
+        fill = np.flatnonzero(live & np.all(msa[:, cols] == _GAP, axis=1))
+        if rows == "query":
+            fill = fill[:1] if fill.size and fill[0] == np.flatnonzero(live)[0] else []
+        msa[np.ix_(fill, cols)] = aatype[cols]
+    example["msa"] = msa.astype(np.asarray(example["msa"]).dtype)
+    profile = np.array(example["profile"])
+    gap_only = profile[:, _GAP] >= 1.0
+    fix = np.flatnonzero(other & gap_only)
+    profile[fix] = 0.0
+    profile[fix, aatype[fix]] = 1.0
+    example["profile"] = profile.astype(np.asarray(example["profile"]).dtype)
+
+
+def element_names_for_ligands(example: dict[str, Any]) -> None:
+    """Name every ligand atom by its element, as RoseTTAFold3 was trained.
+
+    Its atomworks featurisation sets ``use_element_for_atom_names_of_atomized_
+    tokens``: an atomised token's name characters are its element symbol, so a
+    benzamidine reads as C, C, ..., N, N rather than its CCD names C1..C6, C,
+    N1, N2. Fed the CCD names, the atom-name embedding saw names it never
+    trained on and the ligand's bonds came out 0.11 A RMS off ideal against the
+    release's 0.02 A.
+    """
+    from rdkit import Chem  # noqa: PLC0415 - optional dep
+
+    table = Chem.GetPeriodicTable()
+    elements = np.asarray(example["ref_element"])
+    chars = np.array(example["ref_atom_name_chars"])
+    ligand = np.asarray(example["is_ligand"]).astype(bool)
+    mask = np.asarray(example["ref_mask"]).astype(bool)
+    for t, a in zip(*np.nonzero(ligand[:, None] & mask), strict=True):
+        symbol = table.GetElementSymbol(int(elements[t, a])).upper()
+        chars[t, a] = 0
+        chars[t, a, : len(symbol)] = [ord(c) - 32 for c in symbol]
+    example["ref_atom_name_chars"] = chars
+
+
+def key_window(example: dict[str, Any], policy: str, prefix: str = "") -> None:
+    """Rewrite the atom-attention key window of a FINISHED example.
+
+    Each block of queries takes a key window centred on it; the policies differ at
+    the ends. AF3 ("slide") shifts an out-of-range window back inside the real
+    atoms. "pad" clips and masks, so edge blocks see fewer neighbours at different
+    key slots. "slide_qblock" slides against the atom count rounded up to a whole
+    query block. "circular" wraps the window modulo the real atom count, so the
+    first block's leading keys are the last atoms. Runs after bucketing, which
+    rebuilds the window AF3's way.
+    """
+    query_mask = np.asarray(example[prefix + "token_atoms_to_queries:gather_mask"])
+    subsets, query_size = query_mask.shape
+    padded = subsets * query_size
+    name = prefix + "queries_to_keys:gather_idxs"
+    key_size = np.asarray(example[name]).shape[1]
+    starts = np.arange(subsets) * query_size + (query_size - key_size) // 2
+    flat_mask = query_mask.reshape(-1)
+    real = max(int(flat_mask.sum()), 1)
+    if policy == "slide_qblock":
+        bound = -(-real // query_size) * query_size
+        starts = np.clip(starts, 0, max(bound - key_size, 0))
+    elif policy not in ("pad", "circular"):
+        message = f"unknown key-window policy {policy!r}"
+        raise ValueError(message)
+    window = starts[:, None] + np.arange(key_size)[None]
+    if policy == "circular":
+        # Modulo the REAL atom count, so no slot is padding and the ends wrap.
+        window = np.mod(window, real)
+        keep = np.ones_like(window, dtype=bool)
+    else:
+        inside = (window >= 0) & (window < padded)
+        window = np.clip(window, 0, padded - 1)
+        keep = inside & flat_mask[window]
+    example[name] = window.astype(np.asarray(example[name]).dtype)
+    example[prefix + "queries_to_keys:gather_mask"] = keep
+    tokens = np.asarray(example[prefix + "tokens_to_queries:gather_idxs"]).reshape(-1)
+    target = prefix + "tokens_to_keys:gather_idxs"
+    example[target] = tokens[window].astype(np.asarray(example[target]).dtype)
+    token_mask = np.asarray(example[prefix + "tokens_to_queries:gather_mask"]).reshape(
+        -1
+    )
+    example[prefix + "tokens_to_keys:gather_mask"] = (
+        keep if policy == "pad" else token_mask[window]
+    )
+
+
+def empty_template_gap(example: dict[str, Any], slots: str) -> None:
+    """Fill an ABSENT template's restype with the gap class rather than zero.
+
+    Both pipelines pad the template axis and mask every atom, so the distogram,
+    the unit vector and both masks come out zero either way. The RESTYPE one-hot
+    does not: AF3 fills it with class zero where these vendors fill it with the
+    gap. Applied only when there is no real template anywhere, which is the case
+    they build that way; a batch carrying one is left alone.
+
+    ``slots`` is the vendor's own padding: "first" gives one gap template and
+    zero-pads the rest, "all" makes every slot a gap template.
+    """
+    aatype = example.get("template_aatype")
+    mask = example.get("template_atom_mask")
+    if aatype is None or mask is None:
+        return
+    aatype, mask = np.asarray(aatype), np.asarray(mask)
+    if not aatype.shape[0] or mask.any():
+        return
+    aatype = aatype.copy()
+    if slots == "all":
+        aatype[:] = _GAP_RESTYPE
+    else:
+        aatype[0] = _GAP_RESTYPE
+    example["template_aatype"] = aatype
+
+
+def apply(example: dict[str, Any], spec: DenseSpec) -> dict[str, Any]:
+    """Apply ``spec``'s input conventions to one featurised example, in place."""
+    if spec.ref_conformers != "af3":
+        from foldjet.data.constants import residue_geometry  # noqa: PLC0415
+
+        override_ref_conformers(
+            example, residue_geometry.as_conformers(spec.ref_conformers)
+        )
+        single_atoms_at_origin(example)
+    if spec.centre_ref_conformers:
+        centre_conformers(example)
+    if spec.random_ref_pose:
+        random_ref_pose(example)
+    if spec.element_ligand_names:
+        element_names_for_ligands(example)
+    if spec.drop_atoms:
+        drop_atoms(example, spec.drop_atoms)
+    if spec.empty_template_gap is not None:
+        empty_template_gap(example, spec.empty_template_gap)
+    # Deduplicate first: filling only the query row would make the two AF3
+    # query rows differ, and the duplicate would survive.
+    if spec.dedupe_self_msa:
+        dedupe_self_msa(example)
+    if spec.nonprotein_msa_as_query is not None:
+        nonprotein_msa_as_query(example, spec.nonprotein_msa_as_query)
+    return example
+
+
+def apply_after_bucketing(example: dict[str, Any], spec: DenseSpec) -> dict[str, Any]:
+    """Conventions that act on the final atom-attention gathers."""
+    if spec.atom_keys_subset != 128:  # noqa: PLR2004 - AF3's own key subset size
+        widen_key_subset(example, spec.atom_keys_subset)
+    if spec.atom_key_window != "slide":
+        key_window(example, spec.atom_key_window)
+        if any(key.startswith("struct/") for key in example):
+            # The structural layout has its own atom windows, and it is the one
+            # the diffusion runs on, so both need the convention.
+            key_window(example, spec.atom_key_window, prefix="struct/")
+    return example

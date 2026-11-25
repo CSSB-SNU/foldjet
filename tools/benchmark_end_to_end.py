@@ -18,9 +18,9 @@ from pathlib import Path
 import torch
 import yaml
 
-from foldforge import paths
-from foldforge.models.io.paths import run_directory
-from foldforge.modules.engine.backends import BACKENDS
+from foldjet import paths
+from foldjet.models.io.paths import run_directory
+from foldjet.modules.engine.backends import BACKENDS
 
 MODES = {
     "pytorch_eager_fp32": ("pytorch", False, False, "fp32"),
@@ -117,7 +117,7 @@ def main() -> int:  # noqa: PLR0912 - complete benchmark scenario matrix
     selected_modes = args.modes or default_modes
     # The reference precision is a property of the GRAPH, not of a name: every
     # dense AF3-family model runs AF3's own policy.
-    from foldforge.models import is_dense
+    from foldjet.models import is_dense
 
     reference_modes = AF3_REFERENCE_MODES if is_dense(args.model) else REFERENCE_MODES
     scenarios = (
@@ -217,7 +217,7 @@ def main() -> int:  # noqa: PLR0912 - complete benchmark scenario matrix
                 sys.executable,
                 "-c",
                 (
-                    "import sys; from foldforge.models.inference import run; raise "
+                    "import sys; from foldjet.models.inference import run; raise "
                     "SystemExit(run(sys.argv[1],sys.argv[2:]))"
                 ),
                 args.model,

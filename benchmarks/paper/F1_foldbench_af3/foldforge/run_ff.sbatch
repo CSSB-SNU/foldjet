@@ -1,5 +1,5 @@
 #!/bin/bash
-# F1 / F8: the whole FoldBench (1,522 targets) through a FoldForge model on the H100s of ONE job: 5 trunk_seeds x 5 samples, 200 steps, 11 trunk
+# F1 / F8: the whole FoldBench (1,522 targets) through a FoldJet model on the H100s of ONE job: 5 trunk_seeds x 5 samples, 200 steps, 11 trunk
 # passes (AF3), bf16, compile + CUDA graphs (scope trunk), MSA up to 16,384 rows, templates as FoldBench gives them.
 # A walltime run is ONE continuous job (never split into chunks); resumable on a resubmit (finished targets are skipped).
 #
@@ -9,7 +9,7 @@
 # The run records which one it used (<run>/launch.txt, stamp.json, README of the experiment).
 #
 #   sbatch -J paper-F1-ff-bf16-shard -o $PAPER_OUT/F1/h100/logs/%x_%j.log --export=ALL,NAME=af3_bf16_shard,PRECISION=bf16,LAUNCH=shard \
-#       benchmarks/paper/F1_foldbench_af3/foldforge/run_ff.sbatch
+#       benchmarks/paper/F1_foldbench_af3/foldjet/run_ff.sbatch
 #
 # Variables: NAME (required)  EXP (F1; F8 for the fine-tune)  MODEL (af3)  PRECISION (bf16|fp8)  LAUNCH (shard|multi)  SHARDS ("0 1")  TARGETS (a list;
 #   default all 1,522; in shard mode intersected with each shard)  CKPT (checkpoint instead of the released weights)  RECYCLES (11; empty = model default)

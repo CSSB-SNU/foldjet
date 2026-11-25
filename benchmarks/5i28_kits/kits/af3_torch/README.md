@@ -22,6 +22,6 @@ The full log goes to `logs/x<N>.log` and the outputs to `out/x<N>/out/`. The las
 
 ## Where the numbers come from
 
-- `fwd`: the kit's `[af3-torch-opt] ITEM ... forward_s=X` lines, one per seed, in log order, so the cold forward comes first. Each one is synchronize, then `A.inference()` (trunk + 5-sample sampler + confidence + distogram), then synchronize. That is the same span as FoldForge, per the fwd-definition audit. It equals that item's `PHASE total_s`. `warm_median` is the median of `fwd[1:]`. The kit captures its CUDA graphs again for every item.
+- `fwd`: the kit's `[af3-torch-opt] ITEM ... forward_s=X` lines, one per seed, in log order, so the cold forward comes first. Each one is synchronize, then `A.inference()` (trunk + 5-sample sampler + confidence + distogram), then synchronize. That is the same span as FoldJet, per the fwd-definition audit. It equals that item's `PHASE total_s`. `warm_median` is the median of `fwd[1:]`. The kit captures its CUDA graphs again for every item.
 - `templates_real`: the minimum of three counts. The first is the smallest `4*a/b` over ITEM `templates=a/b`, which counts slots x chains with b = 4n. The second is `tmpl_distinct_min` from FEATPROBE. The third, `4*evaluated/slots` from the `template_dedupe` LEVER line, applies only when that line shows identical slots. `tables=` on that line is NOT a distinct count: it is the embedder's constant index tables.
 - `msa_rows`: FEATPROBE `msa_rows`. The kit's run log has no MSA-row line.

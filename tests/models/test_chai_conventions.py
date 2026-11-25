@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from foldforge.modules.dense.spec import SPECS
+from foldjet.modules.dense.spec import SPECS
 
 
 def test_relative_encoding_tells_chains_and_entities_apart():
@@ -15,7 +15,7 @@ def test_relative_encoding_tells_chains_and_entities_apart():
 
     import torch
 
-    from foldforge.modules.dense.featurization import chai_relative_encoding
+    from foldjet.modules.dense.featurization import chai_relative_encoding
 
     # Two copies of one protein (entity 1) and a ligand (entity 2).
     tokens = SimpleNamespace(
@@ -40,7 +40,7 @@ def test_only_protein_chains_reach_the_language_model():
     """A ligand's atoms are not a protein; the release gives them zero rows."""
     import torch
 
-    from foldforge.modules.language_model import embed_chains
+    from foldjet.modules.language_model import embed_chains
 
     seen = []
 

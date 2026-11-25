@@ -11,8 +11,8 @@ import pytest
 import torch
 from torch import nn
 
-from foldforge.train import bench, dist
-from foldforge.train.config import TrainConfig
+from foldjet.train import bench, dist
+from foldjet.train.config import TrainConfig
 
 
 # ---- effective batch / world

@@ -1,15 +1,15 @@
 # Build the 5I28-benchmark AF3-JSON inputs for BOTH AF3 kits (af3_jax, af3_torch),
 # n = 1 2 4 8 12 16 identical chains.
-# Source = FoldForge's own input resolution (foldforge.data.inputs.build.load on the
+# Source = FoldJet's own input resolution (foldjet.data.inputs.build.load on the
 # 1-chain spec): the real MSA (a3m_16k.lmdb key P0113359, 6789 a3m rows incl. the query
-# (AF3 featurises them to 6790 MSA rows), paired == unpaired exactly as FoldForge's
+# (AF3 featurises them to 6790 MSA rows), paired == unpaired exactly as FoldJet's
 # adapter input) + the 4 distinct real templates that
-# foldforge.data.inputs.lmdb.load_templates keeps (one per hit sequence): 5SYD_A,
+# foldjet.data.inputs.lmdb.load_templates keeps (one per hit sequence): 5SYD_A,
 # 6KOL_A, 5YT7_A, 6TFD_A, each as Template.af3() (inline mmCIF + queryIndices +
 # templateIndices).
 # Homomer = ONE protein entry with ids A,B,... (AF3 JSON form, as the earlier
 # anthropic-kits/real/mkreal.py did).
-# Run with FoldForge's interpreter on a compute node (never on the login node):
+# Run with FoldJet's interpreter on a compute node (never on the login node):
 #   srun -p h100 -A cssb --qos=normal_h100 -n 1 -c 4 --mem=16G --time=00:30:00 \
 #     ~/FoldForge/.pixi/envs/default/bin/python -I mkinputs.py
 import copy
@@ -19,7 +19,7 @@ import os
 import string
 from pathlib import Path
 
-from foldforge.data.inputs.build import load, write_adapter_input
+from foldjet.data.inputs.build import load, write_adapter_input
 
 B = Path(os.environ["BENCH_DIR"] + "")
 SPEC = Path(os.environ["INPUT_SCRATCH"] + "/ff_x1.yaml")
@@ -40,11 +40,11 @@ tgt = load(SPEC)
 assert len(tgt.chains) == 1, tgt.chains
 c = tgt.chains[0]
 ids = [t.id for t in c.templates]
-assert sorted(ids) == sorted(WANT), f"FoldForge picked {ids}, want {WANT}"
+assert sorted(ids) == sorted(WANT), f"FoldJet picked {ids}, want {WANT}"
 assert c.alignment is not None
 assert len(c.alignment.tokens) == MSA_ROWS, len(c.alignment.tokens)
 B.joinpath("af3_jax/inputs").mkdir(parents=True, exist_ok=True)
-# FoldForge's own adapter JSON, kept for reference
+# FoldJet's own adapter JSON, kept for reference
 write_adapter_input(tgt, B / "af3_jax/inputs/ff_adapter_x1.json")
 base = tgt.af3(seed=0)
 p = base["sequences"][0]["protein"]

@@ -1,7 +1,7 @@
 # Source this: environment of the paper training experiments (F6, F7, F10) on one card.
 #   CARD=h100|a100|rtx5090   (default: guessed from the host name: cssb-rtx -> rtx5090, cssb-master3 / gpu* -> a100, else h100)
-#   FF_REPO      this FoldForge checkout (default: the one holding this file)
-#   FFENV        pixi env of a FoldForge checkout (its python is called directly: NEVER `pixi run` on a shared env)
+#   FF_REPO      this FoldJet checkout (default: the one holding this file)
+#   FFENV        pixi env of a FoldJet checkout (its python is called directly: NEVER `pixi run` on a shared env)
 #   ENGINE_SRC   optional miniworld-engine SOURCE tree put in front of the installed engine (a release candidate, e.g. rc-3.0.6)
 #   PAPER_CACHE  inductor / XDG cache of the runs (WARM: reuse it, never a fresh dir per run; TRITON_CACHE_DIR is not set on purpose)
 #   PAPER_OUT    output root (default ~/foldforge-scratch/paper on the H100 cluster; <id>/<card>/ below it)
@@ -30,7 +30,7 @@ case $CARD in
     export XDG_CACHE_HOME=$PAPER_CACHE TORCHINDUCTOR_CACHE_DIR=$PAPER_CACHE/inductor MINIWORLD_ENGINE_TARGET_ARCH=sm80 MAX_JOBS=4
     ;;
   rtx5090)
-    export FFENV=${FFENV:-$HOME/ff/FoldForge/.pixi/envs/default}
+    export FFENV=${FFENV:-$HOME/ff/FoldJet/.pixi/envs/default}
     export FOLDFORGE_HOME=${FOLDFORGE_HOME:-$HOME/ff/home}
     export PAPER_CACHE=${PAPER_CACHE:-$HOME/mwe/jit/rc306ff}
     export XDG_CACHE_HOME=$PAPER_CACHE/xdg TORCHINDUCTOR_CACHE_DIR=$PAPER_CACHE/inductor

@@ -19,7 +19,7 @@ from pathlib import Path
 
 import matplotlib as mpl
 
-from foldforge import paths
+from foldjet import paths
 
 mpl.use("Agg")
 import matplotlib.pyplot as plt
@@ -27,7 +27,7 @@ import numpy as np
 import torch
 from compare_af3_precision import aligned_rmsd, atoms, compare, geometry
 
-from foldforge.eval.structure import tm_score
+from foldjet.eval.structure import tm_score
 
 EXPERIMENTAL = {
     "1ubq": str(paths.benchmarks()) + "/data/1ubq/1ubq.cif",

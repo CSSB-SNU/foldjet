@@ -15,14 +15,14 @@ from dataclasses import replace
 import pytest
 import torch
 
-from foldforge.models.architectures.af3 import AlphaFold3
-from foldforge.models.checkpoints import miniworld
-from foldforge.models.checkpoints.legacy import dense_model
-from foldforge.modules.dense.spec import spec_for
-from foldforge.modules.engine import graph, modules
-from foldforge.modules.engine.modules import MODEL_KEYS
-from foldforge.modules.engine.transformers import AtomDiTStack, TokenDiTStack
-from foldforge.utils import atom_layout
+from foldjet.models.architectures.af3 import AlphaFold3
+from foldjet.models.checkpoints import miniworld
+from foldjet.models.checkpoints.legacy import dense_model
+from foldjet.modules.dense.spec import spec_for
+from foldjet.modules.engine import graph, modules
+from foldjet.modules.engine.modules import MODEL_KEYS
+from foldjet.modules.engine.transformers import AtomDiTStack, TokenDiTStack
+from foldjet.utils import atom_layout
 
 TOLERANCE = {"rtol": 1e-4, "atol": 1e-4}
 FAMILIES = (
@@ -293,7 +293,7 @@ def test_the_converter_demands_every_released_key_is_read_or_a_known_discard(
 
 
 def test_known_discards_are_the_softmax_invariant_offsets(pair_of_models):
-    from foldforge.models.checkpoints.legacy.released import is_discarded
+    from foldjet.models.checkpoints.legacy.released import is_discarded
 
     dense, _ = pair_of_models
     discarded = {

@@ -1,11 +1,11 @@
 # Engine work still needed to connect every family (2026-10-19, updated 2026-10-21 for miniworld-engine 2.3.3)
 
-Source: the module-by-module wiring table of FoldForge at `69f7bd6` (engine pin `b4680179`, loader order
+Source: the module-by-module wiring table of FoldJet at `69f7bd6` (engine pin `b4680179`, loader order
 `install_pairformers` -> `install_engine_modules` -> `install_conditioning`). Every item below was read off a
 rejected builder or a model attribute, not guessed. Counts are modules on the engine / modules in the model.
 
 Already connected (no kernel work): AF3, IntelliFold2, OpenBind0, OpenFold3 (all columns), Protenix1/2 and OpenDDE
-(everything, atom included since FoldForge `69f7bd6`), ESMFold2 token DiT / TriMul / MSA / OPM / single attention.
+(everything, atom included since FoldJet `69f7bd6`), ESMFold2 token DiT / TriMul / MSA / OPM / single attention.
 
 ## 0. FIXED in miniworld-engine 2.3.3: H100 bf16 triangle attention overflowed on trained weights
 
@@ -80,5 +80,5 @@ TriAttn pair 64 / 4 x 32 heads and (miniworld-engine 2.3.6) TriMul pair 64 / hid
   last windows are recomputed in torch. No backward.
 - FP32 master weights under bf16 activations in the diffusion blocks: kept FP32 since `69f7bd6`; accuracy vs the reference
   not measured.
-- Engine branch `feat/foldforge-af3` (b4680179): landed on engine main (544e758d) and released as miniworld-engine 2.3.3 on PyPI,
-  which FoldForge now depends on (no git pin).
+- Engine branch `feat/foldjet-af3` (b4680179): landed on engine main (544e758d) and released as miniworld-engine 2.3.3 on PyPI,
+  which FoldJet now depends on (no git pin).

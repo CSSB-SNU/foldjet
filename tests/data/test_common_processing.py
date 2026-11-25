@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-import foldforge
+import foldjet
 
 #: Every name a file must not be called after. A file named for a model is a
 #: file someone will put model-specific code in, and the point of this port is
@@ -40,7 +40,7 @@ def test_no_file_is_named_after_a_model():
     from, and a provenance record is keyed by the model whose weights it
     documents.
     """
-    root = Path(foldforge.__file__).parent
+    root = Path(foldjet.__file__).parent
     architectures = root / "models" / "architectures"
     offenders = [
         path
@@ -54,10 +54,10 @@ def test_no_file_is_named_after_a_model():
 @pytest.mark.parametrize(
     "module",
     [
-        "foldforge.data.features.protenix_constants",
-        "foldforge.data.features.opendde_tokenizer",
-        "foldforge.eval.protenix_clash",
-        "foldforge.modules.ops.opendde_layer_norm",
+        "foldjet.data.features.protenix_constants",
+        "foldjet.data.features.opendde_tokenizer",
+        "foldjet.eval.protenix_clash",
+        "foldjet.modules.ops.opendde_layer_norm",
     ],
 )
 def test_retired_modules_are_not_compatibility_wrappers(module):

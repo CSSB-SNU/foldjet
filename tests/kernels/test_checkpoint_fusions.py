@@ -4,7 +4,7 @@ The released output gate and the engine's ``AdaptiveRMSNorm``.
 
 ``AdaptiveRMSNorm`` (ESMFold2's atom AdaLN: an affine-free RMSNorm, SiLU of the
 conditioning, identity-centred scale, no biases) is the engine class that replaces the
-rms-modulation kernel function FoldForge used to call; the equation is checked on its
+rms-modulation kernel function FoldJet used to call; the equation is checked on its
 own backend.
 """
 
@@ -15,8 +15,8 @@ import torch
 from miniworld_engine.modules import AdaptiveRMSNorm
 from torch.nn import functional as F
 
-from foldforge.modules.dense.diffusion_transformer import AdaLNZero
-from foldforge.modules.engine.configure import configure_model
+from foldjet.modules.dense.diffusion_transformer import AdaLNZero
+from foldjet.modules.engine.configure import configure_model
 
 
 def test_gated_projection_gradient():

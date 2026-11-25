@@ -1,8 +1,8 @@
 #!/bin/bash
 # Fold every family x target x seed that tests/release_references/ holds a release reference
-# for, with FoldForge, then judge:
+# for, with FoldJet, then judge:
 #   tools/references/validate.sh fast            (or exact)
-#   foldforge validate $FOLDFORGE_HOME/runs/validate-fast --report docs/validation/fast.md
+#   foldjet validate $FOLDFORGE_HOME/runs/validate-fast --report docs/validation/fast.md
 set -euo pipefail
 : "${FOLDFORGE_HOME:=$HOME/.cache/foldforge}"; export FOLDFORGE_HOME
 MODE=${1:-fast}

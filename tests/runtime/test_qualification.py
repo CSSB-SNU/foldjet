@@ -11,9 +11,9 @@ import torch
 from support import REFERENCE_ROOT, REPOSITORY_ROOT
 from torch import nn
 
-from foldforge.diffusion import tensor_layout as layout
-from foldforge.models.config import ExecutionConfig
-from foldforge.models.execution import ExecutedCallable
+from foldjet.diffusion import tensor_layout as layout
+from foldjet.models.config import ExecutionConfig
+from foldjet.models.execution import ExecutedCallable
 
 
 def oracle():
@@ -57,7 +57,7 @@ def test_batched_atom_gather_gradients():
 def test_ccd_ligand_id_is_one_code(tmp_path):
     import yaml
 
-    from foldforge.data.inputs.build import load
+    from foldjet.data.inputs.build import load
 
     (tmp_path / "L.fasta").write_text("> ligand | non-polymer | Chain:L\n(BEN)\n")
     path = tmp_path / "in.yaml"
@@ -143,7 +143,7 @@ def test_full_model_graph_rejects_host_sampling():
 
 
 def test_af3_atom_layout_shape_contract():
-    from foldforge.utils.atom_layout import GatherInfo, convert
+    from foldjet.utils.atom_layout import GatherInfo, convert
 
     info = GatherInfo(torch.tensor([0, 3]), torch.tensor([True, False]), (2, 2))
     x = torch.arange(4.0).reshape(2, 2)
@@ -206,7 +206,7 @@ def test_shared_layout_imports_are_live(family):
     )
     for relative, name in records:
         relative.removesuffix(".py").replace("/", ".")
-        actual = importlib.import_module("foldforge.diffusion.tensor_layout")
+        actual = importlib.import_module("foldjet.diffusion.tensor_layout")
         assert getattr(actual, name) is getattr(layout, name), (family, name)
 
 

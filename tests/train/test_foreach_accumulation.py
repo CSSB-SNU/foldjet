@@ -11,7 +11,7 @@ import pytest
 import torch
 from torch import nn
 
-from foldforge.train.step import foreach_accumulation, trainable
+from foldjet.train.step import foreach_accumulation, trainable
 
 
 class Heads(nn.Module):
