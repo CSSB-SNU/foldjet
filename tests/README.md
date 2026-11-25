@@ -9,7 +9,11 @@ Run `pytest tests` from the repository root. Tests are grouped by responsibility
 | `kernels/` | Backend dispatch, fused operators and precision contracts |
 | `runtime/` | Bucketing, execution, cache supervision and output destinations |
 | `utils/` | Shared numerical, serialization and process-state utilities |
-| `tests/release_references/` | Frozen forward bodies and source identities used by regressions |
+| `diffusion/` | `foldjet.diffusion` stays self-contained; alignment defaults |
+| `guidance/` | TFG guidance (Vina) |
+| `train/` | the training recipe, step compile / graph, checkpointing, distributed bench |
+| `references/` | frozen forward oracles and source identities used by regressions (snapshotted 2026-09-13) |
+| `release_references/` | each family's structures from its own released code, the ground truth of `foldjet validate` ([README](release_references/README.md)) |
 
 `support.py` owns repository and reference paths. `conftest.py` gives persistence
 tests temporary run roots; tests never write into real prediction runs. GPU tests
