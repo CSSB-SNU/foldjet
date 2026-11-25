@@ -1,6 +1,6 @@
 # foldjet-engine 2.4.3: released-checkpoint parity
 
-> Historical migration record for that engine release. The current engine integration (2.5.1) is described in [BACKENDS.md](BACKENDS.md), [../ENGINE-UNSUPPORTED.md](../ENGINE-UNSUPPORTED.md) and [CHECKPOINT-FORMAT.md](CHECKPOINT-FORMAT.md).
+> Historical migration record for that engine release. The integration that superseded it is described in [BACKENDS.md](../guides/BACKENDS.md), [../ENGINE-UNSUPPORTED.md](../ENGINE-UNSUPPORTED.md) and [CHECKPOINT-FORMAT.md](../guides/CHECKPOINT-FORMAT.md).
 
 FoldJet pins `foldjet-engine==2.4.3`. The engine now builds its modules from the released (FoldJet dense) layout:
 `<Module>.from_released(state_dict, ...)` (engine `docs/kernels/released-checkpoints.md`).

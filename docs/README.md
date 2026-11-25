@@ -26,7 +26,7 @@
 - [Model integration](guides/MODEL-INTEGRATION.md) and [checkpoint variants](guides/CHECKPOINT-VARIANTS.md).
 - [Code quality](guides/CODE-QUALITY.md) and [validation](guides/QUALITY-VALIDATION.md).
 - [Training (Protenix v1 finetuning)](guides/TRAINING.md): the MiniWorld recipe on the FoldJet graph, the batch-source plug-in, what is and is not implemented.
-- Historical engine migration records (superseded by [ENGINE-UNSUPPORTED.md](ENGINE-UNSUPPORTED.md)): [engine 2.4.2](guides/ENGINE-2.4.2.md), [engine 2.4.3](guides/ENGINE-2.4.3.md).
+- Historical engine migration records (superseded by [ENGINE-UNSUPPORTED.md](ENGINE-UNSUPPORTED.md)): [engine 2.4.2](archive/ENGINE-2.4.2.md), [engine 2.4.3](archive/ENGINE-2.4.3.md).
 
 `archive/` preserves dated audits, migration records and their raw JSON/CSV evidence.
 These are historical snapshots, not the current benchmark table. New benchmark

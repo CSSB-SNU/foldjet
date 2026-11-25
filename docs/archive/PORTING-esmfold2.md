@@ -15,7 +15,7 @@ changed three things that the port depends on, so this is a rewire, not a
 
 `origin/exp/miniworld` moved the ops out of team-gm into foldjet-engine, and
 made the residual unconditional. Both are in
-[ARCHITECTURE.md](../../libs/team-gm/docs/ARCHITECTURE.md).
+`libs/team-gm/docs/ARCHITECTURE.md` (team-gm submodule, since removed).
 
 > [!NOTE]
 > **Resolved upstream.** Engine `478cb72` (RoPE dtype) and `79c819d`
@@ -76,7 +76,7 @@ compare coordinates against a same-code repeat: the fold is not bit-deterministi
 
 ESMFold2's atom encoder and decoder both need it. It is currently in
 `team_gm.modules.blocks`, but team-gm's
-[migration plan](../../libs/team-gm/docs/MIGRATION-model-specific-to-terminals.md)
+migration plan (`libs/team-gm/docs/MIGRATION-model-specific-to-terminals.md`, team-gm submodule, since removed)
 schedules it to move to **MiniWorld**, on the grounds that it is model-specific.
 
 FoldJet cannot import from MiniWorld. Three options:

@@ -1,6 +1,6 @@
 # foldjet-engine 2.4.2: what moved here
 
-> Historical migration record for that engine release. The current engine integration (2.5.1) is described in [BACKENDS.md](BACKENDS.md), [../ENGINE-UNSUPPORTED.md](../ENGINE-UNSUPPORTED.md) and [CHECKPOINT-FORMAT.md](CHECKPOINT-FORMAT.md).
+> Historical migration record for that engine release. The integration that superseded it is described in [BACKENDS.md](../guides/BACKENDS.md), [../ENGINE-UNSUPPORTED.md](../ENGINE-UNSUPPORTED.md) and [CHECKPOINT-FORMAT.md](../guides/CHECKPOINT-FORMAT.md).
 
 foldjet-engine 2.4.2 removed `foldjet_engine.architecture` and `foldjet_engine.ops`
 (engine `docs/CHANGELOG.md`, 2.4.2 "Removed"). FoldJet pins `foldjet-engine==2.4.2`.
