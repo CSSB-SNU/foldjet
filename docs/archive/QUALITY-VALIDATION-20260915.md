@@ -2,7 +2,7 @@
 
 FoldJet uses team-gm's global Ruff `ALL` policy and numerical-code exceptions,
 with Pyright in standard mode over every FoldJet source file. See
-[CODE-QUALITY.md](CODE-QUALITY.md) for the coverage and documented exceptions.
+[CODE-QUALITY.md](../guides/CODE-QUALITY.md) for the coverage and documented exceptions.
 
 | Check | Result |
 | --- | --- |

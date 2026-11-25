@@ -24,6 +24,7 @@ Markdown records cite; do not edit them.
 | [BACKEND-PURITY-20260915.md](BACKEND-PURITY-20260915.md) | PyTorch backend execution audit (before the attention wiring fix) | `BACKEND-PURITY-20260915.json` |
 | [BACKEND-WIRING-20260915.md](BACKEND-WIRING-20260915.md) | checkpoint backend dispatch and the CUDA-graph experiment | `BACKEND-WIRING-20260915.json` |
 | [checkpoint-kernel-wiring-20260915.md](checkpoint-kernel-wiring-20260915.md) | pointer to the engine's checkpoint shape census | |
+| [QUALITY-VALIDATION-20260915.md](QUALITY-VALIDATION-20260915.md) | Ruff / Pyright / test-suite verdict of 2026-09-15 (moved here from `docs/guides/`) | |
 | [PORTING-esmfold2.md](PORTING-esmfold2.md) | how ESMFold2 was ported from team-gm into FoldJet | |
 
 ## Benchmark reports replaced by [../benchmark_results.md](../benchmark_results.md)

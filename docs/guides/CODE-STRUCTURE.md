@@ -93,3 +93,29 @@ configuration trees were removed: none was loaded by any fold, `validate`,
 `checkpoints` or `ccd` run, and none was imported by a script. They remain in
 git history (before this change) if a training stack is ever built on the one
 graph; it should then read the same dense featurization inference does.
+
+## Where FoldJet sits (moved here from the root README)
+
+FoldJet is a **terminal** repository on top of one dependency, foldjet-engine (team-gm was absorbed into the engine and into
+MiniWorld; FoldJet no longer depends on it).
+
+| layer | repo | holds |
+|---|---|---|
+| engine | foldjet-engine | fused kernels, the modules that wrap them (`foldjet_engine.modules`) and the single-op kernel entry points (`foldjet_engine.kernels`); since 2.4.2 no model architecture, diffusion process or checkpoint adapter |
+| terminal | **FoldJet** | the **full models**, the checkpoint installers, data pipeline, eval, CLI |
+
+Nothing here defines an op or a general-purpose block; if you are writing one, it goes in the engine. What the engine has no
+class for (the FoldJet-own pieces of the graph in `modules/dense`, the backend plan and its guard in `modules/engine`,
+compile / graph execution and bucketing in `models/`, TFG guidance, the ESM-C model) lives here.
+
+### Where a block goes
+
+| the unit | lives in |
+|---|---|
+| wraps a kernel, one PyTorch reference | foldjet-engine |
+| diffusion process (EDM, decoupled x-prediction, augmentation, schedules, samplers) | `foldjet.diffusion` (self-contained: movable into its own package) |
+| specific to one predictor | a `DenseSpec` field (`modules/dense/spec.py`) and the one place in the graph that reads it |
+| needed by two or more predictors, no reason for the engine to carry it | `modules/` |
+
+A single-consumer block in `modules/` is the common mistake: it reads as shared, and the next person changing it has to prove
+nothing else depends on it.
