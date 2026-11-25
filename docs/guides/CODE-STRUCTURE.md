@@ -79,8 +79,8 @@ src/foldjet/
 | Choose backend or precision at load | `models/loading.py`, `modules/engine/backends.py` ([backends](BACKENDS.md)) |
 | Serialized weight names or packing | `models/checkpoints/miniworld.py` (the format), `models/checkpoints/legacy/` + `models/checkpoints/legacy/released.py` (the offline converter; [format](CHECKPOINT-FORMAT.md), [checkpoints](CHECKPOINTS.md)) |
 | Input conventions a family needs | `data/features/dense_conventions.py` |
-| Shared attention, triangle, MSA, transition equations | `miniworld_engine` (the classes), `modules/engine/pairformer.py` (how a family builds the engine block) |
-| An accelerated kernel, or how a call picks it | `miniworld_engine`; FoldJet only chooses a backend per module (`modules/engine/backends.py`, `policy.py`) |
+| Shared attention, triangle, MSA, transition equations | `foldjet_engine` (the classes), `modules/engine/pairformer.py` (how a family builds the engine block) |
+| An accelerated kernel, or how a call picks it | `foldjet_engine`; FoldJet only chooses a backend per module (`modules/engine/backends.py`, `policy.py`) |
 | Something the engine lacks | [ENGINE-UNSUPPORTED.md](../ENGINE-UNSUPPORTED.md), requests in [ENGINE-REQUESTS.md](../ENGINE-REQUESTS.md) |
 
 ## What is not here

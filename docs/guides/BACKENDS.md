@@ -23,7 +23,7 @@ engine:
 | `miniworld` (default, alias) | the engine's own kernels, chosen **per module class**: `cuda` where the class has it and a CUDA device exists (every card: H100, A100, RTX 5090, ...; the engine refuses a call outside a card's range itself and the ladder runs `triton`, then `pytorch`), else `triton` where the class has it and a CUDA device exists, else `pytorch` (not a refusal) |
 | `cuequivariance` (alias) | `cueq` |
 
-`miniworld_engine` (the engine package name) is accepted by the loader as `miniworld`. The aliases are FoldJet policy (`modules/engine/backends.py::ALIASES`);
+`foldjet_engine` (the engine package name; the pre-rename `miniworld_engine` too) is accepted by the loader as `miniworld`. The aliases are FoldJet policy (`modules/engine/backends.py::ALIASES`);
 the engine itself knows only `pytorch | cuda | triton | anthropic | cueq`.
 
 A named backend (`cuda`, `triton`, `anthropic`, `cueq`) the module class does not have, and `cuda` / `triton` without a CUDA

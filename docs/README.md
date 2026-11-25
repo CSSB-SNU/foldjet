@@ -10,9 +10,9 @@
   and [2026-09-16](archive/benchmark-20260916/benchmark_results.md).
 - [The 5I28 benchmark](guides/BENCHMARK-5I28.md): the model-level speed protocol (FoldJet vs the Anthropic kits, n = 1..16 chains of
   azurin, real MSA + 4 distinct templates, warm median), why 5I28 (128 residues = one token bucket) and that FoldJet owns it.
-  Records: [2026-11-11](records/5i28_foldjet_20261111.md) (eight models on engine 2.5.1, kit / FoldJet 1.1-6.1x, ESMFold2 0.57-1.0x).
+  Records: [2026-11-11](records/5i28_foldforge_20261111.md) (eight models on engine 2.5.1, kit / FoldJet 1.1-6.1x, ESMFold2 0.57-1.0x).
   Addendum: [the atom DiT conditioning bug (n >= 12) and a rerun on the fixed engine](records/5i28_atom_blocks_check_20261112.md) (2026-11-12).
-  A100: [nine models on an A100 80GB PCIe](records/5i28_foldjet_a100_20261112.md) (2026-11-12, Triton path, 4-5.5x slower than the H100).
+  A100: [nine models on an A100 80GB PCIe](records/5i28_foldforge_a100_20261112.md) (2026-11-12, Triton path, 4-5.5x slower than the H100).
   Kit side: [the Anthropic kits re-measured](records/5i28_anthropic_kits_20261111.md) (2026-11-11, ten kits, one H100 per job; harness in `benchmarks/5i28_kits/`, data in `records/data/`).
 - [FoldBench end to end](../benchmarks/foldbench/README.md): the walltime of all 1,522 FoldBench targets through FoldJet AF3 in one job on 1..N GPUs
   (bucket-affine scheduler, small-target concurrency under MPS). Record: [2026-11-17](records/foldbench_e2e_20261117.md) (engine 2.5.12, 5.27 / 5.31 h vs af3kit 6.36 / 6.27 h).

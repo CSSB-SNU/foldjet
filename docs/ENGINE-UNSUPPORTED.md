@@ -1,5 +1,8 @@
 # What foldjet-engine 2.5.6 does not support
 
+> **Currency (marked 2026-11-25):** written against engine 2.5.0 - 2.5.6 (then named miniworld-engine; dated rows go to 2026-11-14). FoldJet now pins
+> `foldjet-engine==1.0.0`, the renamed engine; this page has not been re-audited against it, so a row may already be closed.
+
 For every gap: **what**, **where FoldJet needs it**, **what FoldJet does meanwhile**. Requests to the engine team that follow from a row are
 in [ENGINE-REQUESTS.md](ENGINE-REQUESTS.md) (`R<n>`). The sections are the categories:
 
