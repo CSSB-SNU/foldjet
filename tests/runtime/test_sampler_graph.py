@@ -17,7 +17,7 @@ def _glue_available() -> bool:
     if not torch.cuda.is_available():
         return False
     try:
-        from miniworld_engine.modules import AlignEuler, AugmentNoise
+        from foldjet_engine.modules import AlignEuler, AugmentNoise
     except ImportError:
         return False
     backend = "cuda" if torch.cuda.get_device_capability() == (9, 0) else "triton"

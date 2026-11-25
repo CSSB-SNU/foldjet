@@ -2,7 +2,7 @@
 #   CARD=h100|a100|rtx5090   (default: guessed from the host name: cssb-rtx -> rtx5090, cssb-master3 / gpu* -> a100, else h100)
 #   FF_REPO      this FoldJet checkout (default: the one holding this file)
 #   FFENV        pixi env of a FoldJet checkout (its python is called directly: NEVER `pixi run` on a shared env)
-#   ENGINE_SRC   optional miniworld-engine SOURCE tree put in front of the installed engine (a release candidate, e.g. rc-3.0.6)
+#   ENGINE_SRC   optional foldjet-engine SOURCE tree put in front of the installed engine (a release candidate, e.g. rc-3.0.6)
 #   PAPER_CACHE  inductor / XDG cache of the runs (WARM: reuse it, never a fresh dir per run; TRITON_CACHE_DIR is not set on purpose)
 #   PAPER_OUT    output root (default ~/foldforge-scratch/paper on the H100 cluster; <id>/<card>/ below it)
 # Nothing here starts python. Never run the scripts on a login node: sbatch / srun (H100, A100) or ~/mwe/gpu.sh (5090).

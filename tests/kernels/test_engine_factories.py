@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 import torch
-from miniworld_engine.modules import (
+from foldjet_engine.modules import (
     AtomDiTBoltz2,
     AtomDiTChai1,
     AtomDiTOpenFold3,
@@ -25,7 +25,7 @@ from miniworld_engine.modules import (
     TriangleMultiplication,
     TriangleMultiplicationRF3,
 )
-from miniworld_engine.modules.primitives import MasterWeights
+from foldjet_engine.modules.primitives import MasterWeights
 
 from foldjet.modules.dense.spec import SPECS
 from foldjet.modules.engine import modules as factory

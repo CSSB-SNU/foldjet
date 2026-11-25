@@ -87,7 +87,7 @@ uses that number, and in a process that captured a few hundred graphs the call c
 
 ## `engine_cache_dir` (removed)
 
-miniworld-engine 2.5.0 has no autotune cache (launch configs come from the engine's pretuned tables). `engine_cache_dir` in `load_model` /
+foldjet-engine 2.5.0 has no autotune cache (launch configs come from the engine's pretuned tables). `engine_cache_dir` in `load_model` /
 `predict` / `--engine-cache-dir` is accepted and ignored with one `DeprecationWarning`; `tools/build_autotune_cache.py` and its guide are deleted.
 
 ## `debug.dense_spec_override`

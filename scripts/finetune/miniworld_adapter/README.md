@@ -89,7 +89,7 @@ Rank and world size are read from `torch.distributed` (the train script initiali
 
 ## Import shims (no install anywhere)
 
-MiniWorld's data package imports `miniworld_engine.utils.typecheck` (engine 2.4) and, through `miniworld.training/__init__`, the whole old trainer and an
+MiniWorld's data package imports `foldjet_engine.utils.typecheck` (engine 2.4) and, through `miniworld.training/__init__`, the whole old trainer and an
 old `foldjet.blocks`. `_mwshim.py` registers an identity `typecheck` module (identity in MiniWorld's engine unless `settings.typecheck` is on) and a
 bare `miniworld.training` package (only `miniworld.training.batch` is needed). `pyarrow` (absent from the FoldJet env) is imported from a symlink to the
 copy in MiniWorld's own env (`extra_site/pyarrow`, appended last to `sys.path`).

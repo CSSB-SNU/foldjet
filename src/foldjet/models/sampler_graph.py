@@ -105,7 +105,7 @@ def _rigid_glue(
 ) -> _Glue | None:
     """Build the engine's fused sampler glue modules, or None when it does not serve.
 
-    ``AugmentNoise`` and ``AlignEuler`` (``miniworld_engine.modules``) are built ONCE
+    ``AugmentNoise`` and ``AlignEuler`` (``foldjet_engine.modules``) are built ONCE
     per sampler call, here, never inside a graph capture. They serve the dense
     layout's step: fp32 coordinates, one random rigid motion per sample before the
     noise, one Kabsch alignment after the denoiser. Their ``unsupported`` says per

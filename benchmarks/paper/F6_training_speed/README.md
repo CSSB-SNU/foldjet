@@ -105,7 +105,7 @@ Measured on a rented 4x RTX 5090 node, to back the multi-GPU statement with a me
 ### Setup
 - **Host:** 4x GeForce RTX 5090 32 GB, PCIe 5.0, no NVLink, GPU peer-to-peer disabled, 2 CPU sockets (128 cores, 503 GB).
   NCCL all-reduce ~20 GB/s bus bandwidth.
-- **Software:** PyTorch 2.13.0+cu129 (MiniWorld pixi env `cu128`), miniworld-engine 3.0.10 source tree, `torchrun` + DDP (NCCL).
+- **Software:** PyTorch 2.13.0+cu129 (MiniWorld pixi env `cu128`), foldjet-engine 3.0.10 source tree, `torchrun` + DDP (NCCL).
 - **Trainer:** the MiniWorld phase-1 training code unchanged; only the data are synthetic batches (`scripts_ddp_rtx5090/synth_graph_train.py`).
   Model = MiniWorld config `phase1a_distogram_medium_v240_nr_nt_pf16` (9.49 M parameters, gradients 36 MiB).
 - **Step:** crop L = 384, 1 sample per GPU per micro-step, bf16 autocast, torch.compile + CUDA graph, no activation checkpointing,

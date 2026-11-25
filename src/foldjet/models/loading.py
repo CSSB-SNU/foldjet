@@ -151,7 +151,7 @@ def load_checkpoint(  # noqa: C901, PLR0912, PLR0915 - one explicit checkpoint l
     reject_removed_environment()
     if implementation is not None:
         backend = getattr(implementation, "value", implementation)
-    if backend == "miniworld_engine":
+    if backend in ("miniworld_engine", "foldjet_engine"):
         backend = "miniworld"
     if backend not in BACKENDS:
         message = f"Unknown backend: {backend}"

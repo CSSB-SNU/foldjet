@@ -2,7 +2,7 @@
 
 SSH alias: `ssh -F ~/.ssh/config cssb3` (login host: cssb-master3).
 Run GPU work through Slurm partition A100, with explicit GPU, CPU and memory requests.
-The separate pre-existing miniworld-engine checkout and A100 cache job 43215 are preserved.
+The separate pre-existing foldjet-engine checkout and A100 cache job 43215 are preserved.
 
 | Workspace | Branch | Base commit |
 | --- | --- | --- |
@@ -17,7 +17,7 @@ AF3 vendor-attention batch-axis fix. No commit or push was performed.
 Copied the existing FoldJet Python 3.12 environment, its interpreter and GCC 14
 runtime library. Required versions: Torch 2.10.0+cu128, Triton 3.6.0,
 Quack 0.5.0, CUTLASS DSL 4.5.2, FlashAttention 2.8.3.post1,
-miniworld-engine d2266a035de11384c46f8cc980e6460f60925413.
+foldjet-engine d2266a035de11384c46f8cc980e6460f60925413.
 This does not switch the installed engine to the other existing remote checkout.
 The standalone team-gm environment is copied locally on cssb3 and reinstalled
 editable against its own checkout, without changing dependency versions.

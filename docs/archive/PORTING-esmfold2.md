@@ -13,7 +13,7 @@ changed three things that the port depends on, so this is a rewire, not a
 
 ## What changed underneath it
 
-`origin/exp/miniworld` moved the ops out of team-gm into miniworld-engine, and
+`origin/exp/miniworld` moved the ops out of team-gm into foldjet-engine, and
 made the residual unconditional. Both are in
 [ARCHITECTURE.md](../../libs/team-gm/docs/ARCHITECTURE.md).
 
@@ -63,8 +63,8 @@ compare coordinates against a same-code repeat: the fold is not bit-deterministi
 
 | the port imports | now |
 |---|---|
-| `team_gm.modules.layers` → `Transition`, `TriangleMultiplication` | `miniworld_engine.modules` |
-| `team_gm.modules.layers.swa_atom_attention` → `build_attention_params` | `miniworld_engine.modules.swa_atom_attention` |
+| `team_gm.modules.layers` → `Transition`, `TriangleMultiplication` | `foldjet_engine.modules` |
+| `team_gm.modules.layers.swa_atom_attention` → `build_attention_params` | `foldjet_engine.modules.swa_atom_attention` |
 | `team_gm.modules.exceptions.ImplementationType.MINIWORLD_KERNELS` | `…MINIWORLD_ENGINE` |
 | `team_gm.checkpoints` | `foldjet.models.checkpoints` (added here; it was never upstream) |
 | `team_gm.modules.blocks` → `DiffusionTransformer` | unchanged |
@@ -121,7 +121,7 @@ Where each convention comes from:
 | | divide vs `to_out` | denominator | bias scaled |
 |---|---|---|---|
 | AF3 (Algorithm 9: mean, then project) | before | `N`, unmasked in the reference impl | no |
-| miniworld-engine | before (default) | per-pair valid count, `clamp(min=1)` | no |
+| foldjet-engine | before (default) | per-pair valid count, `clamp(min=1)` | no |
 | ESMFold2 (released) | **after** | per-pair valid count, `clamp(min=1)` | **yes** |
 
 So the engine matched AF3 and ESMFold2 was the outlier. It is a genuine

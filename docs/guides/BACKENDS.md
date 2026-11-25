@@ -1,6 +1,6 @@
 # Backends
 
-FoldJet's graph holds miniworld-engine modules directly (a pairformer block IS `miniworld_engine.modules.PairformerBlock`), so a model's
+FoldJet's graph holds foldjet-engine modules directly (a pairformer block IS `foldjet_engine.modules.PairformerBlock`), so a model's
 backend is the engine's: every op module has a `backends` tuple and `module.set_backend(name)`. A model is loaded with one `backend` for every
 op, single ops can be pinned elsewhere with `engine.ops`, and `engine.unsupported` says what happens to a call a backend cannot take.
 

@@ -15,8 +15,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 
 import torch
-from miniworld_engine.modules import AtomDiT, TokenDiT
-from miniworld_engine.modules.atom_dit import KEY_WINDOWS
+from foldjet_engine.modules import AtomDiT, TokenDiT
+from foldjet_engine.modules.atom_dit import KEY_WINDOWS
 from torch import nn
 
 from foldjet.modules.engine.configure import engine_activation

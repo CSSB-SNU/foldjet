@@ -10,7 +10,7 @@ A model is loaded with one `backend`, the source of the kernels of every op in i
 
 | `backend` | kernels | works on |
 |---|---|---|
-| `miniworld` (default) | the miniworld-engine: hand-written CUDA where the engine has it for the card, the engine's own other legs elsewhere | any CUDA card; tuned for H100 / B200 |
+| `miniworld` (default) | the foldjet-engine: hand-written CUDA where the engine has it for the card, the engine's own other legs elsewhere | any CUDA card; tuned for H100 / B200 |
 | `cuequivariance` | NVIDIA cuEquivariance 0.12 (`triangle_multiplicative_update`, `triangle_attention`, `attention_pair_bias`) | any card the library supports |
 | `anthropic` | the kernels of Anthropic's uplifting-biomolecular-modeling release (the TriMul payload, the `opt_core` cells) | where its payload builds and loads (sm_90 here) |
 | `pytorch` | the dense FoldJet modules: the reference every other backend is compared with | anywhere |
@@ -151,7 +151,7 @@ Forward-only harness, the same as `final_af3.jsonl` / `final_esm.jsonl`: `compil
 graphs on the denoiser, graphs on the trunk and heads, bucketing), real MSA (and templates where the family has them)
 for 5I28 replicated n times, `mode: exact`, 5 diffusion samples, 200 steps, the released recycles per family; warm median
 of 3 forwards (n <= 2), 2 (n <= 8) or 1. One backend per process, one process per GPU, on the engine tree FoldJet main
-runs on (the PyPI wheel `miniworld-engine==2.3.9`; the numbers below were measured on the unreleased tree 2.3.8 + `integ/all-20261023`, whose content 2.3.9 contains, and re-checked on the wheel, see "Re-check on the 2.3.9 wheel"). FoldJet `6d5b7b6`, except RoseTTAFold3 on `anthropic`
+runs on (the PyPI wheel `foldjet-engine==2.3.9`; the numbers below were measured on the unreleased tree 2.3.8 + `integ/all-20261023`, whose content 2.3.9 contains, and re-checked on the wheel, see "Re-check on the 2.3.9 wheel"). FoldJet `6d5b7b6`, except RoseTTAFold3 on `anthropic`
 (`91fb117`: its length-divided TriMul is a stated reference there, see below). `anthropic` has the payloads of
 `~/ext/uplifting-biomolecular-modeling` and `trimul_native_cu129`.
 
@@ -284,7 +284,7 @@ transformers only on `miniworld`, and the other backends run the reference).
 
 ## Re-check on the 2.3.9 wheel
 
-FoldJet pins `miniworld-engine==2.3.9` from PyPI (2.3.9 contains the engine work the tables above were measured on:
+FoldJet pins `foldjet-engine==2.3.9` from PyPI (2.3.9 contains the engine work the tables above were measured on:
 `serves_extra_bias`, `sampler_ops`, `dit_variants`, the sm90 triangle attention fp16 core, `local_dit`, PWA up to N <= 2048).
 Nothing is put on `PYTHONPATH`: the engine is the installed wheel, FoldJet the editable checkout. Test suite
 (`FOLDFORGE_TEST_ALLOW_SIZE_MISMATCH=1`, empty kernel cache, `CUTLASS_PATH=/nonexistent`): 604 passed, 1 failed (the
@@ -311,10 +311,10 @@ Boltz-2, RoseTTAFold3 and Chai-1 (token and atom) and ESMFold2's token stack ran
 AF3-style and ESMFold2 atom blocks the engine's reference core.
 
 No other card was available, so this was measured on the **H100 with the engine's internal A/B switch**
-(`miniworld_engine.settings.configure(force_portable_kernels=True)`, set by the scratch harness `ff_stage.py` and by the tests only: FoldJet
+(`foldjet_engine.settings.configure(force_portable_kernels=True)`, set by the scratch harness `ff_stage.py` and by the tests only: FoldJet
 has no key for it), which sends the engine to the kernels a recorded card would run, for the whole model. Harness
 `ffbench/ff_fwd.py`, `compile_graph_trunk_bucket`, real MSA and templates, `mode: exact`, 5 samples, 200 steps, warm median
-of 3 (n = 1) or 2 (n = 4) forwards, wheel `miniworld-engine==2.3.10` and no overlay. Columns: `default` = `miniworld` on the
+of 3 (n = 1) or 2 (n = 4) forwards, wheel `foldjet-engine==2.3.10` and no overlay. Columns: `default` = `miniworld` on the
 H100 without the switch (CUDA paths); `portable` = switch on; `dense` = switch on and the diffusion blocks left dense
 (`engine.skip: [engine_atom_blocks, engine_dit_variant_blocks, engine_atom_variant_blocks]`: what a recorded card ran before
 the seam knew the engine's portable path; for AF3 only the atom blocks, its token blocks are the engine's in both).
@@ -349,7 +349,7 @@ Test suite on the wheel (`FOLDFORGE_TEST_ALLOW_SIZE_MISMATCH=1`): 641 passed, 1 
 
 ## Re-check on the 2.3.11 wheel
 
-FoldJet pins `miniworld-engine==2.3.11` from PyPI (the La-Proteina kernels and the window-attention backward bands on top of
+FoldJet pins `foldjet-engine==2.3.11` from PyPI (the La-Proteina kernels and the window-attention backward bands on top of
 2.3.10). `pixi.lock` resolves the cp312 wheel with sha256 `834835eb...eec7` (the file on PyPI); the `default` and `cu13`
 environments import 2.3.11 from FoldJet's own `.pixi` with an empty `PYTHONPATH`. Test suite
 (`FOLDFORGE_TEST_ALLOW_SIZE_MISMATCH=1`, empty kernel cache, `CUTLASS_PATH=/nonexistent`): 641 passed, 1 failed (the missing
@@ -389,6 +389,6 @@ None was made (the engine is not touched from here). In order of value:
 8. The window kernels of the portable atom paths (`augmented_attention_*_window_triton`) have no `ok` row in any recorded
    card's manifest at engine 2.3.10 (A100, RTX A5000, RTX A6000), so on those cards the AF3-style and ESMFold2 atom blocks and the
    atom stacks of Boltz-2 / RoseTTAFold3 / Chai-1 warn once (`UnrecordedCardWarning`) and run the dense path. `python -m
-   miniworld_engine.autotune.run_all` on each card, and the manifest committed, turns them on without a FoldJet change.
+   foldjet_engine.autotune.run_all` on each card, and the manifest committed, turns them on without a FoldJet change.
 9. The portable stacks refuse a head wider than 64 or more than 256 keys (one `KernelRefusedWarning`, then the reference) and, for the
    atom stacks, a token count that is not a multiple of 32; FoldJet's seam only asks, so those calls keep the dense blocks.

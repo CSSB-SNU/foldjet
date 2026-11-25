@@ -91,7 +91,7 @@ samples according to their released execution policy. This table compares backen
 within a model, not scientific performance between architectures.
 
 Environment: torch 2.10.0+cu128, Triton 3.6.0, Quack 0.5.0, CUTLASS DSL 4.5.2,
-cuEquivariance torch 0.11.1, miniworld-engine 1.0.0. Some A100 tuning records were
+cuEquivariance torch 0.11.1, foldjet-engine 1.0.0. Some A100 tuning records were
 missing or stale; first requests performed additional kernel compilation/autotuning.
 No cache grids were retuned as part of this task.
 

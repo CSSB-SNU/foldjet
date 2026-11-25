@@ -95,10 +95,10 @@ def test_the_flag_is_a_plain_attribute_so_compile_guards_on_it():
 
 
 def test_the_engine_residual_classes_still_declare_the_dead_flag_false_by_default():
-    from miniworld_engine.modules.attention import AttentionPairBias
-    from miniworld_engine.modules.msa import MSAPairWeightedAveraging, OuterProductMean
-    from miniworld_engine.modules.transition import Transition
-    from miniworld_engine.modules.triangle import (
+    from foldjet_engine.modules.attention import AttentionPairBias
+    from foldjet_engine.modules.msa import MSAPairWeightedAveraging, OuterProductMean
+    from foldjet_engine.modules.transition import Transition
+    from foldjet_engine.modules.triangle import (
         TriangleAttention,
         TriangleMultiplication,
     )
@@ -119,7 +119,7 @@ def test_the_engine_residual_classes_still_declare_the_dead_flag_false_by_defaul
 
 
 def test_a_flagged_engine_transition_returns_its_residual_input_without_grad():
-    from miniworld_engine.modules.transition import Transition
+    from foldjet_engine.modules.transition import Transition
 
     module = Transition(d_hidden=16, n=2, backend="pytorch").eval()
     with torch.no_grad():

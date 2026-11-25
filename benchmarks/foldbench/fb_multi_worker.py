@@ -331,7 +331,7 @@ with ff.load_model(args.model, config=config, checkpoint=args.checkpoint, device
     # saturation check and redo below use fp8_mod).
     FP8 = None
     try:
-        import miniworld_engine.fp8 as _fp8
+        import foldjet_engine.fp8 as _fp8
 
         if _fp8.preset():
             FP8 = _fp8
@@ -343,7 +343,7 @@ with ff.load_model(args.model, config=config, checkpoint=args.checkpoint, device
     # and was rescaled -> run that forward again (at most 3 times). Active only when MINIWORLD_FP8 is set; the counts go to run.json ("fp8").
     fp8_mod = None
     if os.environ.get("MINIWORLD_FP8"):
-        import miniworld_engine.fp8 as fp8_mod
+        import foldjet_engine.fp8 as fp8_mod
 
     gstate = {"res_bucket": None, "graphs": True}
 

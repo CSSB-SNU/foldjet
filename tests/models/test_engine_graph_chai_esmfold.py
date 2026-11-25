@@ -375,7 +375,7 @@ def _atom_case(atoms: int, window: str, *, seed: int = 7) -> dict:
 
     24-atom conformers, the key window per FoldJet's word.
     """
-    from miniworld_engine.modules.functional import slide_starts
+    from foldjet_engine.modules.functional import slide_starts
 
     generator = torch.Generator().manual_seed(seed)
     windows = (atoms + 31) // 32

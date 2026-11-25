@@ -5,7 +5,7 @@ Renamed from FoldForge (`import foldforge` and the `foldforge` command still wor
 **Many structure predictors, one environment, one set of kernels.**
 
 Eleven AF3-family predictors share MiniWorld-format inputs, one CCD LMDB,
-miniworld-engine blocks and kernels — and one graph. A
+foldjet-engine blocks and kernels — and one graph. A
 family is a `DenseSpec` row stating where its release disagrees with AF3;
 where a release's equations, checkpoint layout or confidence head differ, the
 difference is a field in that row rather than a second implementation.
@@ -79,14 +79,14 @@ converted once from the released blob with `foldjet weights convert <model>`; [d
 
 ## Where this sits
 
-FoldJet is a **terminal** repo on top of one dependency, miniworld-engine
+FoldJet is a **terminal** repo on top of one dependency, foldjet-engine
 (team-gm was absorbed into the engine and into MiniWorld; FoldJet no longer
 depends on it). The boundary rule decides whether a piece of code belongs here or
 a layer down:
 
 | layer | repo | holds |
 |---|---|---|
-| engine | miniworld-engine | fused kernels, the modules that wrap them (`miniworld_engine.modules`) and the single-op kernel entry points (`miniworld_engine.kernels`); since 2.4.2 no model architecture, diffusion process or checkpoint adapter |
+| engine | foldjet-engine | fused kernels, the modules that wrap them (`foldjet_engine.modules`) and the single-op kernel entry points (`foldjet_engine.kernels`); since 2.4.2 no model architecture, diffusion process or checkpoint adapter |
 | terminal | **FoldJet** | the **full models**, the checkpoint installers, data pipeline, eval, CLI |
 
 Nothing here defines an op or a general-purpose block. If you are writing one,
@@ -97,7 +97,7 @@ requests in [docs/ENGINE-REQUESTS.md](docs/ENGINE-REQUESTS.md)); see [the direct
 
 ## Install
 
-One **pixi** environment, the same layout as MiniWorld and miniworld-engine
+One **pixi** environment, the same layout as MiniWorld and foldjet-engine
 (torch 2.13.0+cu129, cuequivariance 0.12, FlashAttention-4; `-e cu13` for CUDA 13).
 No GPU is needed to install, and nothing is run on a login node: use a CPU
 allocation of the cluster.
@@ -137,10 +137,10 @@ all model/backend combinations on a new GPU.
 
 ### The engine pin
 
-`miniworld-engine` is pinned once in the package runtime dependencies (`==2.5.1`); Pixi
-resolves that same requirement. The committed `pixi.lock` records the 2.5.1 wheels (`miniworld-engine`, `-kernels-sm90-cu129`; the `-cu130` kernel wheel
+`foldjet-engine` is pinned once in the package runtime dependencies (`==2.5.1`); Pixi
+resolves that same requirement. The committed `pixi.lock` records the 2.5.1 wheels (`foldjet-engine`, `-kernels-sm90-cu129`; the `-cu130` kernel wheel
 of 2.4.4 is gone from the lock because 2.5.1 does not ship one). An environment installed from an older lock must be refreshed (`pixi install --frozen`). 2.5.1 brings its own prebuilt H100 kernels as the wheel
-`miniworld-engine-kernels-sm90-cu129==2.5.1` (CPython 3.12, linux x86_64, CUDA 12.9 / torch 2.13); there is no CUDA 13 kernel wheel, so the `cu13`
+`foldjet-engine-kernels-sm90-cu129==2.5.1` (CPython 3.12, linux x86_64, CUDA 12.9 / torch 2.13); there is no CUDA 13 kernel wheel, so the `cu13`
 environment JIT-builds kernels on first use. Update the pin,
 refresh the lock and re-run the tests: the engine changes contracts between
 releases (for example, since the 2026-10 release every `x = x + f(x)` module
@@ -202,7 +202,7 @@ $FOLDFORGE_HOME/
 
 | the unit | lives in |
 |---|---|
-| wraps a kernel, one PyTorch reference | miniworld-engine |
+| wraps a kernel, one PyTorch reference | foldjet-engine |
 | diffusion process (EDM, decoupled x-prediction, augmentation, schedules, samplers) | `foldjet.diffusion` (self-contained: movable into its own package) |
 | specific to one predictor | `models/architectures/<name>.py` |
 | needed by two or more predictors, no reason for the engine to carry it | `modules/` |

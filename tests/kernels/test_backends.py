@@ -10,14 +10,14 @@ import logging
 
 import pytest
 import torch
-from miniworld_engine.modules import (
+from foldjet_engine.modules import (
     AdaptiveLayerNorm,
     OuterProductMean,
     Transition,
     TriangleAttention,
     TriangleMultiplication,
 )
-from miniworld_engine.modules.primitives import BackendUnsupported
+from foldjet_engine.modules.primitives import BackendUnsupported
 from torch import nn
 
 from foldjet.models.config import Config

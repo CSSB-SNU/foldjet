@@ -33,7 +33,7 @@ so `max_graphs` should be at least 8 with it.
 ## Trunk graphs
 
 Every family runs `scope: trunk` with the trunk pass and the heads as graphs (the fold-to-fold fault that once kept Boltz2, Chai-1 and
-RosettaFold3 off it was fixed in miniworld-engine 2.3.9, and the `DenseSpec.trunk_graph` switch is removed).
+RosettaFold3 off it was fixed in foldjet-engine 2.3.9, and the `DenseSpec.trunk_graph` switch is removed).
 
 ESMFold2 (and ESMFold2-fast) is on the trunk graph. Its pass was not capturable only because the first pass
 drew the recurrent state with `trunc_normal_` inside the pass, whose rejection loop reads the device on the

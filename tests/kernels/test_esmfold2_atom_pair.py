@@ -49,7 +49,7 @@ def _layout(seed: int = 0) -> dict[str, Any]:
     Queries [W, 32, C], the 192-key windows slid AF3's way, the pair, the rank window
     mask and the rotary tables of queries and keys, from one reference conformer.
     """
-    from miniworld_engine.modules.functional import slide_starts
+    from foldjet_engine.modules.functional import slide_starts
 
     generator = torch.Generator().manual_seed(seed)
     windows = (ATOMS + QUERIES - 1) // QUERIES

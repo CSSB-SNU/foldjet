@@ -1,6 +1,6 @@
 """Which backend serves which op: the one table behind ``backend``, ``engine.ops`` and ``engine.unsupported``.
 
-The engine (miniworld-engine 2.5.0) names five backends: ``pytorch`` (the reference), ``cuda`` (H100 kernels), ``triton``,
+The engine (foldjet-engine 2.5.0) names five backends: ``pytorch`` (the reference), ``cuda`` (H100 kernels), ``triton``,
 ``anthropic`` and ``cueq``. A class lists the ones it has in its ``backends`` tuple and never falls back: a call outside a backend's
 range raises ``BackendUnsupported``. FoldJet owns the policy on top of that:
 
@@ -31,7 +31,7 @@ ENGINE_BACKENDS = ("pytorch", "cuda", "triton", "anthropic", "cueq")
 ALIASES: dict[str, str | None] = {"miniworld": None, "cuequivariance": "cueq"}
 BACKENDS = ("miniworld", "cuequivariance", *ENGINE_BACKENDS)
 
-#: op -> the engine classes (by name, in ``miniworld_engine.modules``) that carry it. The keys are the names ``engine.ops`` takes.
+#: op -> the engine classes (by name, in ``foldjet_engine.modules``) that carry it. The keys are the names ``engine.ops`` takes.
 OP_CLASSES: dict[str, tuple[str, ...]] = {
     "trimul": (
         "TriangleMultiplication",
@@ -78,7 +78,7 @@ class BackendUnsupportedError(RuntimeError):
 
 def op_classes(op: str) -> tuple[type, ...]:
     """The engine classes of ``op`` (imports the engine)."""
-    import miniworld_engine.modules as modules
+    import foldjet_engine.modules as modules
 
     return tuple(
         getattr(modules, name) for name in OP_CLASSES[op] if hasattr(modules, name)

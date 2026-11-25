@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import pytest
 import torch
-from miniworld_engine.modules import AdaptiveRMSNorm
+from foldjet_engine.modules import AdaptiveRMSNorm
 from torch.nn import functional as F
 
 from foldjet.modules.dense.diffusion_transformer import AdaLNZero

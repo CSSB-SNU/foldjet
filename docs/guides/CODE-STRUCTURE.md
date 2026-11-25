@@ -3,7 +3,7 @@
 Every model is a row of one graph. `foldjet.load_model(name, config, **options)`
 and `foldjet fold <model>` run the same lifecycle for all of them:
 registry entry -> `DenseSpec` row (`spec_for(family, mode)`) -> the one
-architecture (`models/architectures/af3.py`, built from miniworld-engine classes
+architecture (`models/architectures/af3.py`, built from foldjet-engine classes
 plus FoldJet-own modules) -> strict load of the miniworld-format checkpoint ->
 precision (`master` | `fp32`) -> backend plan applied to the engine modules
 (`pytorch | cuda | triton | anthropic | cueq`, aliases `miniworld` / `cuequivariance`).
@@ -60,7 +60,7 @@ src/foldjet/
 
 ## Who owns what
 
-| Concern | miniworld-engine | FoldJet |
+| Concern | foldjet-engine | FoldJet |
 |---|---|---|
 | Modules (Transition, triangle ops, attention, PairformerBlock, token / atom DiT, sampler glue) | classes, parameters, `state_dict` keys | builds them per family (`modules/engine/modules.py`, `pairformer.py`, `transformers.py`), never re-implements them |
 | Kernels and their backends (`pytorch`, `cuda`, `triton`, `anthropic`, `cueq`) | the kernels, pretuned launch configs, `module.unsupported(...)`, `BackendUnsupportedError` | none |

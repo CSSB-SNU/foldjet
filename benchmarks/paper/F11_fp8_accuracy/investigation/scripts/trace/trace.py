@@ -35,7 +35,7 @@ import foldjet as ff
 sys.path.insert(0, str(Path.home() / "foldforge-scratch/paper/F11_investigation/scripts"))
 from step3 import SPECS, _fp8_status, regions  # noqa: E402
 
-from miniworld_engine.kernels.transition.cuda import fp8_sm90a as tr  # noqa: E402
+from foldjet_engine.kernels.transition.cuda import fp8_sm90a as tr  # noqa: E402
 
 NSUB = 64
 E4M3 = 448.0
@@ -158,7 +158,7 @@ def main() -> None:
     d.mkdir(parents=True, exist_ok=True)
     CALIB = tr.POLICY
     assert CALIB == "calib", f"Transition FP8 not on in the env: {CALIB!r}"
-    from miniworld_engine.kernels.trimul_inproj.cuda import h100_b200style_fp8 as tmf  # noqa: PLC0415
+    from foldjet_engine.kernels.trimul_inproj.cuda import h100_b200style_fp8 as tmf  # noqa: PLC0415
 
     assert tmf.POLICY is None, "TriMul FP8 must be off (Transition-only env)"
     cfg = {"precision": "bf16", "trunk": {"recycles": 11}, "execution": {"compile": False, "cuda_graph": False}}

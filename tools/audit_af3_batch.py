@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from miniworld_engine.modules import AugmentedAttentionPairBias
+from foldjet_engine.modules import AugmentedAttentionPairBias
 
 from foldjet.models.inference import run
 from foldjet.models.io import runtime

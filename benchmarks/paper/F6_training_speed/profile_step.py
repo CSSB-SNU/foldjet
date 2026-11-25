@@ -202,7 +202,7 @@ def gemm_probe() -> None:
             x, y = a32.to(dt), b32.to(dt)
             res[mode] = timeit(lambda x=x, y=y: x @ y, flop)
         try:
-            from miniworld_engine.kernels import ieee_f32
+            from foldjet_engine.kernels import ieee_f32
 
             if ieee_f32.available(a32, hopper=True) and m % 4 == 0 and n % 4 == 0 and k % 4 == 0:
                 res["engine ieee_f32.mm (FFMA)"] = timeit(lambda: ieee_f32.mm(a32, b32), flop)

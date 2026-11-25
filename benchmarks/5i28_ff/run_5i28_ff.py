@@ -190,7 +190,7 @@ def git(*args: str) -> str:
 def meta(model: str, config: dict) -> dict:
     from importlib import metadata
 
-    import miniworld_engine.modules as engine_modules
+    import foldjet_engine.modules as engine_modules
 
     def version(name: str) -> str | None:
         try:
@@ -204,10 +204,10 @@ def meta(model: str, config: dict) -> dict:
         "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
         "gpu": torch.cuda.get_device_name(0),
         "torch": torch.__version__,
-        "miniworld_engine": version("miniworld-engine"),
+        "miniworld_engine": version("foldjet-engine"),
         # the installed version above can differ (PYTHONPATH)
         "miniworld_engine_loaded_from": engine_modules.__file__,
-        "miniworld_engine_kernels": version("miniworld-engine-kernels-sm90-cu129"),
+        "miniworld_engine_kernels": version("foldjet-engine-kernels-sm90-cu129"),
         "foldforge_commit": git("rev-parse", "HEAD"),
         "foldjet_dirty": bool(git("status", "--porcelain", "--untracked-files=no")),
         "config": config,

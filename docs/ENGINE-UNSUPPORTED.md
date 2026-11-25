@@ -1,4 +1,4 @@
-# What miniworld-engine 2.5.6 does not support
+# What foldjet-engine 2.5.6 does not support
 
 For every gap: **what**, **where FoldJet needs it**, **what FoldJet does meanwhile**. Requests to the engine team that follow from a row are
 in [ENGINE-REQUESTS.md](ENGINE-REQUESTS.md) (`R<n>`). The sections are the categories:
@@ -20,7 +20,7 @@ engine `pytorch` backend for the call and logs the reason once; `error` raises. 
 
 | What | Where FoldJet needed it | Meanwhile |
 | --- | --- | --- |
-| `miniworld_engine.settings` (process-global policy) | `api.py` snapshot / restore around a fold | Removed. Only torch's matmul precision is restored (`modules/engine/configure.py::inference_settings`). |
+| `foldjet_engine.settings` (process-global policy) | `api.py` snapshot / restore around a fold | Removed. Only torch's matmul precision is restored (`modules/engine/configure.py::inference_settings`). |
 | Autotune cache (`autotune`, cache root, `run_all`, shape keys) | `engine_cache_dir`, `tools/build_autotune_cache.py`, `bucketing.ATOM_SHAPES` | `engine_cache_dir` is accepted and ignored with one `DeprecationWarning`; the builder tool and its guide are deleted; `ATOM_SHAPES` is a FoldJet constant. Launch configs come from the engine's pretuned tables. |
 | Public `static_weights` / `static_inputs` / `clear_weight_caches` | `models/execution.py` graph capture, `models/loading.py` | Private `kernels._capture` and the known weight-cache dicts (R1). |
 | `mark_dead_modules` / `clear_dead_modules` (dead-module loader, 2.4.x) | `load_model` skip of dead modules | Not restored by the engine (R15 closed). FoldJet's `modules/dense/dead.py` flags the engine's plain `dead` attribute (76 modules on Protenix v1, bit-identical output); `tests/models/test_dead_modules.py` pins the engine side of that contract. |

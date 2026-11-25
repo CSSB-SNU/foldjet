@@ -245,7 +245,7 @@ def test_atom_transformer_matches_dense(pair_of_models, atoms):
     lets a real query read the padded keys, the engine block switches them off: the two
     differ there by construction.)
     """
-    from miniworld_engine.modules.functional import slide_starts
+    from foldjet_engine.modules.functional import slide_starts
 
     dense, engine = pair_of_models
     generator = torch.Generator().manual_seed(7)

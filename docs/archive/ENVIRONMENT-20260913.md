@@ -12,7 +12,7 @@
 | ESM | Biohub fork 3.3.0, `fba1e42a8a0f8df2b7e08611c88807aa32a25d9c` |
 | MiniWorld Engine | `d2266a035de11384c46f8cc980e6460f60925413` |
 
-The cu12/cu13 extras include `miniworld-engine[cute]`. Root constraints preserve
+The cu12/cu13 extras include `foldjet-engine[cute]`. Root constraints preserve
 Quack 0.5.0 and CuTeDSL 4.5.2 across optional environments. Installing these
 packages does not override the engine's GPU-specific dispatch policy: SM86
 excludes unsupported Quack GEMM candidates.

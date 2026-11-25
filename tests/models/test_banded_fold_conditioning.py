@@ -187,7 +187,7 @@ def test_release_fold_state_of_the_execution(monkeypatch):
     assert head.transformer._pair_engine is None
     assert not per_fold.graphs
     assert len(cached.graphs) == 1
-    assert calls == ["miniworld_engine.kernels._capture"]
+    assert calls == ["foldjet_engine.kernels._capture"]
 
 
 def test_release_fold_state_tolerates_an_engine_without_release_dead_inputs(

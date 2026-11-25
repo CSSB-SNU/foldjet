@@ -1,7 +1,7 @@
 """The ported families' graph pieces: engine classes with FoldJet's layout adapters.
 
-FoldJet's graph holds the miniworld-engine classes directly: a pairformer block IS
-``miniworld_engine.modules.PairformerBlock``, a token / atom diffusion transformer is a list of ``TokenDiT*`` / ``AtomDiT*`` blocks, a
+FoldJet's graph holds the foldjet-engine classes directly: a pairformer block IS
+``foldjet_engine.modules.PairformerBlock``, a token / atom diffusion transformer is a list of ``TokenDiT*`` / ``AtomDiT*`` blocks, a
 transition is ``Transition``. Their ``state_dict`` keys are the engine's. What is FoldJet's is the layout around them:
 
 * the engine is batched (``[B, L, ...]`` activations, bool key masks ``[B, L]``, diffusion ``single`` / ``cond`` ``[A, B, L, d]``), the
@@ -22,7 +22,7 @@ import contextlib
 from typing import TYPE_CHECKING, Protocol, cast, overload
 
 import torch
-from miniworld_engine.modules import PairformerBlock
+from foldjet_engine.modules import PairformerBlock
 from torch import nn
 
 from foldjet.modules.engine import modules as factories

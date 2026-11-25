@@ -1,6 +1,6 @@
 """FoldJet — many structure predictors, one environment.
 
-FoldJet is a *terminal* repo in a two-layer stack: miniworld-engine holds the
+FoldJet is a *terminal* repo in a two-layer stack: foldjet-engine holds the
 fused kernels and the modules that wrap them (since 2.4.2 no architecture, diffusion
 or checkpoint adapters: those are ``foldjet.diffusion`` / ``blocks`` / ``layers`` /
 ``checkpoints``); the full models are assembled here. Nothing in this package should

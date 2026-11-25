@@ -1,8 +1,8 @@
-# miniworld-engine 2.4.3: released-checkpoint parity
+# foldjet-engine 2.4.3: released-checkpoint parity
 
 > Historical migration record for that engine release. The current engine integration (2.5.1) is described in [BACKENDS.md](BACKENDS.md), [../ENGINE-UNSUPPORTED.md](../ENGINE-UNSUPPORTED.md) and [CHECKPOINT-FORMAT.md](CHECKPOINT-FORMAT.md).
 
-FoldJet pins `miniworld-engine==2.4.3`. The engine now builds its modules from the released (FoldJet dense) layout:
+FoldJet pins `foldjet-engine==2.4.3`. The engine now builds its modules from the released (FoldJet dense) layout:
 `<Module>.from_released(state_dict, ...)` (engine `docs/kernels/released-checkpoints.md`).
 
 | FoldJet adapter (`modules/engine/modules.py`) | engine call |

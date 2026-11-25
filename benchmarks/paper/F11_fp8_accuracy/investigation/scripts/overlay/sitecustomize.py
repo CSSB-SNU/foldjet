@@ -4,7 +4,7 @@ import os
 
 _v = os.environ.get("F11INV_TRIATTN")
 if _v:
-    import miniworld_engine.fp8 as _fp8
+    import foldjet_engine.fp8 as _fp8
 
     _choice = {"pvqk": (frozenset({"fused", "unfused"}), True), "pv": (frozenset({"fused", "unfused"}), False), "none": (frozenset(), False)}[_v]
     _fp8.triattn_for = lambda _name, _c=_choice: _c
@@ -15,7 +15,7 @@ if _v:
 #   F11INV_TR_LOG=FILE         append one line per FP8 Transition call: x shape, hidden width, calibrated h scale
 if any(os.environ.get(k) for k in ("F11INV_TR_HIDDEN", "F11INV_TR_DYNAMIC", "F11INV_TR_LOG")):
     import torch as _torch
-    from miniworld_engine.kernels.transition.cuda import fp8_sm90a as _tr
+    from foldjet_engine.kernels.transition.cuda import fp8_sm90a as _tr
 
     _hid = os.environ.get("F11INV_TR_HIDDEN")
     if _hid:

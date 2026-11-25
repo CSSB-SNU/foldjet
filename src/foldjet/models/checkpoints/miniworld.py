@@ -1,7 +1,7 @@
 r"""The miniworld checkpoint format: an fp32 ``state_dict`` with engine-class keys.
 
 The keys are the FoldJet graph's own (engine-class) keys. Every model's graph is built
-from miniworld-engine classes, so its parameters have the engine's names and layouts.
+from foldjet-engine classes, so its parameters have the engine's names and layouts.
 Its checkpoint is that ``state_dict`` plus a format tag, saved with ``torch.save`` and
 read with ``weights_only=True``::
 
@@ -187,7 +187,7 @@ def _converters(engine_model: nn.Module) -> list[tuple[str, Any, nn.Module]]:  #
     ``function(tracked_state, prefix) -> {relative engine key: tensor}``; outermost
     modules only: parts of a converted module are converted with it.
     """
-    from miniworld_engine.modules import (  # noqa: PLC0415 - deferred until called (import time)
+    from foldjet_engine.modules import (  # noqa: PLC0415 - deferred until called (import time)
         PairformerBlock,
         Transition,
     )

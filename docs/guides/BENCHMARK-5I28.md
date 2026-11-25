@@ -3,7 +3,7 @@
 The model-level speed benchmark of FoldJet: every supported model on the engine against its Anthropic kit (and the vendor's stock code),
 on **5I28 (azurin, 128 residues)**, one H100 80GB.
 
-**Ownership.** The protocol was first written in miniworld-engine (`benchmarks/5i28.md`, commit `71c800225`, 2026-10-30; removed from the
+**Ownership.** The protocol was first written in foldjet-engine (`benchmarks/5i28.md`, commit `71c800225`, 2026-10-30; removed from the
 engine tree by the 2.5.0 redesign). FoldJet owns it from 2026-11-11: this page is the protocol, FoldJet runs it, and the results
 are recorded here. The engine commit keeps the earlier records (all nine models, Protenix v1/v2 at 10 trunk passes, the kit
 forward-definition audit): `docs/records/5i28_*.md` and `anthropic_kits_fwd_definition_audit_20261029.md` in that commit.
@@ -40,7 +40,7 @@ featurization, loading and output writing. Report the median of the warm forward
 - Kits: their `PHASE ... fwd_s` (or the kit's equivalent span, per the kit forward-definition audit). Not the kits' wider
   "Model forward time" lines.
 - FoldJet runs on prebuilt kernels and warm caches: no JIT compile inside a timed run.
-- **Sampler CUDA-graph capture (R26).** With `execution.sampler_graph_cache` on (the default) and an engine that has the refresh API (miniworld-engine
+- **Sampler CUDA-graph capture (R26).** With `execution.sampler_graph_cache` on (the default) and an engine that has the refresh API (foldjet-engine
   >= 2.5.6: `StaticTables.refresh`), `models/sampler_graph.py` captures the sampler graph once per shape and serves every later fold of that shape by writing
   it into the graph's static buffers; the FIRST forward of a shape (`model_seconds_cold`) includes the capture (2 eager warm-up steps + capture), later
   forwards do not, so `model_seconds_warm` / `model_seconds_warm_median` exclude it. On an older engine (2.5.4) or with the cache off, every forward

@@ -166,7 +166,7 @@ def backend_table(model):
     rows = {}
     for name, m in model.named_modules():
         mod = type(m).__module__
-        if not mod.startswith("miniworld_engine"):
+        if not mod.startswith(("foldjet_engine", "miniworld_engine")):
             continue
         be = getattr(m, "backend_name", None) or getattr(m, "backend", None)
         if be is None:

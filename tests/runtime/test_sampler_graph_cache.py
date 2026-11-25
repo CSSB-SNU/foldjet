@@ -365,10 +365,10 @@ def test_training_and_missing_fold_use_no_cache() -> None:
 
 
 def _fake_engine_capture(monkeypatch, **attributes: Any) -> None:
-    module = types.ModuleType("miniworld_engine.capture")
+    module = types.ModuleType("foldjet_engine.capture")
     for name, value in attributes.items():
         setattr(module, name, value)
-    monkeypatch.setitem(sys.modules, "miniworld_engine.capture", module)
+    monkeypatch.setitem(sys.modules, "foldjet_engine.capture", module)
     parent = sys.modules.get("miniworld_engine")
     if parent is not None:
         monkeypatch.setattr(parent, "capture", module, raising=False)

@@ -8,7 +8,7 @@ engine class, then its two multiplications replaced) instead of asking the engin
 
 from __future__ import annotations
 
-from miniworld_engine.modules import PairformerBlock, PairformerConfig
+from foldjet_engine.modules import PairformerBlock, PairformerConfig
 
 from foldjet.modules.engine.modules import Precision, finish, triangle_multiplication
 

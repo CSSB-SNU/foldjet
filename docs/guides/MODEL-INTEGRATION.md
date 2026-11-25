@@ -7,7 +7,7 @@ The dated validation sections below describe the state when those checks ran.
 
 Working tree: `main`; shared team-gm member: branch `foldjet/dense-families`.
 All predictors must use FoldJet's environment, team-gm blocks, and
-miniworld-engine ops. A package name or a subprocess launching an untouched
+foldjet-engine ops. A package name or a subprocess launching an untouched
 upstream model is not a completed shared-engine port.
 
 **Current state (2026-09-27).** Twelve models fold on one graph: AF3,
@@ -761,7 +761,7 @@ Protenix/OpenDDE use a tensor dictionary.
 ## Shared operations and precision
 
 `team_gm.modules.checkpoints.af_family` maps plain residual transitions, compatible residual
-TriMul and LayerNorm onto miniworld-engine. It preserves masks and consumes the
+TriMul and LayerNorm onto foldjet-engine. It preserves masks and consumes the
 fused residual exactly once. AF3 interleaved projection weights and incoming
 contraction order are mapped explicitly. Protenix template TriMul with pair
 width 64 and hidden width 128 retains its original PyTorch equation because the

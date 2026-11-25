@@ -1,6 +1,6 @@
 """Released-checkpoint layout -> engine module layout: pure tensor re-shuffles.
 
-No module is built here. The engine (miniworld-engine 2.5.0) has no ``from_released``;
+No module is built here. The engine (foldjet-engine 2.5.0) has no ``from_released``;
 FoldJet owns the conversion of the AlphaFold 3 family's released parameter layout (the
 names FoldJet's dense modules and the Haiku blob carry) to the state dict of the
 engine class that serves the op. Every function maps a state dict (optionally below

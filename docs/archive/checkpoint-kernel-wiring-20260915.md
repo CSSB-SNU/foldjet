@@ -1,6 +1,6 @@
 # Checkpoint kernel wiring (2026-09-15)
 
-The authoritative shape census and build table are in miniworld-engine:
+The authoritative shape census and build table are in foldjet-engine:
 `docs/checkpoint-shapes-20260915.md`, its JSON companion, and
 `src/miniworld_engine/kernels/registry_module.csv`.
 

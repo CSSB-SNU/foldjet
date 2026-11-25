@@ -2,7 +2,7 @@
 
 Whole-predictor experiments of the {{ENGINE}} / {{FOLDFORGE}} Brief Communication. One folder per experiment with a `README.md` (what is measured, conditions, exact
 commands, output columns), its input lists, one script per card and a `collect.py` that turns the raw records into CSVs. Engine 3.0.6 campaign: inference (F3 F4 F5 F9), FoldBench (F1 F2 F8 F11) and training (F6 F7; F10 removed from the paper) experiments. The engine's operator experiments
-(E1-E6) live in the miniworld-engine repository.
+(E1-E6) live in the foldjet-engine repository.
 
 ## Common rules
 

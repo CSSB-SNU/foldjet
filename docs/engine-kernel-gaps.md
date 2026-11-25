@@ -1,4 +1,4 @@
-# Engine work still needed to connect every family (2026-10-19, updated 2026-10-21 for miniworld-engine 2.3.3)
+# Engine work still needed to connect every family (2026-10-19, updated 2026-10-21 for foldjet-engine 2.3.3)
 
 Source: the module-by-module wiring table of FoldJet at `69f7bd6` (engine pin `b4680179`, loader order
 `install_pairformers` -> `install_engine_modules` -> `install_conditioning`). Every item below was read off a
@@ -7,7 +7,7 @@ rejected builder or a model attribute, not guessed. Counts are modules on the en
 Already connected (no kernel work): AF3, IntelliFold2, OpenBind0, OpenFold3 (all columns), Protenix1/2 and OpenDDE
 (everything, atom included since FoldJet `69f7bd6`), ESMFold2 token DiT / TriMul / MSA / OPM / single attention.
 
-## 0. FIXED in miniworld-engine 2.3.3: H100 bf16 triangle attention overflowed on trained weights
+## 0. FIXED in foldjet-engine 2.3.3: H100 bf16 triangle attention overflowed on trained weights
 
 The forward core now raises the softmax offset to the row's running maximum (lazy rescale; engine `cad85074`, test
 `tests/gpu/sm90/test_triattn_large_logits_gpu.py`). Kept below as the record of what it was.
@@ -52,7 +52,7 @@ Chai's `PairformerBlock` is not converted by `install_pairformers`, so its singl
 
 ## 4. ESMFold2 / ESMFold2-fast atom DiT -- WIRED 2026-10-21 (3/3, inference)
 
-miniworld-engine 2.3.6 has the block (`LocalDiTBlock(**modules.local_dit.ESMFOLD2)`, H100 kernels for inference, bf16 and
+foldjet-engine 2.3.6 has the block (`LocalDiTBlock(**modules.local_dit.ESMFOLD2)`, H100 kernels for inference, bf16 and
 fp32/TF32; fp32 parity with this dense module 3e-7, trained weights included); `engine.modules._esmfold2_atom_blocks` builds it and
 `DiffusionCrossAttTransformer._engine_forward` hands it the rotary tables (the window is the engine's). A call with grad keeps the
 dense path (no engine backward). What it differs in from the AF3 block:
@@ -65,7 +65,7 @@ The atom blocks' 9 conditioned transitions run inside the engine blocks; the dif
 
 The builders pass the hidden width as the engine's `d_hidden` (it was never tied in the engine, only here): Protenix1
 TriMul and TriAttn 116/116, Boltz2 TriAttn 156/156 (RF3 / Chai template TriAttn stay on their own other gaps).
-TriAttn pair 64 / 4 x 32 heads and (miniworld-engine 2.3.6) TriMul pair 64 / hidden 128 run the H100 CUDA kernels.
+TriAttn pair 64 / 4 x 32 heads and (foldjet-engine 2.3.6) TriMul pair 64 / hidden 128 run the H100 CUDA kernels.
 
 ## 6. Not kernel work
 
@@ -80,5 +80,5 @@ TriAttn pair 64 / 4 x 32 heads and (miniworld-engine 2.3.6) TriMul pair 64 / hid
   last windows are recomputed in torch. No backward.
 - FP32 master weights under bf16 activations in the diffusion blocks: kept FP32 since `69f7bd6`; accuracy vs the reference
   not measured.
-- Engine branch `feat/foldjet-af3` (b4680179): landed on engine main (544e758d) and released as miniworld-engine 2.3.3 on PyPI,
+- Engine branch `feat/foldjet-af3` (b4680179): landed on engine main (544e758d) and released as foldjet-engine 2.3.3 on PyPI,
   which FoldJet now depends on (no git pin).

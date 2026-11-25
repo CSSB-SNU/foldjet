@@ -144,7 +144,7 @@ Output (rank 0 only):
   `PHASES` lines are printed too (they add synchronizations).
 - `BENCH {json}`: backend, world size, grad_accum, effective batch, steps, `first_step_s` (includes first-call overheads, reported separately), mean / median / min / max over steps 2..N,
   `total_wall_s`, `micro_steps_per_s` (all ranks), `seconds_per_micro_step_per_gpu`, `tokens_per_s`, `nonfinite_steps` (counted, the run goes on), peak allocated / reserved GiB, the
-  engine table, git commit, engine version and `miniworld_engine.__file__`, GPU name, and `ranks_identical` (the parameter checksum equals on every rank).
+  engine table, git commit, engine version and `foldjet_engine.__file__`, GPU name, and `ranks_identical` (the parameter checksum equals on every rank).
 
 Data are STAND-INS: FoldJet's featurisation of FoldBench targets (`--bench-pool default` = 8 targets with 0.7 x N .. N tokens (size table of the featurisation, <= 4096 atoms), N = `--bench-tokens`; an example that featurises above N tokens is dropped, default 384 = MiniWorld's recipe crop
 `crop.max_tokens: 384`, bucket 384; or `--bench-pool a,b,c`), the ground truth is the model's own pre-training prediction. Step time depends on the shapes, not on the label values,

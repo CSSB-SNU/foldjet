@@ -330,7 +330,7 @@ def test_atom_transformer_matches_dense(pair_of_models, atoms):
     Slid inside the real atoms (fast) or at the clipped ``32 w - 48`` start (exact,
     ``pad``).
     """
-    from miniworld_engine.modules.functional import slide_starts
+    from foldjet_engine.modules.functional import slide_starts
 
     dense, engine = pair_of_models
     generator = torch.Generator().manual_seed(7)

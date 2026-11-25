@@ -135,7 +135,7 @@ def main() -> None:
 
 def _fp8_status():
     try:
-        import miniworld_engine.fp8 as f  # noqa: PLC0415
+        import foldjet_engine.fp8 as f  # noqa: PLC0415
 
         return {"status": f.status(), "routes": f.route_stats(), "saturated": f.check()} if f.preset() else None
     except Exception as exc:  # noqa: BLE001

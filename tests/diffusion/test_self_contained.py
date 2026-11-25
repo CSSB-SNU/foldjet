@@ -37,7 +37,7 @@ def test_imports_stay_inside_the_subpackage():
                     or module.startswith("foldjet.diffusion.")
                 ):
                     offenders.append((str(path.relative_to(ROOT)), module))
-            elif top == "miniworld_engine":
+            elif top in ("foldjet_engine", "miniworld_engine"):
                 offenders.append((str(path.relative_to(ROOT)), module))
     assert not offenders, offenders
 

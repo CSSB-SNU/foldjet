@@ -182,7 +182,7 @@ def main() -> None:
                 t1 = time.monotonic()
                 redo = 0
                 if args.arm == "engine_fp8":
-                    import miniworld_engine.fp8 as fp8
+                    import foldjet_engine.fp8 as fp8
 
                     fp8.check()  # clear a flag left from loading / an earlier target
                 torch.cuda.reset_peak_memory_stats()

@@ -1,4 +1,4 @@
-"""Factories of the engine classes FoldJet's graph holds as its own modules (miniworld-engine 2.5.0).
+"""Factories of the engine classes FoldJet's graph holds as its own modules (foldjet-engine 2.5.0).
 
 FoldJet always takes its modules from the engine: a Transition, a TriangleMultiplication, a PairformerBlock ... in a FoldJet model IS
 the engine class, so its ``state_dict`` keys are the engine's. This module is the one place that decides HOW such a module is built:
@@ -20,7 +20,7 @@ from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Literal, overload
 
 import torch
-from miniworld_engine.modules import (
+from foldjet_engine.modules import (
     LayerNorm,
     MSAPairWeightedAveraging,
     OuterProductMean,
@@ -28,7 +28,7 @@ from miniworld_engine.modules import (
     TriangleAttention,
     TriangleMultiplication,
 )
-from miniworld_engine.modules.primitives import MasterWeights
+from foldjet_engine.modules.primitives import MasterWeights
 
 if TYPE_CHECKING:
     from torch import nn
@@ -83,7 +83,7 @@ MODEL_KEYS: dict[str, ModelKeys] = {
 
 def engine_has_atom_dit(key: str) -> bool:
     """Whether the installed engine has an ``AtomDiT(model=key)`` class (``esmfold2_pair`` is newer than engine 2.5.1)."""
-    from miniworld_engine.modules.atom_dit import ATOM_DIT_MODELS
+    from foldjet_engine.modules.atom_dit import ATOM_DIT_MODELS
 
     return key in ATOM_DIT_MODELS
 

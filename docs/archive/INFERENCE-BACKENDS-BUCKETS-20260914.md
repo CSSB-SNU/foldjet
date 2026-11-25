@@ -17,7 +17,7 @@ execution settings. The profile is explicit; legacy defaults have not changed.
 ## Bucket contract
 
 The shared policy lives in `team_gm.modules.bucketing` and imports
-`TOKEN_SHAPES` and `ATOM_SHAPES` from the installed pinned miniworld-engine.
+`TOKEN_SHAPES` and `ATOM_SHAPES` from the installed pinned foldjet-engine.
 
 | Axis | Allocated lengths |
 | --- | --- |

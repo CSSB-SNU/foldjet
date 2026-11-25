@@ -23,7 +23,7 @@ def main() -> int:
         )
         metadata = Parser().parsestr(wheel.read(metadata_path).decode())
         requires = metadata.get_all("Requires-Dist", [])
-        assert any(r.startswith("miniworld-engine==2.5.0") for r in requires)
+        assert any(r.startswith("foldjet-engine==1.0.0") for r in requires)
         assert any(r.startswith("foldforge-af3-data==3.0.2") for r in requires)
         assert "foldjet/py.typed" in wheel.namelist()
         assert "weights" in metadata.get_all("Provides-Extra", [])

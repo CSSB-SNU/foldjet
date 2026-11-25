@@ -100,7 +100,7 @@ def _warn_engine_cache_dir() -> None:
         return
     _CACHE_DIR_WARNED = True
     message = (
-        "engine_cache_dir is deprecated and ignored: miniworld-engine 2.5.0 has no "
+        "engine_cache_dir is deprecated and ignored: foldjet-engine 2.5.0 has no "
         "autotune cache (launch configs come from the engine's pretuned tables)"
     )
     warnings.warn(message, DeprecationWarning, stacklevel=3)

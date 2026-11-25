@@ -55,7 +55,7 @@ def configure_model(
     for m, name, value in fixed_buffers:
         setattr(m, name, value.to(device))
     if precision == "master":
-        from miniworld_engine.modules import MasterWeights
+        from foldjet_engine.modules import MasterWeights
 
         for module in model.modules():
             if isinstance(module, MasterWeights):

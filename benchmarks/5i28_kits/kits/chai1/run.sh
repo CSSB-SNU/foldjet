@@ -1,6 +1,6 @@
 #!/bin/bash
 # usage: run.sh N        (N = 1 2 4 8 12 16; on a GPU node, CUDA_VISIBLE_DEVICES set by the caller; host shell, NOT inside the container)
-# The 5I28 benchmark (miniworld-engine benchmarks/5i28.md) on the Chai-1 Anthropic kit, pinned cu130 stack (container as anthropic-kits/cu130run.sh):
+# The 5I28 benchmark (foldjet-engine benchmarks/5i28.md) on the Chai-1 Anthropic kit, pinned cu130 stack (container as anthropic-kits/cu130run.sh):
 #   N identical 5I28 chains (inputs/5i28_x<N>.fasta), real MSA (inputs/msa/*.aligned.pqt = 5i28_unpaired.a3m, all rows) via --msa-directory,
 #   4 distinct templates 5SYD_A 6KOL_A 5YT7_A 6TFD_A per chain via --template-hits-path inputs/templates_n<N>.m8 (+ inputs/cifs, offline shim),
 #   --num-trunk-recycles 3 (= 4 trunk passes), 200 steps, 5 samples, kit mode $MODE (default fast), --seed 0.

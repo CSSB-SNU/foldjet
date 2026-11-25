@@ -1,6 +1,6 @@
 """Shared helpers of the paper experiments F3 / F4 / F5 / F9 (inference timing, sample comparison, inference limit).
 
-Import this module BEFORE ``foldjet`` / ``miniworld_engine`` in a runner: ``apply_arm_env`` sets the FP8 switches, which the engine reads when
+Import this module BEFORE ``foldjet`` / ``foldjet_engine`` in a runner: ``apply_arm_env`` sets the FP8 switches, which the engine reads when
 its FP8 modules are imported.
 
 Arms (``ARMS``): ``torch`` = backend ``pytorch`` (PyTorch operators), ``engine`` = backend ``miniworld`` (bf16 / fp16 engine kernels),
@@ -134,13 +134,13 @@ def run_meta(**extra) -> dict:
 
     repo = Path(__file__).resolve().parents[3]
     try:
-        import miniworld_engine
+        import foldjet_engine
 
-        engine_from = str(list(miniworld_engine.__path__)[0])
+        engine_from = str(list(foldjet_engine.__path__)[0])
     except Exception:  # noqa: BLE001
         engine_from = None
     try:
-        engine = metadata.version("miniworld-engine")
+        engine = metadata.version("foldjet-engine")
     except metadata.PackageNotFoundError:
         engine = None
     gpu = torch.cuda.get_device_name(0) if torch.cuda.is_available() else None
@@ -175,7 +175,7 @@ def fp8_check() -> bool | None:
     """True when an FP8 route saturated since the last call (the engine's guard contract), None when FP8 is not in play."""
     if os.environ.get("MINIWORLD_FP8") is None:
         return None
-    import miniworld_engine.fp8 as fp8
+    import foldjet_engine.fp8 as fp8
 
     return bool(fp8.check())
 
@@ -183,7 +183,7 @@ def fp8_check() -> bool | None:
 def fp8_status() -> dict | None:
     if os.environ.get("MINIWORLD_FP8") is None:
         return None
-    import miniworld_engine.fp8 as fp8
+    import foldjet_engine.fp8 as fp8
 
     out: dict = {"status": fp8.status()}
     try:

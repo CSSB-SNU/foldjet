@@ -607,7 +607,7 @@ class Execution:
     @staticmethod
     def _release_engine_dead_inputs() -> None:
         try:
-            capture = importlib.import_module("miniworld_engine.kernels._capture")
+            capture = importlib.import_module("foldjet_engine.kernels._capture")
         except ImportError:  # no engine: nothing of it to release
             capture = None
         release_dead_inputs = getattr(

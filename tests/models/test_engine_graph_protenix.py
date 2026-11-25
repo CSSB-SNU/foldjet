@@ -390,7 +390,7 @@ def test_atom_transformer_matches_dense(pair_of_models, atoms):
     32 queries against 128 keys slid inside the real atoms (from 128 real atoms the
     dense AF3 mask form and the engine's agree; see ``docs/ENGINE-UNSUPPORTED.md``).
     """
-    from miniworld_engine.modules.functional import slide_starts
+    from foldjet_engine.modules.functional import slide_starts
 
     dense, engine = pair_of_models
     generator = torch.Generator().manual_seed(7)

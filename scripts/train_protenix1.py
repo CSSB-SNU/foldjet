@@ -1137,9 +1137,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915 - one linear training driver
     if args.bench:
         import importlib.metadata  # noqa: PLC0415 - only --bench reports the engine
 
-        import miniworld_engine  # noqa: PLC0415 - only --bench reports the engine
+        import foldjet_engine  # noqa: PLC0415 - only --bench reports the engine
 
-        engine_version = importlib.metadata.version("miniworld-engine")
+        engine_version = importlib.metadata.version("foldjet-engine")
 
         table = bench.engine_table(report_observations(model))
         for line in bench.format_table(table, "ENGINE_FINAL"):
@@ -1196,7 +1196,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915 - one linear training driver
             "pool": [e.name for e in pool],
             "commit": bench.git_commit(),
             "engine_version": engine_version,
-            "engine_file": next(iter(miniworld_engine.__path__)),
+            "engine_file": next(iter(foldjet_engine.__path__)),
             "gpu": torch.cuda.get_device_name(device),
             "dist_backend": args.dist_backend if world.world_size > 1 else None,
         }

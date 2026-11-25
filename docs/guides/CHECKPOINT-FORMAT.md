@@ -1,6 +1,6 @@
 # The miniworld checkpoint format
 
-Every model's graph is built from miniworld-engine classes (`PairformerBlock`, `TriangleMultiplication`, `TokenDiT*`, `AtomDiT*` ...) plus
+Every model's graph is built from foldjet-engine classes (`PairformerBlock`, `TriangleMultiplication`, `TokenDiT*`, `AtomDiT*` ...) plus
 FoldJet-own modules, so its parameters have the engine's names and layouts. Its checkpoint is that model's `state_dict`:
 
 ```text

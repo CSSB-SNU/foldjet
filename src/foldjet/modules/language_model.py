@@ -26,7 +26,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from jaxtyping import Bool, Float, Int
-from miniworld_engine.modules import LayerNorm
+from foldjet_engine.modules import LayerNorm
 from torch import nn
 
 from foldjet.data.constants import residue_names

@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 def skip_engine_init():
     """Engine modules built while this is active keep their uninitialised weights (a load fills every one of them straight away; the
     truncated-normal initialiser (SciPy) it would run first costs ~40 ms per matrix)."""
-    from miniworld_engine.modules import primitives
+    from foldjet_engine.modules import primitives
 
     original = primitives.InitType.apply
     primitives.InitType.apply = lambda _self, _data: None  # pyright: ignore[reportAttributeAccessIssue]  # patched for the duration

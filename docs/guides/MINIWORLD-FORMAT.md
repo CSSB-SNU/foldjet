@@ -1,7 +1,7 @@
 # MiniWorld format contract
 
 FoldJet uses MiniWorld's inference YAML, FASTA grammar and CCDMol serialization.
-`miniworld-engine` owns kernels and standalone operators; `team-gm` owns reusable
+`foldjet-engine` owns kernels and standalone operators; `team-gm` owns reusable
 block compositions; FoldJet owns complete predictors, input packing, heads and
 released-checkpoint conversion. Model-specific equations, vocabularies and weight
 layouts remain explicit at those boundaries.

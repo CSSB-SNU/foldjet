@@ -36,9 +36,9 @@ def _version(dist: str) -> str | None:
 def stamp() -> dict:
     engine_file = None
     try:
-        import miniworld_engine  # noqa: PLC0415
+        import foldjet_engine  # noqa: PLC0415
 
-        engine_file = str(getattr(miniworld_engine, "__path__", [None])[0])
+        engine_file = str(getattr(foldjet_engine, "__path__", [None])[0])
     except Exception:  # noqa: BLE001
         pass
     return {
@@ -46,8 +46,8 @@ def stamp() -> dict:
         "foldforge_commit": _run("git", "-C", str(REPO), "rev-parse", "HEAD"),
         "foldjet_dirty_paths": _run("git", "-C", str(REPO), "status", "--porcelain", "--untracked-files=no").splitlines(),
         "foldjet_version": _version("foldjet"),
-        "engine_version": _version("miniworld-engine"),
-        "engine_kernels": {d: _version(d) for d in ("miniworld-engine-kernels-sm90-cu129", "miniworld-engine-kernels-sm80-cu129", "miniworld-engine-kernels-sm120-cu129")},
+        "engine_version": _version("foldjet-engine"),
+        "engine_kernels": {d: _version(d) for d in ("foldjet-engine-kernels-sm90-cu129", "foldjet-engine-kernels-sm80-cu129", "foldjet-engine-kernels-sm120-cu129", "foldjet-engine-kernels-sm100-cu129", "foldjet-engine-kernels-sm100-cu129-part2")},
         "engine_path": engine_file,
         "gpus": _run("nvidia-smi", "--query-gpu=index,name,uuid,driver_version", "--format=csv,noheader").splitlines(),
         "node": socket.gethostname(),

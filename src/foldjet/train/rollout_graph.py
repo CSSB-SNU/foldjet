@@ -16,7 +16,7 @@ is declared static.
 * Weight packs and the per-fold tables (token-DiT pair bias, atom conditioning,
   conditioning folds) are built INSIDE the capture, so their kernels are recorded and
   every replay rebuilds them from the CURRENT weights and the CURRENT inputs (the
-  engine scopes its pack caches to a capture: ``miniworld_engine.kernels._capture``).
+  engine scopes its pack caches to a capture: ``foldjet_engine.kernels._capture``).
   The cost is paid once per 20 steps, not per step.
 * The graph reads static buffers (a copy of the batch features and of the DETACHED
   trunk outputs); each micro step ``copy_``s the new fold into them. There is no
