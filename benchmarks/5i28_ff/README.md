@@ -22,9 +22,9 @@ identical 5I28 chains (128 n tokens), the real MSA and templates of key `P011335
 ```bash
 export OUT_ROOT=<where the run directories go>          # also holds the kernel / compile caches (CACHE_ROOT overrides)
 # the inputs default to the copies in the repository (benchmarks/5i28_data/, see its README); override only to test another copy:
-# export FOLDFORGE_5I28_FASTA=$PWD/tests/release_references/inputs/5i28/A.fasta
-# export FOLDFORGE_5I28_MSA_DB=$PWD/benchmarks/5i28_data/a3m_16k.lmdb          # key P0113359, 6790 rows
-# export FOLDFORGE_5I28_TEMPLATE_DB=$PWD/benchmarks/5i28_data/template.lmdb    # key P0113359 (20 records, 6 distinct sequences)
+# export FOLDJET_5I28_FASTA=$PWD/tests/release_references/inputs/5i28/A.fasta
+# export FOLDJET_5I28_MSA_DB=$PWD/benchmarks/5i28_data/a3m_16k.lmdb          # key P0113359, 6790 rows
+# export FOLDJET_5I28_TEMPLATE_DB=$PWD/benchmarks/5i28_data/template.lmdb    # key P0113359 (20 records, 6 distinct sequences)
 
 # one model, directly (sizes optional):
 sbatch -J ff5i28-protenix1 --export=ALL,MODEL=protenix1 benchmarks/5i28_ff/run_model.sbatch

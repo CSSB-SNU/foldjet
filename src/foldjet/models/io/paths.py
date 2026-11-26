@@ -1,7 +1,7 @@
 """Resolve every structure-prediction destination inside the runs tree.
 
-The tree is ``foldjet.paths.runs()`` (``$FOLDFORGE_RUNS``, else
-``$FOLDFORGE_HOME/runs``), outside the repository.
+The tree is ``foldjet.paths.runs()`` (``$FOLDJET_RUNS``, else
+``$FOLDJET_HOME/runs``), outside the repository.
 """
 
 from __future__ import annotations

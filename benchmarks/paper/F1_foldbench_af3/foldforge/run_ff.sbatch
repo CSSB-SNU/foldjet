@@ -13,7 +13,7 @@
 #
 # Variables: NAME (required)  EXP (F1; F8 for the fine-tune)  MODEL (af3)  PRECISION (bf16|fp8)  LAUNCH (shard|multi)  SHARDS ("0 1")  TARGETS (a list;
 #   default all 1,522; in shard mode intersected with each shard)  CKPT (checkpoint instead of the released weights)  RECYCLES (11; empty = model default)
-#   EXTRA (more fb_multi / worker flags, e.g. "--seeds 42" for a smoke)  FFENV  ENGINE_OVERLAY  FOLDFORGE_REPO  FB_SPECS  PAPER_OUT
+#   EXTRA (more fb_multi / worker flags, e.g. "--seeds 42" for a smoke)  FFENV  ENGINE_OVERLAY  FOLDJET_REPO  FB_SPECS  PAPER_OUT
 # GPUs: --gres=gpu:h100:2 below = one per shard / two for multi. Smoke runs override on the command line: --gres=gpu:h100:1 --time=00:10:00 -c 16 --mem=64G SHARDS=0.
 #SBATCH -p h100
 #SBATCH -A cssb
@@ -27,7 +27,7 @@
 #SBATCH -o slurm-%x-%j.log
 set -uo pipefail
 : "${NAME:?NAME=<run name>}"
-REPO=${FOLDFORGE_REPO:-${SLURM_SUBMIT_DIR:-$PWD}}
+REPO=${FOLDJET_REPO:-${SLURM_SUBMIT_DIR:-$PWD}}
 P=$REPO/benchmarks/paper
 B=$REPO/benchmarks/foldbench
 . "$P/common/env.sh"
@@ -38,12 +38,12 @@ OUT=${OUT:-$PAPER_OUT/$EXP/h100/$NAME}
 FFENV=${FFENV:-$REPO/.pixi/envs/default}; export FFENV
 mkdir -p "$OUT"
 
-# --- FP8 (engine 3.x opt-in, process-wide): MINIWORLD_FP8=safe + the model named for TriAttn; lazy guards = no host sync under CUDA-graph capture.
+# --- FP8 (engine 3.x opt-in, process-wide): FOLDJET_ENGINE_FP8=safe + the model named for TriAttn; lazy guards = no host sync under CUDA-graph capture.
 # The worker calls fp8.check() after every trunk_seed group and redoes a saturated group (<= 3 times); the counts are in each run.json ("fp8").
-unset MINIWORLD_FP8 MINIWORLD_FP8_MODEL MINIWORLD_TRIMUL_FP8_GUARD MINIWORLD_OPM_FP8_GUARD MINIWORLD_PWA_FP8_GUARD MINIWORLD_TRANSITION_FP8_GUARD
+unset FOLDJET_ENGINE_FP8 FOLDJET_ENGINE_FP8_MODEL FOLDJET_ENGINE_TRIMUL_FP8_GUARD FOLDJET_ENGINE_OPM_FP8_GUARD FOLDJET_ENGINE_PWA_FP8_GUARD FOLDJET_ENGINE_TRANSITION_FP8_GUARD
 case "$PRECISION" in
   bf16) ;;
-  fp8) export MINIWORLD_FP8=safe MINIWORLD_FP8_MODEL=$MODEL MINIWORLD_TRIMUL_FP8_GUARD=lazy MINIWORLD_OPM_FP8_GUARD=lazy MINIWORLD_PWA_FP8_GUARD=lazy MINIWORLD_TRANSITION_FP8_GUARD=lazy ;;
+  fp8) export FOLDJET_ENGINE_FP8=safe FOLDJET_ENGINE_FP8_MODEL=$MODEL FOLDJET_ENGINE_TRIMUL_FP8_GUARD=lazy FOLDJET_ENGINE_OPM_FP8_GUARD=lazy FOLDJET_ENGINE_PWA_FP8_GUARD=lazy FOLDJET_ENGINE_TRANSITION_FP8_GUARD=lazy ;;
   *) echo "PRECISION must be bf16 or fp8" >&2; exit 2 ;;
 esac
 

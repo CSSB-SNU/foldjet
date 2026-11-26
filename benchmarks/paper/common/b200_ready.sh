@@ -1,6 +1,6 @@
 #!/bin/bash
 # b200_ready.sh <model>: exit 0 when the weights files of the predictor are complete on the B200 (rsync renames a file only when it is complete).
-C=${FOLDFORGE_HOME:-/NHNHOME/WORKSPACE/26mohw002_A/psk6950/paper-b200/ff/home}/checkpoints
+C=${FOLDJET_HOME:-/NHNHOME/WORKSPACE/26mohw002_A/psk6950/paper-b200/ff/home}/checkpoints
 need() { for f in "$@"; do [ -s "$C/$f" ] || exit 1; done; exit 0; }
 case $1 in
   af3) need af3/af3.miniworld.pt ;;

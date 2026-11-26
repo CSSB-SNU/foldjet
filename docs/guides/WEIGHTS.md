@@ -17,7 +17,7 @@ Pixi 체크아웃의 기본 환경에는 `weights`와 `language` extra가 포함
 pip install 'foldjet[weights]'
 
 # 공유 스토리지를 쓰려면 다운로드와 추론 모두 같은 환경 변수를 설정합니다.
-export FOLDFORGE_CHECKPOINT_DIR=/data/foldjet/checkpoints
+export FOLDJET_CHECKPOINT_DIR=/data/foldjet/checkpoints
 
 # 여러 모델을 한 번에 준비
 foldjet weights download boltz2 opendde
@@ -40,10 +40,10 @@ foldjet weights download --all
 실패가 하나라도 있으면 마지막에 모델별 결과를 출력하고 종료 코드 `1`을 반환합니다.
 모든 모델이 설치됐다는 의미로 `--all`을 해석하면 안 됩니다.
 
-기본 저장 위치는 `$FOLDFORGE_CHECKPOINT_DIR`, 설정하지 않았다면
-`$FOLDFORGE_HOME/checkpoints` (`FOLDFORGE_HOME` 기본값: `~/.cache/foldforge`)입니다.
+기본 저장 위치는 `$FOLDJET_CHECKPOINT_DIR`, 설정하지 않았다면
+`$FOLDJET_HOME/checkpoints` (`FOLDJET_HOME` 기본값: `~/.cache/foldjet`)입니다.
 한 번만 위치를 지정하려면 `--root /data/foldjet/checkpoints`를 사용하세요.
-이 경우 추론 프로세스에도 같은 `FOLDFORGE_CHECKPOINT_DIR`을 설정해야 합니다.
+이 경우 추론 프로세스에도 같은 `FOLDJET_CHECKPOINT_DIR`을 설정해야 합니다.
 
 ```python
 import foldjet as ff

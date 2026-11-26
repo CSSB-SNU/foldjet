@@ -13,7 +13,7 @@
 #SBATCH -o /home/psk6950/foldforge-scratch/paper/logs/%x_%j.log
 set -uo pipefail
 : "${RUNS:?RUNS = the F4 output dir of the card}" "${CARD:?CARD}"
-HERE=${FF_REPO:-$HOME/FoldForge}/benchmarks/paper
+HERE=${FF_REPO:-$HOME/FoldJet}/benchmarks/paper
 PRED_CARD=$CARD; source "$HERE/common/cards/h100.env"
 CARD=$PRED_CARD   # h100.env sets CARD=h100: keep the card that made the predictions (outputs go to F5/<that card>)
 D=$HERE/F5_sample_comparison; OUT=$PAPER_OUT/F5/$CARD; mkdir -p "$OUT"

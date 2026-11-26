@@ -60,11 +60,11 @@ same amplification measured for a 2% MSA-module difference).
 
 ## Where the data is
 
-Not in git (`$FOLDFORGE_HOME/runs/` is ignored):
+Not in git (`$FOLDJET_HOME/runs/` is ignored):
 
-- `$FOLDFORGE_HOME/runs/plddt_test/`: per-pair folders with the release and the four
+- `$FOLDJET_HOME/runs/plddt_test/`: per-pair folders with the release and the four
   FoldJet variants, superposed, pLDDT in B-factors; `pairs.md`, `README.md`.
-- `$FOLDFORGE_HOME/runs/archive/release-compare-20260924/odde-noise/`: the recorded release draws.
-- Tools: `$FOLDFORGE_HOME/runs/archive/release-compare-20260924/tools/odde_noisecap.py` (record),
+- `$FOLDJET_HOME/runs/archive/release-compare-20260924/odde-noise/`: the recorded release draws.
+- Tools: `$FOLDJET_HOME/runs/archive/release-compare-20260924/tools/odde_noisecap.py` (record),
   `ours_noise_replay.py` (replay; conformer/pose settings), `dump_inputs.py`
   (input equality check).

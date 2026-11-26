@@ -308,7 +308,7 @@ def render(rows: list[dict], docs: Path) -> None:
         "tuned entries can trigger initial heuristic autotuning; these "
         "are warm latencies,",
         "not a claim of fully tuned performance. Per-case logs are "
-        "preserved under $FOLDFORGE_HOME/runs/.",
+        "preserved under $FOLDJET_HOME/runs/.",
         "",
         "## Memory and execution evidence",
         "",

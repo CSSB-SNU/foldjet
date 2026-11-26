@@ -6,8 +6,8 @@ repository: the real MSA and the 4 distinct real templates, for FoldJet and for 
 
 | file | used by | content |
 |---|---|---|
-| `a3m_16k.lmdb/data.mdb` | FoldJet `msa_db` (`FOLDFORGE_5I28_MSA_DB`) | key `P0113359` of `a3m_16k.lmdb`, BioMolDB_20260224: the real MSA |
-| `template.lmdb/data.mdb` | FoldJet `template_db` (`FOLDFORGE_5I28_TEMPLATE_DB`) | key `P0113359` of `template.lmdb`, BioMolDB_20260224: 20 records, 6 distinct sequences; with `template_n: 4` and the default `template_dedup` FoldJet loads `5SYD_A`, `6KOL_A`, `5YT7_A`, `6TFD_A` |
+| `a3m_16k.lmdb/data.mdb` | FoldJet `msa_db` (`FOLDJET_5I28_MSA_DB`) | key `P0113359` of `a3m_16k.lmdb`, BioMolDB_20260224: the real MSA |
+| `template.lmdb/data.mdb` | FoldJet `template_db` (`FOLDJET_5I28_TEMPLATE_DB`) | key `P0113359` of `template.lmdb`, BioMolDB_20260224: 20 records, 6 distinct sequences; with `template_n: 4` and the default `template_dedup` FoldJet loads `5SYD_A`, `6KOL_A`, `5YT7_A`, `6TFD_A` |
 | `5i28_unpaired.a3m` | kits (`A3M_5I28`) | the same MSA as an a3m (`Alignment.load(...).a3m(species_aliases(...))`) |
 | `5i28_templates_hits20.a3m` | Protenix-family / OpenFold3 kits | the 20 template hits as an a3m; the kits keep one hit per sequence, which gives the same four |
 | `mmcif/{5syd,6kol,5yt7,6tfd}.cif.gz` | kits that take template coordinates as mmCIF | the four template entries (PDB, CC0) |

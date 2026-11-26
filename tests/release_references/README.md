@@ -53,11 +53,11 @@ everything: `sbatch tools/references/generate.sbatch` (each task runs one
 family x target x seed and normalises it with `tools/references/collect.py`).
 
 The released environments are too large for the repository. The runner reads
-`FOLDFORGE_RELEASE_ROOT` (default `$FOLDFORGE_HOME/releases/` at the repo root, gitignored),
+`FOLDJET_RELEASE_ROOT` (default `$FOLDJET_HOME/releases/` at the repo root, gitignored),
 which holds `of3-deps`, `rf3-deps`, `if2-deps`, `chai-deps`, `chai-rdkit-deps`,
 `chai-msa-deps`, `protenix-root`, `boltz-cache` and
 `esmfold2-transformers-fork`, each an isolated `pip install --target` (or copy)
-of that release's pinned dependencies, and `FOLDFORGE_RELEASE_ENVS` (the Boltz,
+of that release's pinned dependencies, and `FOLDJET_RELEASE_ENVS` (the Boltz,
 Protenix and Chai-lab environments).
 
 ## Release quirks recorded here
@@ -66,7 +66,7 @@ Protenix and Chai-lab environments).
 - OpenDDE's release cannot featurise any input with a ligand or ion (its
   template featuriser raises `map_to_standard` even with templates off), so it
   has `5i28` alone.
-- ESMFold2 loads its ESM-C tower from `$FOLDFORGE_HOME/checkpoints/esmc-6b`:
+- ESMFold2 loads its ESM-C tower from `$FOLDJET_HOME/checkpoints/esmc-6b`:
   `ESMFold2Model.from_pretrained` otherwise pulls `biohub/ESMC-6B` from the
   Hugging Face cache, whose keys do not match, and leaves every ESM-C weight
   randomly initialised with only a warning. The release still folds, at pLDDT
@@ -84,7 +84,7 @@ Protenix and Chai-lab environments).
 
 ```
 tools/references/validate.sh fast
-foldjet validate $FOLDFORGE_HOME/runs/validate-fast --report docs/validation/fast.md
+foldjet validate $FOLDJET_HOME/runs/validate-fast --report docs/validation/fast.md
 ```
 
 The latest reports are in `docs/validation/`.

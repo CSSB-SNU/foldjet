@@ -36,14 +36,14 @@ source tools/activate_env.sh
 foldjet ccd prepare \
   --components data/ccd/components.cif \
   --rdkit data/ccd/molecules.pkl \
-  --out $FOLDFORGE_HOME/ccd/preprocessed_CCD.lmdb
-foldjet ccd verify --ccd-db $FOLDFORGE_HOME/ccd/preprocessed_CCD.lmdb
+  --out $FOLDJET_HOME/ccd/preprocessed_CCD.lmdb
+foldjet ccd verify --ccd-db $FOLDJET_HOME/ccd/preprocessed_CCD.lmdb
 ```
 
 The old files above are migration inputs only. Preparation uses a temporary sibling
 directory and renames it after success; an existing destination is never overwritten.
 The environment pins remain unchanged; `lmdb` is now a direct locked dependency.
-`FOLDFORGE_CCD_DB` overrides the CLI default. A plain external MiniWorld LMDB can
+`FOLDJET_CCD_DB` overrides the CLI default. A plain external MiniWorld LMDB can
 be opened with `CCDLookup`; released-model views additionally require the full
 chemistry metadata produced by `ccd prepare`.
 
@@ -54,8 +54,8 @@ from pickle transport. Caches belong to the selected lookup/database instance.
 
 ```bash
 foldjet fold af3 --spec docs/examples/inference/1ubq.yaml \
-  --config docs/examples/inference/native-bf16.yaml --out $FOLDFORGE_HOME/runs/af3
-foldjet fold protenix2 --spec docs/examples/inference/1ubq.yaml --out $FOLDFORGE_HOME/runs/protenix2
+  --config docs/examples/inference/native-bf16.yaml --out $FOLDJET_HOME/runs/af3
+foldjet fold protenix2 --spec docs/examples/inference/1ubq.yaml --out $FOLDJET_HOME/runs/protenix2
 ```
 
 The same `--spec` works with every model `foldjet models` lists. Paths in

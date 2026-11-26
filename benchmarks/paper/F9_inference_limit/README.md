@@ -20,7 +20,7 @@ Input = the F3 protocol (real MSA + 4 distinct real templates, 4 trunk passes, 2
   harness (new files only; AF3 kits 1 seed; Protenix family keeps the harness' 7 seeds; ESMFold2 `FWD_CALLS=1`): automated for `af3_jax af3_torch openfold3 chai1 esmfold2
   esmfold2_fast boltz2 protenix_v1 protenix_v2 opendde`; **not** for `rf3` and `intellifold2` (threaded template PDB / overlay inputs per n): those two report `no_input`.
   RTX 5090 has no kit install.
-- FP8 arm: `MINIWORLD_FP8=safe` + `MINIWORLD_FP8_MODEL`, lazy guards, saturation check recorded per probe (`fp8_saturated`).
+- FP8 arm: `FOLDJET_ENGINE_FP8=safe` + `FOLDJET_ENGINE_FP8_MODEL`, lazy guards, saturation check recorded per probe (`fp8_saturated`).
 
 ## Commands
 

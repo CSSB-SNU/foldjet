@@ -158,7 +158,7 @@ def test_convert_forward_backward_same_bits(monkeypatch):
     grad = _gradient((48, 128, 32, 128), torch.bfloat16, gen)
     outs, grads = [], []
     for flag in ("1", "0"):
-        monkeypatch.setenv("FOLDFORGE_GATHER_GRAD", flag)
+        monkeypatch.setenv("FOLDJET_GATHER_GRAD", flag)
         x = base.clone().requires_grad_(requires_grad=True)
         y = atom_layout.convert(info, x, layout_axes=(1,))
         (gx,) = torch.autograd.grad(y, x, grad)
@@ -180,5 +180,5 @@ def test_applies_only_where_torch_is_reproduced(monkeypatch):
     assert not gather_grad.applies(x, idx.int(), 0)
     with torch.no_grad():
         assert not gather_grad.applies(x, idx, 0)
-    monkeypatch.setenv("FOLDFORGE_GATHER_GRAD", "0")
+    monkeypatch.setenv("FOLDJET_GATHER_GRAD", "0")
     assert not gather_grad.applies(x, idx, 0)

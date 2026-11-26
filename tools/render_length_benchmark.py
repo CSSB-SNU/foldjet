@@ -360,7 +360,7 @@ def main() -> int:
         "```",
         "",
         "Use `--model opendde`, `--model esmfold2` or `--model protenix2`; inputs "
-        "live under `$FOLDFORGE_HOME/benchmarks/qualification/5i28x<N>/`.",
+        "live under `$FOLDJET_HOME/benchmarks/qualification/5i28x<N>/`.",
         "",
     ]
     if args.notes:

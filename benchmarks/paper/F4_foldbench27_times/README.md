@@ -8,7 +8,7 @@ Warm model time (`model_seconds_warm_median` of one cold + one warm forward; CUD
 `run_foldbench27.py MODEL ARM` over the 27 targets of `targets27.tsv` (3 per FoldBench task: small / medium / large, 28 - 2,008 tokens), ascending size, one
 process per (predictor, arm). Predictors (11): `af3 boltz2 chai1 esmfold2 intellifold2 opendde openfold3 openfold3-preview2 protenix1 protenix2 rosettafold3`.
 
-- **Arms:** `torch` (backend `pytorch`), `engine` (backend `miniworld`, bf16 kernels), `engine_fp8` (H100; `MINIWORLD_FP8=safe` + model; sync guards; `fp8.check()`
+- **Arms:** `torch` (backend `pytorch`), `engine` (backend `miniworld`, bf16 kernels), `engine_fp8` (H100; `FOLDJET_ENGINE_FP8=safe` + model; sync guards; `fp8.check()`
   after every forward, a saturated forward is run again, at most 3 times: `fp8_redo`), `anthropic` (optional: the engine's connection to Anthropic's kernels).
 - **Same inputs and seeds:** FoldBench's own inputs (`$FB_ROOT/inputs/<target>/data.yaml`: real MSA, templates where the checkpoint takes them; ESMFold2 and
   RoseTTAFold3 without), `trunk_seed = diffusion_seed = 0`, 200 steps, 4 trunk passes, 5 samples, bf16, mode exact. Eager on every arm (no compile, no CUDA
@@ -17,7 +17,7 @@ process per (predictor, arm). Predictors (11): `af3 boltz2 chai1 esmfold2 intell
   FoldJet with `language_model.allow_no_protein`, which is **not in `fdad9e2`** (it exists only as an uncommitted change in the main checkout, 2026-11-21): those
   targets are recorded as `error: No protein token` until that change is committed; `run_foldbench27.py` retries such rows on the next run.
 - RTX 5090: needs the FoldBench inputs / MSA / template LMDBs under `$FB_ROOT` (`~/data/foldbench`; 27 inputs + `msa/` + `template/`, ~2.2 GB, copied there 2026-11-21)
-  and the checkpoints under `$FOLDFORGE_HOME` (`~/ff/home`; `openfold3.miniworld.pt` was missing there on 2026-11-21: `openfold3` / `openfold3-preview2` need it).
+  and the checkpoints under `$FOLDJET_HOME` (`~/ff/home`; `openfold3.miniworld.pt` was missing there on 2026-11-21: `openfold3` / `openfold3-preview2` need it).
 
 ## Commands
 
@@ -121,7 +121,7 @@ PyTorch 2.87-95.3 s. Engine arm backend: all cuda except the declared B200 Layer
 **Released as 3.0.10 (2026-11-24):** engine `5090-int` 07bf36ae4 -> v3.0.10 changes no code the RTX 5090 runs (TokenDiTMiniWorldBiasOnly `backend_versions` number, the GPU-less prebuild plan, an A100-only `MWE_SM120` guard in `wide_ops.cu`), so these rows are the 3.0.10 rows; the CSV `engine` columns say so and keep the measured commit.
 
 **Engine:** branch `5090-int` 07bf36ae4 as source (`ENGINE_SRC`): 3.0.9 + origin/main + Boltz-2 up-gate transition and token pair-bias hoist on sm_120
-+ the RTX 5090 FP8 routes (off unless `MINIWORLD_FP8` is set). **Unreleased.** FoldJet 49d41bb (differs from the 3.0.6 campaign's 6a0593e only in
++ the RTX 5090 FP8 routes (off unless `FOLDJET_ENGINE_FP8` is set). **Unreleased.** FoldJet 49d41bb (differs from the 3.0.6 campaign's 6a0593e only in
 ESMFold2 code). Protocol of `rtx5090.sh` unchanged (27 targets, seeds 0, 200 steps, 4 trunk passes, 5 samples, bf16, eager, one process per
 (predictor, arm), warm median of cold + warm). ESMFold2 / ESMFold2-Fast: not feasible on the 5090 (16 GB host RAM), as before. OpenFold3-preview2:
 not in the 5090 campaign (as before).
@@ -153,7 +153,7 @@ So the small-target loss of 1-3 % is between 3.0.6 and 3.0.9 (already in the rel
 profiled yet). Large targets are 5-32 % faster.
 
 **(2) engine FP8 + same-machine engine bf16 control, rented 4x RTX 5090 (`vast5090`, 575 W, Xeon Gold 6530 host), real weights** — the FP8 arm
-(`MINIWORLD_FP8=safe` + `MINIWORLD_FP8_MODEL=<predictor>`, lazy guards, `fp8.check()` after each forward with up to 3 redo = the H100 protocol;
+(`FOLDJET_ENGINE_FP8=safe` + `FOLDJET_ENGINE_FP8_MODEL=<predictor>`, lazy guards, `fp8.check()` after each forward with up to 3 redo = the H100 protocol;
 on the 5090 `safe` = the `SM120_ROUTES` slots TriAttn, TriMul, OPM, PWA, token DiT, atom DiT; the Transition is excluded from the preset) and the bf16 control were run on the same rented node,
 4 jobs at a time (one per GPU) from one queue. `data/F4_times_rtx5090_fp8_3010.csv`. That host is ~2.7x slower than cssb-rtx on the
 host-bound small targets (AF3 8gzl 8.8 s vs 3.2 s) and equal on the GPU-bound ones (8j62 39.5 vs 40.0 s): **compare FP8 with the vast bf16 column, not

@@ -9,7 +9,7 @@ Paper benchmark harnesses live in [`../benchmarks/`](../benchmarks/README.md); t
 | file | group | what |
 |---|---|---|
 | `activate_env.sh` | environment | activate `.pixi/envs/default` and the C++ runtime |
-| `setup_env.sbatch` | environment | `pixi install --locked` on a CPU allocation (FA2 with `FOLDFORGE_FLASH2=1`) |
+| `setup_env.sbatch` | environment | `pixi install --locked` on a CPU allocation (FA2 with `FOLDJET_FLASH2=1`) |
 | `check_quality.sh` | quality | Ruff lint / format and Pyright, as pre-commit runs them |
 | `check_wheel.py` | quality | a built wheel's public imports, types and metadata (used by CI) |
 | `typings/` | quality | Pyright stubs (`biotite-stubs`), `stubPath` in `pyproject.toml` |
@@ -41,7 +41,7 @@ in the same commit; its entry is kept for the archived benchmark records that ci
 
 The standard entry point is `foldjet fold <model> --spec <MiniWorld YAML>`,
 optionally with `--config <runtime YAML>`. All predictors read `ccd_db` from the
-input YAML and share `$FOLDFORGE_HOME/ccd/preprocessed_CCD.lmdb`; prepare it with
+input YAML and share `$FOLDJET_HOME/ccd/preprocessed_CCD.lmdb`; prepare it with
 `foldjet ccd prepare` and check it with `foldjet ccd verify`. See
 [the format contract](../docs/guides/MINIWORLD-FORMAT.md) and
 [model integration](../docs/guides/MODEL-INTEGRATION.md) for input schemas,
@@ -80,7 +80,7 @@ Compatibility tools for reproducing the recorded validation runs:
   make it an upper bound on the same stages inside the compiled/graph benchmark.
 
 ```bash
-sbatch tools/profile_af3_modules.sbatch --out $FOLDFORGE_HOME/runs/af3-profile --repeats 2
+sbatch tools/profile_af3_modules.sbatch --out $FOLDJET_HOME/runs/af3-profile --repeats 2
 ```
 
 ## Benchmark

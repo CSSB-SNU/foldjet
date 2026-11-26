@@ -10,9 +10,9 @@ repository): `~/foldforge-scratch/paper/F11_investigation/{abl,out,step3}`. 31 G
 
 ```bash
 # trunk bf16, diffusion FP8 (engine >= 3.0.2)
-export MINIWORLD_FP8=safe                 # the preset: token DiT expand + atom DiT rows stay on
-unset  MINIWORLD_FP8_MODEL                # no model -> TriAttn keeps the default fp16 core (no PV / q-k FP8)
-export MINIWORLD_TRIMUL_FP8= MINIWORLD_OPM_FP8= MINIWORLD_PWA_FP8= MINIWORLD_TRANSITION_FP8=   # explicitly empty = off (wins over the preset)
+export FOLDJET_ENGINE_FP8=safe                 # the preset: token DiT expand + atom DiT rows stay on
+unset  FOLDJET_ENGINE_FP8_MODEL                # no model -> TriAttn keeps the default fp16 core (no PV / q-k FP8)
+export FOLDJET_ENGINE_TRIMUL_FP8= FOLDJET_ENGINE_OPM_FP8= FOLDJET_ENGINE_PWA_FP8= FOLDJET_ENGINE_TRANSITION_FP8=   # explicitly empty = off (wins over the preset)
 ```
 
 | config (antibody-antigen, 166 interface groups; seed 42 x 5 samples) | same-sample RMSD to bf16 | mean dDockQ | top-1 % | oracle % | success flips down / up |

@@ -11,7 +11,7 @@
 # anthropic-kits/real/mkreal.py did).
 # Run with FoldJet's interpreter on a compute node (never on the login node):
 #   srun -p h100 -A cssb --qos=normal_h100 -n 1 -c 4 --mem=16G --time=00:30:00 \
-#     ~/FoldForge/.pixi/envs/default/bin/python -I mkinputs.py
+#     ~/foldjet/.pixi/envs/default/bin/python -I mkinputs.py
 import copy
 import hashlib
 import json

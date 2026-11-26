@@ -17,5 +17,5 @@ family's release needs (its reference conformer frame, dropped atoms, MSA
 deduplication, random reference pose, ...), all selected by `DenseSpec` fields.
 There is one featurization path.
 
-Prediction output stays under repository `$FOLDFORGE_HOME/runs/`, enforced by
+Prediction output stays under repository `$FOLDJET_HOME/runs/`, enforced by
 `models/io/paths.py` for the CLI and direct output writers.

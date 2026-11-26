@@ -9,7 +9,7 @@ warm one is dropped (the kit side drops forward 1 = cold and forward 2, then tak
 forwards on both sides). Forward = one complete model forward (trunk, sampler, confidence heads), CUDA-synchronized, no featurization /
 loading / writing (`model_seconds_warm` of the report).
 
-Arms: engine = the engine's bf16 kernels; engine_fp8 = the opt-in FP8 path (H100 only): MINIWORLD_FP8=safe, MINIWORLD_FP8_MODEL=<model>, lazy
+Arms: engine = the engine's bf16 kernels; engine_fp8 = the opt-in FP8 path (H100 only): FOLDJET_ENGINE_FP8=safe, FOLDJET_ENGINE_FP8_MODEL=<model>, lazy
 guards; `fp8.check()` after every cell records whether a route saturated (`fp8_saturated`; None for the bf16 arm).
 One row per cell in <out>/cells.jsonl; run information in <out>/meta.json. Resumable (finished and out-of-memory cells are final).
 """

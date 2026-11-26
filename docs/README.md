@@ -56,6 +56,6 @@ Pages marked *dated* record a measurement or decision of their date and are not 
 migration records and the pre-2.5.0 backend measurements, each with its raw JSON / CSV evidence. Not current.
 
 The recorded 2026-09 benchmarks (before the team-gm dependency was removed, commit `f3e6128`) pinned `libs/team-gm` to `92a50c9`
-(branch `foldforge/msa-bucket-1024`: the validated `a823f69` runtime plus a 1024-row MSA inference bucket); the 2026-09-16 release
+(branch `foldjet/msa-bucket-1024`: the validated `a823f69` runtime plus a 1024-row MSA inference bucket); the 2026-09-16 release
 used `a823f69` itself. To reproduce them, check out `f3e6128` and run `git submodule update --init --recursive`
 (`--remote` would select newer, unmeasured runtime changes).

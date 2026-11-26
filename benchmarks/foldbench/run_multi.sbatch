@@ -18,7 +18,7 @@
 # ---- end of the cluster lines ----
 set -uo pipefail
 : "${SPECS:?SPECS=<spec dir from build_specs.py>}" "${OUT:?OUT=<run dir>}"
-REPO=${FOLDFORGE_REPO:-${SLURM_SUBMIT_DIR:-$PWD}}
+REPO=${FOLDJET_REPO:-${SLURM_SUBMIT_DIR:-$PWD}}
 B=$REPO/benchmarks/foldbench
 TARGETS=${TARGETS:-$B/foldbench_targets.txt}
 mkdir -p "$OUT"

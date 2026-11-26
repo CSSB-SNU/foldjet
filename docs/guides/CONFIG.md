@@ -109,10 +109,10 @@ and 24 % less peak reserved memory, CUDA graph capture and replay unaffected.
 
 ## What stays an environment variable
 
-Locations and the machine, not behaviour: `FOLDFORGE_HOME`, `FOLDFORGE_CHECKPOINT_DIR`, `FOLDFORGE_CCD_DB`,
-`FOLDFORGE_RUNS`, `FOLDFORGE_RELEASE_ROOT`, `FOLDFORGE_BENCHMARKS`; `CUDA_VISIBLE_DEVICES`, `SLURM_*`, `XDG_CACHE_HOME`,
-`TORCH_EXTENSIONS_DIR`, `CUTLASS_PATH`, `PYTORCH_CUDA_ALLOC_CONF` (default above); the location of the Anthropic release for the `anthropic` backend, `MINIWORLD_ANTHROPIC_ROOT` (BACKENDS.md); `CUBLAS_WORKSPACE_CONFIG` (set by `utils.seed` for deterministic cuBLAS); the
-test inputs `FOLDFORGE_TEST_CCD_DB` and `MINIWORLD_TEST_SOURCE`.
+Locations and the machine, not behaviour: `FOLDJET_HOME`, `FOLDJET_CHECKPOINT_DIR`, `FOLDJET_CCD_DB`,
+`FOLDJET_RUNS`, `FOLDJET_RELEASE_ROOT`, `FOLDJET_BENCHMARKS`; `CUDA_VISIBLE_DEVICES`, `SLURM_*`, `XDG_CACHE_HOME`,
+`TORCH_EXTENSIONS_DIR`, `CUTLASS_PATH`, `PYTORCH_CUDA_ALLOC_CONF` (default above); the location of the Anthropic release for the `anthropic` backend, `FOLDJET_ENGINE_ANTHROPIC_ROOT` (BACKENDS.md); `CUBLAS_WORKSPACE_CONFIG` (set by `utils.seed` for deterministic cuBLAS); the
+test inputs `FOLDJET_TEST_CCD_DB` and `FOLDJET_ENGINE_TEST_SOURCE`.
 
 ## Removed variables
 
@@ -122,6 +122,6 @@ loader), never silently ignored:
 | removed | now |
 |---|---|
 | `FF_ENGINE_SKIP` | `engine.skip` |
-| `FOLDFORGE_DENSE_SPEC_OVERRIDE` | `debug.dense_spec_override` |
-| `FOLDFORGE_CONFIDENCE_SAMPLE_CHUNK` | `execution.confidence_sample_chunk` |
+| `FOLDJET_DENSE_SPEC_OVERRIDE` | `debug.dense_spec_override` |
+| `FOLDJET_CONFIDENCE_SAMPLE_CHUNK` | `execution.confidence_sample_chunk` |
 | `FF_TRUNK_BF16` | deleted: an experiment (bf16 trunk on an fp32 release under `af3_default`), concluded; the released dtypes stay |

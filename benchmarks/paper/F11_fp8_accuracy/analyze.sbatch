@@ -12,8 +12,8 @@
 #SBATCH -o slurm-%x-%j.log
 set -uo pipefail
 : "${STAGE:?STAGE=rmsd|analyze}"
-REPO=${FOLDFORGE_REPO:-${SLURM_SUBMIT_DIR:-$PWD}}
+REPO=${FOLDJET_REPO:-${SLURM_SUBMIT_DIR:-$PWD}}
 . "$REPO/benchmarks/paper/common/env.sh"
-E=${EVAL_ENV:-$HOME/FoldForge/.pixi/envs/default}
+E=${EVAL_ENV:-$HOME/foldjet/.pixi/envs/default}
 export PATH=$E/bin:$PATH LD_LIBRARY_PATH=$E/lib:${LD_LIBRARY_PATH:-} OMP_NUM_THREADS=1
 python -u "$REPO/benchmarks/paper/F11_fp8_accuracy/analyze.py" "$STAGE" --workers "${SLURM_CPUS_PER_TASK:-8}" ${OUT:+--out "$OUT"} ${EVALS:+--evals "$EVALS"}

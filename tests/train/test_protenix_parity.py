@@ -1,8 +1,8 @@
 """FoldJet's Protenix-recipe pieces against Protenix's OWN functions (CPU).
 
-Runs on a tiny structure. Skipped unless ``FOLDFORGE_PROTENIX_PY`` (the Protenix
+Runs on a tiny structure. Skipped unless ``FOLDJET_PROTENIX_PY`` (the Protenix
 environment's python, ``~/foldforge-base/envs/protenix/.venv/bin/python``) and
-``FOLDFORGE_PROTENIX_SRC`` (``~/foldforge-base/protenix``) are set:
+``FOLDJET_PROTENIX_SRC`` (``~/foldforge-base/protenix``) are set:
 ``protenix_reference.py`` runs in a subprocess of that environment and returns
 Protenix's values (resolved loss, pLDDT / PDE target bins, af3 lr scheduler,
 configs_base settings); the FoldJet side runs in this process. Run it in a Slurm
@@ -28,12 +28,12 @@ from foldjet.train.config import TrainConfig
 from foldjet.train.loss import confidence as conf
 from foldjet.utils.atom_layout import GatherInfo
 
-PY = os.environ.get("FOLDFORGE_PROTENIX_PY")
-SRC = os.environ.get("FOLDFORGE_PROTENIX_SRC")
+PY = os.environ.get("FOLDJET_PROTENIX_PY")
+SRC = os.environ.get("FOLDJET_PROTENIX_SRC")
 pytestmark = pytest.mark.skipif(
     not (PY and SRC),
     reason=(
-        "needs FOLDFORGE_PROTENIX_PY and FOLDFORGE_PROTENIX_SRC (Protenix environment)"
+        "needs FOLDJET_PROTENIX_PY and FOLDJET_PROTENIX_SRC (Protenix environment)"
     ),
 )
 

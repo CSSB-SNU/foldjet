@@ -10,15 +10,15 @@
 # at fp32, as their defaults do not.
 #
 # The released environments and their dependency trees are too large for the
-# repository. FOLDFORGE_RELEASE_ROOT points at the directory that holds them
-# (default $FOLDFORGE_HOME/releases; see tests/release_references/README.md for how each was built); the Python environments of
+# repository. FOLDJET_RELEASE_ROOT points at the directory that holds them
+# (default $FOLDJET_HOME/releases; see tests/release_references/README.md for how each was built); the Python environments of
 # Boltz, Protenix and Chai-lab live under /public_data/thalkak_envs.
 set -euo pipefail
-: "${FOLDFORGE_HOME:=$HOME/.cache/foldforge}"; export FOLDFORGE_HOME
+: "${FOLDJET_HOME:=$HOME/.cache/foldjet}"; export FOLDJET_HOME
 FAMILY=$1; TARGET=$2; SEED=$3; OUT=$(realpath -m "$4")
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
-REL=${FOLDFORGE_RELEASE_ROOT:-$FOLDFORGE_HOME/releases}
-ENVS=${FOLDFORGE_RELEASE_ENVS:-/public_data/thalkak_envs}
+REL=${FOLDJET_RELEASE_ROOT:-$FOLDJET_HOME/releases}
+ENVS=${FOLDJET_RELEASE_ENVS:-/public_data/thalkak_envs}
 IN=$ROOT/tests/release_references/inputs/$TARGET
 HERE=$ROOT/tools/references
 mkdir -p "$OUT"
@@ -43,7 +43,7 @@ protenix1|protenix2)
     -d fp32 --trimul_kernel torch --triatt_kernel torch ;;
 openfold3|openfold3-preview2)
   S=$ROOT/../refs/uplifting-biomolecular-modeling/openfold3_ob0/stock/src
-  K=$FOLDFORGE_HOME/checkpoints/openfold3/release/of3-ob-2025-06-30-174k.pt
+  K=$FOLDJET_HOME/checkpoints/openfold3/release/of3-ob-2025-06-30-174k.pt
   if [ "$FAMILY" = openfold3-preview2 ]; then
     S=${OF3_PREVIEW2_SRC:-/home/hwlee/project/openfold3}; K=${OF3_PREVIEW2_CKPT:-/home/hwlee/.openfold3/of3-p2-155k.pt}
   fi
@@ -60,16 +60,16 @@ PY
 rosettafold3)
   D=$REL/rf3-deps; S=$D/_src/foundry-4010e3e2e
   PYTHONPATH=$D:$S/src:$S/models/rf3/src python -c "from rf3.cli import app; app()" fold \
-    ckpt_path="$FOLDFORGE_HOME/checkpoints/rosettafold3/release/rf3_foundry_01_24_latest_remapped.ckpt" \
+    ckpt_path="$FOLDJET_HOME/checkpoints/rosettafold3/release/rf3_foundry_01_24_latest_remapped.ckpt" \
     inputs="$IN/rf3.json" out_dir="$OUT" n_recycles=4 num_steps=200 diffusion_batch_size=5 \
     early_stopping_plddt_threshold=0 seed="$SEED" ;;
 intellifold2)
   PYTHONPATH=$REL/if2-deps python "$HERE/intellifold_run.py" "$REL/if2-deps/runner/intellifold_inference.py" \
-    "$IN/intellifold.yaml" --out_dir "$OUT" --cache "$FOLDFORGE_HOME/checkpoints/intellifold2/release" \
+    "$IN/intellifold.yaml" --out_dir "$OUT" --cache "$FOLDJET_HOME/checkpoints/intellifold2/release" \
     --model v2 --seed "$SEED" --recycling_iters 3 --num_diffusion_samples 5 --sampling_steps 200 \
     --precision no --num_workers 0 --override ;;
 chai1)
-  CHAI_DOWNLOADS_DIR=$FOLDFORGE_HOME/checkpoints/chai1 \
+  CHAI_DOWNLOADS_DIR=$FOLDJET_HOME/checkpoints/chai1 \
   PYTHONPATH=$REL/chai-rdkit-deps:$REL/chai-msa-deps:$REL/chai-deps:$ENVS/chai-lab \
     python "$HERE/chai_run.py" "$IN/chai.fasta" "$OUT" "$SEED" ;;
 opendde)
@@ -78,7 +78,7 @@ opendde)
     "$ENVS/protenix_v2/bin/python" runner/batch_inference.py pred -i "$IN/protenix.json" -o "$OUT" \
     -s "$SEED" -c 4 -p 200 -e 5 -n opendde_v1 --use_msa "$USE_MSA" -d fp32 \
     --trimul_kernel torch --triatt_kernel torch \
-    --load_checkpoint_path "$FOLDFORGE_HOME/checkpoints/opendde/opendde.pt" ;;
+    --load_checkpoint_path "$FOLDJET_HOME/checkpoints/opendde/opendde.pt" ;;
 esmfold2)
   # The Biohub Transformers fork that carried ESMFold2/ESM-C was taken down;
   # the references use a copy of it kept beside the other release trees.

@@ -41,7 +41,7 @@ REFERENCE = "pytorch"
 #: Locations the Anthropic backend reads; only its own run sees them (the engine's
 #:miniworld modules use a named payload).
 PAYLOAD_VARIABLES = (
-    "MINIWORLD_ANTHROPIC_ROOT",
+    "FOLDJET_ENGINE_ANTHROPIC_ROOT",
     "OPT_CORE_DIR",
     "TRIMUL_NATIVE_BUILD_DIR",
 )

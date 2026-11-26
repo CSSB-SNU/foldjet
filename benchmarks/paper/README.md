@@ -16,7 +16,7 @@ commands, output columns), its input lists, one script per card and a `collect.p
 - **Anthropic kits** are not modified (single exception: the af3_torch featuriser `ref_max_modified_date` line; original `featurise.py.orig_kit`); kit-native modes only
   (`fast`; `big` only for a cell that ran out of memory under `fast`); no other retries. Failures and out-of-memory cells are results: recorded with the reason, never drawn.
 - **Timing.** Inference: steady-state median without the model's first call (5I28: forward 1 = cold and forward 2 dropped); 3 repetitions in different jobs where stated.
-- **FP8** (H100 only): `MINIWORLD_FP8=safe` + `MINIWORLD_FP8_MODEL=<predictor>`; saturation check (`fp8.check()`) and route counters recorded.
+- **FP8** (H100 only): `FOLDJET_ENGINE_FP8=safe` + `FOLDJET_ENGINE_FP8_MODEL=<predictor>`; saturation check (`fp8.check()`) and route counters recorded.
 - **Backends.** Engine runs print the per-class backend plan first (`BACKEND_PLAN`) and the served-call table after the first forward (`BACKEND_TABLE`, `all_cuda`); an engine
   class served by Triton or PyTorch in an engine run is a bug, not a result.
 - **A walltime run is ONE continuous job**, never chunked into a different job shape; a refused submit stops the script (ask).

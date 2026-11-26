@@ -84,7 +84,7 @@ bf16 activations under `activation_autocast`), `fp32` runs `fp32` (plain fp32). 
 ## External baselines
 
 `anthropic` and `cueq` are connections to other people's kernels, kept as comparison baselines. They are located by the engine (the Anthropic
-release is `MINIWORLD_ANTHROPIC_ROOT`, else the engine's `third_party/anthropic/upstream`, revision- and hash-checked by the engine's loader;
+release is `FOLDJET_ENGINE_ANTHROPIC_ROOT`, else the engine's `third_party/anthropic/upstream`, revision- and hash-checked by the engine's loader;
 cuEquivariance is the `baselines` extra). FoldJet never gates them on accuracy and calls no vendor library itself.
 
 ## Other cards

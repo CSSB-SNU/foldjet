@@ -40,7 +40,7 @@ def test_every_backend_spelling_reaches_one_loading_lifecycle(
 ):
     """One loader, whatever the backend is called and whoever asks for it.
 
-    ``miniworld_engine`` is the engine package's own name for the backend that
+    ``foldjet_engine`` is the engine package's own name for the backend that
     the CLI and the report call ``miniworld``; the loader normalises it once
     so a benchmark row never carries two spellings of one backend.
     """

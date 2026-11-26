@@ -12,14 +12,14 @@
 #SBATCH --output=slurm-x_%A_%a.log
 #SBATCH --error=slurm-x_%A_%a.err
 set -euo pipefail
-: "${FOLDFORGE_HOME:=$HOME/.cache/foldforge}"; export FOLDFORGE_HOME
+: "${FOLDJET_HOME:=$HOME/.cache/foldjet}"; export FOLDJET_HOME
 cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 TASKS=(opendde:5i28:0 opendde:5i28:1 opendde:5i28:2
        esmfold2:5i28:0 esmfold2:5i28:1 esmfold2:5i28:2
        esmfold2:3ptb:0 esmfold2:3ptb:1 esmfold2:3ptb:2
        esmfold2:1a1k:0 esmfold2:1a1k:1 esmfold2:1a1k:2)
 IFS=: read -r f t s <<< "${TASKS[$SLURM_ARRAY_TASK_ID]}"
-RAW=$FOLDFORGE_HOME/runs/references-raw/$f/$t/seed$s
+RAW=$FOLDJET_HOME/runs/references-raw/$f/$t/seed$s
 rm -rf "$RAW"; mkdir -p "$RAW"
 tools/references/run_release.sh "$f" "$t" "$s" "$RAW" > "$RAW.stdout" 2>&1 || { echo "FAILED $f $t $s"; tail -20 "$RAW.stdout"; exit 1; }
 source tools/activate_env.sh

@@ -160,7 +160,7 @@ and configuration artifacts during the inference request.
 convenience function: it opens a predictor, runs the same pipeline and closes it.
 For raw tensor batches, the lower-level `ff.load()` network loader remains available.
 
-The CLI chooses a run inside `$FOLDFORGE_RUNS` (default `$FOLDFORGE_HOME/runs`) before
+The CLI chooses a run inside `$FOLDJET_RUNS` (default `$FOLDJET_HOME/runs`) before
 calling the library. Its path containment rule is separate from library saving.
 Explicit CLI flags override config values; omitted flags preserve YAML/defaults.
 

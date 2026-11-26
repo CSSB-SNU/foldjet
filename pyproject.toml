@@ -18,7 +18,7 @@ dependencies = [
   "lmdb>=1.7,<2",
   "biopython>=1.85,<2",
   "pydantic>=2,<3",
-  "foldforge-af3-data==3.0.2",
+  "foldjet-af3-data==3.0.2",
   "numpy>=2,<3",
   "scipy>=1.15,<2",
   "biotite>=1.4,<2",
@@ -51,7 +51,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/foldjet", "src/foldforge"]
+packages = ["src/foldjet", "src/foldjet"]
 
 # One pixi project, the same layout as MiniWorld and foldjet-engine. `cu12` is torch 2.13.0+cu129
 # (the newest CUDA the cluster drivers run); `cu13` is the CUDA 13 build.
@@ -98,7 +98,7 @@ index-strategy = "unsafe-best-match"
 # Retain the validated Torch-provided Triton binary in both CUDA environments.
 triton = { url = "https://download-r2.pytorch.org/whl/triton-3.7.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" }
 foldjet = { path = ".", editable = true, extras = ["weights", "language"] }
-foldforge-af3-data = { path = "third_party/af3-data" }
+foldjet-af3-data = { path = "third_party/af3-data" }
 # Match the reference ESMFold2 input processor.
 esm = { git = "https://github.com/Biohub/esm.git", rev = "fba1e42a8a0f8df2b7e08611c88807aa32a25d9c" }
 

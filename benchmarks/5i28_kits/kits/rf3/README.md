@@ -41,7 +41,7 @@ name is `rosettafold3:<mode>`.
 
 ## FoldJet side
 
-FoldJet's `rosettafold3` family has `use_input_templates=False` (`~/FoldForge/src/foldjet/modules/dense/spec.py`), so its template
+FoldJet's `rosettafold3` family has `use_input_templates=False` (`~/foldjet/src/foldjet/modules/dense/spec.py`), so its template
 embedder runs on zero features. To give it the kit's input it needs two changes:
 
 - Set `use_input_templates=True` for that family.

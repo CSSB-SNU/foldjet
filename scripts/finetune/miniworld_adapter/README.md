@@ -1,14 +1,14 @@
 # ft_adapter: MiniWorld PDB data -> FoldJet `TrainBatch`
 
-Real-data batch source for `~/FoldForge/scripts/train_protenix1.py` (Protenix v1 fine-tuning). Lives outside both repositories; it imports both
-(FoldJet for the featurisation, MiniWorld for the sampler / loader). Nothing in `~/FoldForge`, `~/MiniWorld`, `~/miniworld-engine` is changed.
+Real-data batch source for `~/foldjet/scripts/train_protenix1.py` (Protenix v1 fine-tuning). Lives outside both repositories; it imports both
+(FoldJet for the featurisation, MiniWorld for the sampler / loader). Nothing in `~/foldjet`, `~/MiniWorld`, `~/foldjet-engine` is changed.
 
 ## Call
 
 ```bash
 source ~/foldforge-scratch/ft_train/env.sh          # FoldJet pixi env python (no `pixi run`), PYTHONPATH = adapter + FoldJet/src + MiniWorld/src + pyarrow
-cd ~/FoldForge
-python scripts/train_protenix1.py --batch-source ft_adapter:batches --backend pytorch --effective-batch 256 --ckpt ~/.cache/foldforge/checkpoints/protenix/protenix1.miniworld.pt ...
+cd ~/foldjet
+python scripts/train_protenix1.py --batch-source ft_adapter:batches --backend pytorch --effective-batch 256 --ckpt ~/.cache/foldjet/checkpoints/protenix/protenix1.miniworld.pt ...
 # 2 ranks: torchrun --nproc-per-node 2 scripts/train_protenix1.py --batch-source ft_adapter:batches ...
 ```
 

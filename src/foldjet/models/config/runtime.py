@@ -26,10 +26,10 @@ REMOVED_ENVIRONMENT = {
     "FF_TRUNK_BF16": (
         "removed: the experiment is concluded (af3_default keeps the released dtypes)"
     ),
-    "FOLDFORGE_DENSE_SPEC_OVERRIDE": (
+    "FOLDJET_DENSE_SPEC_OVERRIDE": (
         "set `debug.dense_spec_override` in the config (docs/guides/CONFIG.md)"
     ),
-    "FOLDFORGE_CONFIDENCE_SAMPLE_CHUNK": (
+    "FOLDJET_CONFIDENCE_SAMPLE_CHUNK": (
         "set `execution.confidence_sample_chunk` in the config (docs/guides/CONFIG.md)"
     ),
 }

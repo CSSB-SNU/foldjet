@@ -61,7 +61,7 @@ def list_weights(*, as_json: bool) -> None:
 @click.option(
     "--root",
     type=click.Path(path_type=Path, file_okay=False),
-    help="Checkpoint destination; default: FOLDFORGE_CHECKPOINT_DIR or cache.",
+    help="Checkpoint destination; default: FOLDJET_CHECKPOINT_DIR or cache.",
 )
 @click.option(
     "--from-dir",
@@ -97,7 +97,7 @@ def download(
     destination = (root or paths.checkpoints()).expanduser().resolve()
     click.echo(f"Checkpoint root: {destination}")
     if root is not None:
-        click.echo(f"For inference, set FOLDFORGE_CHECKPOINT_DIR={destination}")
+        click.echo(f"For inference, set FOLDJET_CHECKPOINT_DIR={destination}")
     if dry_run:
         _print_plan(selected, data, source_dir=source_dir)
         return

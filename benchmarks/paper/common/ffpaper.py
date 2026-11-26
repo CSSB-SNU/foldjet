@@ -30,26 +30,26 @@ PREDICTORS_FOLDBENCH = (
     "af3", "boltz2", "chai1", "esmfold2", "intellifold2", "opendde", "openfold3", "openfold3-preview2", "protenix1", "protenix2", "rosettafold3",
 )
 
-_FP8_ENV_PREFIXES = ("MINIWORLD_",)
+_FP8_ENV_PREFIXES = ("FOLDJET_ENGINE_",)
 
 
 def apply_arm_env(arm: str, model: str) -> None:
     """Set (or clear) the FP8 environment for one arm. Call before importing the engine.
 
-    ``engine_fp8``: ``MINIWORLD_FP8=safe`` + ``MINIWORLD_FP8_MODEL=<model>`` (the engine keeps TriAttn on the fp16 core for a model outside its
+    ``engine_fp8``: ``FOLDJET_ENGINE_FP8=safe`` + ``FOLDJET_ENGINE_FP8_MODEL=<model>`` (the engine keeps TriAttn on the fp16 core for a model outside its
     ``TRIATTN_MODELS``, so the variable is set for every model) + lazy guards (no host sync inside a CUDA-graph capture; the saturation check
     ``fp8.check()`` runs once per cell by the runner). Every other arm: no FP8 variable at all.
     """
     if arm not in ARMS:
         raise ValueError(f"arm {arm!r} not in {ARMS}")
-    for key in [k for k in os.environ if k.startswith("MINIWORLD_") and "FP8" in k]:
+    for key in [k for k in os.environ if k.startswith("FOLDJET_ENGINE_") and "FP8" in k]:
         os.environ.pop(key)
     if arm == "engine_fp8":
-        os.environ["MINIWORLD_FP8"] = "safe"
-        os.environ["MINIWORLD_FP8_MODEL"] = model
+        os.environ["FOLDJET_ENGINE_FP8"] = "safe"
+        os.environ["FOLDJET_ENGINE_FP8_MODEL"] = model
         if os.environ.get("FFPAPER_FP8_GUARD", "lazy") == "lazy":
             for route in ("TRIMUL", "OPM", "PWA", "TRANSITION"):
-                os.environ[f"MINIWORLD_{route}_FP8_GUARD"] = "lazy"
+                os.environ[f"FOLDJET_ENGINE_{route}_FP8_GUARD"] = "lazy"
 
 
 def random_init_enabled() -> bool:
@@ -157,7 +157,7 @@ def run_meta(**extra) -> dict:
         "gpu_total_gib": round(torch.cuda.get_device_properties(0).total_memory / 2**30, 2) if gpu else None,
         "host": socket.gethostname(),
         "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
-        "fp8_env": {k: v for k, v in os.environ.items() if k.startswith("MINIWORLD_") and "FP8" in k},
+        "fp8_env": {k: v for k, v in os.environ.items() if k.startswith("FOLDJET_ENGINE_") and "FP8" in k},
         "alloc_conf": os.environ.get("PYTORCH_CUDA_ALLOC_CONF", ""),
         "started": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
     }
@@ -173,7 +173,7 @@ def steady_median(forwards: list[float], drop: int = 2) -> float | None:
 
 def fp8_check() -> bool | None:
     """True when an FP8 route saturated since the last call (the engine's guard contract), None when FP8 is not in play."""
-    if os.environ.get("MINIWORLD_FP8") is None:
+    if os.environ.get("FOLDJET_ENGINE_FP8") is None:
         return None
     import foldjet_engine.fp8 as fp8
 
@@ -181,7 +181,7 @@ def fp8_check() -> bool | None:
 
 
 def fp8_status() -> dict | None:
-    if os.environ.get("MINIWORLD_FP8") is None:
+    if os.environ.get("FOLDJET_ENGINE_FP8") is None:
         return None
     import foldjet_engine.fp8 as fp8
 

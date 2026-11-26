@@ -4,4 +4,4 @@
 # F6 on one A100 (cssb3; no account / qos there: unset SLURM_ACCOUNT). FoldJet copy and engine source on cssb3, see README.
 export CARD=a100
 unset SLURM_ACCOUNT
-exec "${FF_REPO:-$HOME/FoldForge}/benchmarks/paper/F6_training_speed/run_f6.sh"
+exec "${FF_REPO:-$HOME/FoldJet}/benchmarks/paper/F6_training_speed/run_f6.sh"

@@ -18,4 +18,4 @@ Run `pytest tests` from the repository root. Tests are grouped by responsibility
 `support.py` owns repository and reference paths. `conftest.py` gives persistence
 tests temporary run roots; tests never write into real prediction runs. GPU tests
 skip when no GPU is allocated. Execute them on a Slurm compute node. Prepared
-large input assets live under `$FOLDFORGE_HOME/benchmarks`, not inside the test package.
+large input assets live under `$FOLDJET_HOME/benchmarks`, not inside the test package.

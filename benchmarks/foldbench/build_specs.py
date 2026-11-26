@@ -9,7 +9,7 @@
   --resources  the BioMolDB `lmdb` directory holding the FoldBench cut package `foldbench/msa/a3m.lmdb`, `foldbench/msa/a3m_rna.lmdb`,
                `foldbench/template/template.lmdb`; default $FOLDBENCH_RESOURCES (the 2026-11-17 run: BioMolDB_20261014/lmdb)
   --ccd-db     FoldJet's CCD LMDB (its own format, manifest.json; holds all 956 codes FoldBench needs); default foldjet.paths.ccd_db()
-               ($FOLDFORGE_CCD_DB, else ~/.cache/foldforge/ccd/preprocessed_CCD.lmdb)
+               ($FOLDJET_CCD_DB, else ~/.cache/foldjet/ccd/preprocessed_CCD.lmdb)
   --rna-msa    another RNA MSA database for a sensitivity run (the release's 58 RNA records are 1-3 rows deep for most keys); default the release's
 
 Every spec carries n_trunk_samples 1 (fb_multi_worker.py runs its own `--seeds` trunk_seeds), n_diffusion_samples / diffusion_batch_size 5 and

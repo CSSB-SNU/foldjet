@@ -143,8 +143,8 @@ if HAVE_TRITON:
 
 
 def enabled() -> bool:
-    """``FOLDFORGE_GATHER_GRAD=0`` turns the kernel off (torch's own backward everywhere)."""
-    return HAVE_TRITON and os.environ.get("FOLDFORGE_GATHER_GRAD", "1") != "0"
+    """``FOLDJET_GATHER_GRAD=0`` turns the kernel off (torch's own backward everywhere)."""
+    return HAVE_TRITON and os.environ.get("FOLDJET_GATHER_GRAD", "1") != "0"
 
 
 def applies(arr: torch.Tensor, idx: torch.Tensor, dim: int) -> bool:

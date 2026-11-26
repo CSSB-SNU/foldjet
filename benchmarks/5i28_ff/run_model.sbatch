@@ -1,6 +1,6 @@
 #!/bin/bash
 # One model of the 5I28 benchmark (FoldJet side) on ONE GPU: every n in one process, host probe + GPU clock log around it.
-#   sbatch --export=ALL,MODEL=protenix1,OUT_ROOT=<dir>,FOLDFORGE_5I28_FASTA=...,FOLDFORGE_5I28_MSA_DB=...,FOLDFORGE_5I28_TEMPLATE_DB=... \
+#   sbatch --export=ALL,MODEL=protenix1,OUT_ROOT=<dir>,FOLDJET_5I28_FASTA=...,FOLDJET_5I28_MSA_DB=...,FOLDJET_5I28_TEMPLATE_DB=... \
 #          -J ff5i28-protenix1 benchmarks/5i28_ff/run_model.sbatch
 # Edit the partition / account / qos lines for your cluster. --hint=nomultithread: PIN physical cores (the first PIN logical CPUs of the allocation).
 # Resumable: submit it again and finished cells are skipped. Optional: PIN (default 16), REPEATS (default 3), SIZES (default "1 2 4 8 12 16").
@@ -14,8 +14,8 @@
 #SBATCH --time=04:00:00
 #SBATCH -o slurm-%x-%j.log
 set -uo pipefail
-: "${MODEL:?MODEL}" "${OUT_ROOT:?OUT_ROOT}" "${FOLDFORGE_5I28_FASTA:?}" "${FOLDFORGE_5I28_MSA_DB:?}" "${FOLDFORGE_5I28_TEMPLATE_DB:?}"
-REPO=${FOLDFORGE_REPO:-${SLURM_SUBMIT_DIR:-$PWD}}
+: "${MODEL:?MODEL}" "${OUT_ROOT:?OUT_ROOT}" "${FOLDJET_5I28_FASTA:?}" "${FOLDJET_5I28_MSA_DB:?}" "${FOLDJET_5I28_TEMPLATE_DB:?}"
+REPO=${FOLDJET_REPO:-${SLURM_SUBMIT_DIR:-$PWD}}
 PIN=${PIN:-16}; REPEATS=${REPEATS:-3}; SIZES=${SIZES:-"1 2 4 8 12 16"}
 OUT=$OUT_ROOT/$MODEL; CACHE=${CACHE_ROOT:-$OUT_ROOT/cache}
 mkdir -p "$OUT" "$CACHE"

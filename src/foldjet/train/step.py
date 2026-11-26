@@ -61,9 +61,9 @@ def foreach_accumulation(params: list[torch.nn.Parameter]) -> Iterator[None]:
     element with the same operands (``a + 1 * b``), so the result is bitwise the
     same. A parameter without an old gradient keeps the new one, as before. The
     ``.grad`` tensor objects are the old ones afterwards (a step graph accumulates
-    into them). ``FOLDFORGE_FOREACH_GRAD_ACCUM=0``: plain autograd accumulation.
+    into them). ``FOLDJET_FOREACH_GRAD_ACCUM=0``: plain autograd accumulation.
     """
-    if os.environ.get("FOLDFORGE_FOREACH_GRAD_ACCUM", "1") == "0":
+    if os.environ.get("FOLDJET_FOREACH_GRAD_ACCUM", "1") == "0":
         yield
         return
     held = [p.grad for p in params]

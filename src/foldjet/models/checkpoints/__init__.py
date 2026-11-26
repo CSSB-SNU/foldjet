@@ -8,8 +8,8 @@ AF3 in another.
 Lookup order for ``<model>``:
 
 1. ``<checkpoints>/<model>``, where ``<checkpoints>`` is
-   ``foldjet.paths.checkpoints()`` (``$FOLDFORGE_CHECKPOINT_DIR``, else
-   ``$FOLDFORGE_HOME/checkpoints``).
+   ``foldjet.paths.checkpoints()`` (``$FOLDJET_CHECKPOINT_DIR``, else
+   ``$FOLDJET_HOME/checkpoints``).
 2. the ``path`` recorded for that model in ``<checkpoints>/registry.yaml``,
    which is where a shared cluster location goes.
 """
@@ -96,7 +96,7 @@ def resolve(model: str, filename: str | None = None) -> Path:
         f"no checkpoint for {model!r}"
         + (f" (file {filename!r})" if filename else "")
         + f". Searched:\n  {searched}\n"
-        "Set FOLDFORGE_HOME or FOLDFORGE_CHECKPOINT_DIR; "
+        "Set FOLDJET_HOME or FOLDJET_CHECKPOINT_DIR; "
         "see docs/guides/CHECKPOINTS.md."
     )
     raise FileNotFoundError(msg)

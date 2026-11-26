@@ -9,7 +9,7 @@ precision loss?
 The 162 targets of the two tasks (`targets_abag_rna.txt`: 113 antibody-antigen, 49 protein-RNA), AF3 (DeepMind weights), 5 trunk seeds (42, 66, 101,
 2024, 8888) x 5 samples, 200 steps, 11 trunk passes, compile + CUDA graphs, the same seeds and sample indices in both arms.
 
-| pair | engine | bf16 run | FP8 run (`MINIWORLD_FP8=safe`, `MINIWORLD_FP8_MODEL=af3`) |
+| pair | engine | bf16 run | FP8 run (`FOLDJET_ENGINE_FP8=safe`, `FOLDJET_ENGINE_FP8_MODEL=af3`) |
 |---|---|---|---|
 | primary `v306` | 3.0.6 (FoldJet `paper-306`) | `~/foldforge-scratch/paper/F11/h100/af3_306_bf16_abagrna` (Slurm 62832) | `af3_306_fp8_abagrna` (62834; `fp8.check()` after every group, 0 saturations) |
 | replicate `v301` | 3.0.1 (FoldJet a9e1549) | `~/foldforge-scratch/foldbench/ff_full/af3_301` (58554, whole FoldBench) | `af3_301_fp8` (58867, no `check()`) |

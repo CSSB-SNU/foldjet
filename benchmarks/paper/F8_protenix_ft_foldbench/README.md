@@ -24,7 +24,7 @@ evaluations `$PAPER_OUT/F8/h100/eval/protenix1_{released,ft10}/`.
 
 ```bash
 cd ~/foldforge-scratch/paper-foldbench
-export FOLDFORGE_REPO=$PWD FFENV=<FoldJet env with the released engine> PAPER_OUT=~/foldforge-scratch/paper
+export FOLDJET_REPO=$PWD FFENV=<FoldJet env with the released engine> PAPER_OUT=~/foldforge-scratch/paper
 bash benchmarks/paper/F8_protenix_ft_foldbench/run_f8.sh          # 2 x (2-GPU run job ~4.5 h wall, then a ~4.5 h CPU evaluation)
 # when both evaluations are done (CPU, FoldJet env python):
 $FFENV/bin/python benchmarks/paper/F8_protenix_ft_foldbench/collect.py \

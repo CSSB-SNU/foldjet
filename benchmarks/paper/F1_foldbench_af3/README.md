@@ -8,7 +8,7 @@ MSA up to 16,384 rows and templates as FoldBench gives them. Three arms:
 |---|---|
 | `kit` | Anthropic's `af3_torch` kit, mode `fast`; a target that fails in fast mode (OOM) is run again in the kit's own `big` mode, nothing else is retried |
 | `ff_bf16` | FoldJet AF3 on the engine, bf16, compile + CUDA graphs (`scope: trunk`) |
-| `ff_fp8` | the same with the engine's FP8 path (`MINIWORLD_FP8=safe`, `MINIWORLD_FP8_MODEL=af3`, lazy guards) |
+| `ff_fp8` | the same with the engine's FP8 path (`FOLDJET_ENGINE_FP8=safe`, `FOLDJET_ENGINE_FP8_MODEL=af3`, lazy guards) |
 
 **GPU-hours** = the sum of the per-shard wall times. The shards are the kit's own split (`shards/s0.txt`, `shards/s1.txt`, 761 targets each,
 the split of every earlier kit run); for the kit that is one kit process per GPU. For a FoldJet run in multi mode it is the number of GPUs x the wall time.
@@ -54,15 +54,15 @@ Slurm log, and per target `run.json` (`gpu_s`, `peak_alloc_gib`, per-stage times
   The run is resumable on a resubmit (done markers), but a resubmit makes the wall time invalid; use it only for recovery and say so.
 * Kit: not modified, except the `af3_torch` featuriser's one line (`ref_max_modified_date`, as upstream `run_alphafold.py`; original kept as `featurise.py.orig_kit`) and the
   AF3 weight layout of the copy (`xfold.of3.OF3 = False`). Kit-native modes only: `fast`, `big` only for what fast cannot do. No other retries.
-* FP8: the worker calls `fp8.check()` after every trunk-seed group and redoes a saturated group (at most 3 times; the guard contract of `miniworld_engine/fp8.py`); the counts
+* FP8: the worker calls `fp8.check()` after every trunk-seed group and redoes a saturated group (at most 3 times; the guard contract of `foldjet_engine/fp8.py`); the counts
   (`saturated`, `redo`, `unresolved`) are in each target's `run.json` and in `f1_per_target.csv`. (The 2026-11 whole-FoldBench FP8 runs did not call `check()`: see F11.)
-* Warm caches: the default compile / extension caches (`CACHE_ROOT`, `~/.cache/foldforge/cache/foldbench`); do not point a campaign at a fresh cache directory.
+* Warm caches: the default compile / extension caches (`CACHE_ROOT`, `~/.cache/foldjet/cache/foldbench`); do not point a campaign at a fresh cache directory.
 
 ## Full-campaign commands (run by the coordinator after the engine release; replace the paths)
 
 ```bash
 cd ~/foldforge-scratch/paper-foldbench                       # the worktree at the experiment commit
-export FOLDFORGE_REPO=$PWD FFENV=<FoldJet env with the released engine> PAPER_OUT=~/foldforge-scratch/paper
+export FOLDJET_REPO=$PWD FFENV=<FoldJet env with the released engine> PAPER_OUT=~/foldforge-scratch/paper
 mkdir -p $PAPER_OUT/F1/h100/logs
 P=benchmarks/paper/F1_foldbench_af3
 

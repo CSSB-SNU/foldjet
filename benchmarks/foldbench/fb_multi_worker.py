@@ -327,7 +327,7 @@ with ff.load_model(args.model, config=config, checkpoint=args.checkpoint, device
     ex = getattr(model, "_execution", None)
     load_s = time.time() - t_all
     log(f"model {args.model} loaded in {load_s:.0f} s")
-    # Engine 3.x FP8 (MINIWORLD_FP8 set): log the routes in force at load, the route counters after the first target and at exit (the
+    # Engine 3.x FP8 (FOLDJET_ENGINE_FP8 set): log the routes in force at load, the route counters after the first target and at exit (the
     # saturation check and redo below use fp8_mod).
     FP8 = None
     try:
@@ -339,10 +339,10 @@ with ff.load_model(args.model, config=config, checkpoint=args.checkpoint, device
     except ImportError:
         pass
 
-    # FP8 guard contract (miniworld_engine/fp8.py): after every forward, outside any graph, fp8.check() once; True = a static-scale route saturated
-    # and was rescaled -> run that forward again (at most 3 times). Active only when MINIWORLD_FP8 is set; the counts go to run.json ("fp8").
+    # FP8 guard contract (foldjet_engine/fp8.py): after every forward, outside any graph, fp8.check() once; True = a static-scale route saturated
+    # and was rescaled -> run that forward again (at most 3 times). Active only when FOLDJET_ENGINE_FP8 is set; the counts go to run.json ("fp8").
     fp8_mod = None
-    if os.environ.get("MINIWORLD_FP8"):
+    if os.environ.get("FOLDJET_ENGINE_FP8"):
         import foldjet_engine.fp8 as fp8_mod
 
     gstate = {"res_bucket": None, "graphs": True}

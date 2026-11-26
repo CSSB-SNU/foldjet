@@ -72,7 +72,7 @@ sample k median Ca/C1' RMSD 0.658 A (p90 2.66, 135 pairs, now including the nucl
 **Released as 3.0.10 (2026-11-24):** engine `5090-int` 07bf36ae4 -> v3.0.10 changes no code the RTX 5090 runs (TokenDiTMiniWorldBiasOnly `backend_versions` number, the GPU-less prebuild plan, an A100-only `MWE_SM120` guard in `wide_ops.cu`), so these rows are the 3.0.10 rows; the CSV `engine` columns say so and keep the measured commit.
 
 Predictions of the F4 runs of the same date (see the F4 README): engine bf16 on cssb-rtx (real weights, the old rows' box), engine FP8 on the rented
-4x RTX 5090 (`vast5090`, real weights; `MINIWORLD_FP8=safe` + `MINIWORLD_FP8_MODEL`), engine branch `5090-int` 07bf36ae4 (= 3.0.10 on sm_120), FoldJet
+4x RTX 5090 (`vast5090`, real weights; `FOLDJET_ENGINE_FP8=safe` + `FOLDJET_ENGINE_FP8_MODEL`), engine branch `5090-int` 07bf36ae4 (= 3.0.10 on sm_120), FoldJet
 49d41bb. The PyTorch reference = the existing 5090 PyTorch-arm predictions of the 3.0.6 campaign (not re-run: same inputs and seeds, and FoldJet
 6a0593e -> 49d41bb changed only ESMFold2 code). `data/F5_rtx5090_pairs_summary.csv` (released engine) is unchanged.
 

@@ -8,7 +8,7 @@ ions) with no MSA, and on 5I28 again with one shared MSA (`5i28-msa`: the same
 three seeds of five samples each, no template.
 
 Regenerate with `tools/references/validate.sh fast` (or `exact`), then
-`foldjet validate $FOLDFORGE_HOME/runs/validate-<mode> --report docs/validation/<mode>.md`.
+`foldjet validate $FOLDJET_HOME/runs/validate-<mode> --report docs/validation/<mode>.md`.
 
 ## How a row is judged
 

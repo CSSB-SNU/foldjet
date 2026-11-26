@@ -102,14 +102,14 @@ CLI, not one per predictor. On an allocated GPU node:
 ```bash
 source tools/activate_env.sh
 foldjet models
-foldjet fold af3      --spec docs/examples/inference/1ubq.yaml --out $FOLDFORGE_HOME/runs/af3
-foldjet fold esmfold2 --spec docs/examples/inference/1ubq.yaml --out $FOLDFORGE_HOME/runs/esmfold2
+foldjet fold af3      --spec docs/examples/inference/1ubq.yaml --out $FOLDJET_HOME/runs/af3
+foldjet fold esmfold2 --spec docs/examples/inference/1ubq.yaml --out $FOLDJET_HOME/runs/esmfold2
 ```
 
 `--checkpoint` is optional when the release's default blob sits in
-`$FOLDFORGE_HOME/checkpoints/<model>/` or in its family's directory. `--config` takes a
+`$FOLDJET_HOME/checkpoints/<model>/` or in its family's directory. `--config` takes a
 YAML of backend, precision, seeds, recycles, steps and execution settings; see
-`$FOLDFORGE_HOME/runs/*/tools/config.yaml` in any recorded run for the shape.
+`$FOLDJET_HOME/runs/*/tools/config.yaml` in any recorded run for the shape.
 
 A family with no template stack (`template_layers == 0`, both ESMFold2
 releases) refuses a templated input, and one with no MSA stack
@@ -191,7 +191,7 @@ so the next person does not rediscover the setup.
 **ESMFold2** ships inside `transformers`, so it needs nothing extra:
 
 ```python
-ESMFold2Model.from_pretrained("$FOLDFORGE_HOME/checkpoints/esmfold2")
+ESMFold2Model.from_pretrained("$FOLDJET_HOME/checkpoints/esmfold2")
 ```
 
 Use the LOCAL path. `from_pretrained("biohub/ESMFold2")` fails in this build --
@@ -205,7 +205,7 @@ samples in one call hits a degenerate SVD inside the model's own Kabsch align.
 - Source: `/public_data/thalkak_envs/chai-lab` (already on this machine).
 - Weights: `models_v2/*.pt` (1.1 GB) and `conformers_v1.apkl` (119 MB) from
   `https://chaiassets.com/chai1-inference-depencencies/`, into
-  `$FOLDFORGE_HOME/checkpoints/chai1/`. Point `CHAI_DOWNLOADS_DIR` at that directory.
+  `$FOLDJET_HOME/checkpoints/chai1/`. Point `CHAI_DOWNLOADS_DIR` at that directory.
 - Missing packages: `gemmi`, `antipickle==0.2.0`, `modelcif`, `typer`,
   `pandera`, `numba`. Install them to a directory and reach them with
   `PYTHONPATH` rather than into `.venv` -- they are for a control, not for
@@ -224,7 +224,7 @@ trunk -- because both take a `token_single_trunk_repr`.
 
 
 The other releases, all runnable from this machine (details in
-`$FOLDFORGE_HOME/runs/archive/release-compare-20260924/tools/*.sbatch`):
+`$FOLDJET_HOME/runs/archive/release-compare-20260924/tools/*.sbatch`):
 
 - **Boltz-2**: `/public_data/thalkak_envs/boltz/bin/boltz predict`, cache = a
   directory with `boltz2_conf.ckpt` and `mols` linked from
@@ -314,7 +314,7 @@ takes the conditioning from 16% error to 0.09% -- but is worth 0.03 pLDDT
   `triangle_attention.linear_out`, `transition_single.linear_out`,
   `attention_pair_bias.attention.output_proj`) and compare with our first K
   blocks on the release's captured inputs.
-  `$FOLDFORGE_HOME/runs/archive/chai-native-20260923/tools/trunk_bisect.py` does K = 0..48 and three
+  `$FOLDJET_HOME/runs/archive/chai-native-20260923/tools/trunk_bisect.py` does K = 0..48 and three
   recycles.
 - **Compare values, not names.** Cutting every tensor into vectors along each
   axis (rounded to bf16) and looking them up on the other side matches through
@@ -333,7 +333,7 @@ takes the conditioning from 16% error to 0.09% -- but is worth 0.03 pLDDT
 200 steps on both sides, 5 samples. pLDDT is the per-atom mean; "CA to release"
 is the mean pairwise CA RMSD from each of our samples to each release sample,
 set against the release's own sample-to-sample spread. Scripts and outputs are
-under `$FOLDFORGE_HOME/runs/release-compare-20260924/`.
+under `$FOLDJET_HOME/runs/release-compare-20260924/`.
 
 | family | release pLDDT | ours | CA to release | release spread | verdict |
 |---|---|---|---|---|---|
@@ -385,7 +385,7 @@ under `$FOLDFORGE_HOME/runs/release-compare-20260924/`.
 generalise: capture the release's stage outputs (a forward pre-hook copies the
 INPUTS, since Protenix and OpenFold3 update in place -- read after the call, an
 input is already the output), feed the release's own inputs to our model LOADED
-BY THE CLI (`$FOLDFORGE_HOME/runs/archive/release-compare-20260924/tools/ours_blocks.py` does a
+BY THE CLI (`$FOLDJET_HOME/runs/archive/release-compare-20260924/tools/ours_blocks.py` does a
 teacher-forced per-block pass inside a real `inference.run`), and swap one input
 at a time into a real fold.
 
@@ -433,7 +433,7 @@ Every convention that owns no parameter was reset to AF3's value one at a time,
 per family, and folded with the same seed on three inputs: 5I28 (no MSA, low
 confidence, chaotic), 3PTB (protein + Ca + benzamidine, MSA and template) and
 1A1K (two DNA strands + protein). Baselines repeated bit-identically, so every
-difference is that convention's. Runs: `$FOLDFORGE_HOME/runs/release-compare-20260924/abl/`,
+difference is that convention's. Runs: `$FOLDJET_HOME/runs/release-compare-20260924/abl/`,
 scores `convention_table.txt`.
 
 **Removed -- no output bit changed on any input**, and the code shows why each
@@ -529,7 +529,7 @@ the release gives zero rows. Only protein chains reach the tower now.
 The Chai-1 RELEASE had silently dropped both of 3PTB's ligands (RDKit 2026 no
 longer accepts `useChirality` on ETKDG parameters; the entity fails to tokenise
 and the fold goes ahead without it). Pin `rdkit==2024.9.5`
-(`$FOLDFORGE_HOME/releases/chai-rdkit-deps`) or the control is protein-only.
+(`$FOLDJET_HOME/releases/chai-rdkit-deps`) or the control is protein-only.
 
 RoseTTAFold3 stays 0.15-0.19 A against a release that itself spreads
 0.01-0.16 A; its extra atom channels (`ref_pos_ground_truth`,
@@ -629,7 +629,7 @@ A single-seed Protenix comparison is therefore a coin toss: compare seeds
 with the dropout in the same state, or distributions.
 
 **Score every entity by its own geometry, not by the protein around it.**
-`$FOLDFORGE_HOME/runs/archive/release-compare-20260924/tools/complex_compare.py` reports it per family.
+`$FOLDJET_HOME/runs/archive/release-compare-20260924/tools/complex_compare.py` reports it per family.
 
 ### The one real defect this found
 
@@ -712,35 +712,35 @@ Run on an allocated GPU node after `tools/setup_env.sbatch` completes.
 Input JSON must carry prepared MSA/template data; these commands do not run an
 MSA search. Protenix/OpenDDE use their upstream sequence/job JSON schema, whereas
 AF3 uses the official AF3 JSON schema. Example input files are in
-`$FOLDFORGE_HOME/benchmarks/data/1ubq/{af3-full,af-family}.json`.
+`$FOLDJET_HOME/benchmarks/data/1ubq/{af3-full,af-family}.json`.
 
 ```bash
 source tools/activate_env.sh
 # Once for all models, independently of their checkpoints:
 foldjet ccd prepare \
-  --components $FOLDFORGE_HOME/checkpoints/opendde/common/components.cif \
-  --rdkit $FOLDFORGE_HOME/checkpoints/opendde/common/components.cif.rdkit_mol.pkl \
-  --out $FOLDFORGE_HOME/ccd/preprocessed_CCD.lmdb
-foldjet ccd verify --ccd-db $FOLDFORGE_HOME/ccd/preprocessed_CCD.lmdb
+  --components $FOLDJET_HOME/checkpoints/opendde/common/components.cif \
+  --rdkit $FOLDJET_HOME/checkpoints/opendde/common/components.cif.rdkit_mol.pkl \
+  --out $FOLDJET_HOME/ccd/preprocessed_CCD.lmdb
+foldjet ccd verify --ccd-db $FOLDJET_HOME/ccd/preprocessed_CCD.lmdb
 
-foldjet fold af3 --input $FOLDFORGE_HOME/benchmarks/data/1ubq/af3-full.json \
-  --checkpoint $FOLDFORGE_HOME/checkpoints/af3/af3.bin.zst \
-  --ccd-db $FOLDFORGE_HOME/ccd/preprocessed_CCD.lmdb --samples 1 --out $FOLDFORGE_HOME/runs/af3
-foldjet fold protenix1 --input $FOLDFORGE_HOME/benchmarks/data/1ubq/af-family.json \
-  --checkpoint $FOLDFORGE_HOME/checkpoints/protenix/protenix1.bin.zst \
-  --ccd-db $FOLDFORGE_HOME/ccd/preprocessed_CCD.lmdb --samples 1 --out $FOLDFORGE_HOME/runs/protenix1
-foldjet fold protenix2 --input $FOLDFORGE_HOME/benchmarks/data/1ubq/af-family.json \
-  --checkpoint $FOLDFORGE_HOME/checkpoints/protenix/protenix2.bin.zst \
-  --ccd-db $FOLDFORGE_HOME/ccd/preprocessed_CCD.lmdb --samples 1 --out $FOLDFORGE_HOME/runs/protenix2
-foldjet fold opendde --input $FOLDFORGE_HOME/benchmarks/data/1ubq/af-family.json \
-  --checkpoint $FOLDFORGE_HOME/checkpoints/opendde/opendde.pt \
-  --ccd-db $FOLDFORGE_HOME/ccd/preprocessed_CCD.lmdb --samples 1 --out $FOLDFORGE_HOME/runs/opendde
+foldjet fold af3 --input $FOLDJET_HOME/benchmarks/data/1ubq/af3-full.json \
+  --checkpoint $FOLDJET_HOME/checkpoints/af3/af3.bin.zst \
+  --ccd-db $FOLDJET_HOME/ccd/preprocessed_CCD.lmdb --samples 1 --out $FOLDJET_HOME/runs/af3
+foldjet fold protenix1 --input $FOLDJET_HOME/benchmarks/data/1ubq/af-family.json \
+  --checkpoint $FOLDJET_HOME/checkpoints/protenix/protenix1.bin.zst \
+  --ccd-db $FOLDJET_HOME/ccd/preprocessed_CCD.lmdb --samples 1 --out $FOLDJET_HOME/runs/protenix1
+foldjet fold protenix2 --input $FOLDJET_HOME/benchmarks/data/1ubq/af-family.json \
+  --checkpoint $FOLDJET_HOME/checkpoints/protenix/protenix2.bin.zst \
+  --ccd-db $FOLDJET_HOME/ccd/preprocessed_CCD.lmdb --samples 1 --out $FOLDJET_HOME/runs/protenix2
+foldjet fold opendde --input $FOLDJET_HOME/benchmarks/data/1ubq/af-family.json \
+  --checkpoint $FOLDJET_HOME/checkpoints/opendde/opendde.pt \
+  --ccd-db $FOLDJET_HOME/ccd/preprocessed_CCD.lmdb --samples 1 --out $FOLDJET_HOME/runs/opendde
 ```
 
 Defaults are MiniWorld, native BF16, 10 recycles, 200 diffusion steps and 5
 samples. Use `--backend pytorch` for the corresponding ported reference equations.
 Protenix/OpenDDE templates are opt-in (`--templates`). `--no-msa` is a smoke-test
-option. All commands use `--ccd-db` (default `FOLDFORGE_CCD_DB`, otherwise `$FOLDFORGE_HOME/ccd/preprocessed_CCD.lmdb`).
+option. All commands use `--ccd-db` (default `FOLDJET_CCD_DB`, otherwise `$FOLDJET_HOME/ccd/preprocessed_CCD.lmdb`).
 The former model-specific `--assets` options are replaced. The database is MiniWorld-compatible BioMol LMDB. Per-record metadata preserves
 full CCD categories and prepared references, with a lazy AF3 mapping over those
 same records. There are no runtime CIF/pickle database fallbacks. See
@@ -830,14 +830,14 @@ local and uncommitted; existing unrelated edits are preserved.
 ## Proposed result storage contract (not implemented)
 
 Resolve the output root independently of the source checkout. All permanent
-prediction artifacts should live under the deployment's top-level `$FOLDFORGE_HOME/runs/`, even
+prediction artifacts should live under the deployment's top-level `$FOLDJET_HOME/runs/`, even
 when executing a source snapshot. Use one unique directory per run; refuse a
 nonempty destination unless an explicit, validated resume is requested.
 
 For grouped benchmarks or seed sweeps, use a single level of named cases:
 
 ```text
-$FOLDFORGE_HOME/runs/<run-id>/
+$FOLDJET_HOME/runs/<run-id>/
   run.json
   af3-miniworld_graph-t7-d19/
     sample-000.cif
@@ -885,7 +885,7 @@ output:
 
 CLI selection overrides the YAML selection. Empty `images: []` is the default.
 Images are saved beside the existing CIF/JSON artifacts under
-`$FOLDFORGE_HOME/runs/<run>/images/<target>/`; the result JSON records relative paths and reasons
+`$FOLDJET_HOME/runs/<run>/images/<target>/`; the result JSON records relative paths and reasons
 for requested images that were unavailable. This addition does not implement the
 proposed output migration above or change existing CIF filenames.
 

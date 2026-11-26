@@ -40,7 +40,7 @@ The language-model files (`esmfold2*.lm.npz`, the ESM-C directory) are not part 
 ## Finding the file (`load_model` / `foldjet fold`)
 
 `load_model("<model>")` (and `foldjet fold <model>` without `--checkpoint`) resolves `<model>.miniworld.pt` in the usual checkpoint locations
-(`$FOLDFORGE_CHECKPOINT_DIR` / `$FOLDFORGE_HOME/checkpoints/<dir>/`, `registry.yaml`). **It never converts at run time.** A missing file raises
+(`$FOLDJET_CHECKPOINT_DIR` / `$FOLDJET_HOME/checkpoints/<dir>/`, `registry.yaml`). **It never converts at run time.** A missing file raises
 `FileNotFoundError` with the exact command, for example:
 
 ```text

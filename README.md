@@ -43,7 +43,7 @@ srun -p h100 -A cssb --qos=normal_h100 --gres=none -c 8 --mem=32G pixi install
 source tools/activate_env.sh                   # before running Python directly
 ```
 
-On A5000 / A6000 / A100 add FlashAttention-2: `FOLDFORGE_FLASH2=1 sbatch tools/setup_env.sbatch`.
+On A5000 / A6000 / A100 add FlashAttention-2: `FOLDJET_FLASH2=1 sbatch tools/setup_env.sbatch`.
 
 Without pixi (Python 3.12 and a C++20 toolchain; the native AF3 data component is its own wheel):
 
@@ -63,7 +63,7 @@ Weights (download the released blob, then convert it once, offline, to the miniw
 
 ```bash
 foldjet weights download --all-public          # or: foldjet weights download <model>
-foldjet weights convert <model>                # writes $FOLDFORGE_HOME/checkpoints/<model>/<model>.miniworld.pt
+foldjet weights convert <model>                # writes $FOLDJET_HOME/checkpoints/<model>/<model>.miniworld.pt
 ```
 
 A fold, on an allocated GPU node (every family takes the same YAML and flags):
@@ -87,12 +87,12 @@ with ff.load_model("boltz2", config="config.yaml", device="cuda:0") as model:
 ```
 
 CLI outputs (CIF, confidences and a JSON report of the actual precision, sampling, compile and CUDA-graph settings) always go under
-the runs tree `$FOLDFORGE_RUNS` (default `$FOLDFORGE_HOME/runs`): `--out NAME` is `<runs>/NAME`, no `--out` gives
+the runs tree `$FOLDJET_RUNS` (default `$FOLDJET_HOME/runs`): `--out NAME` is `<runs>/NAME`, no `--out` gives
 `<runs>/<model>/<timestamp-id>/`, and an absolute path outside the runs tree is refused. `result.save(dir)` in Python writes to the
 directory you give it. API details: [PYTHON-API.md](docs/guides/PYTHON-API.md).
 
 Other commands: `foldjet ccd prepare|verify` (the CCD LMDB), `foldjet checkpoints` (verify converted blobs against
-`checkpoints.lock`), `foldjet validate` (judge a run against the release references). `foldforge` is the same command.
+`checkpoints.lock`), `foldjet validate` (judge a run against the release references). `foldjet` is the same command.
 
 ## Backends, precision, modes
 
@@ -119,9 +119,9 @@ scripts/            training drivers (Protenix v1 / AF3, MiniWorld fine-tune)   
 third_party/        af3-data: the AF3 feature package (own wheel)
 ```
 
-Nothing machine-specific lives in the checkout. `$FOLDFORGE_HOME` (default `~/.cache/foldforge`) holds `checkpoints/`,
-`ccd/preprocessed_CCD.lmdb`, `runs/`, `releases/` and `benchmarks/`, each overridable (`FOLDFORGE_CHECKPOINT_DIR`,
-`FOLDFORGE_CCD_DB`, `FOLDFORGE_RUNS`, `FOLDFORGE_RELEASE_ROOT`, `FOLDFORGE_BENCHMARKS`; `src/foldjet/paths.py`).
+Nothing machine-specific lives in the checkout. `$FOLDJET_HOME` (default `~/.cache/foldjet`) holds `checkpoints/`,
+`ccd/preprocessed_CCD.lmdb`, `runs/`, `releases/` and `benchmarks/`, each overridable (`FOLDJET_CHECKPOINT_DIR`,
+`FOLDJET_CCD_DB`, `FOLDJET_RUNS`, `FOLDJET_RELEASE_ROOT`, `FOLDJET_BENCHMARKS`; `src/foldjet/paths.py`).
 Code ownership and where a change goes: [CODE-STRUCTURE.md](docs/guides/CODE-STRUCTURE.md).
 
 ## Conventions

@@ -27,15 +27,15 @@ case $CARD in
   a100)
     export FFENV=${FFENV:-$HOME/practice/ff_train_a9e1549/.pixi/envs/default}
     export PAPER_CACHE=${PAPER_CACHE:-$HOME/practice/paper_train_cache}
-    export XDG_CACHE_HOME=$PAPER_CACHE TORCHINDUCTOR_CACHE_DIR=$PAPER_CACHE/inductor MINIWORLD_ENGINE_TARGET_ARCH=sm80 MAX_JOBS=4
+    export XDG_CACHE_HOME=$PAPER_CACHE TORCHINDUCTOR_CACHE_DIR=$PAPER_CACHE/inductor FOLDJET_ENGINE_TARGET_ARCH=sm80 MAX_JOBS=4
     ;;
   rtx5090)
     export FFENV=${FFENV:-$HOME/ff/FoldJet/.pixi/envs/default}
-    export FOLDFORGE_HOME=${FOLDFORGE_HOME:-$HOME/ff/home}
+    export FOLDJET_HOME=${FOLDJET_HOME:-$HOME/ff/home}
     export PAPER_CACHE=${PAPER_CACHE:-$HOME/mwe/jit/rc306ff}
     export XDG_CACHE_HOME=$PAPER_CACHE/xdg TORCHINDUCTOR_CACHE_DIR=$PAPER_CACHE/inductor
-    export CUDA_HOME=/usr/local/cuda-12.8 PATH=/usr/local/cuda-12.8/bin:$PATH MINIWORLD_ENGINE_HEADER_CACHE=$HOME/.cache/miniworld_engine_headers
-    export MINIWORLD_ENGINE_BUILD_ARCH=sm120 MAX_JOBS=4 TORCHINDUCTOR_COMPILE_THREADS=4 PAPER_OUT=${PAPER_OUT_5090:-$HOME/ff/paper}
+    export CUDA_HOME=/usr/local/cuda-12.8 PATH=/usr/local/cuda-12.8/bin:$PATH FOLDJET_ENGINE_HEADER_CACHE=$HOME/.cache/miniworld_engine_headers
+    export FOLDJET_ENGINE_BUILD_ARCH=sm120 MAX_JOBS=4 TORCHINDUCTOR_COMPILE_THREADS=4 PAPER_OUT=${PAPER_OUT_5090:-$HOME/ff/paper}
     ;;
   b200)
     # host `b200` (no Slurm, GPUs 0-3 only; the lane driver sets CUDA_VISIBLE_DEVICES): everything from common/cards/b200.env (engine 3.0.7 source ENGINE_ROOT,

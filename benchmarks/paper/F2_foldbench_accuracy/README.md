@@ -32,7 +32,7 @@ structures with the **upstream FoldBench evaluator** (OpenStructure lDDT / DockQ
 ## Commands (after the F1 campaign; one evaluation job per run, ~4.5 h for 38,050 predictions on 32 CPUs)
 
 ```bash
-cd ~/foldforge-scratch/paper-foldbench; export FOLDFORGE_REPO=$PWD PAPER_OUT=~/foldforge-scratch/paper; P=benchmarks/paper/F2_foldbench_accuracy
+cd ~/foldforge-scratch/paper-foldbench; export FOLDJET_REPO=$PWD PAPER_OUT=~/foldforge-scratch/paper; P=benchmarks/paper/F2_foldbench_accuracy
 R=$PAPER_OUT/F1/h100
 for spec in "af3_bf16_shard af3_bf16" "af3_fp8_shard af3_fp8"; do set -- $spec
   sbatch -J paper-F2-eval-$2 -o $PAPER_OUT/F2/h100/logs/%x_%j.log \

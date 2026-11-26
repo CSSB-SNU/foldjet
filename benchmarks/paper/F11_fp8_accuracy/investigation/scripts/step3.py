@@ -3,8 +3,8 @@ Pairformer block; at the LAST pass, the block outputs (pair, single) are saved (
 FP8-route process: the FP8 environment is set by the caller). Per block: relative error of pair / single, split by region (antibody x antigen interface
 rows, antibody intra, antigen intra) and the per-channel dynamic range of the bf16 pair at the interface vs elsewhere.
 
-  python step3.py ref --target T --out DIR     (no MINIWORLD_FP8 in the env)
-  python step3.py cmp --target T --out DIR     (MINIWORLD_FP8=... set; writes DIR/T/cmp_<tag>.json)
+  python step3.py ref --target T --out DIR     (no FOLDJET_ENGINE_FP8 in the env)
+  python step3.py cmp --target T --out DIR     (FOLDJET_ENGINE_FP8=... set; writes DIR/T/cmp_<tag>.json)
 """
 
 from __future__ import annotations

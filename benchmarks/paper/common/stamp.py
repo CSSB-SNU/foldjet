@@ -54,7 +54,7 @@ def stamp() -> dict:
         "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
         "slurm_job_name": os.environ.get("SLURM_JOB_NAME"),
         "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES"),
-        "env": {k: v for k, v in sorted(os.environ.items()) if k.startswith(("MINIWORLD_", "FF_", "FOLDFORGE_")) or k == "ENGINE_OVERLAY"},
+        "env": {k: v for k, v in sorted(os.environ.items()) if k.startswith(("FOLDJET_ENGINE_", "FF_", "FOLDJET_")) or k == "ENGINE_OVERLAY"},
     }
 
 

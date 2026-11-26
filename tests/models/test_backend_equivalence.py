@@ -6,7 +6,7 @@ diffusion sampler amplifies kernel rounding over 200 steps, so the predicted
 coordinates are compared after the best rigid fit and by pLDDT, not elementwise.
 Skipped without a GPU, the AF3 checkpoint or the CCD database; the anthropic backend
 also needs its payloads (``TRIMUL_NATIVE_BUILD_DIR``, ``OPT_CORE_DIR``,
-``MINIWORLD_ANTHROPIC_ROOT``).
+``FOLDJET_ENGINE_ANTHROPIC_ROOT``).
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ pytestmark = pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA requ
 
 PAYLOAD = {
     name: os.environ[name]
-    for name in ("TRIMUL_NATIVE_BUILD_DIR", "OPT_CORE_DIR", "MINIWORLD_ANTHROPIC_ROOT")
+    for name in ("TRIMUL_NATIVE_BUILD_DIR", "OPT_CORE_DIR", "FOLDJET_ENGINE_ANTHROPIC_ROOT")
     if os.environ.get(name)
 }
 FASTA = Path(__file__).parents[1] / "release_references/inputs/5i28/A.fasta"

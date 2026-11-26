@@ -9,7 +9,7 @@
 
 # Submit from this repository's root. The install needs no GPU: on the H100 cluster a CPU allocation does
 # (srun -p h100 -A cssb --qos=normal_h100 --gres=none -c 8 --mem=32G pixi install).
-# Ampere/Ada (A100, A5000, A6000) also want FlashAttention-2: FOLDFORGE_FLASH2=1 builds it against the
+# Ampere/Ada (A100, A5000, A6000) also want FlashAttention-2: FOLDJET_FLASH2=1 builds it against the
 # environment's torch (about 40 minutes).
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:?Submit this job from the repository root}"
@@ -20,7 +20,7 @@ export CXX="${CXX:-/opt/ohpc/pub/compiler/gcc/12.4.0/bin/g++}"
 export MAX_JOBS=8 NVCC_THREADS=2 FLASH_ATTN_CUDA_ARCHS=80
 
 pixi install --locked
-if [[ "${FOLDFORGE_FLASH2:-0}" == 1 ]]; then
+if [[ "${FOLDJET_FLASH2:-0}" == 1 ]]; then
     pixi run --locked pip install --no-build-isolation "flash-attn==2.8.3.post1"
 fi
-pixi run --locked python -c 'import torch, miniworld_engine, foldjet; print(torch.__version__, torch.version.cuda)'
+pixi run --locked python -c 'import torch, foldjet_engine, foldjet; print(torch.__version__, torch.version.cuda)'

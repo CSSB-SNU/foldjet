@@ -13,8 +13,12 @@ triangle multiplication is a change to all of them at once.
 from importlib import import_module
 from typing import TYPE_CHECKING, Any
 
+# first: the pre-rename FOLDFORGE_* environment names (copied to FOLDJET_*)
 # first: the allocator default (expandable segments) before anything touches CUDA
-from foldjet import allocator  # noqa: F401
+from foldjet import (
+    _envcompat,  # noqa: F401
+    allocator,  # noqa: F401
+)
 from foldjet.errors import (
     ConcurrentCallError,
     FoldJetError,

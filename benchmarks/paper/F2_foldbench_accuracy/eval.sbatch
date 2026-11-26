@@ -18,12 +18,12 @@
 #SBATCH -o slurm-%x-%j.log
 set -uo pipefail
 : "${NAME:?NAME=<run name>}" "${PRED_DIRS:?PRED_DIRS=<dirs>}"
-REPO=${FOLDFORGE_REPO:-${SLURM_SUBMIT_DIR:-$PWD}}
+REPO=${FOLDJET_REPO:-${SLURM_SUBMIT_DIR:-$PWD}}
 P=$REPO/benchmarks/paper
 . "$P/common/env.sh"
-EVAL_ENV=${EVAL_ENV:-$HOME/FoldForge/.pixi/envs/default}
+EVAL_ENV=${EVAL_ENV:-$HOME/foldjet/.pixi/envs/default}
 export PATH=$EVAL_ENV/bin:$PATH LD_LIBRARY_PATH=$EVAL_ENV/lib:${LD_LIBRARY_PATH:-}
-export PYTHONPATH=${PARALLELBAR:-$HOME/miniworld-engine/paper/pylib}
+export PYTHONPATH=${PARALLELBAR:-$HOME/foldjet-engine/paper/pylib}
 export MW_OST_WORKERS=${MW_OST_WORKERS:-30} MW_DOCKQ_WORKERS=${MW_DOCKQ_WORKERS:-30}
 EVAL_OUT=${EVAL_OUT:-$PAPER_OUT/F2/h100/$NAME}
 ARGS=(); for d in ${PRED_DIRS//:/ }; do ARGS+=(--pred-dir "$d"); done

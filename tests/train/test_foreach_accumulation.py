@@ -118,7 +118,7 @@ def test_error_restores_the_old_gradients():
 
 
 def test_switch_off(monkeypatch):
-    monkeypatch.setenv("FOLDFORGE_FOREACH_GRAD_ACCUM", "0")
+    monkeypatch.setenv("FOLDJET_FOREACH_GRAD_ACCUM", "0")
     model = Heads()
     params = trainable(model)
     for p in params:

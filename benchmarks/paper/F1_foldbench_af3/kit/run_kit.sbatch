@@ -16,7 +16,7 @@
 #SBATCH -o slurm-%x-%j.log
 set -uo pipefail
 : "${NAME:?NAME=<run name>}"
-REPO=${FOLDFORGE_REPO:-${SLURM_SUBMIT_DIR:-$PWD}}
+REPO=${FOLDJET_REPO:-${SLURM_SUBMIT_DIR:-$PWD}}
 P=$REPO/benchmarks/paper
 . "$P/common/env.sh"
 export KIT_ROOT=${KIT_ROOT:-$FF_SCRATCH/anthropic-kits} KIT_INPUTS=${KIT_INPUTS:-$FF_SCRATCH/foldbench/af3full/inputs_all}

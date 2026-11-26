@@ -1,10 +1,10 @@
 #!/bin/bash
 # Submit the FoldJet side of the 5I28 benchmark: one gate job, then one single-GPU job per model that starts after the gate.
-#   OUT_ROOT=<dir> FOLDFORGE_5I28_FASTA=... FOLDFORGE_5I28_MSA_DB=... FOLDFORGE_5I28_TEMPLATE_DB=... benchmarks/5i28_ff/submit_all.sh
+#   OUT_ROOT=<dir> FOLDJET_5I28_FASTA=... FOLDJET_5I28_MSA_DB=... FOLDJET_5I28_TEMPLATE_DB=... benchmarks/5i28_ff/submit_all.sh
 # Optional: WAIT_FOR (default '^b5i28': the kit jobs), MODELS (default: all nine), NO_GATE=1 (submit the model jobs directly).
 set -euo pipefail
-: "${OUT_ROOT:?}" "${FOLDFORGE_5I28_FASTA:?}" "${FOLDFORGE_5I28_MSA_DB:?}" "${FOLDFORGE_5I28_TEMPLATE_DB:?}"
-HERE=$(cd "$(dirname "$0")" && pwd); export FOLDFORGE_REPO=${FOLDFORGE_REPO:-$(cd "$HERE/../.." && pwd)}
+: "${OUT_ROOT:?}" "${FOLDJET_5I28_FASTA:?}" "${FOLDJET_5I28_MSA_DB:?}" "${FOLDJET_5I28_TEMPLATE_DB:?}"
+HERE=$(cd "$(dirname "$0")" && pwd); export FOLDJET_REPO=${FOLDJET_REPO:-$(cd "$HERE/../.." && pwd)}
 MODELS=${MODELS:-"protenix1 protenix2 opendde esmfold2 esmfold2-fast intellifold2 af3 boltz2 chai1 openfold3 rosettafold3"}
 mkdir -p "$OUT_ROOT/logs"; cd "$OUT_ROOT/logs"
 DEP=()
