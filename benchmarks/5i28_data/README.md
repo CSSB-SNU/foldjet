@@ -1,13 +1,13 @@
 # 5I28 benchmark inputs
 
 Every input of the 5I28 benchmark ([BENCHMARK-5I28.md](../../docs/guides/BENCHMARK-5I28.md)), so a run needs nothing outside the
-repository: the real MSA and the 4 distinct real templates, for FoldForge and for the kits. The chain sequence is
+repository: the real MSA and the 4 distinct real templates, for FoldJet and for the kits. The chain sequence is
 [`tests/release_references/inputs/5i28/A.fasta`](../../tests/release_references/inputs/5i28/A.fasta).
 
 | file | used by | content |
 |---|---|---|
-| `a3m_16k.lmdb/data.mdb` | FoldForge `msa_db` (`FOLDFORGE_5I28_MSA_DB`) | key `P0113359` of `a3m_16k.lmdb`, BioMolDB_20260224: the real MSA |
-| `template.lmdb/data.mdb` | FoldForge `template_db` (`FOLDFORGE_5I28_TEMPLATE_DB`) | key `P0113359` of `template.lmdb`, BioMolDB_20260224: 20 records, 6 distinct sequences; with `template_n: 4` and the default `template_dedup` FoldForge loads `5SYD_A`, `6KOL_A`, `5YT7_A`, `6TFD_A` |
+| `a3m_16k.lmdb/data.mdb` | FoldJet `msa_db` (`FOLDFORGE_5I28_MSA_DB`) | key `P0113359` of `a3m_16k.lmdb`, BioMolDB_20260224: the real MSA |
+| `template.lmdb/data.mdb` | FoldJet `template_db` (`FOLDFORGE_5I28_TEMPLATE_DB`) | key `P0113359` of `template.lmdb`, BioMolDB_20260224: 20 records, 6 distinct sequences; with `template_n: 4` and the default `template_dedup` FoldJet loads `5SYD_A`, `6KOL_A`, `5YT7_A`, `6TFD_A` |
 | `5i28_unpaired.a3m` | kits (`A3M_5I28`) | the same MSA as an a3m (`Alignment.load(...).a3m(species_aliases(...))`) |
 | `5i28_templates_hits20.a3m` | Protenix-family / OpenFold3 kits | the 20 template hits as an a3m; the kits keep one hit per sequence, which gives the same four |
 | `mmcif/{5syd,6kol,5yt7,6tfd}.cif.gz` | kits that take template coordinates as mmCIF | the four template entries (PDB, CC0) |
@@ -15,9 +15,9 @@ repository: the real MSA and the 4 distinct real templates, for FoldForge and fo
 The two LMDBs hold only the key `P0113359`, cut from the full BioMolDB_20260224 stores. They open read-only without a lock file
 (`lock=False`), so the directories hold only `data.mdb`.
 
-Checked 2026-11-26 (CPU job): the MSA read from `a3m_16k.lmdb` here is byte-identical to the a3m exported
+Checked 2026-11-26 (CPU job, FoldJet `rename-foldjet`): the MSA read from `a3m_16k.lmdb` here is byte-identical to the a3m exported
 from the full BioMolDB_20260224 on 2026-10-24 (`5i28_unpaired.a3m`); `load_templates(..., 4)` gives `5SYD_A, 6KOL_A, 5YT7_A, 6TFD_A`;
-`build.load` (data.inputs) on the n = 1 and n = 4 specs gives 4 templates and an MSA of 6789 a3m entries per chain.
+`foldjet.data.inputs.build.load` on the n = 1 and n = 4 specs gives 4 templates and an MSA of 6789 a3m entries per chain.
 
 ## SHA-256
 
