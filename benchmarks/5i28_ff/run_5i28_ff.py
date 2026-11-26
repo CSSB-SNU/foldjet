@@ -63,6 +63,7 @@ MODELS: dict[str, tuple[int, int, dict]] = {
     "boltz2": (4, 4, {}),
     "chai1": (4, 4, {}),
     "openfold3": (4, 4, {}),
+    "openfold3-preview2": (4, 4, {}),
     "rosettafold3": (
         4,
         1,

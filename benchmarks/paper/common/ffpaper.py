@@ -24,7 +24,7 @@ CARDS = {"h100": "H100", "a100": "A100", "rtx5090": "5090", "b200": "B200"}
 #: FoldJet predictors of F3 / F9 (the 5I28 benchmark's eleven) and of F4 / F5 (the FoldBench 27-target set's eleven; the two lists differ:
 #: F4 / F5 have openfold3-preview2 and no esmfold2-fast).
 PREDICTORS_5I28 = (
-    "protenix1", "protenix2", "opendde", "esmfold2", "esmfold2-fast", "intellifold2", "af3", "boltz2", "chai1", "openfold3", "rosettafold3",
+    "protenix1", "protenix2", "opendde", "esmfold2", "esmfold2-fast", "intellifold2", "af3", "boltz2", "chai1", "openfold3", "rosettafold3", "openfold3-preview2",
 )
 PREDICTORS_FOLDBENCH = (
     "af3", "boltz2", "chai1", "esmfold2", "intellifold2", "opendde", "openfold3", "openfold3-preview2", "protenix1", "protenix2", "rosettafold3",
