@@ -37,7 +37,7 @@ One **pixi** environment (torch 2.13.0+cu129, cuequivariance 0.12, FlashAttentio
 No GPU is needed to install; on the cluster do it on a CPU allocation, never on a login node.
 
 ```bash
-git clone git@github.com:SanggeunParrk/foldjet.git
+git clone git@github.com:CSSB-SNU/foldjet.git
 cd foldjet
 srun -p h100 -A cssb --qos=normal_h100 --gres=none -c 8 --mem=32G pixi install
 source tools/activate_env.sh                   # before running Python directly
