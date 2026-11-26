@@ -53,8 +53,7 @@ python -m pip install '.[language]'          # `language`: Transformers for the 
 ```
 
 **Engine pin.** `pyproject.toml` pins `foldjet-engine==1.0.0` (the renamed miniworld-engine; Python package `foldjet_engine`).
-*Stale as of 2026-11-25:* the committed `pixi.lock` still records the pre-rename wheels (`miniworld-engine` 3.0.10 and its
-`-kernels-sm90/sm80/sm120-cu129` wheels); refresh the lock before relying on `pixi install --frozen`. The engine changes contracts
+The committed `pixi.lock` records foldjet-engine 1.0.0 and its five kernels wheels from PyPI. The engine changes contracts
 between releases: after changing the pin, refresh the lock and re-run the tests.
 
 ## Quick start
