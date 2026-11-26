@@ -1,0 +1,25 @@
+kit,card,n,tokens,value_s,mode,status,n_timed,value_reps,forwards_s,templates,jobs,node,notes
+openfold3_p2,h100,1,128,0.868,fast,ok,5,0.851;0.868;0.874,3.237;0.885;0.851;0.851;0.846;0.849;0.854|2.418;0.902;0.882;0.868;0.857;0.858;0.879|2.697;0.916;0.874;0.907;0.863;0.942;0.872,4/4;4/4;4/4,67620;67620;67620,node01,
+openfold3_p2,h100,2,256,1.154,fast,ok,5,1.154;1.158;1.153,3.094;1.197;1.154;1.152;1.154;1.158;1.151|2.662;1.204;1.163;1.157;1.153;1.158;1.158|2.683;1.198;1.149;1.150;1.157;1.158;1.153,4/4;4/4;4/4,67620;67620;67620,node01,
+openfold3_p2,h100,4,512,2.184,fast,ok,5,2.184;2.135;2.187,4.261;2.273;2.186;2.184;2.189;2.178;2.176|3.999;2.242;2.121;2.117;2.135;2.135;2.141|4.182;2.413;2.235;2.194;2.187;2.180;2.182,4/4;4/4;4/4,67620;67620;67620,node01,
+openfold3_p2,h100,8,1024,5.891,fast,ok,5,5.863;5.950;5.891,11.971;5.917;5.878;5.867;5.863;5.853;5.860|7.818;5.953;5.948;5.953;5.948;5.950;5.950|7.510;5.914;5.881;5.890;5.891;5.892;5.891,4/4;4/4;4/4,67620;67620;67620,node01,
+openfold3_p2,h100,12,1536,12.818,fast,ok,5,12.818;12.829;12.812,16.572;12.772;12.798;12.819;12.831;12.818;12.808|14.352;12.822;12.811;12.821;12.829;12.837;12.833|14.491;12.808;12.804;12.815;12.812;12.812;12.807,4/4;4/4;4/4,67620;67620;67620,node01,
+openfold3_p2,h100,16,2048,23.686,fast,ok,5,23.686;23.375;23.692,27.365;23.747;23.693;23.712;23.686;23.669;23.676|25.357;23.389;23.648;23.386;23.323;23.364;23.375|25.477;23.709;24.153;23.728;23.692;23.674;23.661,4/4;4/4;4/4,67620;67620;67620,node01,
+openfold3_p2,a100,1,128,1.413,fast,ok,5,1.413;1.447;1.401,4.174;1.523;1.411;1.430;1.423;1.413;1.408|4.539;1.461;1.406;1.450;1.460;1.447;1.441|7.068;1.447;1.458;1.401;1.406;1.394;1.391,4/4;4/4;4/4,100100;100100;100100,gpu03,
+openfold3_p2,a100,2,256,2.227,fast,ok,5,2.271;2.203;2.227,5.123;2.269;2.294;2.271;2.301;2.186;2.183|4.972;2.364;2.186;2.203;2.238;2.179;2.278|8.034;2.316;2.223;2.227;2.227;2.234;2.260,4/4;4/4;4/4,100100;100100;100100,gpu03,
+openfold3_p2,a100,4,512,,fast,failed,0,,,,100100,gpu03,"all 3 repetitions: CUDA error: an illegal memory access was encountered in the 3rd forward (kit exit 1; not out of memory)"
+openfold3_p2,a100,8,1024,12.210,fast,ok,5,12.230;12.182;12.210,18.054;12.131;12.171;12.198;12.230;12.279;12.264|15.179;12.092;12.115;12.182;12.163;12.202;12.192|17.947;12.157;12.157;12.180;12.210;12.223;12.234,4/4;4/4;4/4,100100;100100;100100,gpu03,
+openfold3_p2,a100,12,1536,27.081,fast,ok,5,27.054;27.081;27.236,29.532;26.763;26.906;27.008;27.054;27.063;27.088|29.598;26.965;27.037;27.068;27.090;27.081;27.147|34.970;27.145;27.222;27.219;27.274;27.236;27.273,4/4;4/4;4/4,100100;100100;100100,gpu03,
+openfold3_p2,a100,16,2048,50.510,fast,ok,5,50.902;50.510;50.276,55.107;50.734;50.966;51.035;50.877;50.902;50.849|53.483;50.237;50.386;50.464;50.510;50.516;50.522|56.451;49.986;50.204;50.264;50.276;50.277;50.290,4/4;4/4;4/4,100100;100100;100100,gpu03,
+openfold3_p2,rtx5090,1,128,,fast,refused,0,,,,local (no Slurm),cssb-rtx,"fast refused on sm_120: pair_transition core arch-sm120-not-measured (strict); exact not measured (user 2026-11-27)"
+openfold3_p2,rtx5090,2,256,,fast,ram_cap_16GB,0,,,,local (no Slurm),cssb-rtx,"killed by the 16 GB host RAM cap before the fast refusal point (rc 137)"
+openfold3_p2,rtx5090,4,512,,fast,ram_cap_16GB,0,,,,local (no Slurm),cssb-rtx,"killed by the 16 GB host RAM cap before the fast refusal point (rc 137)"
+openfold3_p2,rtx5090,8,1024,,fast,not_run,0,,,,local (no Slurm),cssb-rtx,"not run: fast refused at n=1 (user 2026-11-27: try fast only)"
+openfold3_p2,rtx5090,12,1536,,fast,not_run,0,,,,local (no Slurm),cssb-rtx,"not run: fast refused at n=1 (user 2026-11-27: try fast only)"
+openfold3_p2,rtx5090,16,2048,,fast,not_run,0,,,,local (no Slurm),cssb-rtx,"not run: fast refused at n=1 (user 2026-11-27: try fast only)"
+openfold3_p2,b200,1,128,,fast,refused,0,,,,vast.ai (no Slurm),vast B200,"fast refused on sm_100: pair_transition core arch-sm100-not-measured (strict), smoke n=1 with random in-process weights; not queued further"
+openfold3_p2,b200,2,256,,fast,not_run,0,,,,vast.ai (no Slurm),vast B200,"not run: fast refused at n=1"
+openfold3_p2,b200,4,512,,fast,not_run,0,,,,vast.ai (no Slurm),vast B200,"not run: fast refused at n=1"
+openfold3_p2,b200,8,1024,,fast,not_run,0,,,,vast.ai (no Slurm),vast B200,"not run: fast refused at n=1"
+openfold3_p2,b200,12,1536,,fast,not_run,0,,,,vast.ai (no Slurm),vast B200,"not run: fast refused at n=1"
+openfold3_p2,b200,16,2048,,fast,not_run,0,,,,vast.ai (no Slurm),vast B200,"not run: fast refused at n=1"

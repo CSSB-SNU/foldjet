@@ -236,3 +236,35 @@ Shared B200 host (DCTN-0831174147-1, 8 x B200 sm_100), one task per GPU, each pi
   the kit's own switch MODEL_OPT_LEVERS_OFF=prefetch (its niced prefetch helper starved; featurisation is outside the timed forward).
 - **Engine vs kit, same host:** the engine is faster in all 47 comparable cells (n = 1..16); the smallest margin is Boltz-2 n = 1 (1.70x; n = 16: 1.83x);
   n = 16: AF3 2.05x (af3_torch) / 3.40x (af3_jax), Chai-1 3.28x, Protenix v1 3.32x, Protenix v2 3.00x, RF3 2.77x, IntelliFold2 2.07x (notxla).
+
+## OpenFold3 preview 2 Anthropic kit (2026-11-27)
+
+The paper said "OpenFold3 preview 2 has no Anthropic kit": wrong. The `openfold3` kit of github.com/anthropics/uplifting-biomolecular-modeling (f4f62fa) is
+OpenFold3 0.4.1 with the preview-2 weights (`of3-p2-155k.pt`); the kit measured as "openfold3" so far is `openfold3_ob0` (OpenFold3 0.5.0, OpenBind-0).
+Data: `data/F3_kits_openfold3_p2.csv` (kit `openfold3_p2`; same columns idea as the other kit CSVs: steady value = median of the 3 repetitions, each the
+median of 5 forwards after forward 1 and 2 are dropped; `forwards_s` = all 7 forwards per repetition, `|`-separated).
+
+- **FoldJet side is the existing `openfold3` rows**: FoldJet runs `openfold3` and `openfold3-preview2` through the same `AlphaFold3` class and settings, only the
+  weights differ (H100 n = 1 check: preview2 0.403 s, openfold3 0.39 s).
+- **Kit setup** (`kits/openfold3_p2/`, copies of the harness files; the kit itself is unmodified, installed by its STOCK.md route C): 0.4.1 has no CIF-direct
+  template fields, so the 4 distinct real templates go in as a template alignment (`templates_4.a3m`: query + full chain sequences of 5SYD_A, 6KOL_A, 5YT7_A,
+  6TFD_A, realigned by the kit's own kalign path; the 20-hit a3m drops insertions, and 0.4.1 then dropped 6KOL / 6TFD); `--use-templates true --upstream-fix
+  OF3-001` (the kit's own fix: stock 0.4.1 preprocesses templates but never hands them to the model); every cell logs `TEMPLATES FEATURISED real_slots=4/4`,
+  MSA 6,790 rows, 4 trunk passes, 200 steps, 5 samples, mode fast (no cell needed big). H100 / A100: in the kits' Ubuntu 22.04 container with the CUDA 13
+  compat libcuda (`cu130kit.sh`, as `openfold3_ob0`): natively on the 575 driver the kit's TriMul `tma` Triton kernel segfaults from n = 4.
+- **Runs**: H100 node01 job 67620, A100 gpu03 job 100100 (`of3p2_ngpu.sh`: one job, 4 GPUs, one kit process per GPU at a time, repetitions 1-3 interleaved).
+
+| n | H100 kit (s) | kit / FoldJet bf16 | kit / FoldJet FP8 | A100 kit (s) | kit / FoldJet bf16 |
+|---|---|---|---|---|---|
+| 1 | 0.868 | 2.24 | 2.28 | 1.413 | 1.33 |
+| 2 | 1.154 | 1.95 | 2.00 | 2.227 | 1.26 |
+| 4 | 2.184 | 1.74 | 1.88 | failed | - |
+| 8 | 5.891 | 1.56 | 1.82 | 12.210 | 1.21 |
+| 12 | 12.818 | 1.44 | 1.75 | 27.081 | 1.16 |
+| 16 | 23.686 | 1.40 | 1.78 | 50.510 | 1.16 |
+
+FoldJet values: `F3_foldforge_h100_3010.csv` (engine 3.0.10) and `F3_foldforge_a100.csv` (engine 3.0.9 + A100 patches), `openfold3` rows.
+- **A100 n = 4**: all 3 repetitions died in the 3rd forward with `CUDA error: an illegal memory access` (kit exit 1, not out of memory): `failed`.
+- **RTX 5090**: fast refused at n = 1 (`pair_transition` core `arch-sm120-not-measured`, strict; the same refusal as `openfold3_ob0`); n = 2 / 4 were killed by
+  the 16 GB host RAM cap before reaching that point; exact was not measured (user decision 2026-11-27).
+- **B200** (rented vast.ai, random in-process weights): fast refused at n = 1 (`arch-sm100-not-measured`), as `openfold3_ob0` on the B200.

@@ -23,16 +23,17 @@ def rename_chains(cif: str, new_names: list[str]) -> str:
     mapping = dict(zip(old, new_names, strict=True))
     for col in ("label_asym_id", "auth_asym_id"):
         atom[col] = pdbx.CIFColumn(np.array([mapping[c] for c in atom[col].as_array()]))
-    for cat, col in (
-        ("struct_asym", "id"),
-        ("pdbx_nonpoly_scheme", "asym_id"),
-        ("pdbx_nonpoly_scheme", "pdb_strand_id"),
-        ("entity_poly", "pdbx_strand_id"),
-        ("struct_conn", "ptnr1_label_asym_id"),
-        ("struct_conn", "ptnr2_label_asym_id"),
-        ("struct_conn", "ptnr1_auth_asym_id"),
-        ("struct_conn", "ptnr2_auth_asym_id"),
-    ):
+    # Every other chain-id column of every category (struct_asym.id, *_scheme asym_id / pdb_strand_id, entity_poly.pdbx_strand_id,
+    # struct_conn ptnr*_asym_id, ...): a column left with the old ids (pdbx_poly_seq_scheme was) makes the file unreadable for
+    # AlphaFold3's own parser (alphafold3.structure.from_mmcif: "Lookup for the following atom from the _atom_site table failed").
+    targets = [("struct_asym", "id")] + [
+        (cat_name, col)
+        for cat_name in block
+        if cat_name != "atom_site"
+        for col in block[cat_name]
+        if col.endswith(("asym_id", "strand_id"))
+    ]
+    for cat, col in targets:
         if cat in block and col in block[cat]:
             vals = block[cat][col].as_array()
             block[cat][col] = pdbx.CIFColumn(
