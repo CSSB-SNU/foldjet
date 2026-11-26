@@ -9,7 +9,8 @@
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO=$(cd "$HERE/../.." && pwd)
 E=${FFENV:-$REPO/.pixi/envs/default}
-C=${CACHE_ROOT:-${FOLDJET_HOME:-$HOME/.cache/foldjet}/cache/foldbench}
+_FJH=$HOME/.cache/foldjet; [ -d $_FJH ] || [ ! -d $HOME/.cache/foldforge ] || _FJH=$HOME/.cache/foldforge
+C=${CACHE_ROOT:-${FOLDJET_HOME:-$_FJH}/cache/foldbench}
 mkdir -p "$C"
 export PATH=$E/bin:$PATH LD_LIBRARY_PATH=$E/lib:${LD_LIBRARY_PATH:-}
 # ENGINE_OVERLAY: a directory with an extracted foldjet_engine wheel (+ kernels wheels) in front of the env's installed engine (release-candidate runs)
