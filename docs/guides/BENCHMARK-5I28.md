@@ -19,14 +19,15 @@ incomparable. One fixed target, one known sequence and one real MSA / template s
 ## Inputs (both sides, every model, every n)
 
 - **Size:** n identical chains, n = 1, 2, 4, 8, 12, 16 (128 n tokens).
-- **MSA:** the real MSA, always. FoldForge: `msa_db: ~/data/BioMolDB_20260224/a3m_16k.lmdb`, key `P0113359` (6790 rows); kits: the same
-  rows as an a3m. There is no run without the MSA.
+- **MSA:** the real MSA, always. FoldForge: `msa_db: benchmarks/5i28_data/a3m_16k.lmdb` (in the repository, see its README), key `P0113359` (6790 rows); kits: the same
+  rows as an a3m (`benchmarks/5i28_data/5i28_unpaired.a3m`). There is no run without the MSA.
 - **Templates:** 4 distinct real templates, always: `5SYD_A`, `6KOL_A`, `5YT7_A`, `6TFD_A`.
-  - FoldForge: `template_db: .../template.lmdb`, key `P0113359`, `template_n: 4`. The LMDB stores every chain of an entry (20 records,
+  - FoldForge: `template_db: benchmarks/5i28_data/template.lmdb`, key `P0113359`, `template_n: 4`. The LMDB stores every chain of an entry (20 records,
     6 distinct sequences). **Keep `template_dedup: true` (the default)**: `load_templates` then keeps one record per hit sequence,
     which gives these four. (FoldBench specs set `template_dedup: false`; a 5I28 spec must not.)
   - Kits: those 4, in each kit's own input form. For the Protenix-family kits (Protenix v1/v2, OpenDDE) use the whole 20-hit a3m;
     their search keeps one hit per sequence. Never pass a list that a kit's dedupe would shrink.
+    The 20-hit a3m and the four mmCIFs are in `benchmarks/5i28_data/` (`5i28_templates_hits20.a3m`, `mmcif/`).
   - A kit run counts only when its log shows 4 real templates (`real=4/4`, `Found 4 templates`).
   - RoseTTAFold3 takes one coordinate set per chain: the same single template on both sides. ESMFold2 has no template input.
 - **Sampling:** 4 recycles, 200 steps, 5 samples, bf16. The same seeds where the kit allows.

@@ -12,7 +12,7 @@ on the shell scripts), so expect to fix a path or two on first use. No logs, wei
 | `BENCH_DIR` | working directory: per-kit `<kit>/{inputs,logs,out}`, `done_final/`, `done_sep/`, `probe/` are created under it; `<kit>/run.sh` etc. are expected at `$BENCH_DIR/<kit>/` (copy `kits/<kit>/` there) |
 | `KITS_DIR` | the kit installs (`<kit>/venv*`, `<kit>/kit/...`, `cu130run.sh`, `cuda13home`, `libstdcxx`, `weights`) |
 | `FF_SCRATCH` | scratch holding the cu130 CUDA toolkit pixi env (`cuda13tk`), the CUDA 13 compat libs (`cudacompat13`), `kalign_build`, the Singularity image (`sing/ubuntu2204.sif`) |
-| `INPUT_SCRATCH`, `A3M_5I28` | the FoldForge spec / 20-hit template a3m the input builders read; the real 5I28 MSA as an a3m |
+| `INPUT_SCRATCH`, `A3M_5I28` | the FoldForge spec / 20-hit template a3m the input builders read; the real 5I28 MSA as an a3m (the files are in the repository: [`benchmarks/5i28_data/`](../5i28_data/README.md); `A3M_5I28` = `benchmarks/5i28_data/5i28_unpaired.a3m`) |
 | `PY` | a python with numpy, for the host probe (`queue3.sh`, `kit_multi_job.sh`) |
 
 ## Files

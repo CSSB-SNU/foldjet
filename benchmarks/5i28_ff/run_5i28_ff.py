@@ -9,12 +9,13 @@ decoding, see ``foldforge.models.execution.measured_forward``). Each cell is wri
 soon as it finishes (``cells/<model>_x<n>.json`` and a line in ``cells.jsonl``), so a
 run is resumable and an out-of-memory cell does not lose the earlier ones.
 
-Environment (no paths in the code):
+Environment (each defaults to the copy in the repository):
   FOLDFORGE_5I28_FASTA        the 5I28 chain fasta
-                              (tests/release_references/inputs/5i28/A.fasta in the repo)
+                              (default: tests/release_references/inputs/5i28/A.fasta)
   FOLDFORGE_5I28_MSA_DB       MSA LMDB with key P0113359
-                              (a3m_16k.lmdb of BioMolDB_20260224)
+                              (default: benchmarks/5i28_data/a3m_16k.lmdb)
   FOLDFORGE_5I28_TEMPLATE_DB  template LMDB with key P0113359
+                              (default: benchmarks/5i28_data/template.lmdb)
 Checkpoints come from FOLDFORGE_CHECKPOINT_DIR / the default checkpoint directory.
 """
 
@@ -37,6 +38,12 @@ import yaml
 import foldforge as ff
 
 KEY = "P0113359"
+REPO = Path(__file__).resolve().parents[2]
+DEFAULTS = {
+    "FOLDFORGE_5I28_FASTA": REPO / "tests/release_references/inputs/5i28/A.fasta",
+    "FOLDFORGE_5I28_MSA_DB": REPO / "benchmarks/5i28_data/a3m_16k.lmdb",
+    "FOLDFORGE_5I28_TEMPLATE_DB": REPO / "benchmarks/5i28_data/template.lmdb",
+}
 TOKENS_PER_CHAIN = 128
 SIZES = (1, 2, 4, 8, 12, 16)
 
@@ -74,7 +81,7 @@ def make_spec(n: int, template_n: int) -> dict:
     ``template_dedup`` stays at its default: 4 distinct.
     """
     fasta, msa_db, template_db = (
-        os.environ[k]
+        os.environ.get(k, str(DEFAULTS[k]))
         for k in (
             "FOLDFORGE_5I28_FASTA",
             "FOLDFORGE_5I28_MSA_DB",
