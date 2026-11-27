@@ -25,10 +25,9 @@ class Scheduler:
         by = defaultdict(list)
         for it in items:
             by[it["bucket"]].append(it)
-        self.queues = {
-            b: deque(sorted(v, key=lambda x: (-x["cost"], x["t"])))
-            for b, v in by.items()
-        }
+        # order=input (ablation): no size ordering, every pick takes the earliest-listed unassigned target (its bucket only labels its graphs)
+        key = (lambda x: x["idx"]) if order == "input" else (lambda x: (-x["cost"], x["t"]))
+        self.queues = {b: deque(sorted(v, key=key)) for b, v in by.items()}
         self.holders: dict = defaultdict(set)  # bucket -> workers currently holding it
         self.wbucket: dict = {}  # worker -> bucket it holds
 
@@ -59,6 +58,17 @@ class Scheduler:
         """-> (item, how) with how in {affinity, claim, steal}, or None when nothing is unassigned (among the buckets `allow(bucket)` accepts,
         when given: a small-concurrency slot only takes small buckets)."""
         b = self.wbucket.get(w)
+        if self.order == "input":
+            live = [x for x, q in self.queues.items() if q and (allow is None or allow(x))]
+            if not live:
+                if b is not None:
+                    self.holders[b].discard(w)
+                    self.wbucket.pop(w, None)
+                return None
+            best = min(live, key=lambda x: self.queues[x][0]["idx"])
+            how = "affinity" if best == b else "claim"
+            self._hold(w, best)
+            return self.queues[best].popleft(), how
         if b is not None and self.queues.get(b) and (allow is None or allow(b)):
             return self.queues[b].popleft(), "affinity"
         live = [x for x, q in self.queues.items() if q and (allow is None or allow(x))]

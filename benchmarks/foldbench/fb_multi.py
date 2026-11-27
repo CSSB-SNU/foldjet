@@ -65,8 +65,8 @@ p.add_argument(
 p.add_argument(
     "--order",
     default="total",
-    choices=("total", "largest"),
-    help="claim the bucket with the largest remaining summed cost, or with the largest single target",
+    choices=("total", "largest", "input"),
+    help="claim the bucket with the largest remaining summed cost, or with the largest single target; input = no size ordering: targets in the order of TARGETS_FILE (ablation; the Anthropic kit runs its input list in order)",
 )
 p.add_argument("--max-fails", type=int, default=2)
 p.add_argument("--max-respawns", type=int, default=8, help="per GPU")
@@ -167,6 +167,7 @@ _sizes = (
 est, cost_desc = fb_sched.cost_model(
     Path(args.per_target_tsv), [d for d in args.calib_runs.split(",") if d], _sizes
 )
+_pos = {t: i for i, t in enumerate(todo)}  # position in TARGETS_FILE (order=input)
 items = []
 for line in (out / "sort_order.tsv").read_text().splitlines() if todo else []:
     t, tok, at, tb, ab = line.split("\t")
@@ -177,6 +178,7 @@ for line in (out / "sort_order.tsv").read_text().splitlines() if todo else []:
             "atoms": int(at),
             "bucket": (int(tb), int(ab)),
             "cost": round(est(t, int(tok)), 2),
+            "idx": _pos[t],
         }
     )
 n_buckets = len({it["bucket"] for it in items})
