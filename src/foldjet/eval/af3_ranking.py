@@ -189,3 +189,25 @@ def ranking_terms(cif: str, ptm: float, iptm: float | None) -> RankingTerms:
     ip = float("nan") if single else float(iptm)
     score = float(get_ranking_score(float(ptm), ip, fd, clash))
     return RankingTerms(float(ptm), None if single else float(iptm), fd, clash, score)
+
+
+def rank_samples(cifs, ptm, iptm=None) -> tuple[list[dict], int | None]:
+    """Ranking terms of every sample (``ptm`` / ``iptm``: one value per sample, ``iptm`` None for a single-chain model output).
+
+    Returns (one dict per sample: RankingTerms.as_dict(), or {"error": ...} when the sample could not be ranked; index of the best
+    sample by ranking_score, first on a tie, None if no sample was ranked).
+    """
+    rows: list[dict] = []
+    for k, cif in enumerate(cifs):
+        try:
+            ip = None if iptm is None else float(iptm[k])
+            rows.append(ranking_terms(cif, float(ptm[k]), ip).as_dict())
+        except Exception as e:
+            _LOG.warning(
+                "AF3 ranking of sample %d failed: %s: %s", k, type(e).__name__, e
+            )
+            rows.append({"error": f"{type(e).__name__}: {e}"[:300]})
+    ranked = [
+        (r["ranking_score"], -k) for k, r in enumerate(rows) if "ranking_score" in r
+    ]
+    return rows, (-max(ranked)[1] if ranked else None)

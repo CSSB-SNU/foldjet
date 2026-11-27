@@ -40,7 +40,46 @@ def to_foldjet_ids(cif: str) -> tuple[str, list[str]]:
         if c not in new:
             new.append(str(c))
     back = {n: af3_mmcif.int_id_to_str_id(k + 1) for k, n in enumerate(new)}
+    # The old writer renamed atom_site but only some of the per-entity tables (e.g. pdbx_poly_seq_scheme kept FoldJet's ids, so a value can
+    # name a different chain there). Those tables are rebuilt from atom_site instead: within each entity, the k-th distinct id met in the
+    # table is the entity's k-th chain in atom_site order.
+    a = block["atom_site"]
+    by_entity: dict[str, list[str]] = defaultdict(list)
+    for c, e in zip(a["label_asym_id"].as_array(), a["label_entity_id"].as_array(), strict=True):
+        if str(c) not in by_entity[str(e)]:
+            by_entity[str(e)].append(str(c))
+    per_entity = {
+        "struct_asym": ("entity_id", ["id"]),
+        "pdbx_poly_seq_scheme": ("entity_id", ["asym_id", "pdb_strand_id"]),
+        "pdbx_nonpoly_scheme": ("entity_id", ["asym_id", "pdb_strand_id"]),
+        "pdbx_branch_scheme": ("entity_id", ["asym_id", "pdb_asym_id"]),
+    }
+    for cat_name, (ecol, cols) in per_entity.items():
+        if cat_name not in block:
+            continue
+        cat = block[cat_name]
+        ents = [str(e) for e in cat[ecol].as_array()]
+        for col in cols:
+            if col not in cat:
+                continue
+            seen: dict[str, list[str]] = defaultdict(list)
+            out = []
+            for v, e in zip(cat[col].as_array(), ents, strict=True):
+                if str(v) not in seen[e]:
+                    seen[e].append(str(v))
+                chains = by_entity.get(e, [])
+                k = seen[e].index(str(v))
+                out.append(back[chains[k]] if k < len(chains) else str(v))
+            cat[col] = pdbx.CIFColumn(np.array(out))
+    if "entity_poly" in block:
+        ep = block["entity_poly"]
+        if "pdbx_strand_id" in ep:
+            ep["pdbx_strand_id"] = pdbx.CIFColumn(
+                np.array([",".join(back[c] for c in by_entity.get(str(e), [])) for e in ep["entity_id"].as_array()])
+            )
     for cat_name in list(block.keys()):
+        if cat_name in per_entity or cat_name == "entity_poly":
+            continue
         cat = block[cat_name]
         for col in list(cat.keys()):
             if col.endswith(("asym_id", "strand_id")):

@@ -153,6 +153,23 @@ def write_output(
             "pde": "angstrom",
         },
     }
+    if payload.get("ptm") is not None:
+        # AlphaFold3's sample ranking (pTM/ipTM + 0.5 fraction_disordered
+        # - 100 has_clash, its own DSSP); coordinates are untouched.
+        from foldjet.eval.af3_ranking import rank_samples  # noqa: PLC0415
+
+        samples, best = rank_samples(
+            result.cifs,
+            payload["ptm"].reshape(-1).tolist(),
+            None
+            if payload.get("iptm") is None
+            else payload["iptm"].reshape(-1).tolist(),
+        )
+        report["af3_ranking"] = {
+            "samples": samples,
+            "best_sample": best,
+            "best_cif": None if best is None else str(paths[best]),
+        }
     # Reject invalid report values before creating any prediction artifact.
     report_text = json.dumps(json_value(report), indent=2, allow_nan=False) + "\n"
     directory.mkdir(parents=True, exist_ok=True)

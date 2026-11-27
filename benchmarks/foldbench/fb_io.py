@@ -49,14 +49,65 @@ def rename_chains(cif: str, new_names: list[str]) -> str:
     return buf.getvalue()
 
 
+RANKING_HEADER = "seed,sample,ranking_score,ptm_iptm,ptm,iptm,fraction_disordered,has_clash,af3_ranking_error"
+
+
 def write_seed(
-    d: str, t: str, s: int, cifs: list[str], scores: list[float], new_names: list[str]
-) -> list[tuple[int, int, float]]:
-    """Rename + write every sample CIF of one trunk_seed; returns its (seed, sample, ranking_score) rows."""
+    d: str,
+    t: str,
+    s: int,
+    cifs: list[str],
+    scores: list[float],
+    new_names: list[str],
+    ptm: list[float] | None = None,
+    iptm: list[float] | None = None,
+) -> list[tuple]:
+    """Rename + write every sample CIF of one trunk_seed; returns its ranking.csv rows (RANKING_HEADER).
+
+    With ``ptm`` given, ranking_score is AlphaFold3's (foldjet.eval.af3_ranking, on the CIF as FoldJet wrote it, before renaming):
+    ptm_iptm + 0.5 fraction_disordered - 100 has_clash; a sample it cannot rank keeps ptm_iptm and records the error.
+    Without ``ptm`` (model without a pTM head) ranking_score = ptm_iptm = the caller's score.
+    """
+    if ptm is not None:
+        from foldjet.eval.af3_ranking import rank_samples
+
+        terms, _ = rank_samples(cifs, ptm, iptm)
     rows = []
     for k, cif in enumerate(cifs):
         Path(d, f"{t}_seed{s}_sample{k}_pred.cif").write_text(
             rename_chains(cif, new_names)
         )
-        rows.append((s, k, scores[k]))
+        if ptm is None:
+            rows.append((s, k, scores[k], scores[k], "", "", "", "", ""))
+            continue
+        r = terms[k]
+        ip = "" if iptm is None or r.get("iptm", 1) is None else f"{iptm[k]:.6f}"
+        if "error" in r:
+            rows.append(
+                (
+                    s,
+                    k,
+                    scores[k],
+                    scores[k],
+                    f"{ptm[k]:.6f}",
+                    ip,
+                    "",
+                    "",
+                    r["error"].replace(",", ";").replace("\n", " "),
+                )
+            )
+        else:
+            rows.append(
+                (
+                    s,
+                    k,
+                    r["ranking_score"],
+                    scores[k],
+                    f"{ptm[k]:.6f}",
+                    ip,
+                    f"{r['fraction_disordered']:.6f}",
+                    int(r["has_clash"]),
+                    "",
+                )
+            )
     return rows

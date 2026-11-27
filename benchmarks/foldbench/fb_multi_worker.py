@@ -81,6 +81,12 @@ p.add_argument(
 )
 p.add_argument("--loader-threads", type=int, default=2)
 p.add_argument("--writers", type=int, default=2)
+p.add_argument(
+    "--af3-ranking",
+    type=int,
+    default=1,
+    help="1: ranking.csv ranking_score = AlphaFold3 ranking (pTM/ipTM + 0.5 fraction_disordered - 100 has_clash, computed in the writer processes); 0: pTM/ipTM only",
+)
 args = p.parse_args()
 seeds = [int(x) for x in args.seeds.split(",")]
 WID = args.wid
@@ -410,8 +416,12 @@ with ff.load_model(args.model, config=config, checkpoint=args.checkpoint, device
         try:
             rank_rows = [r for f in futs for r in f.result()]
             (d / "ranking.csv").write_text(
-                "seed,sample,ranking_score\n"
-                + "".join(f"{s},{k},{v:.6f}\n" for s, k, v in sorted(rank_rows))
+                fb_io.RANKING_HEADER
+                + "\n"
+                + "".join(
+                    f"{r[0]},{r[1]},{r[2]:.6f},{r[3]:.6f}," + ",".join(str(x) for x in r[4:]) + "\n"
+                    for r in sorted(rank_rows, key=lambda r: (r[0], r[1]))
+                )
             )
             timings = meta["timings"]
             (d / "run.json").write_text(
@@ -636,6 +646,14 @@ with ff.load_model(args.model, config=config, checkpoint=args.checkpoint, device
                             list(res.cifs),
                             scores,
                             new_names,
+                            *(
+                                (
+                                    [float(x) for x in ptm],
+                                    None if iptm is None else [float(x) for x in iptm],
+                                )
+                                if args.af3_ranking and rank_basis == "ptm/iptm"
+                                else ()
+                            ),
                         )
                     )
                     timings.append((s, round(t_trunk, 2), round(t_trunk + t_diff, 2)))
@@ -668,7 +686,11 @@ with ff.load_model(args.model, config=config, checkpoint=args.checkpoint, device
                         {
                             "timings": timings,
                             "chains": len(new_names),
-                            "rank_basis": rank_basis,
+                            "rank_basis": (
+                                "af3: ptm_iptm + 0.5 fraction_disordered - 100 has_clash (foldjet.eval.af3_ranking)"
+                                if args.af3_ranking and rank_basis == "ptm/iptm"
+                                else rank_basis
+                            ),
                             "gpu_s": gpu_s,
                             "load_wait_s": load_wait,
                             "stages": stages,
