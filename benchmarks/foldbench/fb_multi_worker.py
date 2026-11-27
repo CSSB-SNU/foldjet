@@ -42,6 +42,11 @@ p.add_argument("--nd", type=int, default=5)
 p.add_argument("--steps", type=int, default=200)
 p.add_argument("--recycles", type=int, default=None)
 p.add_argument("--scope", default="trunk", choices=("trunk", "denoiser"))
+p.add_argument(
+    "--backend",
+    default="miniworld",
+    help="kernel backend of the model (Config.backend): miniworld = FoldJet Engine kernels; anthropic = the engine's connection to Anthropic's released kernels; pytorch",
+)
 p.add_argument("--exec-extra", default="{}")
 p.add_argument(
     "--release-graphs", default="bucket", choices=("never", "bucket", "target")
@@ -300,7 +305,7 @@ def get_features(t, s):
 
 
 # ---------------------------------------------------------------- model
-config = {"precision": "bf16", "diffusion": {"steps": args.steps}}
+config = {"precision": "bf16", "backend": args.backend, "diffusion": {"steps": args.steps}}
 graphs_on = not args.eager
 if not args.eager:
     config["execution"] = {
@@ -413,6 +418,7 @@ with ff.load_model(args.model, config=config, checkpoint=args.checkpoint, device
                 json.dumps(
                     {
                         "model": args.model,
+                        "backend": args.backend,
                         "chains": meta["chains"],
                         "ranking": meta["rank_basis"],
                         "timings_s": timings,
