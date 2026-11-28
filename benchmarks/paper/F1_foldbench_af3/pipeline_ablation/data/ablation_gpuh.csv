@@ -1,0 +1,5 @@
+run,node,shard0_wall_s,shard1_wall_s,retry_s,gpu_h,done,failed_final
+baseline_multi_3010,node02,,,,9.97,1522,0
+af3_bf16_abl1_noconc,node01,18663.4,18671.8,0,10.37,1522,0
+af3_bf16_abl2_noconc_nogroup,node01,18736.7,18749.3,0,10.41,1522,0
+af3_bf16_abl3_noconc_nogroup_nosort,node01,19841.6,20370.8,2006.5,11.73,1522,0
